@@ -29,3 +29,4 @@ echo "   To serve the web frontend:"
 echo "   cd $ROOT_DIR/web && npx serve dist"
 echo ""
 echo "Deployment preparation complete!"
+# TODO

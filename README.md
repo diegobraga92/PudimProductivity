@@ -144,3 +144,4 @@ sudo ufw allow 3000/tcp
 
 - Android app is configured to use `http://192.168.3.12:3000/lists` for backend availability checks.
 - Install APK on devices normally (available in repo releases)
+<!-- TODO -->
