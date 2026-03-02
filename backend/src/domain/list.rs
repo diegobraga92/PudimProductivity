@@ -2,10 +2,16 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct List {
-    pub id: Uuid,
-    pub list_id: Option<Uuid>,
-    pub name: String,
+enum ListType {
+    Todo = 0,
+    Daily = 1,
+    Collection = 2,
 }
 
-// TODO
+#[derive(Debug, Serialize, Deserialize)]
+pub struct List {
+    pub id: Uuid,
+    pub parent_id: Option<Uuid>,
+    pub name: String,
+    pub list_type: ListType,
+}

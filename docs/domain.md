@@ -55,7 +55,7 @@ Attributes:
 - id
 - parent_id (NULL if doesn't belong to a collection)
 - name
-- type
+- list_type
 
 ---
 
