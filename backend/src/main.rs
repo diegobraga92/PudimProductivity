@@ -1,5 +1,4 @@
 mod api;
-mod application;
 mod domain;
 mod infrastructure;
 
@@ -10,7 +9,7 @@ use tokio::net::TcpListener;
 #[tokio::main]
 async fn main() {
     // Initialize DB
-    let pool = init_db("sqlite://todo.db").await;
+    let pool = init_db();
 
     let state = AppState { pool };
     let app = create_router(state);

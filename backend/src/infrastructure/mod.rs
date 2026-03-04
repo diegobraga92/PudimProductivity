@@ -1,2 +1,2 @@
 pub mod db;
-// TODO
+pub mod schema;

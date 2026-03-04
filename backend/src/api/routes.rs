@@ -1,28 +1,27 @@
+use crate::infrastructure::schema::{lists, tasks};
 use axum::{
-    extract::{Path, Query, State},
+    extract::{Path, State},
     http::StatusCode,
     routing::{delete, get, patch, post},
     Json, Router,
 };
-use chrono::Utc;
+use chrono::{DateTime, Utc};
+use diesel::{
+    prelude::*,
+    r2d2::{ConnectionManager, Pool},
+    Insertable, PgConnection, Queryable, Selectable,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use sqlx::SqlitePool;
 use std::sync::Arc;
 use tower_http::cors::{Any, CorsLayer};
 use uuid::Uuid;
 
-use crate::application::sync::{get_events_since, insert_event};
-use crate::domain::event::Event;
+pub type DbPool = Pool<ConnectionManager<PgConnection>>;
 
 #[derive(Clone)]
 pub struct AppState {
-    pub pool: SqlitePool,
-}
-
-#[derive(Deserialize)]
-pub struct SinceQuery {
-    since: i64,
+    pub pool: DbPool,
 }
 
 #[derive(Serialize)]
@@ -38,24 +37,65 @@ pub struct ErrorResponse {
     message: String,
 }
 
-#[derive(Serialize)]
+#[derive(Queryable, Selectable, Serialize)]
+#[diesel(table_name = lists)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
 #[serde(rename_all = "camelCase")]
-pub struct UserDto {
-    id: String,
-    email: String,
+pub struct List {
+    pub id: String,
+    pub user_id: String,
+    pub name: String,
+    #[serde(rename = "type")]
+    pub type_: String,
+    pub config: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct LoginData {
-    token: String,
-    user: UserDto,
+#[derive(Insertable)]
+#[diesel(table_name = lists)]
+pub struct NewList<'a> {
+    pub id: &'a str,
+    pub user_id: &'a str,
+    pub name: &'a str,
+    pub type_: &'a str,
+    pub config: &'a str,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Deserialize)]
-pub struct LoginRequest {
-    email: String,
-    password: String,
+#[derive(Queryable, Selectable, Serialize)]
+#[diesel(table_name = tasks)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+#[serde(rename_all = "camelCase")]
+pub struct Task {
+    pub id: String,
+    pub list_id: String,
+    pub title: String,
+    pub completed: bool,
+    pub order_index: i32,
+    pub due_date: Option<DateTime<Utc>>,
+    pub recurrence: Option<String>,
+    pub streak_count: Option<i32>,
+    pub completed_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Insertable)]
+#[diesel(table_name = tasks)]
+pub struct NewTask<'a> {
+    pub id: &'a str,
+    pub list_id: &'a str,
+    pub title: &'a str,
+    pub completed: bool,
+    pub order_index: i32,
+    pub due_date: Option<DateTime<Utc>>,
+    pub recurrence: Option<&'a str>,
+    pub streak_count: Option<i32>,
+    pub completed_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 #[derive(Serialize)]
@@ -86,10 +126,10 @@ pub struct TaskDto {
     list_id: String,
     title: String,
     completed: bool,
-    order: i64,
+    order: i32,
     due_date: Option<String>,
     recurrence: Option<String>,
-    streak_count: Option<i64>,
+    streak_count: Option<i32>,
     completed_at: Option<String>,
     created_at: String,
     updated_at: String,
@@ -101,10 +141,10 @@ pub struct CreateTaskRequest {
     list_id: String,
     title: String,
     completed: bool,
-    order: i64,
+    order: i32,
     due_date: Option<String>,
     recurrence: Option<String>,
-    streak_count: Option<i64>,
+    streak_count: Option<i32>,
     completed_at: Option<String>,
 }
 
@@ -116,21 +156,14 @@ fn ok<T>(data: T) -> Json<ApiResponse<T>> {
     })
 }
 
-fn now_iso() -> String {
-    Utc::now().to_rfc3339()
-}
-
 pub fn create_router(state: AppState) -> Router {
     Router::new()
-        .route("/auth/login", post(login))
         .route("/lists", get(get_lists).post(create_list))
         .route("/lists/:list_id/tasks", get(get_tasks_for_list))
         .route("/tasks", post(create_task))
         .route("/tasks/:task_id", delete(delete_task))
         .route("/tasks/:task_id/complete", patch(complete_task))
         .route("/tasks/:task_id/reopen", patch(reopen_task))
-        .route("/events", post(post_event))
-        .route("/events", get(get_events))
         .layer(
             CorsLayer::new()
                 .allow_origin(Any)
@@ -140,86 +173,27 @@ pub fn create_router(state: AppState) -> Router {
         .with_state(Arc::new(state))
 }
 
-async fn post_event(State(state): State<Arc<AppState>>, Json(event): Json<Event>) {
-    insert_event(&state.pool, &event).await;
-}
-
-async fn get_events(
-    State(state): State<Arc<AppState>>,
-    Query(query): Query<SinceQuery>,
-) -> Json<Vec<Event>> {
-    let events = get_events_since(&state.pool, query.since).await;
-    Json(events)
-}
-
-async fn login(
-    State(state): State<Arc<AppState>>,
-    Json(request): Json<LoginRequest>,
-) -> Result<Json<ApiResponse<LoginData>>, (StatusCode, Json<ErrorResponse>)> {
-    let row = sqlx::query_as::<_, (String, String, String)>(
-        r#"
-        SELECT id, email, password
-        FROM users
-        WHERE email = ?
-        LIMIT 1
-        "#,
-    )
-    .bind(&request.email)
-    .fetch_optional(&state.pool)
-    .await
-    .map_err(internal_error)?;
-
-    let Some((id, email, password)) = row else {
-        return Err((
-            StatusCode::UNAUTHORIZED,
-            Json(ErrorResponse {
-                message: "Invalid credentials".to_string(),
-            }),
-        ));
-    };
-
-    if request.password != password {
-        return Err((
-            StatusCode::UNAUTHORIZED,
-            Json(ErrorResponse {
-                message: "Invalid credentials".to_string(),
-            }),
-        ));
-    }
-
-    Ok(ok(LoginData {
-        token: format!("dev-token-{id}"),
-        user: UserDto { id, email },
-    }))
-}
-
 async fn get_lists(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<ApiResponse<Vec<ListDto>>>, (StatusCode, Json<ErrorResponse>)> {
-    let rows = sqlx::query_as::<_, (String, String, String, String, String, String, String)>(
-        r#"
-        SELECT id, user_id, name, type, config, created_at, updated_at
-        FROM lists
-        ORDER BY created_at ASC
-        "#,
-    )
-    .fetch_all(&state.pool)
-    .await
-    .map_err(internal_error)?;
+    let mut conn = state.pool.get().map_err(internal_error)?;
 
-    let lists = rows
+    let results: Vec<List> = lists::table
+        .order_by(lists::created_at.asc())
+        .load(&mut conn)
+        .map_err(internal_error)?;
+
+    let lists = results
         .into_iter()
-        .map(
-            |(id, user_id, name, list_type, config, created_at, updated_at)| ListDto {
-                id,
-                user_id,
-                name,
-                r#type: list_type,
-                config: serde_json::from_str(&config).unwrap_or(Value::Object(Default::default())),
-                created_at,
-                updated_at,
-            },
-        )
+        .map(|list| ListDto {
+            id: list.id,
+            user_id: list.user_id,
+            name: list.name,
+            r#type: list.type_,
+            config: serde_json::from_str(&list.config).unwrap_or(Value::Object(Default::default())),
+            created_at: list.created_at.to_rfc3339(),
+            updated_at: list.updated_at.to_rfc3339(),
+        })
         .collect();
 
     Ok(ok(lists))
@@ -229,27 +203,27 @@ async fn create_list(
     State(state): State<Arc<AppState>>,
     Json(request): Json<CreateListRequest>,
 ) -> Result<Json<ApiResponse<ListDto>>, (StatusCode, Json<ErrorResponse>)> {
+    let mut conn = state.pool.get().map_err(internal_error)?;
+
     let id = Uuid::new_v4().to_string();
-    let created_at = now_iso();
-    let updated_at = created_at.clone();
+    let created_at = Utc::now();
+    let updated_at = created_at;
     let config_str = serde_json::to_string(&request.config).map_err(internal_error)?;
 
-    sqlx::query(
-        r#"
-        INSERT INTO lists (id, user_id, name, type, config, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-        "#,
-    )
-    .bind(&id)
-    .bind(&request.user_id)
-    .bind(&request.name)
-    .bind(&request.r#type)
-    .bind(&config_str)
-    .bind(&created_at)
-    .bind(&updated_at)
-    .execute(&state.pool)
-    .await
-    .map_err(internal_error)?;
+    let new_list = NewList {
+        id: &id,
+        user_id: &request.user_id,
+        name: &request.name,
+        type_: &request.r#type,
+        config: &config_str,
+        created_at,
+        updated_at,
+    };
+
+    diesel::insert_into(lists::table)
+        .values(&new_list)
+        .execute(&mut conn)
+        .map_err(internal_error)?;
 
     Ok(ok(ListDto {
         id,
@@ -257,8 +231,8 @@ async fn create_list(
         name: request.name,
         r#type: request.r#type,
         config: request.config,
-        created_at,
-        updated_at,
+        created_at: created_at.to_rfc3339(),
+        updated_at: updated_at.to_rfc3339(),
     }))
 }
 
@@ -266,63 +240,29 @@ async fn get_tasks_for_list(
     State(state): State<Arc<AppState>>,
     Path(list_id): Path<String>,
 ) -> Result<Json<ApiResponse<Vec<TaskDto>>>, (StatusCode, Json<ErrorResponse>)> {
-    let rows = sqlx::query_as::<
-        _,
-        (
-            String,
-            String,
-            String,
-            i64,
-            i64,
-            Option<String>,
-            Option<String>,
-            Option<i64>,
-            Option<String>,
-            String,
-            String,
-        ),
-    >(
-        r#"
-        SELECT id, list_id, title, completed, order_index, due_date, recurrence, streak_count, completed_at, created_at, updated_at
-        FROM tasks
-        WHERE list_id = ?
-        ORDER BY order_index ASC, created_at ASC
-        "#,
-    )
-    .bind(&list_id)
-    .fetch_all(&state.pool)
-    .await
-    .map_err(internal_error)?;
+    let mut conn = state.pool.get().map_err(internal_error)?;
 
-    let tasks = rows
+    let results: Vec<Task> = tasks::table
+        .filter(tasks::list_id.eq(&list_id))
+        .order_by((tasks::order_index.asc(), tasks::created_at.asc()))
+        .load(&mut conn)
+        .map_err(internal_error)?;
+
+    let tasks = results
         .into_iter()
-        .map(
-            |(
-                id,
-                list_id,
-                title,
-                completed,
-                order,
-                due_date,
-                recurrence,
-                streak_count,
-                completed_at,
-                created_at,
-                updated_at,
-            )| TaskDto {
-                id,
-                list_id,
-                title,
-                completed: completed != 0,
-                order,
-                due_date,
-                recurrence,
-                streak_count,
-                completed_at,
-                created_at,
-                updated_at,
-            },
-        )
+        .map(|task| TaskDto {
+            id: task.id,
+            list_id: task.list_id,
+            title: task.title,
+            completed: task.completed,
+            order: task.order_index,
+            due_date: task.due_date.map(|d| d.to_rfc3339()),
+            recurrence: task.recurrence,
+            streak_count: task.streak_count,
+            completed_at: task.completed_at.map(|c| c.to_rfc3339()),
+            created_at: task.created_at.to_rfc3339(),
+            updated_at: task.updated_at.to_rfc3339(),
+        })
         .collect();
 
     Ok(ok(tasks))
@@ -332,31 +272,41 @@ async fn create_task(
     State(state): State<Arc<AppState>>,
     Json(request): Json<CreateTaskRequest>,
 ) -> Result<Json<ApiResponse<TaskDto>>, (StatusCode, Json<ErrorResponse>)> {
-    let id = Uuid::new_v4().to_string();
-    let created_at = now_iso();
-    let updated_at = created_at.clone();
+    let mut conn = state.pool.get().map_err(internal_error)?;
 
-    sqlx::query(
-        r#"
-        INSERT INTO tasks
-            (id, list_id, title, completed, order_index, due_date, recurrence, streak_count, completed_at, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        "#,
-    )
-    .bind(&id)
-    .bind(&request.list_id)
-    .bind(&request.title)
-    .bind(if request.completed { 1 } else { 0 })
-    .bind(request.order)
-    .bind(&request.due_date)
-    .bind(&request.recurrence)
-    .bind(request.streak_count)
-    .bind(&request.completed_at)
-    .bind(&created_at)
-    .bind(&updated_at)
-    .execute(&state.pool)
-    .await
-    .map_err(internal_error)?;
+    let id = Uuid::new_v4().to_string();
+    let created_at = Utc::now();
+    let updated_at = created_at;
+
+    let due_date = request.due_date.as_ref().and_then(|d| {
+        DateTime::parse_from_rfc3339(d)
+            .ok()
+            .map(|dt| dt.with_timezone(&Utc))
+    });
+    let completed_at = request.completed_at.as_ref().and_then(|c| {
+        DateTime::parse_from_rfc3339(c)
+            .ok()
+            .map(|dt| dt.with_timezone(&Utc))
+    });
+
+    let new_task = NewTask {
+        id: &id,
+        list_id: &request.list_id,
+        title: &request.title,
+        completed: request.completed,
+        order_index: request.order,
+        due_date,
+        recurrence: request.recurrence.as_deref(),
+        streak_count: request.streak_count,
+        completed_at,
+        created_at,
+        updated_at,
+    };
+
+    diesel::insert_into(tasks::table)
+        .values(&new_task)
+        .execute(&mut conn)
+        .map_err(internal_error)?;
 
     Ok(ok(TaskDto {
         id,
@@ -368,8 +318,8 @@ async fn create_task(
         recurrence: request.recurrence,
         streak_count: request.streak_count,
         completed_at: request.completed_at,
-        created_at,
-        updated_at,
+        created_at: created_at.to_rfc3339(),
+        updated_at: updated_at.to_rfc3339(),
     }))
 }
 
@@ -377,32 +327,75 @@ async fn complete_task(
     State(state): State<Arc<AppState>>,
     Path(task_id): Path<String>,
 ) -> Result<Json<ApiResponse<TaskDto>>, (StatusCode, Json<ErrorResponse>)> {
-    update_task_completion(&state.pool, &task_id, true).await
+    update_task_completion(state, task_id, true).await
 }
 
 async fn reopen_task(
     State(state): State<Arc<AppState>>,
     Path(task_id): Path<String>,
 ) -> Result<Json<ApiResponse<TaskDto>>, (StatusCode, Json<ErrorResponse>)> {
-    update_task_completion(&state.pool, &task_id, false).await
+    update_task_completion(state, task_id, false).await
+}
+
+async fn update_task_completion(
+    state: Arc<AppState>,
+    task_id: String,
+    completed: bool,
+) -> Result<Json<ApiResponse<TaskDto>>, (StatusCode, Json<ErrorResponse>)> {
+    let mut conn = state.pool.get().map_err(internal_error)?;
+
+    let updated_at = Utc::now();
+    let completed_at = if completed { Some(Utc::now()) } else { None };
+
+    let num_updated = diesel::update(tasks::table.filter(tasks::id.eq(&task_id)))
+        .set((
+            tasks::completed.eq(completed),
+            tasks::completed_at.eq(completed_at),
+            tasks::updated_at.eq(updated_at),
+        ))
+        .execute(&mut conn)
+        .map_err(internal_error)?;
+
+    if num_updated == 0 {
+        return Err((
+            StatusCode::NOT_FOUND,
+            Json(ErrorResponse {
+                message: "Task not found".to_string(),
+            }),
+        ));
+    }
+
+    let task: Task = tasks::table
+        .filter(tasks::id.eq(&task_id))
+        .first(&mut conn)
+        .map_err(internal_error)?;
+
+    Ok(ok(TaskDto {
+        id: task.id,
+        list_id: task.list_id,
+        title: task.title,
+        completed: task.completed,
+        order: task.order_index,
+        due_date: task.due_date.map(|d| d.to_rfc3339()),
+        recurrence: task.recurrence,
+        streak_count: task.streak_count,
+        completed_at: task.completed_at.map(|c| c.to_rfc3339()),
+        created_at: task.created_at.to_rfc3339(),
+        updated_at: task.updated_at.to_rfc3339(),
+    }))
 }
 
 async fn delete_task(
     State(state): State<Arc<AppState>>,
     Path(task_id): Path<String>,
 ) -> Result<Json<ApiResponse<()>>, (StatusCode, Json<ErrorResponse>)> {
-    let result = sqlx::query(
-        r#"
-        DELETE FROM tasks
-        WHERE id = ?
-        "#,
-    )
-    .bind(&task_id)
-    .execute(&state.pool)
-    .await
-    .map_err(internal_error)?;
+    let mut conn = state.pool.get().map_err(internal_error)?;
 
-    if result.rows_affected() == 0 {
+    let num_deleted = diesel::delete(tasks::table.filter(tasks::id.eq(&task_id)))
+        .execute(&mut conn)
+        .map_err(internal_error)?;
+
+    if num_deleted == 0 {
         return Err((
             StatusCode::NOT_FOUND,
             Json(ErrorResponse {
@@ -412,81 +405,6 @@ async fn delete_task(
     }
 
     Ok(ok(()))
-}
-
-async fn update_task_completion(
-    pool: &SqlitePool,
-    task_id: &str,
-    completed: bool,
-) -> Result<Json<ApiResponse<TaskDto>>, (StatusCode, Json<ErrorResponse>)> {
-    let updated_at = now_iso();
-    let completed_at = if completed { Some(now_iso()) } else { None };
-
-    let result = sqlx::query(
-        r#"
-        UPDATE tasks
-        SET completed = ?, completed_at = ?, updated_at = ?
-        WHERE id = ?
-        "#,
-    )
-    .bind(if completed { 1 } else { 0 })
-    .bind(&completed_at)
-    .bind(&updated_at)
-    .bind(task_id)
-    .execute(pool)
-    .await
-    .map_err(internal_error)?;
-
-    if result.rows_affected() == 0 {
-        return Err((
-            StatusCode::NOT_FOUND,
-            Json(ErrorResponse {
-                message: "Task not found".to_string(),
-            }),
-        ));
-    }
-
-    let row = sqlx::query_as::<
-        _,
-        (
-            String,
-            String,
-            String,
-            i64,
-            i64,
-            Option<String>,
-            Option<String>,
-            Option<i64>,
-            Option<String>,
-            String,
-            String,
-        ),
-    >(
-        r#"
-        SELECT id, list_id, title, completed, order_index, due_date, recurrence, streak_count, completed_at, created_at, updated_at
-        FROM tasks
-        WHERE id = ?
-        LIMIT 1
-        "#,
-    )
-    .bind(task_id)
-    .fetch_one(pool)
-    .await
-    .map_err(internal_error)?;
-
-    Ok(ok(TaskDto {
-        id: row.0,
-        list_id: row.1,
-        title: row.2,
-        completed: row.3 != 0,
-        order: row.4,
-        due_date: row.5,
-        recurrence: row.6,
-        streak_count: row.7,
-        completed_at: row.8,
-        created_at: row.9,
-        updated_at: row.10,
-    }))
 }
 
 fn internal_error<E: std::fmt::Display>(error: E) -> (StatusCode, Json<ErrorResponse>) {
