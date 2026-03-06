@@ -2,34 +2,34 @@
 
 diesel::table! {
     lists (id) {
-        id -> Text,
-        user_id -> Text,
+        id -> Uuid,
+        parent_id -> Nullable<Uuid>,
         name -> Text,
-        #[sql_name = "type"]
-        type_ -> Text,
-        config -> Text,
-        created_at -> Timestamptz,
-        updated_at -> Timestamptz,
+        list_type -> Int2,
+    }
+}
+
+diesel::table! {
+    task_completions (task_id, date) {
+        task_id -> Uuid,
+        date -> Timestamptz,
     }
 }
 
 diesel::table! {
     tasks (id) {
-        id -> Text,
-        list_id -> Text,
-        title -> Text,
-        completed -> Bool,
-        order_index -> Int4,
-        due_date -> Nullable<Timestamptz>,
-        recurrence -> Nullable<Text>,
-        streak_count -> Nullable<Int4>,
-        completed_at -> Nullable<Timestamptz>,
+        id -> Uuid,
+        list_id -> Uuid,
+        text -> Text,
+        done -> Bool,
+        repeat_on -> Nullable<Array<Nullable<Int2>>>,
         created_at -> Timestamptz,
         updated_at -> Timestamptz,
+        deleted_at -> Nullable<Timestamptz>,
     }
 }
 
+diesel::joinable!(task_completions -> tasks (task_id));
 diesel::joinable!(tasks -> lists (list_id));
 
-diesel::allow_tables_to_appear_in_same_query!(lists, tasks,);
-//TODO
+diesel::allow_tables_to_appear_in_same_query!(lists, task_completions, tasks,);

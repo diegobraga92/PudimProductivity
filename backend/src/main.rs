@@ -8,8 +8,9 @@ use tokio::net::TcpListener;
 
 #[tokio::main]
 async fn main() {
-    // Initialize DB
-    let pool = init_db();
+    dotenvy::dotenv().ok();
+
+    let pool = init_db().expect("Failed to create DB pool");
 
     let state = AppState { pool };
     let app = create_router(state);
