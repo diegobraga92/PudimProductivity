@@ -12,7 +12,7 @@ async fn main() {
 
     let pool = init_db().expect("Failed to create DB pool");
 
-    let state = AppState { pool };
+    let state = AppState::new(pool);
     let app = create_router(state);
 
     // Bind listener
@@ -25,3 +25,4 @@ async fn main() {
     axum::serve(listener, app).await.expect("Server failed");
 }
 // TODO
+// TODO REVIEW

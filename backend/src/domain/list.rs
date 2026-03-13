@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize)]
-enum ListType {
+pub enum ListType {
     Todo = 0,
     Daily = 1,
     Collection = 2,
@@ -15,3 +15,5 @@ pub struct List {
     pub name: String,
     pub list_type: ListType,
 }
+
+// TODO REVIEW

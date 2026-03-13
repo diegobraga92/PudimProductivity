@@ -17,3 +17,5 @@ pub struct TaskCompletion {
     pub task_id: Uuid,
     pub date: DateTime<Utc>,
 }
+
+// TODO REVIEW
