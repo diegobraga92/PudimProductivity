@@ -2,10 +2,9 @@ use crate::domain::list::{List, ListType};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ListResponse {
-    pub id: Uuid,
+pub struct ListRequest {
     pub parent_id: Option<Uuid>,
     pub name: String,
 
@@ -13,9 +12,10 @@ pub struct ListResponse {
     pub list_type: ListType,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ListRequest {
+pub struct ListResponse {
+    pub id: Uuid,
     pub parent_id: Option<Uuid>,
     pub name: String,
 
