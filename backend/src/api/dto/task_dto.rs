@@ -38,4 +38,18 @@ impl From<Task> for TaskResponse {
     }
 }
 
-// TODO REVIEW
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TaskCompletionDto {
+    pub task_id: Uuid,
+    pub date: DateTime<Utc>,
+}
+
+impl From<TaskCompletion> for TaskCompletionDto {
+    fn from(task_completion: TaskCompletion) -> Self {
+        Self {
+            task_id: task_completion.task_id,
+            date: task_completion.date,
+        }
+    }
+}

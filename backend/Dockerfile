@@ -5,7 +5,6 @@ WORKDIR /app/backend
 COPY backend/Cargo.toml ./Cargo.toml
 COPY backend/src ./src
 
-# Install Diesel CLI for migrations
 RUN cargo install diesel_cli --no-default-features --features postgres
 
 RUN cargo build --release
@@ -27,4 +26,3 @@ COPY --from=builder /usr/local/cargo/bin/diesel /usr/local/bin/diesel
 EXPOSE 3000
 
 CMD ["backend"]
-# TODO

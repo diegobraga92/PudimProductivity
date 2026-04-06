@@ -16,5 +16,4 @@ services:
 
 volumes:
   postgres_data:
-
-# TODO
+  
