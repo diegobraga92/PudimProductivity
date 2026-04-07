@@ -100,5 +100,3 @@ impl ListRepository {
         }
     }
 }
-
-// TODO REVIEW

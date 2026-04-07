@@ -1,4 +1,4 @@
-use crate::domain::task::{Task as DomainTask, TaskCompletion as DomainTaskCompletion};
+use crate::domain::task::{Task, TaskCompletion};
 use crate::infrastructure::schema::{task_completions, tasks};
 use chrono::{DateTime, Utc};
 use diesel::{
@@ -66,7 +66,7 @@ impl TaskRepository {
         Self { pool }
     }
 
-    pub fn get_by_list_id(&self, list_id: Uuid) -> Result<Vec<DomainTask>, diesel::result::Error> {
+    pub fn get_by_list_id(&self, list_id: Uuid) -> Result<Vec<Task>, diesel::result::Error> {
         let mut conn = self.pool.get().unwrap();
         let results: Vec<TaskModel> = tasks::table
             .filter(tasks::list_id.eq(list_id))
@@ -84,7 +84,7 @@ impl TaskRepository {
             .collect())
     }
 
-    pub fn create(&self, task: DomainTask) -> Result<DomainTask, diesel::result::Error> {
+    pub fn create(&self, task: Task) -> Result<Task, diesel::result::Error> {
         let mut conn = self.pool.get().unwrap();
 
         let repeat_on_vec = task.repeat_on.as_ref().map(|weekdays| {
@@ -111,7 +111,7 @@ impl TaskRepository {
 
         // If task is completed, create a completion record
         if task.done {
-            let completion = DomainTaskCompletion {
+            let completion = TaskCompletion {
                 task_id: task.id,
                 date: task.created_at.unwrap_or_else(Utc::now),
             };
@@ -121,7 +121,7 @@ impl TaskRepository {
         Ok(task)
     }
 
-    pub fn find_by_id(&self, id: Uuid) -> Result<Option<DomainTask>, diesel::result::Error> {
+    pub fn find_by_id(&self, id: Uuid) -> Result<Option<Task>, diesel::result::Error> {
         let mut conn = self.pool.get().unwrap();
         let result: Option<TaskModel> = tasks::table
             .filter(tasks::id.eq(id))
@@ -141,7 +141,7 @@ impl TaskRepository {
         &self,
         task_id: Uuid,
         completed: bool,
-    ) -> Result<DomainTask, diesel::result::Error> {
+    ) -> Result<Task, diesel::result::Error> {
         let mut conn = self.pool.get().unwrap();
         let updated_at = Utc::now();
 
@@ -156,7 +156,7 @@ impl TaskRepository {
 
         // Handle task completions
         if completed {
-            let completion = DomainTaskCompletion {
+            let completion = TaskCompletion {
                 task_id,
                 date: updated_at,
             };
@@ -186,10 +186,7 @@ impl TaskRepository {
         Ok(())
     }
 
-    fn create_completion(
-        &self,
-        completion: &DomainTaskCompletion,
-    ) -> Result<(), diesel::result::Error> {
+    fn create_completion(&self, completion: &TaskCompletion) -> Result<(), diesel::result::Error> {
         let mut conn = self.pool.get().unwrap();
 
         let new_completion = NewTaskCompletionModel {
@@ -207,7 +204,7 @@ impl TaskRepository {
     fn get_completions_by_task_ids(
         &self,
         task_ids: &[Uuid],
-    ) -> Result<Vec<DomainTaskCompletion>, diesel::result::Error> {
+    ) -> Result<Vec<TaskCompletion>, diesel::result::Error> {
         if task_ids.is_empty() {
             return Ok(Vec::new());
         }
@@ -224,14 +221,14 @@ impl TaskRepository {
             .collect())
     }
 
-    fn to_domain(model: TaskModel, completions: &[DomainTaskCompletion]) -> DomainTask {
+    fn to_domain(model: TaskModel, completions: &[TaskCompletion]) -> Task {
         // Find most recent completion for this task
         let completion = completions
             .iter()
             .find(|c| c.task_id == model.id)
             .map(|c| c.date);
 
-        DomainTask {
+        Task {
             id: model.id,
             list_id: model.list_id,
             text: model.text,
@@ -248,12 +245,10 @@ impl TaskRepository {
         }
     }
 
-    fn completion_to_domain(model: TaskCompletionModel) -> DomainTaskCompletion {
-        DomainTaskCompletion {
+    fn completion_to_domain(model: TaskCompletionModel) -> TaskCompletion {
+        TaskCompletion {
             task_id: model.task_id,
             date: model.date,
         }
     }
 }
-
-// TODO REVIEW
