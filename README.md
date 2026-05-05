@@ -1,35 +1,87 @@
-# ToDo App
+# 🍮 PudimProductivity
 
-## Project Idea
-1. Simple App with the following types of To Do lists:
-    - Daily (To Do tasks that refresh everyday, for routines or habit-making)
-    - Regular To Dos (Things that need to be done, once checked, that's it)
-    - List of lists (To support categorized lists. E.g: Shopping lists, project ideas, etc)
+A full‑stack personal productivity platform — task management, habit tracking, focus timers, meal planning, book tracking, smart scheduling, collaboration, and AI‑powered insights.
 
-2. App must be accessible through Web (for computer usage) and Android.
-    - It must be able to sync between clients, even with async changes
-    - Ideally, for Android, it should also have widgets for easy to use
+## Architecture
 
-3. The project is meant to be hosted in a local server, accessible over LAN.
-    - Since the server won't always be available (e.g. left home), it must be capable of storing changes locally and then syncing when in LAN
-    - Other clients must be able to be updated with the synced changes, even if done at different times
+```
+pudimproductivity/
+├── backend/          # Go (Chi, pgx, RabbitMQ, OpenTelemetry)
+├── web/              # React + TypeScript (Vite, React Query)
+├── mobile/           # Android (Kotlin, Jetpack Compose)
+├── api/              # OpenAPI specs
+├── infra/            # Terraform (AWS EKS + RDS)
+└── .github/          # CI/CD workflows
+```
 
-4. UX must be easy to use in both platforms, and configurable:
-    - Showing checked or disappearing with them must be configurable per list type
-    - For dailys, should have some simple plots, like a graph or a linked list showing how often daily tasks were done, and streaks
-    - Daily must be configurable by days of the week where they will refresh (e.g. Won't bike on weekends)
+- **Modular monolith**: bounded contexts in `backend/internal/` — no cross‑imports.
+- **Ports & adapters**: domain interfaces, Postgres implementations.
+- **Event‑driven**: in‑memory bus (Phase 2) → RabbitMQ (Phase 3).
+- **API‑first**: all endpoints defined in `api/openapi/*.yaml`.
 
-5. Future functionalities
-    - Pomodoro functionality for focus sessions
-    - White noise options for the same reason
-    - Pomodoro can use white noises (e.g. noise runs when focusing, and stops when timer's up)
+## Quick Start
 
-## Stack
-- Stack will be React (front), Rust + Axum (backend), and Kotlin (Android)
-    - Considered using React Native, but dedicated Kotlin App will be more robust, and made more sense since Widgets are a requirement
+### Prerequisites
 
-## Concerns
-- How to store async changes offline in Android version (no backend)?
-- Will need to define a conflict resolution approach
-- Show/hide approach will cause all old tasks to be saved, even if not shown (maybe add some compaction)?
-- Pomodoro and white noises will not connect to tasks, so implementation should be independent
+- Go 1.22+
+- Node 18+
+- Docker & Docker Compose
+
+### 1. Start infrastructure
+
+```bash
+docker compose up -d
+```
+
+This starts PostgreSQL (port 5432) and RabbitMQ (ports 5672, 15672).
+
+### 2. Start the backend
+
+```bash
+cd backend
+go run ./cmd/server/
+```
+
+Health check: [http://localhost:8080/api/v1/health](http://localhost:8080/api/v1/health)
+
+### 3. Start the web frontend
+
+```bash
+cd web
+npm install
+npm run dev
+```
+
+Opens at [http://localhost:3000](http://localhost:3000) — proxies `/api` to the backend.
+
+### 4. Mobile (Android)
+
+Open `mobile/` in Android Studio, sync Gradle, and run on an emulator.
+The app connects to `http://10.0.2.2:8080/api/v1` (Android emulator loopback).
+
+## Development
+
+### Backend
+
+```bash
+cd backend
+go test ./... -v -race
+go build ./cmd/server/
+```
+
+### Web
+
+```bash
+cd web
+npm run lint        # ESLint
+npm run typecheck   # TypeScript
+npm run build       # Production build
+```
+
+### API Specs
+
+All OpenAPI specs live in `api/openapi/`. They are the source of truth for client‑server contracts.
+
+## License
+
+MIT
