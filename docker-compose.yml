@@ -33,6 +33,21 @@ services:
       timeout: 5s
       retries: 5
 
+  backend:
+    build:
+      context: ./backend
+    container_name: pudim-backend
+    environment:
+      PORT: "8080"
+      DATABASE_URL: "postgres://pudim:pudim_dev@postgres:5432/pudimproductivity?sslmode=disable"
+      LOG_LEVEL: "debug"
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 volumes:
   pgdata:
   rabbitmqdata:
+
