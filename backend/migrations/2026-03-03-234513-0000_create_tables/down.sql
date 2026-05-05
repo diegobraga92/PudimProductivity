@@ -1,0 +1,3 @@
+DROP TABLE IF EXISTS task_completions;
+DROP TABLE IF EXISTS tasks;
+DROP TABLE IF EXISTS lists;

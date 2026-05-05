@@ -1,5 +1,4 @@
 mod api;
-mod application;
 mod domain;
 mod infrastructure;
 
@@ -9,10 +8,11 @@ use tokio::net::TcpListener;
 
 #[tokio::main]
 async fn main() {
-    // Initialize DB
-    let pool = init_db("sqlite://todo.db").await;
+    dotenvy::dotenv().ok();
 
-    let state = AppState { pool };
+    let pool = init_db().expect("Failed to create DB pool");
+
+    let state = AppState::new(pool);
     let app = create_router(state);
 
     // Bind listener
@@ -24,3 +24,5 @@ async fn main() {
 
     axum::serve(listener, app).await.expect("Server failed");
 }
+// TODO
+// TODO REVIEW

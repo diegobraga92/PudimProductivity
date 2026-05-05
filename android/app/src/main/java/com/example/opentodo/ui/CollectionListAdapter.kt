@@ -36,3 +36,4 @@ class CollectionListAdapter(
         holder.itemView.setOnClickListener { onClick(collection) }
     }
 }
+// TODO

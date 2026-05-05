@@ -1,50 +1,5 @@
 # Domain Model
 
-## User
-Represents a person using the system.
-
-Responsibilities:
-- Owns lists
-- Owns tasks indirectly
-- Manages sync across devices
-
-Attributes:
-- id
-- email
-
----
-
-## List
-A logical container owned by a user.
-
-Depending on its type, a list may contain tasks or other lists.
-
-Types:
-- todo: contains regular tasks (once checked, done)
-- daily: derives tasks for the current day, refreshes daily for routines/habits
-- collection: groups other lists for categorization
-
-Rules:
-- A list belongs to one user
-- A todo or daily list contains tasks
-- A collection list contains other lists
-- A list may belong to at most one collection
-- Daily lists can be configured by days of the week (e.g., exclude weekends)
-
-Attributes:
-- id
-- userId
-- name
-- type
-- config (JSON): Configuration settings per list type
-  - For daily lists: daysOfWeek, showCompleted, analyticsEnabled
-  - For todo lists: showCompleted, autoArchive
-  - For collection lists: displayStyle
-
-Behavior:
-- daily.refresh(): Generates today's tasks based on recurrence patterns and day-of-week configuration
-- daily.getAnalytics(): Returns completion streaks and frequency statistics
-
 ---
 
 ## Task
@@ -52,64 +7,65 @@ A unit of work.
 
 Rules:
 - A task belongs to exactly one list
-- A task can be completed or pending
-- A task may have a due date
-- A task may recur (for daily lists)
-- Completed tasks can be shown or hidden based on list configuration
+- Task completion ("done") is defined by TaskCompletions
+- A task may repeat (for daily tasks)
+- Tasks are immutable in recurrence behavior. A change in 'days_of_week' must generate a new task, preserving history
+- A change in recurrence must "soft-delete" a task (mark as deleted_at)
+- A task is active if deleted_at is NULL
+- days_of_week must contain at least one day when not NULL
 
 Attributes:
-- id
-- listId
-- title
-- completed
-- order
-- dueDate?
-- recurrence? (e.g., daily, weekly, custom)
-- completedAt? (timestamp for analytics)
-- streakCount? (for daily tasks)
-
-Behavior:
-- complete()
-- reopen()
-- reschedule()
-- updateStreak(): Updates streak count for daily tasks
+- id 
+- list_id 
+- text 
+- days_of_week (NULL if non-repeatable, else: int[] (0-6))
+- created_at 
+- deleted_at (NULL)
 
 ---
 
-## SyncState (NEW)
-Tracks synchronization status for offline-first operation.
+## TaskCompletions
+Used to track completion events for all tasks
 
-Responsibilities:
-- Manages local changes pending sync
-- Handles conflict resolution
-- Tracks last sync timestamp
+Rules:
+- Each completion belongs to one task
+- Task + Date are to be used as unique identifiers, and cannot be repeated across completions
+- TaskCompletions are created when a task is marked as "done", and deleted when marked as "not done" again
+- If task's days_of_week is NULL, it can only have 1 Task Completion at most
+- Completions can only be created for active tasks
+- Date hold the effective date, meaning the day when the completion applies to (e.g. date of the recurring task)
+- For non-recurring tasks (days_of_week IS NULL), date is always set to the current user-local date
+- For recurring tasks (days_of_week NOT NULL), Date must be provided AND must match the task's days_of_week
 
 Attributes:
-- entityId (references User/List/Task)
-- entityType
-- localVersion
-- serverVersion
-- pendingChanges (JSON)
-- lastSyncedAt
-- syncStatus (pending, synced, conflicted)
-
-Behavior:
-- markForSync()
-- resolveConflict()
-- applyRemoteChanges()
+- task_id
+- date (user-local date, without timezone to minimize complexity and avoid conflicts)
 
 ---
 
-## AndroidWidget (NEW)
-Represents Android home screen widget configuration.
+## List
+Depending on its type, a list may contain tasks or other lists.
+
+Types:
+- todo: contains regular tasks. One fixed list for regular tasks.
+- daily: displays recurring tasks, which refresh according to days_of_week. One fixed list for daily tasks.
+- collection: groups other lists for categorization. Lists can be 'todo' or 'daily'
+
+Rules:
+- A todo or daily list contains tasks
+- A collection list contains other lists
+- Tasks in a todo list must have days_of_week = NULL
+- Tasks in a daily list must have days_of_week != NULL
+- Daily lists display tasks for a given date in user-local time
+- A list may belong to at most one collection
+- Only collection lists can be parents
+- Only todo and daily list can have parents (parent_id)
 
 Attributes:
 - id
-- userId
-- listId (optional: specific list to display)
-- widgetType (daily, todo, collection)
-- refreshInterval
-- lastUpdated
+- parent_id (NULL if doesn't belong to a collection)
+- name
+- list_type
 
 ---
 
@@ -119,74 +75,32 @@ Attributes:
 
 ```mermaid
 classDiagram
-  User "1" --> "many" List : owns
   List "1" --> "many" Task : contains
-  User "1" --> "many" SyncState : has
-  User "1" --> "many" AndroidWidget : configures
-
-  class User {
-    id
-    email
-  }
+  Task "1" --> "many" TaskCompletions : contains
 
   class List {
     id
-    userId
+    parent_id
     name
-    type
-    config
-    refreshDaily()
-    getAnalytics()
+    list_type
   }
 
   class Task {
     id
-    listId
-    title
-    completed
-    streakCount?
-    dueDate?
-    recurrence?
-    complete()
-    updateStreak()
+    list_id
+    text
+    days_of_week
+    created_at
+    deleted_at
   }
 
-  class SyncState {
-    entityId
-    entityType
-    localVersion
-    serverVersion
-    pendingChanges
-    markForSync()
-    resolveConflict()
-  }
-
-  class AndroidWidget {
-    listId?
-    widgetType
-    refreshInterval
+  class TaskCompletions {
+    task_id
+    date
   }
 ```
 
-### List Configuration
-
-```mermaid
-classDiagram
-  class ListConfig {
-    showCompleted: boolean
-    autoArchive: boolean
-    daysOfWeek: number[]
-    analyticsEnabled: boolean
-    displayStyle: string
-  }
-
-  List "1" --> "1" ListConfig : has
-  TodoList --> ListConfig
-  DailyList --> ListConfig
-  CollectionList --> ListConfig
-```
-
-### Task Lifecycle with Sync
+### TODO: Task Lifecycle with Sync
 
 ```mermaid
 stateDiagram-v2
@@ -194,83 +108,4 @@ stateDiagram-v2
   Pending --> Completed : complete()
   Completed --> Pending : reopen()
   Pending --> Pending : reschedule()
-  
-  state Completed {
-    [*] --> LocalOnly : offline change
-    LocalOnly --> Synced : sync successful
-    Synced --> [*]
-  }
-  
-  state Pending {
-    [*] --> LocalOnly : offline change
-    LocalOnly --> Synced : sync successful
-    Synced --> [*]
-  }
 ```
-
-### Sync Flow
-
-```mermaid
-sequenceDiagram
-  participant Client
-  participant SyncState
-  participant API
-  participant DB
-
-  Client->>SyncState: markForSync()
-  Client->>API: POST /sync (when online)
-  API->>DB: Save changes
-  API->>Client: Return sync result
-  Client->>SyncState: update sync status
-  Note over Client: Apply any conflicts
-```
-
-## Future Concepts
-
-### FocusSession
-Represents a period of focused work.
-
-Notes:
-- Will not be linked to a task
-- Used for Pomodoro and analytics
-- Can be associated with white noise
-
-### PomodoroCycle
-A structured set of focus sessions and breaks.
-
-Notes:
-- Built on top of FocusSession
-- Configurable work/break intervals
-- Can trigger white noise automatically
-
-### WhiteNoise
-Focus-inducing sounds for Pomodoro/Focus Sessions.
-
-Attributes:
-- id
-- name
-- audioUrl
-- duration
-- volumeProfile
-
-Behavior:
-- start()
-- pause()
-- stop()
-- fadeOut()
-
-### Analytics (Enhanced)
-Daily task completion analytics.
-
-Attributes:
-- userId
-- date
-- completedTasks
-- streakCount
-- completionRate
-- bestStreak
-
-Behavior:
-- calculateStreak()
-- generateReport()
-- plotCompletionGraph()

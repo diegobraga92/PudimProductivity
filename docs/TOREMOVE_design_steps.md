@@ -1,8 +1,10 @@
+TODO: Remove this file
+
 # Designing the project and architecture
 
 1. Clarify the problem → shape the domain → define responsibilities → only then pick technology
 
-2. Domain: The subject of the project. WWhat concepts will still exist if the UI, framework, or platform changes?
+2. Domain: The subject of the project. What concepts will still exist if the UI, framework, or platform changes?
     e.g.:
     - User
     - Task
@@ -118,3 +120,4 @@ stateDiagram-v2
   Pending --> Completed : complete()
   Completed --> Pending : reopen()
 ```
+<!-- TODO -->

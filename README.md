@@ -33,6 +33,3 @@
 - Will need to define a conflict resolution approach
 - Show/hide approach will cause all old tasks to be saved, even if not shown (maybe add some compaction)?
 - Pomodoro and white noises will not connect to tasks, so implementation should be independent
-
-# Future Plans
-- Add MealPlanner, and BookTracker capabilities

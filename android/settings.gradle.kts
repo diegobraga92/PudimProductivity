@@ -16,3 +16,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "OpenToDoApp-Android"
 include(":app")
+// TODO
