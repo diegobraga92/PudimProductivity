@@ -51,7 +51,7 @@ fun HealthScreen() {
 
     Column(modifier = Modifier.padding(24.dp)) {
         Text(
-            text = "🍮 PudimProductivity",
+            text = "PudimProductivity",
             style = MaterialTheme.typography.headlineLarge
         )
 
@@ -86,7 +86,7 @@ fun HealthScreen() {
             }
             error != null -> {
                 Text(
-                    text = "❌ Error: $error",
+                    text = "Error: $error",
                     color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.padding(top = 8.dp)
                 )

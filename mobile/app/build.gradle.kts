@@ -14,7 +14,7 @@ android {
         versionCode = 1
         versionName = "0.0.1"
 
-        // Backend URL — override via local.properties or build config.
+        // Backend URL, override via local.properties or build config.
         buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:8080/api/v1\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -57,7 +57,7 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
 
-    // Networking — Retrofit + OkHttp
+    // Networking: Retrofit + OkHttp
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
     implementation("com.squareup.retrofit2:converter-gson:2.11.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
