@@ -6,7 +6,6 @@ import (
 	"time"
 )
 
-// Config holds all configuration for the backend service.
 type Config struct {
 	Port            int
 	DatabaseURL     string
@@ -14,7 +13,6 @@ type Config struct {
 	LogLevel        string
 }
 
-// LoadConfig reads configuration from environment variables with sensible defaults.
 func LoadConfig() Config {
 	return Config{
 		Port:            getEnvInt("PORT", 8080),

@@ -9,7 +9,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// ConnectPool creates a new pgx connection pool and verifies connectivity.
 func ConnectPool(ctx context.Context, databaseURL string) (*pgxpool.Pool, error) {
 	config, err := pgxpool.ParseConfig(databaseURL)
 	if err != nil {
@@ -26,7 +25,6 @@ func ConnectPool(ctx context.Context, databaseURL string) (*pgxpool.Pool, error)
 		return nil, fmt.Errorf("create connection pool: %w", err)
 	}
 
-	// Verify connectivity with a ping.
 	pingCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
