@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -19,8 +20,9 @@ import (
 	"github.com/diegobraga92/pudimproductivity/backend/internal/shared"
 )
 
+var Version = "0.0.1"
+
 func main() {
-	// Initialize structured logger.
 	log.Logger = zerolog.New(zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: time.RFC3339}).
 		With().
 		Timestamp().
@@ -29,16 +31,14 @@ func main() {
 
 	cfg := shared.LoadConfig()
 
-	// Set log level.
 	level, err := zerolog.ParseLevel(cfg.LogLevel)
 	if err != nil {
 		level = zerolog.DebugLevel
 	}
 	zerolog.SetGlobalLevel(level)
 
-	log.Info().Str("version", "0.0.1").Msg("starting PudimProductivity backend")
+	log.Info().Str("version", Version).Msg("starting PudimProductivity backend")
 
-	// Connect to PostgreSQL.
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -48,32 +48,28 @@ func main() {
 		pool = nil
 	}
 
-	// Build router.
 	r := chi.NewRouter()
 
-	// Middleware stack.
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
-	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
-	r.Use(middleware.Timeout(30 * time.Second))
+	r.Use(requestLogger)
+	r.Use(middleware.Timeout(15 * time.Second))
 
-	// Health endpoint.
 	r.Get("/api/v1/health", healthHandler(pool))
 
-	// Start server.
 	addr := fmt.Sprintf(":%d", cfg.Port)
 	srv := &http.Server{
 		Addr:         addr,
 		Handler:      r,
 		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 15 * time.Second,
+		WriteTimeout: 30 * time.Second,
 		IdleTimeout:  60 * time.Second,
 	}
 
-	// Graceful shutdown.
 	shutdownCh := make(chan os.Signal, 1)
 	signal.Notify(shutdownCh, syscall.SIGINT, syscall.SIGTERM)
+	defer signal.Stop(shutdownCh)
 
 	go func() {
 		log.Info().Str("addr", addr).Msg("HTTP server listening")
@@ -82,7 +78,6 @@ func main() {
 		}
 	}()
 
-	// Wait for shutdown signal.
 	sig := <-shutdownCh
 	log.Info().Str("signal", sig.String()).Msg("shutting down gracefully")
 
@@ -101,7 +96,42 @@ func main() {
 	log.Info().Msg("server stopped")
 }
 
-// healthHandler returns an HTTP handler that checks database connectivity.
+func requestLogger(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		wrapped := &responseWriter{ResponseWriter: w, statusCode: http.StatusOK}
+
+		defer func() {
+			log.Info().
+				Str("request_id", middleware.GetReqID(r.Context())).
+				Str("method", r.Method).
+				Str("path", r.URL.Path).
+				Int("status", wrapped.statusCode).
+				Dur("duration", time.Since(start)).
+				Str("remote", r.RemoteAddr).
+				Msg("request completed")
+		}()
+
+		next.ServeHTTP(wrapped, r)
+	})
+}
+
+type responseWriter struct {
+	http.ResponseWriter
+	statusCode int
+}
+
+func (rw *responseWriter) WriteHeader(code int) {
+	rw.statusCode = code
+	rw.ResponseWriter.WriteHeader(code)
+}
+
+type HealthResponse struct {
+	Status  string `json:"status"`
+	Version string `json:"version"`
+	DB      string `json:"db"`
+}
+
 func healthHandler(pool *pgxpool.Pool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		dbStatus := "connected"
@@ -126,6 +156,10 @@ func healthHandler(pool *pgxpool.Pool) http.HandlerFunc {
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(statusCode)
-		fmt.Fprintf(w, `{"status":"%s","version":"0.0.1","db":"%s"}`+"\n", overallStatus, dbStatus)
+		json.NewEncoder(w).Encode(HealthResponse{
+			Status:  overallStatus,
+			Version: Version,
+			DB:      dbStatus,
+		})
 	}
 }
