@@ -1,0 +1,277 @@
+openapi: "3.0.3"
+info:
+  title: PudimProductivity Tasks API
+  description: Task CRUD operations for the PudimProductivity platform.
+  version: "0.1.0"
+  contact:
+    name: PudimProductivity Team
+    url: https://github.com/diegobraga92/PudimProductivity
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+
+paths:
+  /api/v1/tasks:
+    get:
+      operationId: listTasks
+      summary: List all tasks
+      description: Returns a list of tasks, optionally filtered by status or priority.
+      tags:
+        - Tasks
+      parameters:
+        - name: status
+          in: query
+          description: Filter by task status
+          required: false
+          schema:
+            $ref: "#/components/schemas/TaskStatus"
+        - name: priority
+          in: query
+          description: Filter by task priority
+          required: false
+          schema:
+            $ref: "#/components/schemas/TaskPriority"
+      responses:
+        "200":
+          description: A list of tasks.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Task"
+
+    post:
+      operationId: createTask
+      summary: Create a new task
+      description: Creates a new task with the provided details.
+      tags:
+        - Tasks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTaskRequest"
+      responses:
+        "201":
+          description: Task created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "400":
+          description: Invalid request body.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/tasks/{taskId}:
+    get:
+      operationId: getTask
+      summary: Get a task by ID
+      description: Returns a single task by its unique identifier.
+      tags:
+        - Tasks
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          description: The UUID of the task
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Task found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "404":
+          description: Task not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    put:
+      operationId: updateTask
+      summary: Update a task
+      description: Updates an existing task with the provided fields.
+      tags:
+        - Tasks
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          description: The UUID of the task
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTaskRequest"
+      responses:
+        "200":
+          description: Task updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "400":
+          description: Invalid request body.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Task not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    delete:
+      operationId: deleteTask
+      summary: Delete a task
+      description: Deletes a task by its unique identifier.
+      tags:
+        - Tasks
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          description: The UUID of the task
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Task deleted successfully.
+        "404":
+          description: Task not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  schemas:
+    TaskStatus:
+      type: string
+      enum: [todo, in_progress, done]
+      description: The current status of the task.
+      example: todo
+
+    TaskPriority:
+      type: string
+      enum: [low, medium, high]
+      description: The priority level of the task.
+      example: medium
+
+    Task:
+      type: object
+      required:
+        - id
+        - title
+        - status
+        - priority
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the task.
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        title:
+          type: string
+          description: The task title.
+          example: "Buy groceries"
+        description:
+          type: string
+          nullable: true
+          description: Optional detailed description.
+          example: "Milk, eggs, bread, and butter"
+        status:
+          $ref: "#/components/schemas/TaskStatus"
+        priority:
+          $ref: "#/components/schemas/TaskPriority"
+        due_date:
+          type: string
+          format: date-time
+          nullable: true
+          description: Optional due date in RFC3339 format.
+          example: "2026-05-10T23:59:59Z"
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the task was created.
+          example: "2026-05-07T10:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          description: Timestamp when the task was last updated.
+          example: "2026-05-07T10:30:00Z"
+
+    CreateTaskRequest:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+          description: The task title.
+          example: "Buy groceries"
+        description:
+          type: string
+          nullable: true
+          description: Optional detailed description.
+          example: "Milk, eggs, bread, and butter"
+        priority:
+          $ref: "#/components/schemas/TaskPriority"
+        due_date:
+          type: string
+          format: date-time
+          nullable: true
+          description: Optional due date in RFC3339 format.
+          example: "2026-05-10T23:59:59Z"
+
+    UpdateTaskRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          description: The task title.
+          example: "Buy groceries and snacks"
+        description:
+          type: string
+          nullable: true
+          description: Optional detailed description.
+          example: "Milk, eggs, bread, butter, and chips"
+        status:
+          $ref: "#/components/schemas/TaskStatus"
+        priority:
+          $ref: "#/components/schemas/TaskPriority"
+        due_date:
+          type: string
+          format: date-time
+          nullable: true
+          description: Optional due date in RFC3339 format.
+          example: "2026-05-12T23:59:59Z"
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: A human-readable error message.
+          example: "Task not found"
