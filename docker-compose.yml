@@ -1,22 +1,53 @@
 services:
-  backend:
-    image: ghcr.io/diegobraga92/opentodo-backend:latest
-    container_name: opentodo-backend
+  postgres:
+    image: postgres:16-alpine
+    container_name: pudim-postgres
+    environment:
+      POSTGRES_USER: pudim
+      POSTGRES_PASSWORD: pudim_dev
+      POSTGRES_DB: pudimproductivity
     ports:
-      - "3000:3000"
+      - "5433:5432"
     volumes:
-      - backend_data:/app
-    restart: unless-stopped
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pudim -d pudimproductivity"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
-  web:
-    image: ghcr.io/diegobraga92/opentodo-web:latest
-    container_name: opentodo-web
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    container_name: pudim-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: pudim
+      RABBITMQ_DEFAULT_PASS: pudim_dev
     ports:
-      - "80:80"
+      - "5672:5672"   # AMQP
+      - "15672:15672" # Management UI
+    volumes:
+      - rabbitmqdata:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+    container_name: pudim-backend
+    environment:
+      PORT: "8080"
+      DATABASE_URL: "postgres://pudim:pudim_dev@postgres:5432/pudimproductivity?sslmode=disable"
+      LOG_LEVEL: "debug"
+    ports:
+      - "8080:8080"
     depends_on:
-      - backend
-    restart: unless-stopped
+      postgres:
+        condition: service_healthy
 
 volumes:
-  backend_data:
-# TODO
+  pgdata:
+  rabbitmqdata:
+

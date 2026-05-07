@@ -1,28 +1,26 @@
-FROM rust:1.86-bookworm AS builder
+# Stage 1: Build
+FROM golang:1.25-alpine AS builder
 
-WORKDIR /app/backend
+RUN apk add --no-cache git ca-certificates
 
-COPY backend/Cargo.toml ./Cargo.toml
-COPY backend/src ./src
+WORKDIR /build
 
-RUN cargo install diesel_cli --no-default-features --features postgres
+COPY go.mod go.sum ./
+RUN go mod download
 
-RUN cargo build --release
+COPY . .
 
-FROM debian:bookworm-slim
+RUN CGO_ENABLED=0 GOOS=linux go build -o /build/server ./cmd/server
+
+# Stage 2: Runtime
+FROM alpine:3.19
+
+RUN apk add --no-cache ca-certificates tzdata
 
 WORKDIR /app
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-        ca-certificates \
-        postgresql-client \
-        libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
+COPY --from=builder /build/server .
 
-COPY --from=builder /app/backend/target/release/backend /usr/local/bin/backend
-COPY --from=builder /usr/local/cargo/bin/diesel /usr/local/bin/diesel
+EXPOSE 8080
 
-EXPOSE 3000
-
-CMD ["backend"]
+CMD ["./server"]

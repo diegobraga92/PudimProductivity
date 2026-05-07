@@ -1,0 +1,58 @@
+openapi: "3.0.3"
+info:
+  title: PudimProductivity Health API
+  description: Health check endpoint for the PudimProductivity platform.
+  version: "0.0.1"
+  contact:
+    name: PudimProductivity Team
+    url: https://github.com/diegobraga92/PudimProductivity
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+
+paths:
+  /api/v1/health:
+    get:
+      operationId: getHealth
+      summary: Health check
+      description: Returns the health status of the backend service, including database connectivity.
+      tags:
+        - Health
+      responses:
+        "200":
+          description: Service is healthy.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+        "503":
+          description: Service is unhealthy (e.g., database down).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - version
+        - db
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded, down]
+          description: Overall service status.
+          example: ok
+        version:
+          type: string
+          description: Application version.
+          example: "0.0.1"
+        db:
+          type: string
+          enum: [connected, disconnected]
+          description: Database connectivity status.
+          example: connected

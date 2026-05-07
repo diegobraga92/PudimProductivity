@@ -1,9 +1,65 @@
-# Ignore toolchain outputs globally
-backend/target/
-web/node_modules/
-android/.gradle/
-todo.db
-
 # OS
 .DS_Store
 Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.sublime-*
+
+# Go
+backend/vendor/
+backend/bin/
+*.exe
+*.test
+*.out
+backend/coverage.out
+
+# Node / Web
+web/node_modules/
+web/dist/
+web/.env.local
+web/.env.*.local
+
+# Android / Mobile
+mobile/.gradle/
+mobile/build/
+mobile/app/build/
+mobile/local.properties
+mobile/captures/
+mobile/.externalNativeBuild/
+mobile/.cxx/
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+bin/
+gen/
+out/
+*.log
+
+# Terraform
+infra/terraform/.terraform/
+infra/terraform/*.tfstate
+infra/terraform/*.tfstate.*
+infra/terraform/crash.log
+infra/terraform/override.tf
+infra/terraform/override.tf.json
+infra/terraform/.terraform.lock.hcl
+
+# Docker
+docker-data/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Misc
+*.log
+tmp/

@@ -1,24 +1,36 @@
-# Rust build output
-target/
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+*.test
+server
+tmp/
 
-# Cargo lock (keep for binaries, optional for libraries)
-Cargo.lock
+# Go workspace
+go.work
+go.work.sum
 
-# SQLite database files
-*.db
-*.db-shm
-*.db-wal
+# Dependency directories
+vendor/
 
-# Logs
-*.log
-
-# OS files
-.DS_Store
-Thumbs.db
+# Build output
+bin/
+dist/
 
 # IDE
 .idea/
 .vscode/
+*.swp
+*.swo
 
-# Environment variables
+# Environment
 .env
+.env.local
+
+# Coverage
+coverage.out
+coverage.html
