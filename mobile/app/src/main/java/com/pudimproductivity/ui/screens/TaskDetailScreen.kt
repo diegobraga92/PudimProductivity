@@ -1,22 +1,45 @@
 package com.pudimproductivity.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.pudimproductivity.api.ApiClient
 import com.pudimproductivity.api.Task
+import com.pudimproductivity.api.TaskCompletion
 import com.pudimproductivity.api.UpdateTaskRequest
 import kotlinx.coroutines.launch
+import java.time.DayOfWeek
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
-@OptIn(ExperimentalMaterial3Api::class)
+private val DAY_ORDER = listOf("mon", "tue", "wed", "thu", "fri", "sat", "sun")
+private val DAY_LABELS = mapOf(
+    "mon" to "Monday", "tue" to "Tuesday", "wed" to "Wednesday",
+    "thu" to "Thursday", "fri" to "Friday", "sat" to "Saturday", "sun" to "Sunday"
+)
+private val DAY_SHORT = mapOf(
+    "mon" to "Mon", "tue" to "Tue", "wed" to "Wed",
+    "thu" to "Thu", "fri" to "Fri", "sat" to "Sat", "sun" to "Sun"
+)
+
+private fun getWeekDates(): List<String> {
+    val today = LocalDate.now()
+    val monday = today.with(DayOfWeek.MONDAY)
+    return (0..6).map { monday.plusDays(it.toLong()).format(DateTimeFormatter.ISO_LOCAL_DATE) }
+}
+
+private fun getDayName(dateStr: String): String {
+    val date = LocalDate.parse(dateStr)
+    val dayIndex = (date.dayOfWeek.value + 6) % 7
+    return DAY_ORDER[dayIndex]
+}
+
 @Composable
 fun TaskDetailScreen(
     taskId: String,
@@ -24,360 +47,309 @@ fun TaskDetailScreen(
     onDeleted: () -> Unit,
     onBack: () -> Unit
 ) {
+    val scope = rememberCoroutineScope()
     var task by remember { mutableStateOf<Task?>(null) }
+    var completions by remember { mutableStateOf<List<TaskCompletion>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
     var isEditing by remember { mutableStateOf(false) }
-
-    // Edit state
     var editTitle by remember { mutableStateOf("") }
-    var editDescription by remember { mutableStateOf("") }
-    var editStatus by remember { mutableStateOf("todo") }
-    var editPriority by remember { mutableStateOf("medium") }
-    var editDueDate by remember { mutableStateOf("") }
 
-    val scope = rememberCoroutineScope()
-
-    LaunchedEffect(taskId) {
-        isLoading = true
-        try {
-            task = ApiClient.taskService.getTask(taskId)
-        } catch (e: Exception) {
-            error = e.message ?: "Failed to load task"
-        } finally {
-            isLoading = false
+    fun loadTask() {
+        scope.launch {
+            isLoading = true
+            error = null
+            try {
+                task = ApiClient.taskService.getTask(taskId)
+                // Load completions if habit
+                val t = task
+                if (t != null && t.recurrence_days != null && t.recurrence_days.isNotEmpty()) {
+                    val weekDates = getWeekDates()
+                    completions = ApiClient.taskService.getTaskCompletions(
+                        taskId, weekDates.first(), weekDates.last()
+                    )
+                }
+            } catch (e: Exception) {
+                error = e.message ?: "Failed to load task"
+            } finally {
+                isLoading = false
+            }
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Task Details") },
-                navigationIcon = {
-                    TextButton(onClick = onBack) {
-                        Text("Back")
-                    }
-                },
-                actions = {
-                    if (task != null && !isEditing) {
-                        TextButton(onClick = {
-                            task?.let {
-                                editTitle = it.title
-                                editDescription = it.description ?: ""
-                                editStatus = it.status
-                                editPriority = it.priority
-                                editDueDate = it.due_date?.take(16) ?: ""
-                                isEditing = true
-                            }
-                        }) {
-                            Text("Edit")
-                        }
-                        TextButton(onClick = {
+    LaunchedEffect(Unit) {
+        loadTask()
+    }
+
+    val isHabit = task?.recurrence_days != null && task?.recurrence_days?.isNotEmpty() == true
+    val completedDates = completions.map { it.completed_date }.toSet()
+    val weekDates = getWeekDates()
+
+    when {
+        isLoading -> {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        }
+        error != null -> {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = "Error: $error",
+                    color = MaterialTheme.colorScheme.error
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(onClick = { loadTask() }) {
+                    Text("Retry")
+                }
+                OutlinedButton(onClick = onBack) {
+                    Text("Back")
+                }
+            }
+        }
+        task != null && isEditing -> {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = "Edit Task",
+                    style = MaterialTheme.typography.headlineMedium
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+
+                OutlinedTextField(
+                    value = editTitle,
+                    onValueChange = { editTitle = it },
+                    label = { Text("Title") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = {
+                            if (editTitle.isBlank()) return@Button
                             scope.launch {
                                 try {
-                                    ApiClient.taskService.deleteTask(taskId)
-                                    onDeleted()
-                                } catch (e: Exception) {
-                                    error = e.message ?: "Failed to delete task"
+                                    ApiClient.taskService.updateTask(
+                                        taskId,
+                                        UpdateTaskRequest(title = editTitle.trim())
+                                    )
+                                    isEditing = false
+                                    loadTask()
+                                    onUpdated()
+                                } catch (_: Exception) { }
+                            }
+                        }
+                    ) {
+                        Text("Save")
+                    }
+                    OutlinedButton(onClick = { isEditing = false }) {
+                        Text("Cancel")
+                    }
+                }
+            }
+        }
+        task != null -> {
+            val t = task!!
+            Column(modifier = Modifier.padding(16.dp)) {
+                // Top bar
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    OutlinedButton(onClick = onBack) {
+                        Text("← Back")
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            onClick = {
+                                editTitle = t.title
+                                isEditing = true
+                            }
+                        ) {
+                            Text("Edit")
+                        }
+                        Button(
+                            onClick = {
+                                scope.launch {
+                                    try {
+                                        ApiClient.taskService.deleteTask(taskId)
+                                        onDeleted()
+                                    } catch (_: Exception) { }
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.error
+                            )
+                        ) {
+                            Text("Delete")
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Title
+                Text(
+                    text = t.title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    textDecoration = if (t.status == "done")
+                        TextDecoration.LineThrough
+                    else
+                        TextDecoration.None,
+                    color = if (t.status == "done")
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    else
+                        MaterialTheme.colorScheme.onSurface
+                )
+
+                // Habit badge
+                if (isHabit) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Habit · ${t.recurrence_days?.joinToString(", ") { DAY_LABELS[it] ?: it }}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // One-off toggle
+                if (!isHabit) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.clickable {
+                            scope.launch {
+                                try {
+                                    val newStatus = if (t.status == "done") "todo" else "done"
+                                    ApiClient.taskService.updateTask(
+                                        taskId,
+                                        UpdateTaskRequest(status = newStatus)
+                                    )
+                                    loadTask()
+                                    onUpdated()
+                                } catch (_: Exception) { }
+                            }
+                        }
+                    ) {
+                        Checkbox(
+                            checked = t.status == "done",
+                            onCheckedChange = {
+                                scope.launch {
+                                    try {
+                                        val newStatus = if (t.status == "done") "todo" else "done"
+                                        ApiClient.taskService.updateTask(
+                                            taskId,
+                                            UpdateTaskRequest(status = newStatus)
+                                        )
+                                        loadTask()
+                                        onUpdated()
+                                    } catch (_: Exception) { }
                                 }
                             }
-                        }) {
-                            Text("Delete", color = MaterialTheme.colorScheme.error)
-                        }
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = if (t.status == "done") "Mark as todo" else "Mark as done"
+                        )
                     }
                 }
-            )
-        }
-    ) { padding ->
-        when {
-            isLoading -> {
-                Box(
-                    modifier = Modifier.fillMaxSize().padding(padding),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
-                }
-            }
-            error != null -> {
-                Box(
-                    modifier = Modifier.fillMaxSize().padding(padding),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Error: $error", color = MaterialTheme.colorScheme.error)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Button(onClick = onBack) { Text("Back") }
-                    }
-                }
-            }
-            task == null -> {
-                Box(
-                    modifier = Modifier.fillMaxSize().padding(padding),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("Task not found")
-                }
-            }
-            isEditing -> {
-                EditTaskContent(
-                    task = task!!,
-                    editTitle = editTitle,
-                    editDescription = editDescription,
-                    editStatus = editStatus,
-                    editPriority = editPriority,
-                    editDueDate = editDueDate,
-                    onTitleChange = { editTitle = it },
-                    onDescriptionChange = { editDescription = it },
-                    onStatusChange = { editStatus = it },
-                    onPriorityChange = { editPriority = it },
-                    onDueDateChange = { editDueDate = it },
-                    onSave = {
-                        scope.launch {
-                            try {
-                                ApiClient.taskService.updateTask(
-                                    taskId,
-                                    UpdateTaskRequest(
-                                        title = editTitle.trim(),
-                                        description = editDescription.trim().ifEmpty { null },
-                                        status = editStatus,
-                                        priority = editPriority,
-                                        due_date = editDueDate.ifEmpty { null }
+
+                // Habit weekly calendar
+                if (isHabit) {
+                    Text(
+                        text = "This Week",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    weekDates.forEach { date ->
+                        val dayName = getDayName(date)
+                        val isScheduled = t.recurrence_days?.contains(dayName) == true
+                        val isCompleted = date in completedDates
+                        val isToday = date == LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
+
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 2.dp),
+                            shape = MaterialTheme.shapes.small,
+                            color = when {
+                                isCompleted -> MaterialTheme.colorScheme.primaryContainer
+                                isScheduled -> MaterialTheme.colorScheme.tertiaryContainer
+                                else -> MaterialTheme.colorScheme.surfaceVariant
+                            },
+                            onClick = {
+                                if (isScheduled || isCompleted) {
+                                    scope.launch {
+                                        try {
+                                            if (isCompleted) {
+                                                ApiClient.taskService.uncompleteTask(taskId)
+                                            } else {
+                                                ApiClient.taskService.completeTask(taskId)
+                                            }
+                                            loadTask()
+                                        } catch (_: Exception) { }
+                                    }
+                                }
+                            }
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = DAY_SHORT[dayName] ?: "",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = if (isToday) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal
                                     )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = date.substring(5),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Text(
+                                    text = when {
+                                        isCompleted -> "✓ Completed"
+                                        isScheduled -> "○ Pending"
+                                        else -> "—"
+                                    },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = when {
+                                        isCompleted -> MaterialTheme.colorScheme.primary
+                                        isScheduled -> MaterialTheme.colorScheme.onTertiaryContainer
+                                        else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                    }
                                 )
-                                task = ApiClient.taskService.getTask(taskId)
-                                isEditing = false
-                                onUpdated()
-                            } catch (e: Exception) {
-                                error = e.message ?: "Failed to update task"
                             }
                         }
-                    },
-                    onCancel = { isEditing = false },
-                    modifier = Modifier.padding(padding)
-                )
-            }
-            else -> {
-                TaskDetailContent(
-                    task = task!!,
-                    modifier = Modifier.padding(padding)
-                )
-            }
-        }
-    }
-}
+                    }
+                }
 
-@Composable
-private fun TaskDetailContent(
-    task: Task,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(16.dp)
-            .verticalScroll(rememberScrollState())
-    ) {
-        Text(
-            text = task.title,
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold
-        )
+                Spacer(modifier = Modifier.height(16.dp))
 
-        if (task.description != null) {
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = task.description,
-                color = Color.DarkGray,
-                lineHeight = 22.sp
-            )
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Status
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Status: ", fontWeight = FontWeight.Bold)
-            val statusColor = when (task.status) {
-                "done" -> Color(0xFF2e7d32)
-                "in_progress" -> Color(0xFFef6c00)
-                else -> Color(0xFF1565c0)
-            }
-            val statusBg = when (task.status) {
-                "done" -> Color(0xFFe8f5e9)
-                "in_progress" -> Color(0xFFfff3e0)
-                else -> Color(0xFFe3f2fd)
-            }
-            Surface(color = statusBg, shape = MaterialTheme.shapes.extraSmall) {
+                // Timestamps
                 Text(
-                    text = task.status.replace("_", " "),
-                    color = statusColor,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    text = "Created: ${t.created_at}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Priority
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Priority: ", fontWeight = FontWeight.Bold)
-            val priorityColor = when (task.priority) {
-                "high" -> Color(0xFFc62828)
-                "medium" -> Color(0xFFef6c00)
-                else -> Color(0xFF2e7d32)
-            }
-            val priorityBg = when (task.priority) {
-                "high" -> Color(0xFFffebee)
-                "medium" -> Color(0xFFfff3e0)
-                else -> Color(0xFFe8f5e9)
-            }
-            Surface(color = priorityBg, shape = MaterialTheme.shapes.extraSmall) {
                 Text(
-                    text = task.priority.uppercase(),
-                    color = priorityColor,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    text = "Updated: ${t.updated_at}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-            }
-        }
-
-        // Due date
-        if (task.due_date != null) {
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Due: ${task.due_date}",
-                fontWeight = FontWeight.Bold
-            )
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Timestamps
-        Text(
-            text = "Created: ${task.created_at}",
-            fontSize = 12.sp,
-            color = Color.Gray
-        )
-        Text(
-            text = "Updated: ${task.updated_at}",
-            fontSize = 12.sp,
-            color = Color.Gray
-        )
-    }
-}
-
-@Composable
-private fun EditTaskContent(
-    task: Task,
-    editTitle: String,
-    editDescription: String,
-    editStatus: String,
-    editPriority: String,
-    editDueDate: String,
-    onTitleChange: (String) -> Unit,
-    onDescriptionChange: (String) -> Unit,
-    onStatusChange: (String) -> Unit,
-    onPriorityChange: (String) -> Unit,
-    onDueDateChange: (String) -> Unit,
-    onSave: () -> Unit,
-    onCancel: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(16.dp)
-            .verticalScroll(rememberScrollState())
-    ) {
-        Text(
-            text = "Edit Task",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        OutlinedTextField(
-            value = editTitle,
-            onValueChange = onTitleChange,
-            label = { Text("Title *") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        OutlinedTextField(
-            value = editDescription,
-            onValueChange = onDescriptionChange,
-            label = { Text("Description") },
-            modifier = Modifier.fillMaxWidth(),
-            minLines = 3,
-            maxLines = 5
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Status
-        Text("Status", style = MaterialTheme.typography.labelLarge)
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            listOf("todo", "in_progress", "done").forEach { s ->
-                FilterChip(
-                    selected = editStatus == s,
-                    onClick = { onStatusChange(s) },
-                    label = { Text(s.replace("_", " ").replaceFirstChar { it.uppercase() }) }
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Priority
-        Text("Priority", style = MaterialTheme.typography.labelLarge)
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            listOf("low", "medium", "high").forEach { p ->
-                FilterChip(
-                    selected = editPriority == p,
-                    onClick = { onPriorityChange(p) },
-                    label = { Text(p.replaceFirstChar { it.uppercase() }) }
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        OutlinedTextField(
-            value = editDueDate,
-            onValueChange = onDueDateChange,
-            label = { Text("Due Date (YYYY-MM-DDTHH:MM)") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Button(
-                onClick = onSave,
-                modifier = Modifier.weight(1f)
-            ) {
-                Text("Save")
-            }
-            OutlinedButton(
-                onClick = onCancel,
-                modifier = Modifier.weight(1f)
-            ) {
-                Text("Cancel")
             }
         }
     }

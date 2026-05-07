@@ -1,8 +1,11 @@
 openapi: "3.0.3"
 info:
   title: PudimProductivity Tasks API
-  description: Task CRUD operations for the PudimProductivity platform.
-  version: "0.1.0"
+  description: |
+    Simple task management — supports both one-off tasks and recurring habits.
+    - One-off tasks have a simple todo/done status.
+    - Habits (tasks with `recurrence_days`) track daily completions via a separate completions resource.
+  version: "0.3.0"
   contact:
     name: PudimProductivity Team
     url: https://github.com/diegobraga92/PudimProductivity
@@ -16,22 +19,16 @@ paths:
     get:
       operationId: listTasks
       summary: List all tasks
-      description: Returns a list of tasks, optionally filtered by status or priority.
+      description: Returns a list of all tasks, optionally filtered by status.
       tags:
         - Tasks
       parameters:
         - name: status
           in: query
-          description: Filter by task status
           required: false
+          description: Filter by task status
           schema:
             $ref: "#/components/schemas/TaskStatus"
-        - name: priority
-          in: query
-          description: Filter by task priority
-          required: false
-          schema:
-            $ref: "#/components/schemas/TaskPriority"
       responses:
         "200":
           description: A list of tasks.
@@ -45,7 +42,7 @@ paths:
     post:
       operationId: createTask
       summary: Create a new task
-      description: Creates a new task with the provided details.
+      description: Creates a new task with the given title and optional recurrence days.
       tags:
         - Tasks
       requestBody:
@@ -100,7 +97,7 @@ paths:
     put:
       operationId: updateTask
       summary: Update a task
-      description: Updates an existing task with the provided fields.
+      description: Updates the title, status, or recurrence days of an existing task.
       tags:
         - Tasks
       parameters:
@@ -161,19 +158,123 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /api/v1/tasks/{taskId}/complete:
+    post:
+      operationId: completeTask
+      summary: Complete a habit for today
+      description: Marks a habit task as completed for the current day.
+      tags:
+        - Tasks
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          description: The UUID of the habit task
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "201":
+          description: Task completed successfully for today.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskCompletion"
+        "400":
+          description: Task is not a habit or already completed today.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Task not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    delete:
+      operationId: uncompleteTask
+      summary: Uncomplete a habit for today
+      description: Removes today's completion for a habit task.
+      tags:
+        - Tasks
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          description: The UUID of the habit task
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Completion removed successfully.
+        "404":
+          description: Task not found or no completion exists for today.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/tasks/{taskId}/completions:
+    get:
+      operationId: getTaskCompletions
+      summary: Get habit completions
+      description: Returns all completions for a habit task within an optional date range.
+      tags:
+        - Tasks
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          description: The UUID of the habit task
+          schema:
+            type: string
+            format: uuid
+        - name: from
+          in: query
+          required: false
+          description: Start date (YYYY-MM-DD). Defaults to 7 days ago.
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          required: false
+          description: End date (YYYY-MM-DD). Defaults to today.
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: A list of task completions.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TaskCompletion"
+        "404":
+          description: Task not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     TaskStatus:
       type: string
-      enum: [todo, in_progress, done]
-      description: The current status of the task.
+      enum: [todo, done]
+      description: Whether the task is still to do or already done.
       example: todo
 
-    TaskPriority:
+    RecurrenceDay:
       type: string
-      enum: [low, medium, high]
-      description: The priority level of the task.
-      example: medium
+      enum: [mon, tue, wed, thu, fri, sat, sun]
+      description: Day of the week abbreviation for habit recurrence.
+      example: mon
 
     Task:
       type: object
@@ -181,7 +282,6 @@ components:
         - id
         - title
         - status
-        - priority
         - created_at
         - updated_at
       properties:
@@ -193,22 +293,15 @@ components:
         title:
           type: string
           description: The task title.
-          example: "Buy groceries"
-        description:
-          type: string
-          nullable: true
-          description: Optional detailed description.
-          example: "Milk, eggs, bread, and butter"
+          example: "Have hair cut"
         status:
           $ref: "#/components/schemas/TaskStatus"
-        priority:
-          $ref: "#/components/schemas/TaskPriority"
-        due_date:
-          type: string
-          format: date-time
-          nullable: true
-          description: Optional due date in RFC3339 format.
-          example: "2026-05-10T23:59:59Z"
+        recurrence_days:
+          type: array
+          description: Days of the week this habit repeats on. null/absent for one-off tasks.
+          items:
+            $ref: "#/components/schemas/RecurrenceDay"
+          example: ["mon", "tue", "thu", "fri"]
         created_at:
           type: string
           format: date-time
@@ -220,6 +313,35 @@ components:
           description: Timestamp when the task was last updated.
           example: "2026-05-07T10:30:00Z"
 
+    TaskCompletion:
+      type: object
+      required:
+        - id
+        - task_id
+        - completed_date
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the completion.
+          example: "660e8400-e29b-41d4-a716-446655440001"
+        task_id:
+          type: string
+          format: uuid
+          description: The UUID of the completed task.
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        completed_date:
+          type: string
+          format: date
+          description: The date this completion is for.
+          example: "2026-05-07"
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the completion was recorded.
+          example: "2026-05-07T10:00:00Z"
+
     CreateTaskRequest:
       type: object
       required:
@@ -228,43 +350,30 @@ components:
         title:
           type: string
           description: The task title.
-          example: "Buy groceries"
-        description:
-          type: string
-          nullable: true
-          description: Optional detailed description.
-          example: "Milk, eggs, bread, and butter"
-        priority:
-          $ref: "#/components/schemas/TaskPriority"
-        due_date:
-          type: string
-          format: date-time
-          nullable: true
-          description: Optional due date in RFC3339 format.
-          example: "2026-05-10T23:59:59Z"
+          example: "Have hair cut"
+        recurrence_days:
+          type: array
+          description: Days of the week for habit recurrence. Omit or set to null for one-off tasks.
+          items:
+            $ref: "#/components/schemas/RecurrenceDay"
+          example: ["mon", "wed", "fri"]
 
     UpdateTaskRequest:
       type: object
       properties:
         title:
           type: string
-          description: The task title.
-          example: "Buy groceries and snacks"
-        description:
-          type: string
-          nullable: true
-          description: Optional detailed description.
-          example: "Milk, eggs, bread, butter, and chips"
+          description: The new task title.
+          example: "Have hair cut and beard trim"
         status:
           $ref: "#/components/schemas/TaskStatus"
-        priority:
-          $ref: "#/components/schemas/TaskPriority"
-        due_date:
-          type: string
-          format: date-time
+        recurrence_days:
+          type: array
+          description: Days of the week for habit recurrence. Set to [] to convert back to one-off.
           nullable: true
-          description: Optional due date in RFC3339 format.
-          example: "2026-05-12T23:59:59Z"
+          items:
+            $ref: "#/components/schemas/RecurrenceDay"
+          example: ["mon", "tue", "thu", "fri"]
 
     ErrorResponse:
       type: object

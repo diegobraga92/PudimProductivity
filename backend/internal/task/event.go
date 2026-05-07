@@ -10,7 +10,8 @@ import (
 var _ shared.DomainEvent = (*TaskCreated)(nil)
 var _ shared.DomainEvent = (*TaskUpdated)(nil)
 var _ shared.DomainEvent = (*TaskDeleted)(nil)
-var _ shared.DomainEvent = (*TaskStatusChanged)(nil)
+var _ shared.DomainEvent = (*TaskCompleted)(nil)
+var _ shared.DomainEvent = (*TaskUncompleted)(nil)
 
 // TaskCreated is emitted when a new task is created.
 type TaskCreated struct {
@@ -25,9 +26,9 @@ func NewTaskCreated(task *Task) *TaskCreated {
 	}
 }
 
-func (e *TaskCreated) EventName() string       { return "task.created" }
-func (e *TaskCreated) AggregateID() string      { return e.Task.ID }
-func (e *TaskCreated) OccurredAt() time.Time    { return e.occurred }
+func (e *TaskCreated) EventName() string    { return "task.created" }
+func (e *TaskCreated) AggregateID() string   { return e.Task.ID }
+func (e *TaskCreated) OccurredAt() time.Time { return e.occurred }
 
 // TaskUpdated is emitted when an existing task is updated.
 type TaskUpdated struct {
@@ -42,9 +43,9 @@ func NewTaskUpdated(task *Task) *TaskUpdated {
 	}
 }
 
-func (e *TaskUpdated) EventName() string       { return "task.updated" }
-func (e *TaskUpdated) AggregateID() string      { return e.Task.ID }
-func (e *TaskUpdated) OccurredAt() time.Time    { return e.occurred }
+func (e *TaskUpdated) EventName() string    { return "task.updated" }
+func (e *TaskUpdated) AggregateID() string   { return e.Task.ID }
+func (e *TaskUpdated) OccurredAt() time.Time { return e.occurred }
 
 // TaskDeleted is emitted when a task is deleted.
 type TaskDeleted struct {
@@ -59,27 +60,44 @@ func NewTaskDeleted(taskID string) *TaskDeleted {
 	}
 }
 
-func (e *TaskDeleted) EventName() string       { return "task.deleted" }
-func (e *TaskDeleted) AggregateID() string      { return e.TaskID }
-func (e *TaskDeleted) OccurredAt() time.Time    { return e.occurred }
+func (e *TaskDeleted) EventName() string    { return "task.deleted" }
+func (e *TaskDeleted) AggregateID() string   { return e.TaskID }
+func (e *TaskDeleted) OccurredAt() time.Time { return e.occurred }
 
-// TaskStatusChanged is emitted when a task's status changes.
-type TaskStatusChanged struct {
-	Task     *Task
-	OldStatus TaskStatus
-	NewStatus TaskStatus
-	occurred  time.Time
+// TaskCompleted is emitted when a habit task is completed for a specific day.
+type TaskCompleted struct {
+	TaskID        string
+	CompletedDate time.Time
+	occurred      time.Time
 }
 
-func NewTaskStatusChanged(task *Task, oldStatus TaskStatus) *TaskStatusChanged {
-	return &TaskStatusChanged{
-		Task:      task,
-		OldStatus: oldStatus,
-		NewStatus: task.Status,
-		occurred:  time.Now().UTC(),
+func NewTaskCompleted(taskID string, completedDate time.Time) *TaskCompleted {
+	return &TaskCompleted{
+		TaskID:        taskID,
+		CompletedDate: completedDate,
+		occurred:      time.Now().UTC(),
 	}
 }
 
-func (e *TaskStatusChanged) EventName() string    { return "task.status_changed" }
-func (e *TaskStatusChanged) AggregateID() string   { return e.Task.ID }
-func (e *TaskStatusChanged) OccurredAt() time.Time { return e.occurred }
+func (e *TaskCompleted) EventName() string    { return "task.completed" }
+func (e *TaskCompleted) AggregateID() string   { return e.TaskID }
+func (e *TaskCompleted) OccurredAt() time.Time { return e.occurred }
+
+// TaskUncompleted is emitted when a habit task completion is undone.
+type TaskUncompleted struct {
+	TaskID        string
+	CompletedDate time.Time
+	occurred      time.Time
+}
+
+func NewTaskUncompleted(taskID string, completedDate time.Time) *TaskUncompleted {
+	return &TaskUncompleted{
+		TaskID:        taskID,
+		CompletedDate: completedDate,
+		occurred:      time.Now().UTC(),
+	}
+}
+
+func (e *TaskUncompleted) EventName() string    { return "task.uncompleted" }
+func (e *TaskUncompleted) AggregateID() string   { return e.TaskID }
+func (e *TaskUncompleted) OccurredAt() time.Time { return e.occurred }

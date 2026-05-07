@@ -1,5 +1,15 @@
 import { useState } from "react";
-import { createTask, type TaskPriority } from "../api/tasks";
+import { createTask, type RecurrenceDay } from "../api/tasks";
+
+const DAY_LABELS: { value: RecurrenceDay; label: string }[] = [
+  { value: "mon", label: "Mon" },
+  { value: "tue", label: "Tue" },
+  { value: "wed", label: "Wed" },
+  { value: "thu", label: "Thu" },
+  { value: "fri", label: "Fri" },
+  { value: "sat", label: "Sat" },
+  { value: "sun", label: "Sun" },
+];
 
 interface TaskCreateProps {
   onCreated: () => void;
@@ -8,11 +18,16 @@ interface TaskCreateProps {
 
 export default function TaskCreate({ onCreated, onCancel }: TaskCreateProps) {
   const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [priority, setPriority] = useState<TaskPriority>("medium");
-  const [dueDate, setDueDate] = useState("");
+  const [isHabit, setIsHabit] = useState(false);
+  const [selectedDays, setSelectedDays] = useState<RecurrenceDay[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const toggleDay = (day: RecurrenceDay) => {
+    setSelectedDays((prev) =>
+      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
+    );
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,13 +38,16 @@ export default function TaskCreate({ onCreated, onCancel }: TaskCreateProps) {
       return;
     }
 
+    if (isHabit && selectedDays.length === 0) {
+      setError("Select at least one day for the habit");
+      return;
+    }
+
     setSubmitting(true);
     try {
       await createTask({
         title: title.trim(),
-        description: description.trim() || null,
-        priority,
-        due_date: dueDate ? new Date(dueDate).toISOString() : null,
+        recurrence_days: isHabit ? selectedDays : undefined,
       });
       onCreated();
     } catch (err) {
@@ -40,13 +58,19 @@ export default function TaskCreate({ onCreated, onCancel }: TaskCreateProps) {
   };
 
   return (
-    <div style={{ maxWidth: "500px", margin: "0 auto", padding: "1rem" }}>
-      <h2>Create Task</h2>
+    <div style={{ maxWidth: "400px", margin: "0 auto", padding: "1rem" }}>
+      <h2>New Task</h2>
 
       <form onSubmit={handleSubmit}>
         <div style={{ marginBottom: "1rem" }}>
-          <label style={{ display: "block", marginBottom: "0.3rem", fontWeight: "bold" }}>
-            Title *
+          <label
+            style={{
+              display: "block",
+              marginBottom: "0.3rem",
+              fontWeight: "bold",
+            }}
+          >
+            What do you need to do?
           </label>
           <input
             type="text"
@@ -57,70 +81,75 @@ export default function TaskCreate({ onCreated, onCancel }: TaskCreateProps) {
               padding: "0.5rem",
               border: "1px solid #ccc",
               borderRadius: "4px",
+              fontSize: "1rem",
             }}
-            placeholder="What needs to be done?"
+            placeholder="e.g. Have hair cut"
             autoFocus
           />
         </div>
 
+        {/* Habit toggle */}
         <div style={{ marginBottom: "1rem" }}>
-          <label style={{ display: "block", marginBottom: "0.3rem", fontWeight: "bold" }}>
-            Description
-          </label>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
+          <label
             style={{
-              width: "100%",
-              padding: "0.5rem",
-              border: "1px solid #ccc",
-              borderRadius: "4px",
-              minHeight: "80px",
-            }}
-            placeholder="Optional details..."
-          />
-        </div>
-
-        <div style={{ marginBottom: "1rem" }}>
-          <label style={{ display: "block", marginBottom: "0.3rem", fontWeight: "bold" }}>
-            Priority
-          </label>
-          <select
-            value={priority}
-            onChange={(e) => setPriority(e.target.value as TaskPriority)}
-            style={{
-              width: "100%",
-              padding: "0.5rem",
-              border: "1px solid #ccc",
-              borderRadius: "4px",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+              cursor: "pointer",
+              fontWeight: "bold",
             }}
           >
-            <option value="low">Low</option>
-            <option value="medium">Medium</option>
-            <option value="high">High</option>
-          </select>
-        </div>
-
-        <div style={{ marginBottom: "1rem" }}>
-          <label style={{ display: "block", marginBottom: "0.3rem", fontWeight: "bold" }}>
-            Due Date
+            <input
+              type="checkbox"
+              checked={isHabit}
+              onChange={(e) => {
+                setIsHabit(e.target.checked);
+                if (!e.target.checked) setSelectedDays([]);
+              }}
+            />
+            Make this a habit (repeats weekly)
           </label>
-          <input
-            type="datetime-local"
-            value={dueDate}
-            onChange={(e) => setDueDate(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "0.5rem",
-              border: "1px solid #ccc",
-              borderRadius: "4px",
-            }}
-          />
         </div>
 
-        {error && (
-          <p style={{ color: "red", marginBottom: "0.5rem" }}>{error}</p>
+        {/* Day picker */}
+        {isHabit && (
+          <div style={{ marginBottom: "1rem" }}>
+            <label
+              style={{
+                display: "block",
+                marginBottom: "0.3rem",
+                fontWeight: "bold",
+              }}
+            >
+              Repeat on:
+            </label>
+            <div style={{ display: "flex", gap: "0.3rem", flexWrap: "wrap" }}>
+              {DAY_LABELS.map(({ value, label }) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => toggleDay(value)}
+                  style={{
+                    padding: "0.4rem 0.7rem",
+                    border: selectedDays.includes(value)
+                      ? "2px solid #007bff"
+                      : "1px solid #ccc",
+                    borderRadius: "4px",
+                    background: selectedDays.includes(value)
+                      ? "#e6f2ff"
+                      : "white",
+                    cursor: "pointer",
+                    fontWeight: selectedDays.includes(value) ? "bold" : "normal",
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
         )}
+
+        {error && <p style={{ color: "red", marginBottom: "0.5rem" }}>{error}</p>}
 
         <div style={{ display: "flex", gap: "0.5rem" }}>
           <button
@@ -135,7 +164,7 @@ export default function TaskCreate({ onCreated, onCancel }: TaskCreateProps) {
               cursor: submitting ? "not-allowed" : "pointer",
             }}
           >
-            {submitting ? "Creating..." : "Create Task"}
+            {submitting ? "Adding..." : "Add Task"}
           </button>
           <button
             type="button"

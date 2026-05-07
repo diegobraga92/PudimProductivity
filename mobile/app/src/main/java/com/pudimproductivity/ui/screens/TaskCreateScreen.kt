@@ -1,8 +1,6 @@
 package com.pudimproductivity.ui.screens
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -11,117 +9,123 @@ import com.pudimproductivity.api.ApiClient
 import com.pudimproductivity.api.CreateTaskRequest
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
+private val DAYS = listOf(
+    "mon" to "Mon",
+    "tue" to "Tue",
+    "wed" to "Wed",
+    "thu" to "Thu",
+    "fri" to "Fri",
+    "sat" to "Sat",
+    "sun" to "Sun"
+)
+
 @Composable
 fun TaskCreateScreen(
     onCreated: () -> Unit,
     onCancel: () -> Unit
 ) {
+    val scope = rememberCoroutineScope()
     var title by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-    var priority by remember { mutableStateOf("medium") }
-    var dueDate by remember { mutableStateOf("") }
+    var isHabit by remember { mutableStateOf(false) }
+    var selectedDays by remember { mutableStateOf(setOf<String>()) }
     var error by remember { mutableStateOf<String?>(null) }
     var isSubmitting by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Create Task") },
-                navigationIcon = {
-                    TextButton(onClick = onCancel) {
-                        Text("Cancel")
-                    }
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        Text(
+            text = "New Task",
+            style = MaterialTheme.typography.headlineMedium
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedTextField(
+            value = title,
+            onValueChange = { title = it },
+            label = { Text("What do you need to do?") },
+            placeholder = { Text("e.g. Have hair cut") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Habit toggle
+        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+            Checkbox(
+                checked = isHabit,
+                onCheckedChange = {
+                    isHabit = it
+                    if (!it) selectedDays = emptySet()
                 }
             )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text("Make this a habit (repeats weekly)")
         }
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState())
-        ) {
-            // Title
-            OutlinedTextField(
-                value = title,
-                onValueChange = { title = it },
-                label = { Text("Title *") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
+
+        // Day picker
+        if (isHabit) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Repeat on:",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Description
-            OutlinedTextField(
-                value = description,
-                onValueChange = { description = it },
-                label = { Text("Description") },
-                modifier = Modifier.fillMaxWidth(),
-                minLines = 3,
-                maxLines = 5
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Priority
-            Text("Priority", style = MaterialTheme.typography.labelLarge)
+            Spacer(modifier = Modifier.height(4.dp))
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier.fillMaxWidth()
             ) {
-                listOf("low", "medium", "high").forEach { p ->
+                DAYS.forEach { (value, label) ->
+                    val isSelected = value in selectedDays
                     FilterChip(
-                        selected = priority == p,
-                        onClick = { priority = p },
-                        label = { Text(p.replaceFirstChar { it.uppercase() }) }
+                        selected = isSelected,
+                        onClick = {
+                            selectedDays = if (isSelected) {
+                                selectedDays - value
+                            } else {
+                                selectedDays + value
+                            }
+                        },
+                        label = { Text(label) }
                     )
                 }
             }
+        }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Due Date
-            OutlinedTextField(
-                value = dueDate,
-                onValueChange = { dueDate = it },
-                label = { Text("Due Date (YYYY-MM-DDTHH:MM)") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                placeholder = { Text("e.g. 2026-05-10T23:59") }
+        if (error != null) {
+            Text(
+                text = error!!,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(top = 8.dp)
             )
+        }
 
-            Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-            // Error
-            if (error != null) {
-                Text(
-                    text = error!!,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-            }
-
-            // Submit button
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(
                 onClick = {
                     if (title.isBlank()) {
                         error = "Title is required"
                         return@Button
                     }
-                    error = null
+                    if (isHabit && selectedDays.isEmpty()) {
+                        error = "Select at least one day for the habit"
+                        return@Button
+                    }
                     isSubmitting = true
+                    error = null
                     scope.launch {
                         try {
                             ApiClient.taskService.createTask(
                                 CreateTaskRequest(
                                     title = title.trim(),
-                                    description = description.trim().ifEmpty { null },
-                                    priority = priority,
-                                    due_date = dueDate.ifEmpty { null }
+                                    recurrence_days = if (isHabit) selectedDays.toList() else null
                                 )
                             )
                             onCreated()
@@ -132,10 +136,13 @@ fun TaskCreateScreen(
                         }
                     }
                 },
-                modifier = Modifier.fillMaxWidth(),
                 enabled = !isSubmitting
             ) {
-                Text(if (isSubmitting) "Creating..." else "Create Task")
+                Text(if (isSubmitting) "Adding..." else "Add Task")
+            }
+
+            OutlinedButton(onClick = onCancel) {
+                Text("Cancel")
             }
         }
     }

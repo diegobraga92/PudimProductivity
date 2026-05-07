@@ -22,29 +22,30 @@ func NewHandler(service *TaskService) *Handler {
 // --- DTOs ---
 
 type taskResponse struct {
-	ID          string  `json:"id"`
-	Title       string  `json:"title"`
-	Description *string `json:"description"`
-	Status      string  `json:"status"`
-	Priority    string  `json:"priority"`
-	DueDate     *string `json:"due_date"`
-	CreatedAt   string  `json:"created_at"`
-	UpdatedAt   string  `json:"updated_at"`
+	ID             string   `json:"id"`
+	Title          string   `json:"title"`
+	Status         string   `json:"status"`
+	RecurrenceDays []string `json:"recurrence_days,omitempty"`
+	CreatedAt      string   `json:"created_at"`
+	UpdatedAt      string   `json:"updated_at"`
 }
 
 type createTaskRequest struct {
-	Title       string      `json:"title"`
-	Description *string     `json:"description"`
-	Priority    TaskPriority `json:"priority"`
-	DueDate     *string     `json:"due_date"`
+	Title          string   `json:"title"`
+	RecurrenceDays []string `json:"recurrence_days,omitempty"`
 }
 
 type updateTaskRequest struct {
-	Title       *string       `json:"title"`
-	Description *string       `json:"description"`
-	Status      *TaskStatus   `json:"status"`
-	Priority    *TaskPriority `json:"priority"`
-	DueDate     *string       `json:"due_date"`
+	Title          *string     `json:"title"`
+	Status         *TaskStatus `json:"status"`
+	RecurrenceDays *[]string   `json:"recurrence_days"`
+}
+
+type taskCompletionResponse struct {
+	ID            string `json:"id"`
+	TaskID        string `json:"task_id"`
+	CompletedDate string `json:"completed_date"`
+	CreatedAt     string `json:"created_at"`
 }
 
 type errorResponse struct {
@@ -54,31 +55,23 @@ type errorResponse struct {
 // --- Helpers ---
 
 func toTaskResponse(t *Task) taskResponse {
-	resp := taskResponse{
-		ID:          t.ID,
-		Title:       t.Title,
-		Description: t.Description,
-		Status:      string(t.Status),
-		Priority:    string(t.Priority),
-		CreatedAt:   t.CreatedAt.Format(time.RFC3339),
-		UpdatedAt:   t.UpdatedAt.Format(time.RFC3339),
+	return taskResponse{
+		ID:             t.ID,
+		Title:          t.Title,
+		Status:         string(t.Status),
+		RecurrenceDays: t.RecurrenceDays,
+		CreatedAt:      t.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:      t.UpdatedAt.Format(time.RFC3339),
 	}
-	if t.DueDate != nil {
-		formatted := t.DueDate.Format(time.RFC3339)
-		resp.DueDate = &formatted
-	}
-	return resp
 }
 
-func parseTimePtr(s *string) *time.Time {
-	if s == nil || *s == "" {
-		return nil
+func toCompletionResponse(c *TaskCompletion) taskCompletionResponse {
+	return taskCompletionResponse{
+		ID:            c.ID,
+		TaskID:        c.TaskID,
+		CompletedDate: c.CompletedDate.Format("2006-01-02"),
+		CreatedAt:     c.CreatedAt.Format(time.RFC3339),
 	}
-	t, err := time.Parse(time.RFC3339, *s)
-	if err != nil {
-		return nil
-	}
-	return &t
 }
 
 func writeJSON(w http.ResponseWriter, status int, v interface{}) {
@@ -98,9 +91,8 @@ func writeError(w http.ResponseWriter, status int, msg string) {
 // ListTasks handles GET /api/v1/tasks
 func (h *Handler) ListTasks(w http.ResponseWriter, r *http.Request) {
 	statusFilter := r.URL.Query().Get("status")
-	priorityFilter := r.URL.Query().Get("priority")
 
-	tasks, err := h.service.ListTasks(r.Context(), statusFilter, priorityFilter)
+	tasks, err := h.service.ListTasks(r.Context(), statusFilter)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to list tasks")
 		writeError(w, http.StatusInternalServerError, "failed to list tasks")
@@ -128,14 +120,7 @@ func (h *Handler) CreateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	priority := req.Priority
-	if priority == "" {
-		priority = TaskPriorityMedium
-	}
-
-	dueDate := parseTimePtr(req.DueDate)
-
-	task, err := h.service.CreateTask(r.Context(), req.Title, req.Description, priority, dueDate)
+	task, err := h.service.CreateTask(r.Context(), req.Title, req.RecurrenceDays)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to create task")
 		writeError(w, http.StatusInternalServerError, "failed to create task")
@@ -181,14 +166,7 @@ func (h *Handler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Convert string dueDate to time.Time pointer
-	var dueDate **time.Time
-	if req.DueDate != nil {
-		parsed := parseTimePtr(req.DueDate)
-		dueDate = &parsed
-	}
-
-	task, err := h.service.UpdateTask(r.Context(), id, req.Title, req.Description, req.Status, req.Priority, dueDate)
+	task, err := h.service.UpdateTask(r.Context(), id, req.Title, req.Status, req.RecurrenceDays)
 	if err != nil {
 		if err == ErrTaskNotFound {
 			writeError(w, http.StatusNotFound, "task not found")
@@ -221,4 +199,104 @@ func (h *Handler) DeleteTask(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// CompleteTask handles POST /api/v1/tasks/{taskId}/complete
+func (h *Handler) CompleteTask(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "taskId")
+	if id == "" {
+		writeError(w, http.StatusBadRequest, "task ID is required")
+		return
+	}
+
+	completion, err := h.service.CompleteTask(r.Context(), id)
+	if err != nil {
+		if err == ErrTaskNotFound {
+			writeError(w, http.StatusNotFound, "task not found")
+			return
+		}
+		log.Error().Err(err).Str("task_id", id).Msg("failed to complete task")
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, toCompletionResponse(completion))
+}
+
+// UncompleteTask handles DELETE /api/v1/tasks/{taskId}/complete
+func (h *Handler) UncompleteTask(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "taskId")
+	if id == "" {
+		writeError(w, http.StatusBadRequest, "task ID is required")
+		return
+	}
+
+	if err := h.service.UncompleteTask(r.Context(), id); err != nil {
+		if err == ErrTaskNotFound {
+			writeError(w, http.StatusNotFound, "task not found")
+			return
+		}
+		log.Error().Err(err).Str("task_id", id).Msg("failed to uncomplete task")
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// GetTaskCompletions handles GET /api/v1/tasks/{taskId}/completions
+func (h *Handler) GetTaskCompletions(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "taskId")
+	if id == "" {
+		writeError(w, http.StatusBadRequest, "task ID is required")
+		return
+	}
+
+	// Parse optional date range query params
+	fromStr := r.URL.Query().Get("from")
+	toStr := r.URL.Query().Get("to")
+
+	now := time.Now().UTC()
+	var from, to time.Time
+
+	if fromStr != "" {
+		var err error
+		from, err = time.Parse("2006-01-02", fromStr)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "invalid 'from' date format, use YYYY-MM-DD")
+			return
+		}
+	} else {
+		// Default to 7 days ago
+		from = now.AddDate(0, 0, -7).Truncate(24 * time.Hour)
+	}
+
+	if toStr != "" {
+		var err error
+		to, err = time.Parse("2006-01-02", toStr)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "invalid 'to' date format, use YYYY-MM-DD")
+			return
+		}
+	} else {
+		to = now.Truncate(24 * time.Hour)
+	}
+
+	completions, err := h.service.GetTaskCompletions(r.Context(), id, from, to)
+	if err != nil {
+		if err == ErrTaskNotFound {
+			writeError(w, http.StatusNotFound, "task not found")
+			return
+		}
+		log.Error().Err(err).Str("task_id", id).Msg("failed to get task completions")
+		writeError(w, http.StatusInternalServerError, "failed to get task completions")
+		return
+	}
+
+	responses := make([]taskCompletionResponse, len(completions))
+	for i, c := range completions {
+		responses[i] = toCompletionResponse(c)
+	}
+
+	writeJSON(w, http.StatusOK, responses)
 }

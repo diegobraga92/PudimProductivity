@@ -21,6 +21,9 @@ func RegisterTaskRoutes(r chi.Router, pool *pgxpool.Pool, bus shared.EventBus) {
 		r.Get("/{taskId}", handler.GetTask)
 		r.Put("/{taskId}", handler.UpdateTask)
 		r.Delete("/{taskId}", handler.DeleteTask)
+		r.Post("/{taskId}/complete", handler.CompleteTask)
+		r.Delete("/{taskId}/complete", handler.UncompleteTask)
+		r.Get("/{taskId}/completions", handler.GetTaskCompletions)
 	})
 
 	log.Info().Msg("task module routes registered")

@@ -8,27 +8,28 @@ import retrofit2.http.*
 data class Task(
     val id: String,
     val title: String,
-    val description: String?,
     val status: String,
-    val priority: String,
-    val due_date: String?,
+    val recurrence_days: List<String>? = null,
     val created_at: String,
     val updated_at: String
 )
 
+data class TaskCompletion(
+    val id: String,
+    val task_id: String,
+    val completed_date: String,
+    val created_at: String
+)
+
 data class CreateTaskRequest(
     val title: String,
-    val description: String? = null,
-    val priority: String? = "medium",
-    val due_date: String? = null
+    val recurrence_days: List<String>? = null
 )
 
 data class UpdateTaskRequest(
     val title: String? = null,
-    val description: String? = null,
     val status: String? = null,
-    val priority: String? = null,
-    val due_date: String? = null
+    val recurrence_days: List<String>? = null
 )
 
 /**
@@ -36,10 +37,7 @@ data class UpdateTaskRequest(
  */
 interface TaskService {
     @GET("tasks")
-    suspend fun listTasks(
-        @Query("status") status: String? = null,
-        @Query("priority") priority: String? = null
-    ): List<Task>
+    suspend fun listTasks(): List<Task>
 
     @POST("tasks")
     suspend fun createTask(@Body request: CreateTaskRequest): Task
@@ -55,6 +53,19 @@ interface TaskService {
 
     @DELETE("tasks/{taskId}")
     suspend fun deleteTask(@Path("taskId") taskId: String)
+
+    @POST("tasks/{taskId}/complete")
+    suspend fun completeTask(@Path("taskId") taskId: String): TaskCompletion
+
+    @DELETE("tasks/{taskId}/complete")
+    suspend fun uncompleteTask(@Path("taskId") taskId: String)
+
+    @GET("tasks/{taskId}/completions")
+    suspend fun getTaskCompletions(
+        @Path("taskId") taskId: String,
+        @Query("from") from: String? = null,
+        @Query("to") to: String? = null
+    ): List<TaskCompletion>
 }
 
 /**
