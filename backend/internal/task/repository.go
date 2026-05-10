@@ -19,6 +19,9 @@ type TaskRepository interface {
 	// Passing an empty string for statusFilter means "no filter".
 	List(ctx context.Context, statusFilter string) ([]*Task, error)
 
+	// ListByListID returns all tasks belonging to a specific task list.
+	ListByListID(ctx context.Context, listID string) ([]*Task, error)
+
 	// Update persists changes to an existing task.
 	// Returns ErrTaskNotFound if the task does not exist.
 	Update(ctx context.Context, task *Task) error

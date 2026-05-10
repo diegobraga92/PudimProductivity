@@ -28,12 +28,19 @@ func NewTaskService(repo TaskRepository, bus shared.EventBus) *TaskService {
 
 // CreateTask creates a new task and publishes a TaskCreated event.
 func (s *TaskService) CreateTask(ctx context.Context, title string, recurrenceDays []string) (*Task, error) {
+	return s.CreateTaskWithList(ctx, title, recurrenceDays, nil)
+}
+
+// CreateTaskWithList creates a new task assigned to a specific list.
+func (s *TaskService) CreateTaskWithList(ctx context.Context, title string, recurrenceDays []string, listID *string) (*Task, error) {
 	id := shared.NewUUID()
 
 	task, err := NewTask(id, title, recurrenceDays)
 	if err != nil {
 		return nil, fmt.Errorf("create task: %w", err)
 	}
+
+	task.ListID = listID
 
 	if err := s.repo.Create(ctx, task); err != nil {
 		return nil, fmt.Errorf("persist task: %w", err)
@@ -56,9 +63,14 @@ func (s *TaskService) GetTask(ctx context.Context, id string) (*Task, error) {
 	return task, nil
 }
 
-// ListTasks returns all tasks, optionally filtered by status.
+// ListTasks returns all tasks not assigned to any list, optionally filtered by status.
 func (s *TaskService) ListTasks(ctx context.Context, statusFilter string) ([]*Task, error) {
 	return s.repo.List(ctx, statusFilter)
+}
+
+// ListTasksByListID returns all tasks belonging to a specific task list.
+func (s *TaskService) ListTasksByListID(ctx context.Context, listID string) ([]*Task, error) {
+	return s.repo.ListByListID(ctx, listID)
 }
 
 // UpdateTask updates an existing task and publishes events.

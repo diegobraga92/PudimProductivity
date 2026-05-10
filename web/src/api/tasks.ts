@@ -9,6 +9,7 @@ export interface Task {
   title: string;
   status: TaskStatus;
   recurrence_days?: RecurrenceDay[];
+  list_id?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -23,6 +24,7 @@ export interface TaskCompletion {
 export interface CreateTaskRequest {
   title: string;
   recurrence_days?: RecurrenceDay[];
+  list_id?: string | null;
 }
 
 export interface UpdateTaskRequest {

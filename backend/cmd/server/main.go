@@ -20,6 +20,7 @@ import (
 	"github.com/diegobraga92/pudimproductivity/backend/internal/features"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/shared"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/task"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/tasklist"
 )
 
 var Version = "0.0.1"
@@ -82,8 +83,14 @@ func main() {
 	r.Get("/api/v1/health", healthHandler(pool))
 
 	// Register task module routes
+	var taskService *task.TaskService
 	if pool != nil {
-		task.RegisterTaskRoutes(r, pool, eventBus)
+		taskService = task.RegisterTaskRoutes(r, pool, eventBus)
+	}
+
+	// Register task list module routes
+	if pool != nil && taskService != nil {
+		tasklist.RegisterTaskListRoutes(r, pool, taskService)
 	}
 
 	// Register feature flag routes

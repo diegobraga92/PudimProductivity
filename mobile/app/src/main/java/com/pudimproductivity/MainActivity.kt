@@ -12,12 +12,13 @@ import com.pudimproductivity.api.ApiClient
 import com.pudimproductivity.api.HealthResponse
 import com.pudimproductivity.ui.screens.TaskCreateScreen
 import com.pudimproductivity.ui.screens.TaskDetailScreen
+import com.pudimproductivity.ui.screens.TaskListDetailScreen
 import com.pudimproductivity.ui.screens.TaskListScreen
 import com.pudimproductivity.ui.theme.PudimProductivityTheme
 import kotlinx.coroutines.launch
 
 enum class Screen {
-    Health, TaskList, TaskCreate, TaskDetail
+    Health, TaskList, TaskCreate, TaskDetail, TaskListDetail
 }
 
 class MainActivity : ComponentActivity() {
@@ -40,6 +41,7 @@ class MainActivity : ComponentActivity() {
 fun AppNavigation() {
     var currentScreen by remember { mutableStateOf(Screen.TaskList) }
     var selectedTaskId by remember { mutableStateOf<String?>(null) }
+    var selectedListId by remember { mutableStateOf<String?>(null) }
 
     when (currentScreen) {
         Screen.Health -> {
@@ -53,6 +55,10 @@ fun AppNavigation() {
                 onTaskClick = { taskId ->
                     selectedTaskId = taskId
                     currentScreen = Screen.TaskDetail
+                },
+                onListClick = { listId ->
+                    selectedListId = listId
+                    currentScreen = Screen.TaskListDetail
                 }
             )
         }
@@ -69,6 +75,15 @@ fun AppNavigation() {
                     onUpdated = { currentScreen = Screen.TaskList },
                     onDeleted = { currentScreen = Screen.TaskList },
                     onBack = { currentScreen = Screen.TaskList }
+                )
+            }
+        }
+        Screen.TaskListDetail -> {
+            selectedListId?.let { listId ->
+                TaskListDetailScreen(
+                    listId = listId,
+                    onBack = { currentScreen = Screen.TaskList },
+                    onDeleted = { currentScreen = Screen.TaskList }
                 )
             }
         }

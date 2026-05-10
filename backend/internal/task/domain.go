@@ -33,11 +33,13 @@ var ValidRecurrenceDays = map[string]bool{
 // Task is the core domain aggregate for the task bounded context.
 // If RecurrenceDays is non-nil, the task is a habit that repeats on those days.
 // If RecurrenceDays is nil, the task is a one-off task with a simple todo/done status.
+// ListID is optional and links the task to a named task list.
 type Task struct {
 	ID             string
 	Title          string
 	Status         TaskStatus
 	RecurrenceDays []string // nil = one-off task, non-nil = habit
+	ListID         *string  // nil = not part of a list, non-nil = belongs to a task list
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 }

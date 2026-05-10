@@ -10,6 +10,7 @@ data class Task(
     val title: String,
     val status: String,
     val recurrence_days: List<String>? = null,
+    val list_id: String? = null,
     val created_at: String,
     val updated_at: String
 )
@@ -23,13 +24,34 @@ data class TaskCompletion(
 
 data class CreateTaskRequest(
     val title: String,
-    val recurrence_days: List<String>? = null
+    val recurrence_days: List<String>? = null,
+    val list_id: String? = null
 )
 
 data class UpdateTaskRequest(
     val title: String? = null,
     val status: String? = null,
     val recurrence_days: List<String>? = null
+)
+
+/**
+ * Task list data class.
+ */
+data class TaskList(
+    val id: String,
+    val name: String,
+    val description: String? = null,
+    val created_at: String,
+    val updated_at: String
+)
+
+data class CreateTaskListRequest(
+    val name: String
+)
+
+data class UpdateTaskListRequest(
+    val name: String? = null,
+    val description: String? = null
 )
 
 /**
@@ -66,6 +88,28 @@ interface TaskService {
         @Query("from") from: String? = null,
         @Query("to") to: String? = null
     ): List<TaskCompletion>
+
+    // Task Lists
+    @GET("task-lists")
+    suspend fun listTaskLists(): List<TaskList>
+
+    @POST("task-lists")
+    suspend fun createTaskList(@Body request: CreateTaskListRequest): TaskList
+
+    @GET("task-lists/{listId}")
+    suspend fun getTaskList(@Path("listId") listId: String): TaskList
+
+    @PUT("task-lists/{listId}")
+    suspend fun updateTaskList(
+        @Path("listId") listId: String,
+        @Body request: UpdateTaskListRequest
+    ): TaskList
+
+    @DELETE("task-lists/{listId}")
+    suspend fun deleteTaskList(@Path("listId") listId: String)
+
+    @GET("task-lists/{listId}/tasks")
+    suspend fun listTasksByListID(@Path("listId") listId: String): List<Task>
 }
 
 /**

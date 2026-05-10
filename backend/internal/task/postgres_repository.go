@@ -22,8 +22,8 @@ func NewPostgresTaskRepository(pool *pgxpool.Pool) *PostgresTaskRepository {
 // Create persists a new task.
 func (r *PostgresTaskRepository) Create(ctx context.Context, task *Task) error {
 	query := `
-		INSERT INTO tasks (id, title, status, recurrence_days, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO tasks (id, title, status, recurrence_days, list_id, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
 
 	_, err := r.pool.Exec(ctx, query,
@@ -31,6 +31,7 @@ func (r *PostgresTaskRepository) Create(ctx context.Context, task *Task) error {
 		task.Title,
 		string(task.Status),
 		task.RecurrenceDays,
+		task.ListID,
 		task.CreatedAt,
 		task.UpdatedAt,
 	)
@@ -44,7 +45,7 @@ func (r *PostgresTaskRepository) Create(ctx context.Context, task *Task) error {
 // GetByID retrieves a task by its ID.
 func (r *PostgresTaskRepository) GetByID(ctx context.Context, id string) (*Task, error) {
 	query := `
-		SELECT id, title, status, recurrence_days, created_at, updated_at
+		SELECT id, title, status, recurrence_days, list_id, created_at, updated_at
 		FROM tasks
 		WHERE id = $1
 	`
@@ -56,6 +57,7 @@ func (r *PostgresTaskRepository) GetByID(ctx context.Context, id string) (*Task,
 		&task.Title,
 		(*string)(&task.Status),
 		&task.RecurrenceDays,
+		&task.ListID,
 		&task.CreatedAt,
 		&task.UpdatedAt,
 	)
@@ -72,9 +74,9 @@ func (r *PostgresTaskRepository) GetByID(ctx context.Context, id string) (*Task,
 // List returns all tasks, optionally filtered by status.
 func (r *PostgresTaskRepository) List(ctx context.Context, statusFilter string) ([]*Task, error) {
 	query := `
-		SELECT id, title, status, recurrence_days, created_at, updated_at
+		SELECT id, title, status, recurrence_days, list_id, created_at, updated_at
 		FROM tasks
-		WHERE 1=1
+		WHERE list_id IS NULL
 	`
 	args := make([]interface{}, 0)
 	argIdx := 1
@@ -102,6 +104,53 @@ func (r *PostgresTaskRepository) List(ctx context.Context, statusFilter string) 
 			&task.Title,
 			(*string)(&task.Status),
 			&task.RecurrenceDays,
+			&task.ListID,
+			&task.CreatedAt,
+			&task.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan task row: %w", err)
+		}
+
+		tasks = append(tasks, task)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate task rows: %w", err)
+	}
+
+	if tasks == nil {
+		tasks = make([]*Task, 0)
+	}
+
+	return tasks, nil
+}
+
+// ListByListID returns all tasks belonging to a specific task list.
+func (r *PostgresTaskRepository) ListByListID(ctx context.Context, listID string) ([]*Task, error) {
+	query := `
+		SELECT id, title, status, recurrence_days, list_id, created_at, updated_at
+		FROM tasks
+		WHERE list_id = $1
+		ORDER BY created_at DESC
+	`
+
+	rows, err := r.pool.Query(ctx, query, listID)
+	if err != nil {
+		return nil, fmt.Errorf("list tasks by list id: %w", err)
+	}
+	defer rows.Close()
+
+	var tasks []*Task
+	for rows.Next() {
+		task := &Task{}
+
+		err := rows.Scan(
+			&task.ID,
+			&task.Title,
+			(*string)(&task.Status),
+			&task.RecurrenceDays,
+			&task.ListID,
 			&task.CreatedAt,
 			&task.UpdatedAt,
 		)
@@ -127,14 +176,15 @@ func (r *PostgresTaskRepository) List(ctx context.Context, statusFilter string) 
 func (r *PostgresTaskRepository) Update(ctx context.Context, task *Task) error {
 	query := `
 		UPDATE tasks
-		SET title = $1, status = $2, recurrence_days = $3, updated_at = $4
-		WHERE id = $5
+		SET title = $1, status = $2, recurrence_days = $3, list_id = $4, updated_at = $5
+		WHERE id = $6
 	`
 
 	result, err := r.pool.Exec(ctx, query,
 		task.Title,
 		string(task.Status),
 		task.RecurrenceDays,
+		task.ListID,
 		task.UpdatedAt,
 		task.ID,
 	)

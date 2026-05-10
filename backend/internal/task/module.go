@@ -10,7 +10,8 @@ import (
 
 // RegisterTaskRoutes mounts all task HTTP routes on the given router.
 // It wires up the repository, service, and handler.
-func RegisterTaskRoutes(r chi.Router, pool *pgxpool.Pool, bus shared.EventBus) {
+// Returns the TaskService so other modules (e.g., tasklist) can use it.
+func RegisterTaskRoutes(r chi.Router, pool *pgxpool.Pool, bus shared.EventBus) *TaskService {
 	repo := NewPostgresTaskRepository(pool)
 	service := NewTaskService(repo, bus)
 	handler := NewHandler(service)
@@ -27,4 +28,5 @@ func RegisterTaskRoutes(r chi.Router, pool *pgxpool.Pool, bus shared.EventBus) {
 	})
 
 	log.Info().Msg("task module routes registered")
+	return service
 }

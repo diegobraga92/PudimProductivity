@@ -5,7 +5,8 @@ info:
     Simple task management — supports both one-off tasks and recurring habits.
     - One-off tasks have a simple todo/done status.
     - Habits (tasks with `recurrence_days`) track daily completions via a separate completions resource.
-  version: "0.3.0"
+    - Task lists allow grouping tasks into named collections (e.g. "Shopping List", "Project Ideas").
+  version: "0.4.0"
   contact:
     name: PudimProductivity Team
     url: https://github.com/diegobraga92/PudimProductivity
@@ -19,7 +20,7 @@ paths:
     get:
       operationId: listTasks
       summary: List all tasks
-      description: Returns a list of all tasks, optionally filtered by status.
+      description: Returns a list of all tasks not assigned to any list, optionally filtered by status.
       tags:
         - Tasks
       parameters:
@@ -42,7 +43,7 @@ paths:
     post:
       operationId: createTask
       summary: Create a new task
-      description: Creates a new task with the given title and optional recurrence days.
+      description: Creates a new task with the given title and optional recurrence days and list assignment.
       tags:
         - Tasks
       requestBody:
@@ -262,6 +263,174 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  # --- Task Lists ---
+  /api/v1/task-lists:
+    get:
+      operationId: listTaskLists
+      summary: List all task lists
+      description: Returns a list of all task lists.
+      tags:
+        - Task Lists
+      responses:
+        "200":
+          description: A list of task lists.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TaskList"
+
+    post:
+      operationId: createTaskList
+      summary: Create a new task list
+      description: Creates a new named task list.
+      tags:
+        - Task Lists
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTaskListRequest"
+      responses:
+        "201":
+          description: Task list created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskList"
+        "400":
+          description: Invalid request body.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/task-lists/{listId}:
+    get:
+      operationId: getTaskList
+      summary: Get a task list by ID
+      description: Returns a single task list by its unique identifier.
+      tags:
+        - Task Lists
+      parameters:
+        - name: listId
+          in: path
+          required: true
+          description: The UUID of the task list
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Task list found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskList"
+        "404":
+          description: Task list not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    put:
+      operationId: updateTaskList
+      summary: Update a task list
+      description: Updates the name or description of a task list.
+      tags:
+        - Task Lists
+      parameters:
+        - name: listId
+          in: path
+          required: true
+          description: The UUID of the task list
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTaskListRequest"
+      responses:
+        "200":
+          description: Task list updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskList"
+        "400":
+          description: Invalid request body.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Task list not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    delete:
+      operationId: deleteTaskList
+      summary: Delete a task list
+      description: Deletes a task list by its unique identifier. Tasks in the list are not deleted.
+      tags:
+        - Task Lists
+      parameters:
+        - name: listId
+          in: path
+          required: true
+          description: The UUID of the task list
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Task list deleted successfully.
+        "404":
+          description: Task list not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/task-lists/{listId}/tasks:
+    get:
+      operationId: listTasksByListID
+      summary: List tasks in a task list
+      description: Returns all tasks belonging to a specific task list.
+      tags:
+        - Task Lists
+      parameters:
+        - name: listId
+          in: path
+          required: true
+          description: The UUID of the task list
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: A list of tasks in the list.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Task"
+        "404":
+          description: Task list not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     TaskStatus:
@@ -302,6 +471,12 @@ components:
           items:
             $ref: "#/components/schemas/RecurrenceDay"
           example: ["mon", "tue", "thu", "fri"]
+        list_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: The UUID of the task list this task belongs to, or null if unassigned.
+          example: "770e8400-e29b-41d4-a716-446655440002"
         created_at:
           type: string
           format: date-time
@@ -357,6 +532,12 @@ components:
           items:
             $ref: "#/components/schemas/RecurrenceDay"
           example: ["mon", "wed", "fri"]
+        list_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: The UUID of the task list to assign this task to.
+          example: "770e8400-e29b-41d4-a716-446655440002"
 
     UpdateTaskRequest:
       type: object
@@ -374,6 +555,60 @@ components:
           items:
             $ref: "#/components/schemas/RecurrenceDay"
           example: ["mon", "tue", "thu", "fri"]
+
+    TaskList:
+      type: object
+      required:
+        - id
+        - name
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the task list.
+          example: "770e8400-e29b-41d4-a716-446655440002"
+        name:
+          type: string
+          description: The name of the task list.
+          example: "Shopping List"
+        description:
+          type: string
+          description: An optional description of the task list.
+          example: "Items I need to buy"
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the task list was created.
+          example: "2026-05-07T10:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          description: Timestamp when the task list was last updated.
+          example: "2026-05-07T10:30:00Z"
+
+    CreateTaskListRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          description: The name of the new task list.
+          example: "Shopping List"
+
+    UpdateTaskListRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: The new name for the task list.
+          example: "Grocery List"
+        description:
+          type: string
+          description: The new description for the task list.
+          example: "Weekly groceries"
 
     ErrorResponse:
       type: object

@@ -26,6 +26,7 @@ type taskResponse struct {
 	Title          string   `json:"title"`
 	Status         string   `json:"status"`
 	RecurrenceDays []string `json:"recurrence_days,omitempty"`
+	ListID         *string  `json:"list_id,omitempty"`
 	CreatedAt      string   `json:"created_at"`
 	UpdatedAt      string   `json:"updated_at"`
 }
@@ -33,12 +34,14 @@ type taskResponse struct {
 type createTaskRequest struct {
 	Title          string   `json:"title"`
 	RecurrenceDays []string `json:"recurrence_days,omitempty"`
+	ListID         *string  `json:"list_id,omitempty"`
 }
 
 type updateTaskRequest struct {
 	Title          *string     `json:"title"`
 	Status         *TaskStatus `json:"status"`
 	RecurrenceDays *[]string   `json:"recurrence_days"`
+	ListID         *string     `json:"list_id,omitempty"`
 }
 
 type taskCompletionResponse struct {
@@ -60,6 +63,7 @@ func toTaskResponse(t *Task) taskResponse {
 		Title:          t.Title,
 		Status:         string(t.Status),
 		RecurrenceDays: t.RecurrenceDays,
+		ListID:         t.ListID,
 		CreatedAt:      t.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:      t.UpdatedAt.Format(time.RFC3339),
 	}
@@ -120,7 +124,7 @@ func (h *Handler) CreateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	task, err := h.service.CreateTask(r.Context(), req.Title, req.RecurrenceDays)
+	task, err := h.service.CreateTaskWithList(r.Context(), req.Title, req.RecurrenceDays, req.ListID)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to create task")
 		writeError(w, http.StatusInternalServerError, "failed to create task")
