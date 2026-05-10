@@ -63,14 +63,14 @@ func (s *TaskService) GetTask(ctx context.Context, id string) (*Task, error) {
 	return task, nil
 }
 
-// ListTasks returns all tasks not assigned to any list, optionally filtered by status.
-func (s *TaskService) ListTasks(ctx context.Context, statusFilter string) ([]*Task, error) {
-	return s.repo.List(ctx, statusFilter)
+// ListTasks returns all tasks not assigned to any list, optionally filtered by status and type.
+func (s *TaskService) ListTasks(ctx context.Context, statusFilter, typeFilter string) ([]*Task, error) {
+	return s.repo.List(ctx, statusFilter, typeFilter)
 }
 
-// ListTasksByListID returns all tasks belonging to a specific task list.
-func (s *TaskService) ListTasksByListID(ctx context.Context, listID string) ([]*Task, error) {
-	return s.repo.ListByListID(ctx, listID)
+// ListTasksByListID returns all tasks belonging to a specific task list, optionally filtered by type.
+func (s *TaskService) ListTasksByListID(ctx context.Context, listID, typeFilter string) ([]*Task, error) {
+	return s.repo.ListByListID(ctx, listID, typeFilter)
 }
 
 // UpdateTask updates an existing task and publishes events.

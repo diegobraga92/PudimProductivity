@@ -71,8 +71,8 @@ func (r *PostgresTaskRepository) GetByID(ctx context.Context, id string) (*Task,
 	return task, nil
 }
 
-// List returns all tasks, optionally filtered by status.
-func (r *PostgresTaskRepository) List(ctx context.Context, statusFilter string) ([]*Task, error) {
+// List returns all tasks, optionally filtered by status and type.
+func (r *PostgresTaskRepository) List(ctx context.Context, statusFilter, typeFilter string) ([]*Task, error) {
 	query := `
 		SELECT id, title, status, recurrence_days, list_id, created_at, updated_at
 		FROM tasks
@@ -85,6 +85,15 @@ func (r *PostgresTaskRepository) List(ctx context.Context, statusFilter string) 
 		query += fmt.Sprintf(" AND status = $%d", argIdx)
 		args = append(args, statusFilter)
 		argIdx++
+	}
+
+	if typeFilter != "" {
+		switch typeFilter {
+		case "one-off":
+			query += fmt.Sprintf(" AND recurrence_days IS NULL")
+		case "habit":
+			query += fmt.Sprintf(" AND recurrence_days IS NOT NULL")
+		}
 	}
 
 	query += " ORDER BY created_at DESC"
@@ -126,16 +135,27 @@ func (r *PostgresTaskRepository) List(ctx context.Context, statusFilter string) 
 	return tasks, nil
 }
 
-// ListByListID returns all tasks belonging to a specific task list.
-func (r *PostgresTaskRepository) ListByListID(ctx context.Context, listID string) ([]*Task, error) {
+// ListByListID returns all tasks belonging to a specific task list, optionally filtered by type.
+func (r *PostgresTaskRepository) ListByListID(ctx context.Context, listID, typeFilter string) ([]*Task, error) {
 	query := `
 		SELECT id, title, status, recurrence_days, list_id, created_at, updated_at
 		FROM tasks
 		WHERE list_id = $1
-		ORDER BY created_at DESC
 	`
+	args := []interface{}{listID}
 
-	rows, err := r.pool.Query(ctx, query, listID)
+	if typeFilter != "" {
+		switch typeFilter {
+		case "one-off":
+			query += fmt.Sprintf(" AND recurrence_days IS NULL")
+		case "habit":
+			query += fmt.Sprintf(" AND recurrence_days IS NOT NULL")
+		}
+	}
+
+	query += " ORDER BY created_at DESC"
+
+	rows, err := r.pool.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("list tasks by list id: %w", err)
 	}

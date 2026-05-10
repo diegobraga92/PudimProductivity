@@ -95,8 +95,9 @@ func writeError(w http.ResponseWriter, status int, msg string) {
 // ListTasks handles GET /api/v1/tasks
 func (h *Handler) ListTasks(w http.ResponseWriter, r *http.Request) {
 	statusFilter := r.URL.Query().Get("status")
+	typeFilter := r.URL.Query().Get("type")
 
-	tasks, err := h.service.ListTasks(r.Context(), statusFilter)
+	tasks, err := h.service.ListTasks(r.Context(), statusFilter, typeFilter)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to list tasks")
 		writeError(w, http.StatusInternalServerError, "failed to list tasks")

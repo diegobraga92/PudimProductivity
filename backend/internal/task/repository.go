@@ -15,12 +15,16 @@ type TaskRepository interface {
 	// Returns ErrTaskNotFound if the task does not exist.
 	GetByID(ctx context.Context, id string) (*Task, error)
 
-	// List returns all tasks, optionally filtered by status.
+	// List returns all tasks, optionally filtered by status and type.
 	// Passing an empty string for statusFilter means "no filter".
-	List(ctx context.Context, statusFilter string) ([]*Task, error)
+	// Passing an empty string for typeFilter means "no filter".
+	// Valid typeFilter values: "one-off", "habit".
+	List(ctx context.Context, statusFilter, typeFilter string) ([]*Task, error)
 
-	// ListByListID returns all tasks belonging to a specific task list.
-	ListByListID(ctx context.Context, listID string) ([]*Task, error)
+	// ListByListID returns all tasks belonging to a specific task list,
+	// optionally filtered by type.
+	// Valid typeFilter values: "one-off", "habit".
+	ListByListID(ctx context.Context, listID, typeFilter string) ([]*Task, error)
 
 	// Update persists changes to an existing task.
 	// Returns ErrTaskNotFound if the task does not exist.

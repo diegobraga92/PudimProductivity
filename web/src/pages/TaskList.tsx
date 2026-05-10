@@ -120,11 +120,18 @@ export default function TaskList() {
   const [newHabitTitle, setNewHabitTitle] = useState("");
   const [newListName, setNewListName] = useState("");
 
-  // Fetch unassigned tasks (not in any list)
-  const { data: tasks, isLoading, error } = useQuery<Task[]>({
-    queryKey: ["tasks", statusFilter],
+  // Fetch unassigned one-off tasks (not in any list)
+  const { data: todoTasks = [], isLoading: todoLoading, error: todoError } = useQuery<Task[]>({
+    queryKey: ["tasks", "one-off", statusFilter],
     queryFn: () =>
-      listTasks(statusFilter ? (statusFilter as TaskStatus) : undefined),
+      listTasks(statusFilter ? (statusFilter as TaskStatus) : undefined, "one-off"),
+  });
+
+  // Fetch unassigned habit tasks (not in any list)
+  const { data: habitTasks = [], isLoading: habitLoading, error: habitError } = useQuery<Task[]>({
+    queryKey: ["tasks", "habit", statusFilter],
+    queryFn: () =>
+      listTasks(statusFilter ? (statusFilter as TaskStatus) : undefined, "habit"),
   });
 
   // Fetch task lists
@@ -133,9 +140,8 @@ export default function TaskList() {
     queryFn: listTaskLists,
   });
 
-  // Separate tasks into todos and habits
-  const todoTasks = tasks?.filter((t) => !t.recurrence_days || t.recurrence_days.length === 0) ?? [];
-  const habitTasks = tasks?.filter((t) => t.recurrence_days && t.recurrence_days.length > 0) ?? [];
+  const isLoading = todoLoading || habitLoading;
+  const error = todoError || habitError;
 
   // Fetch completions for all habit tasks
   const weekDates = getWeekDates();
@@ -163,7 +169,8 @@ export default function TaskList() {
   const deleteMutation = useMutation({
     mutationFn: deleteTask,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["tasks", "one-off"] });
+      queryClient.invalidateQueries({ queryKey: ["tasks", "habit"] });
     },
   });
 
@@ -171,7 +178,8 @@ export default function TaskList() {
     mutationFn: ({ id, status }: { id: string; status: TaskStatus }) =>
       updateTask(id, { status: status === "done" ? "todo" : "done" }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["tasks", "one-off"] });
+      queryClient.invalidateQueries({ queryKey: ["tasks", "habit"] });
     },
   });
 
@@ -191,7 +199,7 @@ export default function TaskList() {
   const createTodoMutation = useMutation({
     mutationFn: (title: string) => createTask({ title }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["tasks", "one-off"] });
       setNewTodoTitle("");
     },
   });
@@ -200,7 +208,7 @@ export default function TaskList() {
     mutationFn: (title: string) =>
       createTask({ title, recurrence_days: ["mon", "tue", "wed", "thu", "fri"] }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["tasks", "habit"] });
       setNewHabitTitle("");
     },
   });
@@ -225,7 +233,8 @@ export default function TaskList() {
     return (
       <TaskCreate
         onCreated={() => {
-          queryClient.invalidateQueries({ queryKey: ["tasks"] });
+          queryClient.invalidateQueries({ queryKey: ["tasks", "one-off"] });
+          queryClient.invalidateQueries({ queryKey: ["tasks", "habit"] });
           setView("list");
         }}
         onCancel={() => setView("list")}
@@ -237,9 +246,13 @@ export default function TaskList() {
     return (
       <TaskDetail
         taskId={selectedTaskId}
-        onUpdated={() => queryClient.invalidateQueries({ queryKey: ["tasks"] })}
+        onUpdated={() => {
+          queryClient.invalidateQueries({ queryKey: ["tasks", "one-off"] });
+          queryClient.invalidateQueries({ queryKey: ["tasks", "habit"] });
+        }}
         onDeleted={() => {
-          queryClient.invalidateQueries({ queryKey: ["tasks"] });
+          queryClient.invalidateQueries({ queryKey: ["tasks", "one-off"] });
+          queryClient.invalidateQueries({ queryKey: ["tasks", "habit"] });
           setView("list");
           setSelectedTaskId(null);
         }}

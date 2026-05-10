@@ -190,7 +190,9 @@ func (h *Handler) ListTasksByListID(taskService *task.TaskService) http.HandlerF
 			return
 		}
 
-		tasks, err := taskService.ListTasksByListID(r.Context(), id)
+		typeFilter := r.URL.Query().Get("type")
+
+		tasks, err := taskService.ListTasksByListID(r.Context(), id, typeFilter)
 		if err != nil {
 			log.Error().Err(err).Str("list_id", id).Msg("failed to list tasks by list")
 			writeError(w, http.StatusInternalServerError, "failed to list tasks")

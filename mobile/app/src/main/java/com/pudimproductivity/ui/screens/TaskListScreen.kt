@@ -62,16 +62,17 @@ fun TaskListScreen(
             isLoading = true
             error = null
             try {
-                tasks = ApiClient.taskService.listTasks()
+                val todoResult = ApiClient.taskService.listTasks("one-off")
+                val habitResult = ApiClient.taskService.listTasks("habit")
+                tasks = todoResult + habitResult
                 taskLists = ApiClient.taskService.listTaskLists()
 
                 // Load completions for habit tasks
-                val habitTasks = tasks.filter { it.recurrence_days != null && it.recurrence_days.isNotEmpty() }
                 val weekDates = getWeekDates()
                 val from = weekDates.first()
                 val to = weekDates.last()
                 val map = mutableMapOf<String, List<String>>()
-                for (task in habitTasks) {
+                for (task in habitResult) {
                     try {
                         val completions = ApiClient.taskService.getTaskCompletions(task.id, from, to)
                         map[task.id] = completions.map { it.completed_date }

@@ -103,10 +103,15 @@ export async function deleteTaskList(listId: string): Promise<void> {
 }
 
 /**
- * Fetches all tasks belonging to a specific task list.
+ * Fetches all tasks belonging to a specific task list, optionally filtered by type.
  */
-export async function listTasksByListID(listId: string): Promise<import("./tasks").Task[]> {
-  const response = await fetch(`${config.apiBaseUrl}/task-lists/${listId}/tasks`);
+export async function listTasksByListID(listId: string, type?: "one-off" | "habit"): Promise<import("./tasks").Task[]> {
+  const params = new URLSearchParams();
+  if (type) params.set("type", type);
+
+  const query = params.toString();
+  const url = `${config.apiBaseUrl}/task-lists/${listId}/tasks${query ? `?${query}` : ""}`;
+  const response = await fetch(url);
 
   if (!response.ok) {
     if (response.status === 404) {

@@ -34,11 +34,12 @@ export interface UpdateTaskRequest {
 }
 
 /**
- * Fetches all tasks, optionally filtered by status.
+ * Fetches all tasks, optionally filtered by status and/or type.
  */
-export async function listTasks(status?: TaskStatus): Promise<Task[]> {
+export async function listTasks(status?: TaskStatus, type?: "one-off" | "habit"): Promise<Task[]> {
   const params = new URLSearchParams();
   if (status) params.set("status", status);
+  if (type) params.set("type", type);
 
   const query = params.toString();
   const url = `${config.apiBaseUrl}/tasks${query ? `?${query}` : ""}`;

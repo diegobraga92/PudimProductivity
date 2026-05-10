@@ -59,7 +59,7 @@ data class UpdateTaskListRequest(
  */
 interface TaskService {
     @GET("tasks")
-    suspend fun listTasks(): List<Task>
+    suspend fun listTasks(@Query("type") type: String? = null): List<Task>
 
     @POST("tasks")
     suspend fun createTask(@Body request: CreateTaskRequest): Task
@@ -109,7 +109,10 @@ interface TaskService {
     suspend fun deleteTaskList(@Path("listId") listId: String)
 
     @GET("task-lists/{listId}/tasks")
-    suspend fun listTasksByListID(@Path("listId") listId: String): List<Task>
+    suspend fun listTasksByListID(
+        @Path("listId") listId: String,
+        @Query("type") type: String? = null
+    ): List<Task>
 }
 
 /**
