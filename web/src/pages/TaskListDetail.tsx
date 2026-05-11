@@ -13,6 +13,7 @@ import {
   type Task,
   type TaskStatus,
 } from "../api/tasks";
+import Checkbox from "../components/Checkbox";
 
 interface TaskListDetailProps {
   listId: string;
@@ -83,225 +84,184 @@ export default function TaskListDetail({
     createMutation.mutate(newTitle.trim());
   };
 
-  if (listLoading) return <p>Loading list...</p>;
-  if (!taskList) return <p>List not found</p>;
+  if (listLoading) {
+    return (
+      <div className="card" style={{ textAlign: "center", padding: "var(--space-xl)" }}>
+        <p style={{ color: "var(--color-text-secondary)" }}>Loading list...</p>
+      </div>
+    );
+  }
+
+  if (!taskList) {
+    return (
+      <div className="card" style={{ borderLeft: "3px solid var(--color-danger)" }}>
+        <p style={{ color: "var(--color-danger)" }}>List not found</p>
+        <button className="btn btn-ghost mt-sm" onClick={onBack}>
+          &larr; Back
+        </button>
+      </div>
+    );
+  }
+
+  const doneCount = tasks.filter((t) => t.status === "done").length;
+  const progress = tasks.length > 0 ? Math.round((doneCount / tasks.length) * 100) : 0;
 
   return (
-    <div style={{ maxWidth: "600px", margin: "0 auto", padding: "1rem" }}>
+    <div className="animate-fade-in" style={{ maxWidth: "600px" }}>
+      {/* Header */}
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: "1rem",
+          marginBottom: "var(--space-md)",
         }}
       >
-        <button
-          onClick={onBack}
-          style={{
-            padding: "0.3rem 0.6rem",
-            background: "transparent",
-            border: "1px solid #ccc",
-            borderRadius: "4px",
-            cursor: "pointer",
-          }}
-        >
+        <button className="btn btn-ghost" onClick={onBack}>
           &larr; Back
         </button>
         <div style={{ display: "flex", gap: "0.5rem" }}>
           <button
+            className="btn btn-ghost"
             onClick={() => {
               setEditName(taskList.name);
               setEditingName(true);
             }}
-            style={{
-              padding: "0.3rem 0.6rem",
-              background: "#ffc107",
-              border: "none",
-              borderRadius: "4px",
-              cursor: "pointer",
-            }}
           >
-            Rename
+            ✏️ Rename
           </button>
           <button
+            className="btn btn-danger"
             onClick={() => {
               if (confirm(`Delete list "${taskList.name}" and all its tasks?`)) {
                 deleteListMutation.mutate();
               }
             }}
-            style={{
-              padding: "0.3rem 0.6rem",
-              background: "#dc3545",
-              color: "white",
-              border: "none",
-              borderRadius: "4px",
-              cursor: "pointer",
-            }}
           >
-            Delete List
+            🗑 Delete List
           </button>
         </div>
       </div>
 
+      {/* Title / Edit */}
       {editingName ? (
         <form
           onSubmit={(e) => {
             e.preventDefault();
             if (editName.trim()) updateListMutation.mutate(editName.trim());
           }}
-          style={{ marginBottom: "1rem", display: "flex", gap: "0.5rem" }}
+          style={{ marginBottom: "var(--space-lg)", display: "flex", gap: "0.5rem" }}
         >
           <input
             type="text"
+            className="input"
             value={editName}
             onChange={(e) => setEditName(e.target.value)}
-            style={{
-              flex: 1,
-              padding: "0.5rem",
-              border: "1px solid #ccc",
-              borderRadius: "4px",
-              fontSize: "1rem",
-            }}
             autoFocus
           />
-          <button
-            type="submit"
-            style={{
-              padding: "0.5rem 1rem",
-              background: "#007bff",
-              color: "white",
-              border: "none",
-              borderRadius: "4px",
-              cursor: "pointer",
-            }}
-          >
+          <button type="submit" className="btn btn-primary">
             Save
           </button>
-          <button
-            type="button"
-            onClick={() => setEditingName(false)}
-            style={{
-              padding: "0.5rem 1rem",
-              background: "#6c757d",
-              color: "white",
-              border: "none",
-              borderRadius: "4px",
-              cursor: "pointer",
-            }}
-          >
+          <button type="button" className="btn btn-ghost" onClick={() => setEditingName(false)}>
             Cancel
           </button>
         </form>
       ) : (
-        <h2 style={{ margin: "0 0 1rem 0" }}>{taskList.name}</h2>
+        <div style={{ marginBottom: "var(--space-lg)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)" }}>
+            <span style={{ fontSize: "1.5rem" }}>📁</span>
+            <h2 style={{ fontSize: "var(--font-size-xl)", fontWeight: 700 }}>{taskList.name}</h2>
+          </div>
+          {tasks.length > 0 && (
+            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)", marginTop: "var(--space-sm)" }}>
+              <span className="badge badge-done">{doneCount}/{tasks.length} done</span>
+              <div style={{ flex: 1, maxWidth: "200px" }}>
+                <div className="progress-bar">
+                  <div className="progress-bar-fill" style={{ width: `${progress}%` }} />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
       {/* Quick-add form */}
       <form
         onSubmit={handleQuickAdd}
-        style={{
-          display: "flex",
-          gap: "0.5rem",
-          marginBottom: "1rem",
-        }}
+        style={{ display: "flex", gap: "0.5rem", marginBottom: "var(--space-lg)" }}
       >
         <input
           type="text"
+          className="input"
           value={newTitle}
           onChange={(e) => setNewTitle(e.target.value)}
           placeholder="Add a task to this list..."
-          style={{
-            flex: 1,
-            padding: "0.5rem",
-            border: "1px solid #ccc",
-            borderRadius: "4px",
-            fontSize: "1rem",
-          }}
         />
         <button
           type="submit"
+          className="btn btn-primary"
+          style={{ background: "var(--color-list)" }}
           disabled={createMutation.isPending || !newTitle.trim()}
-          style={{
-            padding: "0.5rem 1rem",
-            background:
-              createMutation.isPending || !newTitle.trim()
-                ? "#6c757d"
-                : "#007bff",
-            color: "white",
-            border: "none",
-            borderRadius: "4px",
-            cursor:
-              createMutation.isPending || !newTitle.trim()
-                ? "not-allowed"
-                : "pointer",
-          }}
         >
-          Add
+          {createMutation.isPending ? "..." : "Add"}
         </button>
       </form>
 
-      {tasksLoading && <p>Loading tasks...</p>}
+      {tasksLoading && (
+        <div className="card" style={{ textAlign: "center", padding: "var(--space-lg)" }}>
+          <p style={{ color: "var(--color-text-secondary)" }}>Loading tasks...</p>
+        </div>
+      )}
 
       {!tasksLoading && tasks.length === 0 && (
-        <p style={{ color: "#666" }}>No tasks in this list yet.</p>
+        <div className="empty-state">
+          <div className="empty-state-icon">📝</div>
+          <p className="empty-state-text">No tasks in this list yet.</p>
+        </div>
       )}
 
       {tasks.length > 0 && (
-        <ul style={{ listStyle: "none", padding: 0 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
           {tasks.map((task) => (
-            <li
+            <div
               key={task.id}
+              className={`card card-list ${task.status === "done" ? "card-done" : ""}`}
               style={{
-                padding: "0.5rem 0.75rem",
-                marginBottom: "0.3rem",
-                border: "1px solid #ddd",
-                borderRadius: "4px",
                 display: "flex",
                 alignItems: "center",
-                gap: "0.5rem",
-                background: task.status === "done" ? "#f9f9f9" : "white",
+                gap: "var(--space-sm)",
+                padding: "0.6rem 0.8rem",
               }}
             >
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={task.status === "done"}
                 onChange={() =>
                   toggleMutation.mutate({ id: task.id, status: task.status })
                 }
-                style={{ width: "1.1rem", height: "1.1rem", cursor: "pointer" }}
               />
               <span
                 style={{
                   flex: 1,
-                  textDecoration:
-                    task.status === "done" ? "line-through" : "none",
-                  color: task.status === "done" ? "#888" : "inherit",
+                  textDecoration: task.status === "done" ? "line-through" : "none",
+                  color: task.status === "done" ? "var(--color-text-muted)" : "var(--color-text)",
+                  fontSize: "var(--font-size-base)",
                 }}
               >
                 {task.title}
               </span>
               <button
+                className="btn btn-danger btn-sm"
                 onClick={() => {
                   if (confirm("Delete this task?")) {
                     deleteTaskMutation.mutate(task.id);
                   }
                 }}
-                style={{
-                  padding: "0.2rem 0.5rem",
-                  background: "#dc3545",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "3px",
-                  cursor: "pointer",
-                  fontSize: "0.75rem",
-                }}
               >
-                Delete
+                ✕
               </button>
-            </li>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );

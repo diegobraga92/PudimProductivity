@@ -10,7 +10,6 @@ import {
   createTask,
   type Task,
   type TaskStatus,
-  type RecurrenceDay,
 } from "../api/tasks";
 import {
   listTaskLists,
@@ -21,19 +20,13 @@ import {
 import TaskCreate from "./TaskCreate";
 import TaskDetail from "./TaskDetail";
 import TaskListDetail from "./TaskListDetail";
+import Checkbox from "../components/Checkbox";
+import WeekHeatmap from "../components/WeekHeatmap";
+import StreakBadge from "../components/StreakBadge";
+import ProgressBar from "../components/ProgressBar";
+import { computeStreaks } from "../utils/streaks";
 
 type View = "list" | "create" | "detail" | "listDetail";
-
-const DAY_ORDER: RecurrenceDay[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
-const DAY_SHORT: Record<RecurrenceDay, string> = {
-  mon: "M",
-  tue: "T",
-  wed: "W",
-  thu: "T",
-  fri: "F",
-  sat: "S",
-  sun: "S",
-};
 
 function getWeekDates(): string[] {
   const dates: string[] = [];
@@ -49,68 +42,11 @@ function getWeekDates(): string[] {
   return dates;
 }
 
-function getDayName(dateStr: string): RecurrenceDay {
-  const d = new Date(dateStr + "T00:00:00");
-  const day = d.getDay();
-  return DAY_ORDER[day === 0 ? 6 : day - 1];
+interface TaskListProps {
+  onNavigate?: (view: string, taskId?: string) => void;
 }
 
-interface HabitWeekRowProps {
-  task: Task;
-  completions: string[];
-  onToggleDay: (taskId: string, date: string, completed: boolean) => void;
-}
-
-function HabitWeekRow({ task, completions, onToggleDay }: HabitWeekRowProps) {
-  const weekDates = getWeekDates();
-  const completedSet = new Set(completions);
-
-  return (
-    <div style={{ display: "flex", gap: "0.25rem", marginTop: "0.3rem" }}>
-      {weekDates.map((date) => {
-        const dayName = getDayName(date);
-        const isScheduled = task.recurrence_days?.includes(dayName);
-        const isCompleted = completedSet.has(date);
-        const isToday = date === new Date().toISOString().split("T")[0];
-
-        return (
-          <button
-            key={date}
-            onClick={() => {
-              if (isScheduled || isCompleted) {
-                onToggleDay(task.id, date, isCompleted);
-              }
-            }}
-            title={`${dayName} ${date}`}
-            style={{
-              width: "1.8rem",
-              height: "1.8rem",
-              border: isToday ? "2px solid #007bff" : "1px solid #ccc",
-              borderRadius: "4px",
-              background: isCompleted
-                ? "#28a745"
-                : isScheduled
-                ? "#fff3cd"
-                : "#f5f5f5",
-              color: isCompleted ? "white" : isScheduled ? "#856404" : "#ccc",
-              cursor: isScheduled || isCompleted ? "pointer" : "default",
-              fontSize: "0.7rem",
-              fontWeight: "bold",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: 0,
-            }}
-          >
-            {DAY_SHORT[dayName]}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-export default function TaskList() {
+export default function TaskList(_props: TaskListProps) {
   const queryClient = useQueryClient();
   const [view, setView] = useState<View>("list");
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
@@ -119,15 +55,16 @@ export default function TaskList() {
   const [newTodoTitle, setNewTodoTitle] = useState("");
   const [newHabitTitle, setNewHabitTitle] = useState("");
   const [newListName, setNewListName] = useState("");
+  const [activeTab, setActiveTab] = useState<"todos" | "habits" | "lists">("todos");
 
-  // Fetch unassigned one-off tasks (not in any list)
+  // Fetch unassigned one-off tasks
   const { data: todoTasks = [], isLoading: todoLoading, error: todoError } = useQuery<Task[]>({
     queryKey: ["tasks", "one-off", statusFilter],
     queryFn: () =>
       listTasks(statusFilter ? (statusFilter as TaskStatus) : undefined, "one-off"),
   });
 
-  // Fetch unassigned habit tasks (not in any list)
+  // Fetch unassigned habit tasks
   const { data: habitTasks = [], isLoading: habitLoading, error: habitError } = useQuery<Task[]>({
     queryKey: ["tasks", "habit", statusFilter],
     queryFn: () =>
@@ -275,142 +212,205 @@ export default function TaskList() {
     );
   }
 
+  // Compute stats
+  const doneTodos = todoTasks.filter((t) => t.status === "done").length;
+  const todoProgress = todoTasks.length > 0 ? Math.round((doneTodos / todoTasks.length) * 100) : 0;
+
+  const today = new Date().toISOString().split("T")[0];
+  const todayHabitCompletions = Object.values(allCompletions ?? {}).filter((dates) =>
+    dates.includes(today)
+  ).length;
+  const habitProgress = habitTasks.length > 0 ? Math.round((todayHabitCompletions / habitTasks.length) * 100) : 0;
+
   return (
-    <div style={{ maxWidth: "900px", margin: "0 auto", padding: "1rem" }}>
+    <div className="animate-fade-in">
+      {/* Page Header */}
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: "1rem",
+          marginBottom: "var(--space-lg)",
         }}
       >
-        <h2 style={{ margin: 0 }}>Tasks</h2>
-        <button
-          onClick={() => setView("create")}
-          style={{
-            padding: "0.5rem 1rem",
-            background: "#007bff",
-            color: "white",
-            border: "none",
-            borderRadius: "4px",
-            cursor: "pointer",
-          }}
-        >
+        <div>
+          <h2 style={{ fontSize: "var(--font-size-xl)", fontWeight: 700, marginBottom: "0.2rem" }}>
+            📋 Tasks
+          </h2>
+          <p style={{ margin: 0, fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)" }}>
+            Manage your todos, habits, and lists
+          </p>
+        </div>
+        <button className="btn btn-primary" onClick={() => setView("create")}>
           + New Task
         </button>
       </div>
 
-      {/* Filter */}
-      <div style={{ marginBottom: "1rem" }}>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as TaskStatus | "")}
-          style={{ padding: "0.3rem" }}
-        >
-          <option value="">All</option>
-          <option value="todo">Todo</option>
-          <option value="done">Done</option>
-        </select>
-      </div>
-
-      {isLoading && <p>Loading tasks...</p>}
-      {error && <p style={{ color: "red" }}>Error: {(error as Error).message}</p>}
-
-      {/* Two-column layout */}
+      {/* Filter + Progress Row */}
       <div
         style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: "1.5rem",
-          marginBottom: "2rem",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: "var(--space-md)",
+          marginBottom: "var(--space-lg)",
+          flexWrap: "wrap",
         }}
       >
-        {/* LEFT COLUMN: Todo tasks */}
-        <div>
-          <h3 style={{ margin: "0 0 0.75rem 0", color: "#333" }}>
-            📋 To-Do
-          </h3>
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)" }}>
+          <select
+            className="select"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as TaskStatus | "")}
+          >
+            <option value="">All</option>
+            <option value="todo">Todo</option>
+            <option value="done">Done</option>
+          </select>
+        </div>
 
+        {/* Mini progress indicators */}
+        <div style={{ display: "flex", gap: "var(--space-lg)", alignItems: "center" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)" }}>
+            <span className="badge badge-todo">{doneTodos}/{todoTasks.length}</span>
+            <div style={{ width: "80px" }}>
+              <ProgressBar value={todoProgress} variant="todo" />
+            </div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)" }}>
+            <span className="badge badge-habit">{todayHabitCompletions}/{habitTasks.length}</span>
+            <div style={{ width: "80px" }}>
+              <ProgressBar value={habitProgress} variant="habit" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {isLoading && (
+        <div className="card" style={{ textAlign: "center", padding: "var(--space-xl)" }}>
+          <p style={{ color: "var(--color-text-secondary)" }}>Loading tasks...</p>
+        </div>
+      )}
+      {error && (
+        <div className="card" style={{ borderLeft: "3px solid var(--color-danger)", marginBottom: "var(--space-md)" }}>
+          <p style={{ color: "var(--color-danger)", margin: 0 }}>
+            Error: {(error as Error).message}
+          </p>
+        </div>
+      )}
+
+      {/* ===== SECTION TABS ===== */}
+      <div
+        style={{
+          display: "flex",
+          gap: "0",
+          marginBottom: "var(--space-lg)",
+          borderBottom: "2px solid var(--color-border-light)",
+        }}
+      >
+        {[
+          { id: "todos" as const, label: "To-Dos", icon: "📋", count: todoTasks.length },
+          { id: "habits" as const, label: "Habits", icon: "🔄", count: habitTasks.length },
+          { id: "lists" as const, label: "Lists", icon: "📁", count: taskLists.length },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.35rem",
+              padding: "0.6rem 1.2rem",
+              background: "transparent",
+              border: "none",
+              borderBottom: activeTab === tab.id ? "2px solid var(--color-primary)" : "2px solid transparent",
+              marginBottom: "-2px",
+              cursor: "pointer",
+              fontFamily: "var(--font-family)",
+              fontSize: "var(--font-size-sm)",
+              fontWeight: activeTab === tab.id ? 600 : 400,
+              color: activeTab === tab.id ? "var(--color-primary)" : "var(--color-text-secondary)",
+              transition: "all var(--transition-fast)",
+            }}
+          >
+            <span>{tab.icon}</span>
+            <span>{tab.label}</span>
+            <span
+              className="badge"
+              style={{
+                background: activeTab === tab.id ? "var(--color-primary)" : "var(--color-border-light)",
+                color: activeTab === tab.id ? "white" : "var(--color-text-secondary)",
+                padding: "0.05rem 0.35rem",
+                fontSize: "0.65rem",
+              }}
+            >
+              {tab.count}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {/* ===== TODOS TAB ===== */}
+      {activeTab === "todos" && (
+        <div className="animate-fade-in">
           {/* Quick-add for todos */}
           <form
             onSubmit={(e) => {
               e.preventDefault();
               if (newTodoTitle.trim()) createTodoMutation.mutate(newTodoTitle.trim());
             }}
-            style={{ display: "flex", gap: "0.3rem", marginBottom: "0.75rem" }}
+            style={{ display: "flex", gap: "0.3rem", marginBottom: "var(--space-md)" }}
           >
             <input
               type="text"
+              className="input"
               value={newTodoTitle}
               onChange={(e) => setNewTodoTitle(e.target.value)}
               placeholder="Quick add todo..."
-              style={{
-                flex: 1,
-                padding: "0.4rem",
-                border: "1px solid #ccc",
-                borderRadius: "4px",
-                fontSize: "0.9rem",
-              }}
             />
             <button
               type="submit"
+              className="btn btn-primary"
               disabled={createTodoMutation.isPending || !newTodoTitle.trim()}
-              style={{
-                padding: "0.4rem 0.7rem",
-                background:
-                  createTodoMutation.isPending || !newTodoTitle.trim()
-                    ? "#6c757d"
-                    : "#007bff",
-                color: "white",
-                border: "none",
-                borderRadius: "4px",
-                cursor:
-                  createTodoMutation.isPending || !newTodoTitle.trim()
-                    ? "not-allowed"
-                    : "pointer",
-                fontSize: "0.85rem",
-              }}
             >
-              Add
+              {createTodoMutation.isPending ? "..." : "Add"}
             </button>
           </form>
 
           {todoTasks.length === 0 && !isLoading && (
-            <p style={{ color: "#666", fontSize: "0.9rem" }}>No todos yet.</p>
+            <div className="empty-state">
+              <div className="empty-state-icon">📋</div>
+              <p className="empty-state-text">No todos yet. Add one above!</p>
+            </div>
           )}
 
-          <ul style={{ listStyle: "none", padding: 0 }}>
-            {todoTasks.map((task) => (
-              <li
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+            {todoTasks.map((task, index) => (
+              <div
                 key={task.id}
+                className={`card card-todo ${task.status === "done" ? "card-done" : ""}`}
                 style={{
-                  padding: "0.5rem 0.75rem",
-                  marginBottom: "0.3rem",
-                  border: "1px solid #ddd",
-                  borderRadius: "4px",
                   display: "flex",
                   alignItems: "center",
-                  gap: "0.5rem",
-                  background: task.status === "done" ? "#f9f9f9" : "white",
+                  gap: "var(--space-sm)",
+                  padding: "0.6rem 0.8rem",
+                  animationDelay: `${index * 30}ms`,
                 }}
               >
-                <input
-                  type="checkbox"
+                <Checkbox
                   checked={task.status === "done"}
                   onChange={() =>
                     toggleMutation.mutate({ id: task.id, status: task.status })
                   }
-                  style={{ width: "1.1rem", height: "1.1rem", cursor: "pointer" }}
                 />
                 <span
                   style={{
                     flex: 1,
                     cursor: "pointer",
-                    textDecoration:
-                      task.status === "done" ? "line-through" : "none",
-                    color: task.status === "done" ? "#888" : "inherit",
-                    fontSize: "0.9rem",
+                    textDecoration: task.status === "done" ? "line-through" : "none",
+                    color: task.status === "done" ? "var(--color-text-muted)" : "var(--color-text)",
+                    fontSize: "var(--font-size-base)",
+                    transition: "all var(--transition-fast)",
                   }}
                   onClick={() => {
                     setSelectedTaskId(task.id);
@@ -420,110 +420,88 @@ export default function TaskList() {
                   {task.title}
                 </span>
                 <button
+                  className="btn btn-danger btn-sm"
                   onClick={(e) => {
                     e.stopPropagation();
                     if (confirm("Delete this task?")) {
                       deleteMutation.mutate(task.id);
                     }
                   }}
-                  style={{
-                    padding: "0.2rem 0.5rem",
-                    background: "#dc3545",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "3px",
-                    cursor: "pointer",
-                    fontSize: "0.75rem",
-                  }}
                 >
-                  Del
+                  ✕
                 </button>
-              </li>
+              </div>
             ))}
-          </ul>
+          </div>
         </div>
+      )}
 
-        {/* RIGHT COLUMN: Habits */}
-        <div>
-          <h3 style={{ margin: "0 0 0.75rem 0", color: "#333" }}>
-            🔄 Habits
-          </h3>
-
+      {/* ===== HABITS TAB ===== */}
+      {activeTab === "habits" && (
+        <div className="animate-fade-in">
           {/* Quick-add for habits */}
           <form
             onSubmit={(e) => {
               e.preventDefault();
               if (newHabitTitle.trim()) createHabitMutation.mutate(newHabitTitle.trim());
             }}
-            style={{ display: "flex", gap: "0.3rem", marginBottom: "0.75rem" }}
+            style={{ display: "flex", gap: "0.3rem", marginBottom: "var(--space-md)" }}
           >
             <input
               type="text"
+              className="input"
               value={newHabitTitle}
               onChange={(e) => setNewHabitTitle(e.target.value)}
               placeholder="Quick add habit (weekdays)..."
-              style={{
-                flex: 1,
-                padding: "0.4rem",
-                border: "1px solid #ccc",
-                borderRadius: "4px",
-                fontSize: "0.9rem",
-              }}
             />
             <button
               type="submit"
+              className="btn btn-primary"
+              style={{ background: "var(--color-habit)" }}
               disabled={createHabitMutation.isPending || !newHabitTitle.trim()}
-              style={{
-                padding: "0.4rem 0.7rem",
-                background:
-                  createHabitMutation.isPending || !newHabitTitle.trim()
-                    ? "#6c757d"
-                    : "#28a745",
-                color: "white",
-                border: "none",
-                borderRadius: "4px",
-                cursor:
-                  createHabitMutation.isPending || !newHabitTitle.trim()
-                    ? "not-allowed"
-                    : "pointer",
-                fontSize: "0.85rem",
-              }}
             >
-              Add
+              {createHabitMutation.isPending ? "..." : "Add"}
             </button>
           </form>
 
           {habitTasks.length === 0 && !isLoading && (
-            <p style={{ color: "#666", fontSize: "0.9rem" }}>No habits yet.</p>
+            <div className="empty-state">
+              <div className="empty-state-icon">🔄</div>
+              <p className="empty-state-text">No habits yet. Add one above!</p>
+            </div>
           )}
 
-          <ul style={{ listStyle: "none", padding: 0 }}>
-            {habitTasks.map((task) => {
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+            {habitTasks.map((task, index) => {
               const taskCompletions = allCompletions?.[task.id] ?? [];
+              const { current, longest } = computeStreaks(taskCompletions);
+              const weeklyDone = taskCompletions.filter((d) => d <= today).length;
+              const weeklyTotal = task.recurrence_days?.length ?? 0;
+              const weeklyPct = weeklyTotal > 0 ? Math.round((weeklyDone / weeklyTotal) * 100) : 0;
 
               return (
-                <li
+                <div
                   key={task.id}
+                  className="card card-habit"
                   style={{
-                    padding: "0.5rem 0.75rem",
-                    marginBottom: "0.3rem",
-                    border: "1px solid #ddd",
-                    borderRadius: "4px",
-                    background: "#f0f8ff",
+                    padding: "0.7rem 0.8rem",
+                    animationDelay: `${index * 30}ms`,
                   }}
                 >
                   <div
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      gap: "0.5rem",
+                      gap: "var(--space-sm)",
+                      marginBottom: "0.4rem",
                     }}
                   >
                     <span
                       style={{
                         flex: 1,
                         cursor: "pointer",
-                        fontSize: "0.9rem",
+                        fontSize: "var(--font-size-base)",
+                        fontWeight: 500,
                       }}
                       onClick={() => {
                         setSelectedTaskId(task.id);
@@ -531,156 +509,126 @@ export default function TaskList() {
                       }}
                     >
                       {task.title}
-                      <span
-                        style={{
-                          marginLeft: "0.4rem",
-                          fontSize: "0.7rem",
-                          color: "#007bff",
-                          background: "#e6f2ff",
-                          padding: "0.1rem 0.3rem",
-                          borderRadius: "3px",
-                        }}
-                      >
-                        habit
-                      </span>
                     </span>
+                    <StreakBadge current={current} longest={longest} />
+                    <span className="badge badge-habit">habit</span>
                     <button
+                      className="btn btn-danger btn-sm"
                       onClick={(e) => {
                         e.stopPropagation();
                         if (confirm("Delete this habit?")) {
                           deleteMutation.mutate(task.id);
                         }
                       }}
-                      style={{
-                        padding: "0.2rem 0.5rem",
-                        background: "#dc3545",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "3px",
-                        cursor: "pointer",
-                        fontSize: "0.75rem",
-                      }}
                     >
-                      Del
+                      ✕
                     </button>
                   </div>
 
-                  <HabitWeekRow
-                    task={task}
+                  {/* Weekly progress bar */}
+                  <div style={{ marginBottom: "0.4rem" }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        fontSize: "var(--font-size-xs)",
+                        color: "var(--color-text-muted)",
+                        marginBottom: "0.15rem",
+                      }}
+                    >
+                      <span>This week</span>
+                      <span>{weeklyDone}/{weeklyTotal}</span>
+                    </div>
+                    <ProgressBar value={weeklyPct} variant="habit" />
+                  </div>
+
+                  <WeekHeatmap
+                    recurrenceDays={task.recurrence_days ?? []}
                     completions={taskCompletions}
-                    onToggleDay={(taskId, date, completed) => {
-                      habitToggleMutation.mutate({ taskId, date, completed });
+                    onToggleDay={(date, completed) => {
+                      habitToggleMutation.mutate({ taskId: task.id, date, completed });
                     }}
+                    disabled={habitToggleMutation.isPending}
                   />
-                </li>
+                </div>
               );
             })}
-          </ul>
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* TASK LISTS SECTION */}
-      <hr style={{ margin: "1.5rem 0" }} />
-      <div>
-        <h3 style={{ margin: "0 0 0.75rem 0", color: "#333" }}>
-          📁 Task Lists
-        </h3>
-
-        {/* Create new list */}
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (newListName.trim()) createListMutation.mutate(newListName.trim());
-          }}
-          style={{ display: "flex", gap: "0.3rem", marginBottom: "0.75rem" }}
-        >
-          <input
-            type="text"
-            value={newListName}
-            onChange={(e) => setNewListName(e.target.value)}
-            placeholder="New list name (e.g. Shopping List)..."
-            style={{
-              flex: 1,
-              padding: "0.4rem",
-              border: "1px solid #ccc",
-              borderRadius: "4px",
-              fontSize: "0.9rem",
+      {/* ===== LISTS TAB ===== */}
+      {activeTab === "lists" && (
+        <div className="animate-fade-in">
+          {/* Create new list */}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (newListName.trim()) createListMutation.mutate(newListName.trim());
             }}
-          />
-          <button
-            type="submit"
-            disabled={createListMutation.isPending || !newListName.trim()}
-            style={{
-              padding: "0.4rem 0.7rem",
-              background:
-                createListMutation.isPending || !newListName.trim()
-                  ? "#6c757d"
-                  : "#007bff",
-              color: "white",
-              border: "none",
-              borderRadius: "4px",
-              cursor:
-                createListMutation.isPending || !newListName.trim()
-                  ? "not-allowed"
-                  : "pointer",
-              fontSize: "0.85rem",
-            }}
+            style={{ display: "flex", gap: "0.3rem", marginBottom: "var(--space-md)" }}
           >
-            Create
-          </button>
-        </form>
-
-        {taskLists.length === 0 && (
-          <p style={{ color: "#666", fontSize: "0.9rem" }}>
-            No lists yet. Create one above!
-          </p>
-        )}
-
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
-          {taskLists.map((list) => (
-            <div
-              key={list.id}
-              style={{
-                padding: "0.5rem 0.75rem",
-                border: "1px solid #ddd",
-                borderRadius: "6px",
-                background: "white",
-                display: "flex",
-                alignItems: "center",
-                gap: "0.5rem",
-                cursor: "pointer",
-              }}
-              onClick={() => {
-                setSelectedListId(list.id);
-                setView("listDetail");
-              }}
+            <input
+              type="text"
+              className="input"
+              value={newListName}
+              onChange={(e) => setNewListName(e.target.value)}
+              placeholder="New list name (e.g. Shopping List)..."
+            />
+            <button
+              type="submit"
+              className="btn btn-primary"
+              style={{ background: "var(--color-list)" }}
+              disabled={createListMutation.isPending || !newListName.trim()}
             >
-              <span style={{ fontWeight: "bold", fontSize: "0.9rem" }}>
-                {list.name}
-              </span>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (confirm(`Delete list "${list.name}"?`)) {
-                    deleteListMutation.mutate(list.id);
-                  }
-                }}
+              {createListMutation.isPending ? "..." : "Create"}
+            </button>
+          </form>
+
+          {taskLists.length === 0 && (
+            <div className="empty-state">
+              <div className="empty-state-icon">📁</div>
+              <p className="empty-state-text">No lists yet. Create one above!</p>
+            </div>
+          )}
+
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+            {taskLists.map((list) => (
+              <div
+                key={list.id}
+                className="card card-list"
                 style={{
-                  padding: "0.15rem 0.4rem",
-                  background: "#dc3545",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "3px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "var(--space-sm)",
+                  padding: "0.7rem 0.8rem",
                   cursor: "pointer",
-                  fontSize: "0.7rem",
+                }}
+                onClick={() => {
+                  setSelectedListId(list.id);
+                  setView("listDetail");
                 }}
               >
-                ✕
-              </button>
-            </div>
-          ))}
+                <span style={{ fontSize: "1.2rem" }}>📁</span>
+                <span style={{ flex: 1, fontWeight: 600, fontSize: "var(--font-size-base)" }}>
+                  {list.name}
+                </span>
+                <button
+                  className="btn btn-danger btn-sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (confirm(`Delete list "${list.name}"?`)) {
+                      deleteListMutation.mutate(list.id);
+                    }
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

@@ -10,8 +10,11 @@ import {
   type TaskStatus,
   type RecurrenceDay,
 } from "../api/tasks";
+import WeekHeatmap from "../components/WeekHeatmap";
+import StreakBadge from "../components/StreakBadge";
+import ProgressBar from "../components/ProgressBar";
+import { computeStreaks } from "../utils/streaks";
 
-const DAY_ORDER: RecurrenceDay[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 const DAY_LABELS: Record<RecurrenceDay, string> = {
   mon: "Monday",
   tue: "Tuesday",
@@ -34,12 +37,6 @@ function getWeekDates(): string[] {
     dates.push(d.toISOString().split("T")[0]);
   }
   return dates;
-}
-
-function getDayName(dateStr: string): RecurrenceDay {
-  const d = new Date(dateStr + "T00:00:00");
-  const day = d.getDay();
-  return DAY_ORDER[day === 0 ? 6 : day - 1];
 }
 
 interface TaskDetailProps {
@@ -81,6 +78,8 @@ export default function TaskDetail({
   });
 
   const completedDates = new Set(completions.map((c) => c.completed_date));
+  const completionDateStrings = completions.map((c) => c.completed_date);
+  const { current: currentStreak, longest: longestStreak } = computeStreaks(completionDateStrings);
 
   const updateMutation = useMutation({
     mutationFn: (req: Parameters<typeof updateTask>[1]) =>
@@ -140,17 +139,20 @@ export default function TaskDetail({
     updateMutation.mutate({ title: title.trim() });
   };
 
-  if (isLoading) return <p>Loading task...</p>;
+  if (isLoading) {
+    return (
+      <div className="card" style={{ textAlign: "center", padding: "var(--space-xl)" }}>
+        <p style={{ color: "var(--color-text-secondary)" }}>Loading task...</p>
+      </div>
+    );
+  }
 
   if (fetchError) {
     return (
-      <div style={{ padding: "1rem" }}>
-        <p style={{ color: "red" }}>Error: {(fetchError as Error).message}</p>
-        <button
-          onClick={onBack}
-          style={{ padding: "0.5rem 1rem", cursor: "pointer" }}
-        >
-          Back
+      <div className="card" style={{ borderLeft: "3px solid var(--color-danger)" }}>
+        <p style={{ color: "var(--color-danger)" }}>Error: {(fetchError as Error).message}</p>
+        <button className="btn btn-ghost mt-sm" onClick={onBack}>
+          &larr; Back
         </button>
       </div>
     );
@@ -160,64 +162,49 @@ export default function TaskDetail({
 
   if (editing) {
     return (
-      <div style={{ maxWidth: "400px", margin: "0 auto", padding: "1rem" }}>
-        <h2>Edit Task</h2>
+      <div className="animate-fade-in" style={{ maxWidth: "400px" }}>
+        <h2 style={{ fontSize: "var(--font-size-xl)", fontWeight: 700, marginBottom: "var(--space-lg)" }}>
+          ✏️ Edit Task
+        </h2>
         <form onSubmit={handleUpdate}>
-          <div style={{ marginBottom: "1rem" }}>
+          <div style={{ marginBottom: "var(--space-md)" }}>
             <label
               style={{
                 display: "block",
                 marginBottom: "0.3rem",
-                fontWeight: "bold",
+                fontWeight: 600,
+                fontSize: "var(--font-size-sm)",
               }}
             >
               Title
             </label>
             <input
               type="text"
+              className="input"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "0.5rem",
-                border: "1px solid #ccc",
-                borderRadius: "4px",
-                fontSize: "1rem",
-              }}
               autoFocus
             />
           </div>
 
           {error && (
-            <p style={{ color: "red", marginBottom: "0.5rem" }}>{error}</p>
+            <p style={{ color: "var(--color-danger)", marginBottom: "0.5rem", fontSize: "var(--font-size-sm)" }}>
+              {error}
+            </p>
           )}
 
           <div style={{ display: "flex", gap: "0.5rem" }}>
             <button
               type="submit"
+              className="btn btn-primary"
               disabled={updateMutation.isPending}
-              style={{
-                padding: "0.5rem 1rem",
-                background: updateMutation.isPending ? "#6c757d" : "#007bff",
-                color: "white",
-                border: "none",
-                borderRadius: "4px",
-                cursor: updateMutation.isPending ? "not-allowed" : "pointer",
-              }}
             >
               {updateMutation.isPending ? "Saving..." : "Save"}
             </button>
             <button
               type="button"
+              className="btn btn-ghost"
               onClick={() => setEditing(false)}
-              style={{
-                padding: "0.5rem 1rem",
-                background: "#6c757d",
-                color: "white",
-                border: "none",
-                borderRadius: "4px",
-                cursor: "pointer",
-              }}
             >
               Cancel
             </button>
@@ -228,95 +215,78 @@ export default function TaskDetail({
   }
 
   return (
-    <div style={{ maxWidth: "500px", margin: "0 auto", padding: "1rem" }}>
+    <div className="animate-fade-in" style={{ maxWidth: "500px" }}>
+      {/* Header */}
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: "1rem",
+          marginBottom: "var(--space-lg)",
         }}
       >
-        <button
-          onClick={onBack}
-          style={{
-            padding: "0.3rem 0.6rem",
-            background: "transparent",
-            border: "1px solid #ccc",
-            borderRadius: "4px",
-            cursor: "pointer",
-          }}
-        >
+        <button className="btn btn-ghost" onClick={onBack}>
           &larr; Back
         </button>
         <div style={{ display: "flex", gap: "0.5rem" }}>
-          <button
-            onClick={startEditing}
-            style={{
-              padding: "0.3rem 0.6rem",
-              background: "#ffc107",
-              border: "none",
-              borderRadius: "4px",
-              cursor: "pointer",
-            }}
-          >
-            Edit
+          <button className="btn btn-ghost" onClick={startEditing}>
+            ✏️ Edit
           </button>
           <button
+            className="btn btn-danger"
             onClick={() => {
               if (confirm("Delete this task?")) {
                 deleteMutation.mutate();
               }
             }}
-            style={{
-              padding: "0.3rem 0.6rem",
-              background: "#dc3545",
-              color: "white",
-              border: "none",
-              borderRadius: "4px",
-              cursor: "pointer",
-            }}
           >
-            Delete
+            🗑 Delete
           </button>
         </div>
       </div>
 
-      <h2
-        style={{
-          marginBottom: "0.5rem",
-          textDecoration: task.status === "done" ? "line-through" : "none",
-          color: task.status === "done" ? "#888" : "inherit",
-        }}
-      >
-        {task.title}
-      </h2>
-
-      {isHabit && (
-        <span
+      {/* Task Title */}
+      <div className="card" style={{ marginBottom: "var(--space-lg)" }}>
+        <h2
           style={{
-            display: "inline-block",
-            marginBottom: "1rem",
-            fontSize: "0.8rem",
-            color: "#007bff",
-            background: "#e6f2ff",
-            padding: "0.2rem 0.5rem",
-            borderRadius: "3px",
+            fontSize: "var(--font-size-xl)",
+            fontWeight: 700,
+            marginBottom: "var(--space-sm)",
+            textDecoration: task.status === "done" ? "line-through" : "none",
+            color: task.status === "done" ? "var(--color-text-muted)" : "var(--color-text)",
+            transition: "all var(--transition-fast)",
           }}
         >
-          Habit &middot; {task.recurrence_days?.map((d) => DAY_LABELS[d]).join(", ")}
-        </span>
-      )}
+          {task.title}
+        </h2>
+
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)", flexWrap: "wrap" }}>
+          {isHabit ? (
+            <>
+              <span className="badge badge-habit">Habit</span>
+              <StreakBadge current={currentStreak} longest={longestStreak} />
+              <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>
+                {task.recurrence_days?.map((d) => DAY_LABELS[d]).join(", ")}
+              </span>
+            </>
+          ) : (
+            <span className={`badge ${task.status === "done" ? "badge-done" : "badge-todo"}`}>
+              {task.status === "done" ? "Done" : "To Do"}
+            </span>
+          )}
+        </div>
+      </div>
 
       {/* One-off task toggle */}
       {!isHabit && (
-        <div style={{ marginBottom: "1rem" }}>
+        <div className="card card-todo" style={{ marginBottom: "var(--space-lg)" }}>
           <label
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "0.5rem",
+              gap: "var(--space-sm)",
               cursor: "pointer",
+              fontWeight: 500,
             }}
           >
             <input
@@ -325,7 +295,7 @@ export default function TaskDetail({
               onChange={() =>
                 toggleMutation.mutate(task.status === "done" ? "todo" : "done")
               }
-              style={{ width: "1.2rem", height: "1.2rem" }}
+              style={{ width: "1.2rem", height: "1.2rem", accentColor: "var(--color-primary)" }}
             />
             <span>
               {task.status === "done" ? "Mark as todo" : "Mark as done"}
@@ -336,73 +306,71 @@ export default function TaskDetail({
 
       {/* Habit weekly calendar */}
       {isHabit && (
-        <div style={{ marginBottom: "1rem" }}>
-          <h4 style={{ margin: "0 0 0.5rem 0", color: "#555" }}>This Week</h4>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(7, 1fr)",
-              gap: "0.3rem",
-            }}
-          >
-            {weekDates.map((date) => {
-              const dayName = getDayName(date);
-              const isScheduled = task.recurrence_days?.includes(dayName);
-              const isCompleted = completedDates.has(date);
-              const isToday =
-                date === new Date().toISOString().split("T")[0];
+        <div className="card card-habit" style={{ marginBottom: "var(--space-lg)" }}>
+          <h3 style={{ fontSize: "var(--font-size-base)", fontWeight: 600, marginBottom: "var(--space-md)" }}>
+            📅 This Week
+          </h3>
 
-              return (
-                <button
-                  key={date}
-                  onClick={() => {
-                    if (isScheduled || isCompleted) {
-                      habitToggleMutation.mutate(date);
-                    }
-                  }}
-                  disabled={habitToggleMutation.isPending}
-                  title={`${DAY_LABELS[dayName]} ${date}`}
-                  style={{
-                    padding: "0.5rem",
-                    border: isToday ? "2px solid #007bff" : "1px solid #ddd",
-                    borderRadius: "6px",
-                    background: isCompleted
-                      ? "#28a745"
-                      : isScheduled
-                      ? "#fff3cd"
-                      : "#f5f5f5",
-                    color: isCompleted
-                      ? "white"
-                      : isScheduled
-                      ? "#856404"
-                      : "#ccc",
-                    cursor:
-                      isScheduled || isCompleted ? "pointer" : "default",
-                    textAlign: "center",
-                    fontSize: "0.8rem",
-                  }}
-                >
-                  <div style={{ fontWeight: "bold" }}>
-                    {DAY_LABELS[dayName].slice(0, 3)}
-                  </div>
-                  <div style={{ fontSize: "0.7rem", marginTop: "0.2rem" }}>
-                    {date.slice(5)}
-                  </div>
-                  <div style={{ fontSize: "1rem", marginTop: "0.2rem" }}>
-                    {isCompleted ? "✓" : isScheduled ? "○" : "—"}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+          {/* Weekly progress */}
+          {task.recurrence_days && (
+            <div style={{ marginBottom: "var(--space-md)" }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  fontSize: "var(--font-size-xs)",
+                  color: "var(--color-text-muted)",
+                  marginBottom: "0.2rem",
+                }}
+              >
+                <span>Weekly progress</span>
+                <span>
+                  {completionDateStrings.filter((d) => d <= new Date().toISOString().split("T")[0]).length}
+                  /{task.recurrence_days.length}
+                </span>
+              </div>
+              <ProgressBar
+                value={
+                  task.recurrence_days.length > 0
+                    ? Math.round(
+                        (completionDateStrings.filter((d) => d <= new Date().toISOString().split("T")[0]).length /
+                          task.recurrence_days.length) *
+                          100
+                      )
+                    : 0
+                }
+                variant="habit"
+              />
+            </div>
+          )}
+
+          <WeekHeatmap
+            recurrenceDays={task.recurrence_days ?? []}
+            completions={completionDateStrings}
+            onToggleDay={(date, _completed) => {
+              habitToggleMutation.mutate(date);
+            }}
+            disabled={habitToggleMutation.isPending}
+          />
         </div>
       )}
 
-      <p style={{ fontSize: "0.85rem", color: "#888" }}>
-        Created: {new Date(task.created_at).toLocaleString()}
-        <br />
-        Updated: {new Date(task.updated_at).toLocaleString()}
-      </p>
+      {/* Metadata */}
+      <div
+        style={{
+          fontSize: "var(--font-size-xs)",
+          color: "var(--color-text-muted)",
+          padding: "var(--space-sm) 0",
+          borderTop: "1px solid var(--color-border-light)",
+        }}
+      >
+        <p style={{ margin: "0.2rem 0" }}>
+          Created: {new Date(task.created_at).toLocaleString()}
+        </p>
+        <p style={{ margin: "0.2rem 0" }}>
+          Updated: {new Date(task.updated_at).toLocaleString()}
+        </p>
+      </div>
     </div>
   );
 }

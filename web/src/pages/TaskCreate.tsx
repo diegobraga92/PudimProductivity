@@ -58,125 +58,129 @@ export default function TaskCreate({ onCreated, onCancel }: TaskCreateProps) {
   };
 
   return (
-    <div style={{ maxWidth: "400px", margin: "0 auto", padding: "1rem" }}>
-      <h2>New Task</h2>
+    <div className="animate-fade-in" style={{ maxWidth: "450px" }}>
+      <h2 style={{ fontSize: "var(--font-size-xl)", fontWeight: 700, marginBottom: "var(--space-lg)" }}>
+        ✨ New Task
+      </h2>
 
       <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: "1rem" }}>
-          <label
-            style={{
-              display: "block",
-              marginBottom: "0.3rem",
-              fontWeight: "bold",
-            }}
-          >
-            What do you need to do?
-          </label>
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "0.5rem",
-              border: "1px solid #ccc",
-              borderRadius: "4px",
-              fontSize: "1rem",
-            }}
-            placeholder="e.g. Have hair cut"
-            autoFocus
-          />
-        </div>
-
-        {/* Habit toggle */}
-        <div style={{ marginBottom: "1rem" }}>
-          <label
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "0.5rem",
-              cursor: "pointer",
-              fontWeight: "bold",
-            }}
-          >
-            <input
-              type="checkbox"
-              checked={isHabit}
-              onChange={(e) => {
-                setIsHabit(e.target.checked);
-                if (!e.target.checked) setSelectedDays([]);
-              }}
-            />
-            Make this a habit (repeats weekly)
-          </label>
-        </div>
-
-        {/* Day picker */}
-        {isHabit && (
-          <div style={{ marginBottom: "1rem" }}>
+        <div className="card" style={{ marginBottom: "var(--space-lg)" }}>
+          <div style={{ marginBottom: "var(--space-md)" }}>
             <label
               style={{
                 display: "block",
                 marginBottom: "0.3rem",
-                fontWeight: "bold",
+                fontWeight: 600,
+                fontSize: "var(--font-size-sm)",
               }}
             >
-              Repeat on:
+              What do you need to do?
             </label>
-            <div style={{ display: "flex", gap: "0.3rem", flexWrap: "wrap" }}>
-              {DAY_LABELS.map(({ value, label }) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => toggleDay(value)}
-                  style={{
-                    padding: "0.4rem 0.7rem",
-                    border: selectedDays.includes(value)
-                      ? "2px solid #007bff"
-                      : "1px solid #ccc",
-                    borderRadius: "4px",
-                    background: selectedDays.includes(value)
-                      ? "#e6f2ff"
-                      : "white",
-                    cursor: "pointer",
-                    fontWeight: selectedDays.includes(value) ? "bold" : "normal",
-                  }}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+            <input
+              type="text"
+              className="input"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. Have hair cut"
+              autoFocus
+            />
           </div>
-        )}
 
-        {error && <p style={{ color: "red", marginBottom: "0.5rem" }}>{error}</p>}
+          {/* Habit toggle */}
+          <div
+            style={{
+              marginBottom: "var(--space-md)",
+              padding: "var(--space-sm) var(--space-md)",
+              background: "var(--color-bg)",
+              borderRadius: "var(--radius-sm)",
+            }}
+          >
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.5rem",
+                cursor: "pointer",
+                fontWeight: 500,
+                fontSize: "var(--font-size-sm)",
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={isHabit}
+                onChange={(e) => {
+                  setIsHabit(e.target.checked);
+                  if (!e.target.checked) setSelectedDays([]);
+                }}
+                style={{ width: "1.1rem", height: "1.1rem", accentColor: "var(--color-habit)" }}
+              />
+              Make this a habit (repeats weekly)
+            </label>
+          </div>
+
+          {/* Day picker */}
+          {isHabit && (
+            <div style={{ marginBottom: "var(--space-md)" }}>
+              <label
+                style={{
+                  display: "block",
+                  marginBottom: "0.3rem",
+                  fontWeight: 600,
+                  fontSize: "var(--font-size-sm)",
+                }}
+              >
+                Repeat on:
+              </label>
+              <div style={{ display: "flex", gap: "0.3rem", flexWrap: "wrap" }}>
+                {DAY_LABELS.map(({ value, label }) => {
+                  const isSelected = selectedDays.includes(value);
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => toggleDay(value)}
+                      style={{
+                        padding: "0.4rem 0.8rem",
+                        border: isSelected
+                          ? "2px solid var(--color-habit)"
+                          : "1.5px solid var(--color-border)",
+                        borderRadius: "var(--radius-sm)",
+                        background: isSelected ? "var(--color-habit-light)" : "var(--color-surface)",
+                        cursor: "pointer",
+                        fontWeight: isSelected ? 600 : 400,
+                        color: isSelected ? "var(--color-habit)" : "var(--color-text-secondary)",
+                        fontFamily: "var(--font-family)",
+                        fontSize: "var(--font-size-sm)",
+                        transition: "all var(--transition-fast)",
+                      }}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {error && (
+            <p style={{ color: "var(--color-danger)", marginBottom: "0.5rem", fontSize: "var(--font-size-sm)" }}>
+              {error}
+            </p>
+          )}
+        </div>
 
         <div style={{ display: "flex", gap: "0.5rem" }}>
           <button
             type="submit"
+            className="btn btn-primary"
             disabled={submitting}
-            style={{
-              padding: "0.5rem 1rem",
-              background: submitting ? "#6c757d" : "#007bff",
-              color: "white",
-              border: "none",
-              borderRadius: "4px",
-              cursor: submitting ? "not-allowed" : "pointer",
-            }}
           >
-            {submitting ? "Adding..." : "Add Task"}
+            {submitting ? "Adding..." : "✨ Add Task"}
           </button>
           <button
             type="button"
+            className="btn btn-ghost"
             onClick={onCancel}
-            style={{
-              padding: "0.5rem 1rem",
-              background: "#6c757d",
-              color: "white",
-              border: "none",
-              borderRadius: "4px",
-              cursor: "pointer",
-            }}
           >
             Cancel
           </button>
