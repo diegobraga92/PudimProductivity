@@ -35,8 +35,7 @@ paths:
           required: false
           description: Filter by task type. "one-off" for tasks without recurrence, "habit" for tasks with recurrence days.
           schema:
-            type: string
-            enum: [one-off, habit]
+            $ref: "#/components/schemas/TaskType"
       responses:
         "200":
           description: A list of tasks.
@@ -81,13 +80,7 @@ paths:
       tags:
         - Tasks
       parameters:
-        - name: taskId
-          in: path
-          required: true
-          description: The UUID of the task
-          schema:
-            type: string
-            format: uuid
+        - $ref: "#/components/parameters/taskId"
       responses:
         "200":
           description: Task found.
@@ -109,13 +102,7 @@ paths:
       tags:
         - Tasks
       parameters:
-        - name: taskId
-          in: path
-          required: true
-          description: The UUID of the task
-          schema:
-            type: string
-            format: uuid
+        - $ref: "#/components/parameters/taskId"
       requestBody:
         required: true
         content:
@@ -149,13 +136,7 @@ paths:
       tags:
         - Tasks
       parameters:
-        - name: taskId
-          in: path
-          required: true
-          description: The UUID of the task
-          schema:
-            type: string
-            format: uuid
+        - $ref: "#/components/parameters/taskId"
       responses:
         "204":
           description: Task deleted successfully.
@@ -174,13 +155,7 @@ paths:
       tags:
         - Tasks
       parameters:
-        - name: taskId
-          in: path
-          required: true
-          description: The UUID of the habit task
-          schema:
-            type: string
-            format: uuid
+        - $ref: "#/components/parameters/taskId"
       responses:
         "201":
           description: Task completed successfully for today.
@@ -208,13 +183,7 @@ paths:
       tags:
         - Tasks
       parameters:
-        - name: taskId
-          in: path
-          required: true
-          description: The UUID of the habit task
-          schema:
-            type: string
-            format: uuid
+        - $ref: "#/components/parameters/taskId"
       responses:
         "204":
           description: Completion removed successfully.
@@ -233,13 +202,7 @@ paths:
       tags:
         - Tasks
       parameters:
-        - name: taskId
-          in: path
-          required: true
-          description: The UUID of the habit task
-          schema:
-            type: string
-            format: uuid
+        - $ref: "#/components/parameters/taskId"
         - name: from
           in: query
           required: false
@@ -322,13 +285,7 @@ paths:
       tags:
         - Task Lists
       parameters:
-        - name: listId
-          in: path
-          required: true
-          description: The UUID of the task list
-          schema:
-            type: string
-            format: uuid
+        - $ref: "#/components/parameters/listId"
       responses:
         "200":
           description: Task list found.
@@ -350,13 +307,7 @@ paths:
       tags:
         - Task Lists
       parameters:
-        - name: listId
-          in: path
-          required: true
-          description: The UUID of the task list
-          schema:
-            type: string
-            format: uuid
+        - $ref: "#/components/parameters/listId"
       requestBody:
         required: true
         content:
@@ -390,13 +341,7 @@ paths:
       tags:
         - Task Lists
       parameters:
-        - name: listId
-          in: path
-          required: true
-          description: The UUID of the task list
-          schema:
-            type: string
-            format: uuid
+        - $ref: "#/components/parameters/listId"
       responses:
         "204":
           description: Task list deleted successfully.
@@ -415,20 +360,13 @@ paths:
       tags:
         - Task Lists
       parameters:
-        - name: listId
-          in: path
-          required: true
-          description: The UUID of the task list
-          schema:
-            type: string
-            format: uuid
+        - $ref: "#/components/parameters/listId"
         - name: type
           in: query
           required: false
           description: Filter by task type. "one-off" for tasks without recurrence, "habit" for tasks with recurrence days.
           schema:
-            type: string
-            enum: [one-off, habit]
+            $ref: "#/components/schemas/TaskType"
       responses:
         "200":
           description: A list of tasks in the list.
@@ -446,12 +384,36 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
 
 components:
+  parameters:
+    taskId:
+      name: taskId
+      in: path
+      required: true
+      description: The UUID of the task
+      schema:
+        type: string
+        format: uuid
+
+    listId:
+      name: listId
+      in: path
+      required: true
+      description: The UUID of the task list
+      schema:
+        type: string
+        format: uuid
+
   schemas:
     TaskStatus:
       type: string
       enum: [todo, done]
       description: Whether the task is still to do or already done.
       example: todo
+
+    TaskType:
+      type: string
+      enum: [one-off, habit]
+      description: Filter by task type. "one-off" for tasks without recurrence, "habit" for tasks with recurrence days.
 
     RecurrenceDay:
       type: string
@@ -481,6 +443,7 @@ components:
           $ref: "#/components/schemas/TaskStatus"
         recurrence_days:
           type: array
+          nullable: true
           description: Days of the week this habit repeats on. null/absent for one-off tasks.
           items:
             $ref: "#/components/schemas/RecurrenceDay"
@@ -542,6 +505,7 @@ components:
           example: "Have hair cut"
         recurrence_days:
           type: array
+          nullable: true
           description: Days of the week for habit recurrence. Omit or set to null for one-off tasks.
           items:
             $ref: "#/components/schemas/RecurrenceDay"
