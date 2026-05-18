@@ -51,25 +51,24 @@ export default function TaskList(_props: TaskListProps) {
   const [view, setView] = useState<View>("list");
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [selectedListId, setSelectedListId] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<TaskStatus | "">("");
   const [newTodoTitle, setNewTodoTitle] = useState("");
+
   const [newHabitTitle, setNewHabitTitle] = useState("");
   const [newListName, setNewListName] = useState("");
   const [activeTab, setActiveTab] = useState<"todos" | "habits" | "lists">("todos");
 
   // Fetch unassigned one-off tasks
   const { data: todoTasks = [], isLoading: todoLoading, error: todoError } = useQuery<Task[]>({
-    queryKey: ["tasks", "one-off", statusFilter],
-    queryFn: () =>
-      listTasks(statusFilter ? (statusFilter as TaskStatus) : undefined, "one-off"),
+    queryKey: ["tasks", "one-off"],
+    queryFn: () => listTasks(undefined, "one-off"),
   });
 
   // Fetch unassigned habit tasks
   const { data: habitTasks = [], isLoading: habitLoading, error: habitError } = useQuery<Task[]>({
-    queryKey: ["tasks", "habit", statusFilter],
-    queryFn: () =>
-      listTasks(statusFilter ? (statusFilter as TaskStatus) : undefined, "habit"),
+    queryKey: ["tasks", "habit"],
+    queryFn: () => listTasks(undefined, "habit"),
   });
+
 
   // Fetch task lists
   const { data: taskLists = [] } = useQuery<TaskList[]>({
@@ -246,30 +245,19 @@ export default function TaskList(_props: TaskListProps) {
         </button>
       </div>
 
-      {/* Filter + Progress Row */}
+      {/* Progress Row */}
       <div
         style={{
           display: "flex",
-          justifyContent: "space-between",
+          justifyContent: "flex-end",
           alignItems: "center",
           gap: "var(--space-md)",
           marginBottom: "var(--space-lg)",
           flexWrap: "wrap",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)" }}>
-          <select
-            className="select"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as TaskStatus | "")}
-          >
-            <option value="">All</option>
-            <option value="todo">Todo</option>
-            <option value="done">Done</option>
-          </select>
-        </div>
-
         {/* Mini progress indicators */}
+
         <div style={{ display: "flex", gap: "var(--space-lg)", alignItems: "center" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)" }}>
             <span className="badge badge-todo">{doneTodos}/{todoTasks.length}</span>

@@ -17,6 +17,21 @@ log_ok()    { echo -e "${GREEN}[dev]${NC} $1"; }
 log_warn()  { echo -e "${YELLOW}[dev]${NC} $1"; }
 log_error() { echo -e "${RED}[dev]${NC} $1"; }
 
+# ─── Help ──────────────────────────────────────────────────────────────────
+usage() {
+    cat <<EOF
+Usage: $(basename "$0") [OPTIONS]
+
+Start the PudimProductivity development environment.
+
+Options:
+  --no-db    Skip starting Docker services (postgres, rabbitmq)
+  --clean    Remove Docker volumes, node_modules, and Go build cache before starting
+  --help     Show this help message and exit
+EOF
+    exit 0
+}
+
 # ─── Cleanup handler ───────────────────────────────────────────────────────
 cleanup() {
     echo ""
@@ -49,12 +64,38 @@ trap cleanup SIGINT SIGTERM
 
 # ─── Parse arguments ───────────────────────────────────────────────────────
 SKIP_DOCKER=false
+CLEAN=false
 for arg in "$@"; do
     case "$arg" in
         --no-db) SKIP_DOCKER=true ;;
-        *) log_warn "Unknown argument: $arg" ;;
+        --clean) CLEAN=true ;;
+        --help)  usage ;;
+        *) log_warn "Unknown argument: $arg"; usage ;;
     esac
 done
+
+# ─── 0. Clean (if requested) ───────────────────────────────────────────────
+if [ "$CLEAN" = true ]; then
+    log_info "Cleaning environment..."
+
+    # Tear down Docker volumes (postgres + rabbitmq data)
+    if docker compose -f "$ROOT_DIR/docker-compose.yml" ps --quiet 2>/dev/null | grep -q .; then
+        log_info "Removing Docker containers and volumes..."
+        docker compose -f "$ROOT_DIR/docker-compose.yml" down -v
+    fi
+
+    # Remove node_modules
+    if [ -d "$WEB_DIR/node_modules" ]; then
+        log_info "Removing node_modules..."
+        rm -rf "$WEB_DIR/node_modules"
+    fi
+
+    # Clean Go build cache
+    log_info "Cleaning Go build cache..."
+    (cd "$BACKEND_DIR" && go clean -cache)
+
+    log_ok "Clean complete."
+fi
 
 # ─── 1. Install frontend dependencies if needed ────────────────────────────
 if [ ! -d "$WEB_DIR/node_modules" ]; then
@@ -65,7 +106,16 @@ else
     log_ok "node_modules found, skipping npm install."
 fi
 
-# ─── 2. Start Docker services ──────────────────────────────────────────────
+# ─── 2. Download Go dependencies if needed ─────────────────────────────────
+if [ ! -f "$BACKEND_DIR/go.sum" ]; then
+    log_info "go.sum not found. Running go mod download..."
+    (cd "$BACKEND_DIR" && go mod download)
+    log_ok "go mod download completed."
+else
+    log_ok "go.sum found, skipping go mod download."
+fi
+
+# ─── 3. Start Docker services ──────────────────────────────────────────────
 if [ "$SKIP_DOCKER" = false ]; then
     log_info "Starting Docker services (postgres, rabbitmq)..."
     docker compose -f "$ROOT_DIR/docker-compose.yml" up -d postgres rabbitmq
@@ -81,7 +131,7 @@ else
     log_info "Skipping Docker services (--no-db)."
 fi
 
-# ─── 3. Start backend ──────────────────────────────────────────────────────
+# ─── 4. Start backend ──────────────────────────────────────────────────────
 log_info "Starting backend (go run ./cmd/server)..."
 (cd "$BACKEND_DIR" && go run ./cmd/server) &
 BACKEND_PID=$!
@@ -90,13 +140,13 @@ log_ok "Backend started (PID $BACKEND_PID)."
 # Give the backend a moment to start
 sleep 2
 
-# ─── 4. Start frontend ─────────────────────────────────────────────────────
+# ─── 5. Start frontend ─────────────────────────────────────────────────────
 log_info "Starting frontend (npm run dev)..."
 (cd "$WEB_DIR" && npm run dev) &
 FRONTEND_PID=$!
 log_ok "Frontend started (PID $FRONTEND_PID)."
 
-# ─── 5. Print summary ──────────────────────────────────────────────────────
+# ─── 6. Print summary ──────────────────────────────────────────────────────
 echo ""
 log_ok "═══════════════════════════════════════════════════════════"
 log_ok "  PudimProductivity is running!"
