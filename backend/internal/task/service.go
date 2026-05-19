@@ -110,9 +110,10 @@ func (s *TaskService) DeleteTask(ctx context.Context, id string) error {
 	return nil
 }
 
-// CompleteTask marks a habit task as completed for today.
+// CompleteTask marks a habit task as completed for a specific date.
+// If dateStr is empty, defaults to today (UTC).
 // Returns an error if the task is not a habit.
-func (s *TaskService) CompleteTask(ctx context.Context, taskID string) (*TaskCompletion, error) {
+func (s *TaskService) CompleteTask(ctx context.Context, taskID, dateStr string) (*TaskCompletion, error) {
 	task, err := s.repo.GetByID(ctx, taskID)
 	if err != nil {
 		return nil, err
@@ -122,9 +123,15 @@ func (s *TaskService) CompleteTask(ctx context.Context, taskID string) (*TaskCom
 		return nil, fmt.Errorf("task %s is not a habit and cannot be completed via completions", taskID)
 	}
 
-	today := time.Now().UTC().Truncate(24 * time.Hour)
+	completionDate := time.Now().UTC().Truncate(24 * time.Hour)
+	if dateStr != "" {
+		completionDate, err = time.Parse("2006-01-02", dateStr)
+		if err != nil {
+			return nil, fmt.Errorf("invalid date format %q, expected YYYY-MM-DD: %w", dateStr, err)
+		}
+	}
 
-	completion, err := NewTaskCompletion(shared.NewUUID(), taskID, today)
+	completion, err := NewTaskCompletion(shared.NewUUID(), taskID, completionDate)
 	if err != nil {
 		return nil, fmt.Errorf("create completion: %w", err)
 	}
@@ -133,16 +140,17 @@ func (s *TaskService) CompleteTask(ctx context.Context, taskID string) (*TaskCom
 		return nil, fmt.Errorf("persist completion: %w", err)
 	}
 
-	if err := s.bus.Publish(ctx, NewTaskCompleted(taskID, today)); err != nil {
+	if err := s.bus.Publish(ctx, NewTaskCompleted(taskID, completionDate)); err != nil {
 		log.Warn().Err(err).Str("task_id", taskID).Msg("failed to publish TaskCompleted event")
 	}
 
-	log.Info().Str("task_id", taskID).Msg("task completed for today")
+	log.Info().Str("task_id", taskID).Str("date", completionDate.Format("2006-01-02")).Msg("task completed")
 	return completion, nil
 }
 
-// UncompleteTask removes a habit task's completion for today.
-func (s *TaskService) UncompleteTask(ctx context.Context, taskID string) error {
+// UncompleteTask removes a habit task's completion for a specific date.
+// If dateStr is empty, defaults to today (UTC).
+func (s *TaskService) UncompleteTask(ctx context.Context, taskID, dateStr string) error {
 	task, err := s.repo.GetByID(ctx, taskID)
 	if err != nil {
 		return err
@@ -152,17 +160,23 @@ func (s *TaskService) UncompleteTask(ctx context.Context, taskID string) error {
 		return fmt.Errorf("task %s is not a habit", taskID)
 	}
 
-	today := time.Now().UTC().Truncate(24 * time.Hour)
+	completionDate := time.Now().UTC().Truncate(24 * time.Hour)
+	if dateStr != "" {
+		completionDate, err = time.Parse("2006-01-02", dateStr)
+		if err != nil {
+			return fmt.Errorf("invalid date format %q, expected YYYY-MM-DD: %w", dateStr, err)
+		}
+	}
 
-	if err := s.repo.DeleteCompletion(ctx, taskID, today); err != nil {
+	if err := s.repo.DeleteCompletion(ctx, taskID, completionDate); err != nil {
 		return err
 	}
 
-	if err := s.bus.Publish(ctx, NewTaskUncompleted(taskID, today)); err != nil {
+	if err := s.bus.Publish(ctx, NewTaskUncompleted(taskID, completionDate)); err != nil {
 		log.Warn().Err(err).Str("task_id", taskID).Msg("failed to publish TaskUncompleted event")
 	}
 
-	log.Info().Str("task_id", taskID).Msg("task uncompleted for today")
+	log.Info().Str("task_id", taskID).Str("date", completionDate.Format("2006-01-02")).Msg("task uncompleted")
 	return nil
 }
 

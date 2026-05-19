@@ -150,21 +150,30 @@ paths:
   /api/v1/tasks/{taskId}/complete:
     post:
       operationId: completeTask
-      summary: Complete a habit for today
-      description: Marks a habit task as completed for the current day.
+      summary: Complete a habit for a specific date
+      description: |
+        Marks a habit task as completed for the specified date, or today if no date is provided.
       tags:
         - Tasks
       parameters:
         - $ref: "#/components/parameters/taskId"
+        - name: date
+          in: query
+          required: false
+          description: Completion date in YYYY-MM-DD format. Defaults to today (UTC) if omitted.
+          schema:
+            type: string
+            format: date
+            example: "2026-05-18"
       responses:
         "201":
-          description: Task completed successfully for today.
+          description: Task completed successfully.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/TaskCompletion"
         "400":
-          description: Task is not a habit or already completed today.
+          description: Task is not a habit, already completed for the given date, or invalid date format.
           content:
             application/json:
               schema:
@@ -178,12 +187,21 @@ paths:
 
     delete:
       operationId: uncompleteTask
-      summary: Uncomplete a habit for today
-      description: Removes today's completion for a habit task.
+      summary: Uncomplete a habit for a specific date
+      description: |
+        Removes a habit task's completion for the specified date, or today if no date is provided.
       tags:
         - Tasks
       parameters:
         - $ref: "#/components/parameters/taskId"
+        - name: date
+          in: query
+          required: false
+          description: Completion date in YYYY-MM-DD format. Defaults to today (UTC) if omitted.
+          schema:
+            type: string
+            format: date
+            example: "2026-05-18"
       responses:
         "204":
           description: Completion removed successfully.

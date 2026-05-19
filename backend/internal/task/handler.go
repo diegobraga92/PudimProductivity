@@ -214,7 +214,9 @@ func (h *Handler) CompleteTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	completion, err := h.service.CompleteTask(r.Context(), id)
+	dateStr := r.URL.Query().Get("date")
+
+	completion, err := h.service.CompleteTask(r.Context(), id, dateStr)
 	if err != nil {
 		if err == ErrTaskNotFound {
 			writeError(w, http.StatusNotFound, "task not found")
@@ -236,7 +238,9 @@ func (h *Handler) UncompleteTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.service.UncompleteTask(r.Context(), id); err != nil {
+	dateStr := r.URL.Query().Get("date")
+
+	if err := h.service.UncompleteTask(r.Context(), id, dateStr); err != nil {
 		if err == ErrTaskNotFound {
 			writeError(w, http.StatusNotFound, "task not found")
 			return

@@ -126,10 +126,13 @@ export async function deleteTask(taskId: string): Promise<void> {
 }
 
 /**
- * Completes a habit task for today.
+ * Completes a habit task for a specific date.
+ * @param taskId - The ID of the task to complete.
+ * @param date - Optional date string in YYYY-MM-DD format. Defaults to today if omitted.
  */
-export async function completeTask(taskId: string): Promise<TaskCompletion> {
-  const response = await fetch(`${config.apiBaseUrl}/tasks/${taskId}/complete`, {
+export async function completeTask(taskId: string, date?: string): Promise<TaskCompletion> {
+  const params = date ? `?date=${encodeURIComponent(date)}` : "";
+  const response = await fetch(`${config.apiBaseUrl}/tasks/${taskId}/complete${params}`, {
     method: "POST",
   });
 
@@ -145,10 +148,13 @@ export async function completeTask(taskId: string): Promise<TaskCompletion> {
 }
 
 /**
- * Uncompletes a habit task for today.
+ * Uncompletes a habit task for a specific date.
+ * @param taskId - The ID of the task to uncomplete.
+ * @param date - Optional date string in YYYY-MM-DD format. Defaults to today if omitted.
  */
-export async function uncompleteTask(taskId: string): Promise<void> {
-  const response = await fetch(`${config.apiBaseUrl}/tasks/${taskId}/complete`, {
+export async function uncompleteTask(taskId: string, date?: string): Promise<void> {
+  const params = date ? `?date=${encodeURIComponent(date)}` : "";
+  const response = await fetch(`${config.apiBaseUrl}/tasks/${taskId}/complete${params}`, {
     method: "DELETE",
   });
 

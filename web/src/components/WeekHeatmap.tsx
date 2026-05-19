@@ -1,4 +1,6 @@
+import { useState, useCallback, useEffect, useRef } from "react";
 import type { RecurrenceDay } from "../api/tasks";
+import { getWeekDates, getToday } from "../utils/dates";
 
 const DAY_ORDER: RecurrenceDay[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 const DAY_SHORT: Record<RecurrenceDay, string> = {
@@ -10,20 +12,6 @@ const DAY_SHORT: Record<RecurrenceDay, string> = {
   sat: "S",
   sun: "S",
 };
-
-function getWeekDates(): string[] {
-  const dates: string[] = [];
-  const now = new Date();
-  const dayOfWeek = now.getDay();
-  const monday = new Date(now);
-  monday.setDate(now.getDate() - ((dayOfWeek + 6) % 7));
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
-    dates.push(d.toISOString().split("T")[0]);
-  }
-  return dates;
-}
 
 function getDayName(dateStr: string): RecurrenceDay {
   const d = new Date(dateStr + "T00:00:00");
@@ -46,10 +34,30 @@ export default function WeekHeatmap({
 }: WeekHeatmapProps) {
   const weekDates = getWeekDates();
   const completedSet = new Set(completions);
-  const today = new Date().toISOString().split("T")[0];
+  const today = getToday();
+  const [animatingDate, setAnimatingDate] = useState<string | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, []);
+
+  const handleClick = useCallback(
+    (date: string, isCompleted: boolean) => {
+      setAnimatingDate(date);
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => setAnimatingDate(null), 200);
+      onToggleDay(date, isCompleted);
+    },
+    [onToggleDay]
+  );
 
   return (
-    <div className="week-heatmap">
+    <div className="week-heatmap" role="group" aria-label="Weekly habit completion tracker">
       {weekDates.map((date) => {
         const dayName = getDayName(date);
         const isScheduled = recurrenceDays.includes(dayName);
@@ -60,6 +68,9 @@ export default function WeekHeatmap({
         if (isCompleted) className += " completed";
         else if (isScheduled) className += " scheduled";
         if (isToday) className += " today";
+        if (animatingDate === date) className += " animate-complete";
+
+        const label = `${dayName} ${date}${isCompleted ? " — completed" : isScheduled ? " — scheduled" : " — not scheduled"}`;
 
         return (
           <button
@@ -67,11 +78,12 @@ export default function WeekHeatmap({
             className={className}
             onClick={() => {
               if (isScheduled || isCompleted) {
-                onToggleDay(date, isCompleted);
+                handleClick(date, isCompleted);
               }
             }}
             disabled={disabled || (!isScheduled && !isCompleted)}
-            title={`${dayName} ${date}`}
+            aria-label={label}
+            aria-pressed={isCompleted}
           >
             {DAY_SHORT[dayName]}
           </button>
