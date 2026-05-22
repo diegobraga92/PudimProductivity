@@ -30,7 +30,7 @@ interface HealthService {
 object ApiClient {
     private const val DEFAULT_BASE_URL = "http://10.0.2.2:8080/api/v1/"
 
-    val healthService: HealthService by lazy {
+    val retrofit: Retrofit by lazy {
         val logging = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
         }
@@ -57,6 +57,9 @@ object ApiClient {
             .client(client)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
-            .create(HealthService::class.java)
+    }
+
+    val healthService: HealthService by lazy {
+        retrofit.create(HealthService::class.java)
     }
 }

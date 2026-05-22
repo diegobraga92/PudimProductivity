@@ -17,7 +17,10 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/diegobraga92/pudimproductivity/backend/internal/db"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/features"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/shared"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/task"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/tasklist"
 )
 
 var Version = "0.0.1"
@@ -48,6 +51,27 @@ func main() {
 		pool = nil
 	}
 
+	// Run database migrations if connected
+	if pool != nil {
+		migrateCtx, migrateCancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer migrateCancel()
+
+		if err := db.RunMigrations(migrateCtx, pool); err != nil {
+			log.Fatal().Err(err).Msg("failed to run database migrations")
+		}
+	}
+
+	// Initialize event bus (in-memory for Phase 1-2, RabbitMQ in Phase 3)
+	eventBus := shared.NewInMemoryEventBus()
+	defer eventBus.Close()
+
+	// Initialize feature flag service
+	var featureStore *features.CachedFeatureStore
+	if pool != nil {
+		pgFeatureStore := features.NewPostgresFeatureStore(pool)
+		featureStore = features.NewCachedFeatureStore(pgFeatureStore, 30*time.Second)
+	}
+
 	r := chi.NewRouter()
 
 	r.Use(middleware.RequestID)
@@ -57,6 +81,22 @@ func main() {
 	r.Use(middleware.Timeout(15 * time.Second))
 
 	r.Get("/api/v1/health", healthHandler(pool))
+
+	// Register task module routes
+	var taskService *task.TaskService
+	if pool != nil {
+		taskService = task.RegisterTaskRoutes(r, pool, eventBus)
+	}
+
+	// Register task list module routes
+	if pool != nil && taskService != nil {
+		tasklist.RegisterTaskListRoutes(r, pool, taskService)
+	}
+
+	// Register feature flag routes
+	if featureStore != nil {
+		features.RegisterFeatureRoutes(r, featureStore)
+	}
 
 	addr := fmt.Sprintf(":%d", cfg.Port)
 	srv := &http.Server{

@@ -3,19 +3,23 @@ package com.pudimproductivity
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.pudimproductivity.api.ApiClient
 import com.pudimproductivity.api.HealthResponse
+import com.pudimproductivity.ui.screens.TaskCreateScreen
+import com.pudimproductivity.ui.screens.TaskDetailScreen
+import com.pudimproductivity.ui.screens.TaskListDetailScreen
+import com.pudimproductivity.ui.screens.TaskListScreen
 import com.pudimproductivity.ui.theme.PudimProductivityTheme
 import kotlinx.coroutines.launch
+
+enum class Screen {
+    Health, TaskList, TaskCreate, TaskDetail, TaskListDetail
+}
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -26,7 +30,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    HealthScreen()
+                    AppNavigation()
                 }
             }
         }
@@ -34,7 +38,60 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun HealthScreen() {
+fun AppNavigation() {
+    var currentScreen by remember { mutableStateOf(Screen.TaskList) }
+    var selectedTaskId by remember { mutableStateOf<String?>(null) }
+    var selectedListId by remember { mutableStateOf<String?>(null) }
+
+    when (currentScreen) {
+        Screen.Health -> {
+            HealthScreen(
+                onBack = { currentScreen = Screen.TaskList }
+            )
+        }
+        Screen.TaskList -> {
+            TaskListScreen(
+                onCreateTask = { currentScreen = Screen.TaskCreate },
+                onTaskClick = { taskId ->
+                    selectedTaskId = taskId
+                    currentScreen = Screen.TaskDetail
+                },
+                onListClick = { listId ->
+                    selectedListId = listId
+                    currentScreen = Screen.TaskListDetail
+                }
+            )
+        }
+        Screen.TaskCreate -> {
+            TaskCreateScreen(
+                onCreated = { currentScreen = Screen.TaskList },
+                onCancel = { currentScreen = Screen.TaskList }
+            )
+        }
+        Screen.TaskDetail -> {
+            selectedTaskId?.let { taskId ->
+                TaskDetailScreen(
+                    taskId = taskId,
+                    onUpdated = { currentScreen = Screen.TaskList },
+                    onDeleted = { currentScreen = Screen.TaskList },
+                    onBack = { currentScreen = Screen.TaskList }
+                )
+            }
+        }
+        Screen.TaskListDetail -> {
+            selectedListId?.let { listId ->
+                TaskListDetailScreen(
+                    listId = listId,
+                    onBack = { currentScreen = Screen.TaskList },
+                    onDeleted = { currentScreen = Screen.TaskList }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun HealthScreen(onBack: () -> Unit) {
     var health by remember { mutableStateOf<HealthResponse?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
@@ -97,6 +154,11 @@ fun HealthScreen() {
                     modifier = Modifier.padding(top = 8.dp)
                 )
             }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(onClick = onBack) {
+            Text("Back to Tasks")
         }
     }
 }
