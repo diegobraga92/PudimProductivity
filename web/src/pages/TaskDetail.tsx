@@ -347,7 +347,7 @@ export default function TaskDetail({
           <WeekHeatmap
             recurrenceDays={task.recurrence_days ?? []}
             completions={completionDateStrings}
-            onToggleDay={(date, _completed) => {
+            onToggleDay={(date) => {
               habitToggleMutation.mutate(date);
             }}
             disabled={habitToggleMutation.isPending}

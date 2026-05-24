@@ -31,11 +31,7 @@ import { getWeekDates, getToday } from "../utils/dates";
 
 type View = "list" | "create" | "detail";
 
-interface TaskListProps {
-  onNavigate?: (view: string, taskId?: string) => void;
-}
-
-export default function TaskList(_props: TaskListProps) {
+export default function TaskList() {
   const queryClient = useQueryClient();
   const [view, setView] = useState<View>("list");
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);

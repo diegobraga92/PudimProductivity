@@ -41,7 +41,7 @@ export function computeStreaks(completions: string[]): {
   const today = new Date().toISOString().split("T")[0];
 
   // If today is not completed, check if yesterday was (for "active" streak)
-  let checkDate = new Date();
+  const checkDate = new Date();
   if (!dateSet.has(today)) {
     // Don't count today if not completed, but check if yesterday was
     checkDate.setDate(checkDate.getDate() - 1);
