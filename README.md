@@ -5,7 +5,7 @@ Starting as a To Do App. Hopefully adding other stuff later.
 ## Quick Start (Development)
 
 Prerequisites:
-- Go 1.22+
+- Go 1.25+
 - Node 18+
 - Docker & Docker Compose
 

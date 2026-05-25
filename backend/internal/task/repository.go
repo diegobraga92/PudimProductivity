@@ -48,4 +48,8 @@ type TaskRepository interface {
 
 	// ListCompletions returns all completions for a task within a date range (inclusive).
 	ListCompletions(ctx context.Context, taskID string, from, to time.Time) ([]*TaskCompletion, error)
+
+	// ListAllCompletions returns all completions across all tasks within a date range (inclusive).
+	// This is used to avoid N+1 queries when rendering weekly habit grids.
+	ListAllCompletions(ctx context.Context, from, to time.Time) ([]*TaskCompletion, error)
 }

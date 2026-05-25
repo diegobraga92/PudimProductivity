@@ -1,5 +1,6 @@
 package com.pudimproductivity.api
 
+import com.pudimproductivity.BuildConfig
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.GET
@@ -26,10 +27,13 @@ interface HealthService {
 
 /**
  * Singleton Retrofit client configured for the backend API.
+ *
+ * The base URL is taken directly from [BuildConfig.API_BASE_URL] which is injected
+ * at build time via the `buildConfigField` in `app/build.gradle.kts`.
+ * Override it in a local `gradle.properties` or CI environment variable to point
+ * at a real device / LAN server instead of the AVD emulator loopback.
  */
 object ApiClient {
-    private const val DEFAULT_BASE_URL = "http://10.0.2.2:8080/api/v1/"
-
     val retrofit: Retrofit by lazy {
         val logging = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
@@ -41,16 +45,7 @@ object ApiClient {
             .readTimeout(10, TimeUnit.SECONDS)
             .build()
 
-        val baseUrl = try {
-            Class.forName("com.pudimproductivity.BuildConfig")
-                .getField("API_BASE_URL")
-                .get(null) as? String
-                ?.trim('"')
-                ?.let { "$it/" }
-                ?: DEFAULT_BASE_URL
-        } catch (_: Exception) {
-            DEFAULT_BASE_URL
-        }
+        val baseUrl = BuildConfig.API_BASE_URL.trimEnd('/') + "/"
 
         Retrofit.Builder()
             .baseUrl(baseUrl)

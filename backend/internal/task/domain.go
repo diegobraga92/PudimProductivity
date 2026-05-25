@@ -83,7 +83,12 @@ func (t *Task) IsHabit() bool {
 
 // Update applies the provided updates to the task.
 // Only non-nil fields are applied. Returns an error if the resulting state is invalid.
-func (t *Task) Update(title *string, status *TaskStatus, recurrenceDays *[]string) error {
+//
+// listID uses double-pointer semantics:
+//   - nil outer pointer → field absent, ListID is not changed.
+//   - non-nil outer pointer, nil inner pointer → explicitly unassign (set ListID to nil).
+//   - non-nil outer pointer, non-nil inner pointer → assign to the given list.
+func (t *Task) Update(title *string, status *TaskStatus, recurrenceDays *[]string, listID **string) error {
 	if title != nil {
 		if *title == "" {
 			return fmt.Errorf("task title cannot be empty")
@@ -107,6 +112,9 @@ func (t *Task) Update(title *string, status *TaskStatus, recurrenceDays *[]strin
 			}
 			t.RecurrenceDays = *recurrenceDays
 		}
+	}
+	if listID != nil {
+		t.ListID = *listID
 	}
 
 	t.UpdatedAt = time.Now().UTC()

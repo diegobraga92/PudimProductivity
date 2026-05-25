@@ -236,6 +236,7 @@ func (r *PostgresTaskRepository) Delete(ctx context.Context, id string) error {
 }
 
 // CreateCompletion records a habit completion for a specific date.
+// Returns ErrCompletionAlreadyExists if a completion already exists for the given task+date.
 func (r *PostgresTaskRepository) CreateCompletion(ctx context.Context, completion *TaskCompletion) error {
 	query := `
 		INSERT INTO task_completions (id, task_id, completed_date, created_at)
@@ -254,13 +255,14 @@ func (r *PostgresTaskRepository) CreateCompletion(ctx context.Context, completio
 	}
 
 	if result.RowsAffected() == 0 {
-		return fmt.Errorf("completion already exists for task %s on %s", completion.TaskID, completion.CompletedDate.Format("2006-01-02"))
+		return ErrCompletionAlreadyExists
 	}
 
 	return nil
 }
 
 // DeleteCompletion removes a habit completion for a specific task+date.
+// Returns ErrCompletionNotFound if no completion exists for that task+date.
 func (r *PostgresTaskRepository) DeleteCompletion(ctx context.Context, taskID string, date time.Time) error {
 	query := `DELETE FROM task_completions WHERE task_id = $1 AND completed_date = $2`
 
@@ -270,7 +272,7 @@ func (r *PostgresTaskRepository) DeleteCompletion(ctx context.Context, taskID st
 	}
 
 	if result.RowsAffected() == 0 {
-		return ErrTaskNotFound
+		return ErrCompletionNotFound
 	}
 
 	return nil
@@ -300,6 +302,49 @@ func (r *PostgresTaskRepository) GetCompletion(ctx context.Context, taskID strin
 	}
 
 	return completion, nil
+}
+
+// ListAllCompletions returns all completions across all tasks within a date range (inclusive).
+func (r *PostgresTaskRepository) ListAllCompletions(ctx context.Context, from, to time.Time) ([]*TaskCompletion, error) {
+	query := `
+		SELECT id, task_id, completed_date, created_at
+		FROM task_completions
+		WHERE completed_date >= $1 AND completed_date <= $2
+		ORDER BY task_id, completed_date ASC
+	`
+
+	rows, err := r.pool.Query(ctx, query, from, to)
+	if err != nil {
+		return nil, fmt.Errorf("list all task completions: %w", err)
+	}
+	defer rows.Close()
+
+	var completions []*TaskCompletion
+	for rows.Next() {
+		c := &TaskCompletion{}
+
+		err := rows.Scan(
+			&c.ID,
+			&c.TaskID,
+			&c.CompletedDate,
+			&c.CreatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan task completion row: %w", err)
+		}
+
+		completions = append(completions, c)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate task completion rows: %w", err)
+	}
+
+	if completions == nil {
+		completions = make([]*TaskCompletion, 0)
+	}
+
+	return completions, nil
 }
 
 // ListCompletions returns all completions for a task within a date range (inclusive).

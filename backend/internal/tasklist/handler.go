@@ -2,6 +2,7 @@ package tasklist
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -119,7 +120,7 @@ func (h *Handler) GetTaskList(w http.ResponseWriter, r *http.Request) {
 
 	list, err := h.service.GetTaskList(r.Context(), id)
 	if err != nil {
-		if err == ErrTaskListNotFound {
+		if errors.Is(err, ErrTaskListNotFound) {
 			writeError(w, http.StatusNotFound, "task list not found")
 			return
 		}
@@ -147,7 +148,7 @@ func (h *Handler) UpdateTaskList(w http.ResponseWriter, r *http.Request) {
 
 	list, err := h.service.UpdateTaskList(r.Context(), id, req.Name, req.Description)
 	if err != nil {
-		if err == ErrTaskListNotFound {
+		if errors.Is(err, ErrTaskListNotFound) {
 			writeError(w, http.StatusNotFound, "task list not found")
 			return
 		}
@@ -168,7 +169,7 @@ func (h *Handler) DeleteTaskList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.service.DeleteTaskList(r.Context(), id); err != nil {
-		if err == ErrTaskListNotFound {
+		if errors.Is(err, ErrTaskListNotFound) {
 			writeError(w, http.StatusNotFound, "task list not found")
 			return
 		}

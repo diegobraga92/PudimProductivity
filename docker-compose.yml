@@ -4,26 +4,30 @@ services:
     container_name: pudim-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: pudim
-      POSTGRES_PASSWORD: pudim_dev
-      POSTGRES_DB: pudimproductivity
+      POSTGRES_USER: ${POSTGRES_USER:-pudim}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set — copy .env.example to .env and fill it in}
+      POSTGRES_DB: ${POSTGRES_DB:-pudimproductivity}
     ports:
       - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U pudim -d pudimproductivity"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pudim} -d ${POSTGRES_DB:-pudimproductivity}"]
       interval: 5s
       timeout: 3s
       retries: 5
 
+  # RabbitMQ is not yet wired to the backend (Phase 3).
+  # Start it explicitly with:  docker compose --profile mq up -d
   rabbitmq:
+    profiles:
+      - mq
     image: rabbitmq:4-management-alpine
     container_name: pudim-rabbitmq
     restart: unless-stopped
     environment:
-      RABBITMQ_DEFAULT_USER: pudim
-      RABBITMQ_DEFAULT_PASS: pudim_dev
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-pudim}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:?RABBITMQ_PASS must be set}
     ports:
       - "5672:5672"   # AMQP
       - "15672:15672" # Management UI
@@ -42,8 +46,8 @@ services:
     restart: unless-stopped
     environment:
       PORT: "8080"
-      DATABASE_URL: "postgres://pudim:pudim_dev@postgres:5432/pudimproductivity?sslmode=disable"
-      LOG_LEVEL: "debug"
+      DATABASE_URL: "postgres://${POSTGRES_USER:-pudim}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-pudimproductivity}?sslmode=disable"
+      LOG_LEVEL: "${LOG_LEVEL:-debug}"
     ports:
       - "8080:8080"
     depends_on:
@@ -63,4 +67,3 @@ services:
 volumes:
   pgdata:
   rabbitmqdata:
-

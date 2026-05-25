@@ -1,22 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { listTasks, getTaskCompletions, type Task } from "../api/tasks";
+import { listTasks, getAllTaskCompletions, type Task } from "../api/tasks";
 import { listTaskLists, type TaskList } from "../api/taskLists";
 import ProgressBar from "../components/ProgressBar";
 import { computeStreaks } from "../utils/streaks";
-
-function getWeekDates(): string[] {
-  const dates: string[] = [];
-  const now = new Date();
-  const dayOfWeek = now.getDay();
-  const monday = new Date(now);
-  monday.setDate(now.getDate() - ((dayOfWeek + 6) % 7));
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
-    dates.push(d.toISOString().split("T")[0]);
-  }
-  return dates;
-}
+import { getWeekDates, getToday } from "../utils/dates";
 
 interface DashboardProps {
   onNavigate: (view: string, taskId?: string) => void;
@@ -41,19 +28,21 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   const weekDates = getWeekDates();
   const from = weekDates[0];
   const to = weekDates[6];
-  const today = new Date().toISOString().split("T")[0];
+  const today = getToday();
+  const DAY_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
 
-  // Fetch completions for all habits this week
+  // Fetch completions for all habits this week using a single batch request
   const { data: allCompletions = {} } = useQuery({
-    queryKey: ["dashboardCompletions", from, to],
+    queryKey: ["habitCompletions", from, to],
     queryFn: async () => {
+      const completions = await getAllTaskCompletions(from, to);
       const results: Record<string, string[]> = {};
       for (const task of habitTasks) {
-        try {
-          const completions = await getTaskCompletions(task.id, from, to);
-          results[task.id] = completions.map((c) => c.completed_date);
-        } catch {
-          results[task.id] = [];
+        results[task.id] = [];
+      }
+      for (const c of completions) {
+        if (results[c.task_id] !== undefined) {
+          results[c.task_id].push(c.completed_date);
         }
       }
       return results;
@@ -68,20 +57,25 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
     dates.includes(today)
   ).length;
 
-  // Weekly completion rate
+  // Weekly completion rate — numerator and denominator both restricted to
+  // scheduled dates that have already arrived (≤ today) to avoid >100%.
   const totalScheduledDays = habitTasks.reduce((sum, t) => {
-    const scheduledDays = t.recurrence_days?.filter((d) => {
-      const dayIndex = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"].indexOf(d);
+    const scheduledDays = (t.recurrence_days ?? []).filter((d) => {
+      const dayIndex = DAY_ORDER.indexOf(d as typeof DAY_ORDER[number]);
       const weekDate = weekDates[dayIndex];
-      return weekDate <= today;
-    }).length ?? 0;
+      return weekDate !== undefined && weekDate <= today;
+    }).length;
     return sum + scheduledDays;
   }, 0);
 
-  const totalCompletedDays = Object.values(allCompletions).reduce(
-    (sum, dates) => sum + dates.filter((d) => d <= today).length,
-    0
-  );
+  const totalCompletedDays = habitTasks.reduce((sum, t) => {
+    const dates = allCompletions[t.id] ?? [];
+    const weekScheduledDates = (t.recurrence_days ?? []).map((d) => {
+      const dayIndex = DAY_ORDER.indexOf(d as typeof DAY_ORDER[number]);
+      return weekDates[dayIndex];
+    }).filter((d): d is string => d !== undefined);
+    return sum + dates.filter((d) => weekScheduledDates.includes(d) && d <= today).length;
+  }, 0);
 
   const weeklyRate =
     totalScheduledDays > 0

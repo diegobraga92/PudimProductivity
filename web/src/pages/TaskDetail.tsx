@@ -14,6 +14,7 @@ import WeekHeatmap from "../components/WeekHeatmap";
 import StreakBadge from "../components/StreakBadge";
 import ProgressBar from "../components/ProgressBar";
 import { computeStreaks } from "../utils/streaks";
+import { getWeekDates, getToday } from "../utils/dates";
 
 const DAY_LABELS: Record<RecurrenceDay, string> = {
   mon: "Monday",
@@ -25,19 +26,7 @@ const DAY_LABELS: Record<RecurrenceDay, string> = {
   sun: "Sunday",
 };
 
-function getWeekDates(): string[] {
-  const dates: string[] = [];
-  const now = new Date();
-  const dayOfWeek = now.getDay();
-  const monday = new Date(now);
-  monday.setDate(now.getDate() - ((dayOfWeek + 6) % 7));
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
-    dates.push(d.toISOString().split("T")[0]);
-  }
-  return dates;
-}
+const DAY_ORDER: RecurrenceDay[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 
 interface TaskDetailProps {
   taskId: string;
@@ -110,9 +99,9 @@ export default function TaskDetail({
   const habitToggleMutation = useMutation({
     mutationFn: async (date: string) => {
       if (completedDates.has(date)) {
-        await uncompleteTask(taskId);
+        await uncompleteTask(taskId, date);
       } else {
-        await completeTask(taskId);
+        await completeTask(taskId, date);
       }
     },
     onSuccess: () => {
@@ -312,37 +301,35 @@ export default function TaskDetail({
           </h3>
 
           {/* Weekly progress */}
-          {task.recurrence_days && (
-            <div style={{ marginBottom: "var(--space-md)" }}>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  fontSize: "var(--font-size-xs)",
-                  color: "var(--color-text-muted)",
-                  marginBottom: "0.2rem",
-                }}
-              >
-                <span>Weekly progress</span>
-                <span>
-                  {completionDateStrings.filter((d) => d <= new Date().toISOString().split("T")[0]).length}
-                  /{task.recurrence_days.length}
-                </span>
+          {task.recurrence_days && (() => {
+            const today = getToday();
+            const weekScheduledDates = task.recurrence_days.map(
+              (day) => weekDates[DAY_ORDER.indexOf(day)]
+            ).filter((d): d is string => d !== undefined);
+            const weeklyTotal = weekScheduledDates.filter((d) => d <= today).length;
+            const weeklyDone = completionDateStrings.filter(
+              (d) => weekScheduledDates.includes(d) && d <= today
+            ).length;
+            const weeklyPct = weeklyTotal > 0 ? Math.round((weeklyDone / weeklyTotal) * 100) : 0;
+
+            return (
+              <div style={{ marginBottom: "var(--space-md)" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    fontSize: "var(--font-size-xs)",
+                    color: "var(--color-text-muted)",
+                    marginBottom: "0.2rem",
+                  }}
+                >
+                  <span>Weekly progress</span>
+                  <span>{weeklyDone}/{weeklyTotal}</span>
+                </div>
+                <ProgressBar value={weeklyPct} variant="habit" />
               </div>
-              <ProgressBar
-                value={
-                  task.recurrence_days.length > 0
-                    ? Math.round(
-                        (completionDateStrings.filter((d) => d <= new Date().toISOString().split("T")[0]).length /
-                          task.recurrence_days.length) *
-                          100
-                      )
-                    : 0
-                }
-                variant="habit"
-              />
-            </div>
-          )}
+            );
+          })()}
 
           <WeekHeatmap
             recurrenceDays={task.recurrence_days ?? []}

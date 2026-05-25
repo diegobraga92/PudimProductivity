@@ -2,12 +2,47 @@ package task
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
 )
+
+// optionalString distinguishes a JSON field that was absent from one that was
+// explicitly null or set to a value.
+//
+//   - set=false → field was absent; do not change the stored value.
+//   - set=true, val=nil → field was explicitly null; clear the stored value.
+//   - set=true, val=&s → field was a string; set the stored value to s.
+type optionalString struct {
+	set bool
+	val *string
+}
+
+func (o *optionalString) UnmarshalJSON(data []byte) error {
+	o.set = true
+	if string(data) == "null" {
+		o.val = nil
+		return nil
+	}
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	}
+	o.val = &s
+	return nil
+}
+
+// ptr returns a **string suitable for Task.Update:
+// nil outer pointer if the field was absent, otherwise a pointer to val.
+func (o *optionalString) ptr() **string {
+	if !o.set {
+		return nil
+	}
+	return &o.val
+}
 
 // Handler contains HTTP handlers for task operations.
 type Handler struct {
@@ -38,10 +73,10 @@ type createTaskRequest struct {
 }
 
 type updateTaskRequest struct {
-	Title          *string     `json:"title"`
-	Status         *TaskStatus `json:"status"`
-	RecurrenceDays *[]string   `json:"recurrence_days"`
-	ListID         *string     `json:"list_id,omitempty"`
+	Title          *string        `json:"title"`
+	Status         *TaskStatus    `json:"status"`
+	RecurrenceDays *[]string      `json:"recurrence_days"`
+	ListID         optionalString `json:"list_id"`
 }
 
 type taskCompletionResponse struct {
@@ -145,7 +180,7 @@ func (h *Handler) GetTask(w http.ResponseWriter, r *http.Request) {
 
 	task, err := h.service.GetTask(r.Context(), id)
 	if err != nil {
-		if err == ErrTaskNotFound {
+		if errors.Is(err, ErrTaskNotFound) {
 			writeError(w, http.StatusNotFound, "task not found")
 			return
 		}
@@ -171,9 +206,9 @@ func (h *Handler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	task, err := h.service.UpdateTask(r.Context(), id, req.Title, req.Status, req.RecurrenceDays)
+	task, err := h.service.UpdateTask(r.Context(), id, req.Title, req.Status, req.RecurrenceDays, req.ListID.ptr())
 	if err != nil {
-		if err == ErrTaskNotFound {
+		if errors.Is(err, ErrTaskNotFound) {
 			writeError(w, http.StatusNotFound, "task not found")
 			return
 		}
@@ -194,7 +229,7 @@ func (h *Handler) DeleteTask(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.service.DeleteTask(r.Context(), id); err != nil {
-		if err == ErrTaskNotFound {
+		if errors.Is(err, ErrTaskNotFound) {
 			writeError(w, http.StatusNotFound, "task not found")
 			return
 		}
@@ -218,12 +253,16 @@ func (h *Handler) CompleteTask(w http.ResponseWriter, r *http.Request) {
 
 	completion, err := h.service.CompleteTask(r.Context(), id, dateStr)
 	if err != nil {
-		if err == ErrTaskNotFound {
+		if errors.Is(err, ErrTaskNotFound) {
 			writeError(w, http.StatusNotFound, "task not found")
 			return
 		}
+		if errors.Is(err, ErrCompletionAlreadyExists) {
+			writeError(w, http.StatusConflict, "task already completed for this date")
+			return
+		}
 		log.Error().Err(err).Str("task_id", id).Msg("failed to complete task")
-		writeError(w, http.StatusInternalServerError, err.Error())
+		writeError(w, http.StatusInternalServerError, "failed to complete task")
 		return
 	}
 
@@ -241,16 +280,64 @@ func (h *Handler) UncompleteTask(w http.ResponseWriter, r *http.Request) {
 	dateStr := r.URL.Query().Get("date")
 
 	if err := h.service.UncompleteTask(r.Context(), id, dateStr); err != nil {
-		if err == ErrTaskNotFound {
+		if errors.Is(err, ErrTaskNotFound) {
 			writeError(w, http.StatusNotFound, "task not found")
 			return
 		}
+		if errors.Is(err, ErrCompletionNotFound) {
+			writeError(w, http.StatusNotFound, "no completion found for this date")
+			return
+		}
 		log.Error().Err(err).Str("task_id", id).Msg("failed to uncomplete task")
-		writeError(w, http.StatusInternalServerError, err.Error())
+		writeError(w, http.StatusInternalServerError, "failed to uncomplete task")
 		return
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// GetAllCompletions handles GET /api/v1/tasks/completions
+// Returns all completions across every habit task within an optional date range.
+// This is a batch alternative that avoids N+1 per-task requests from the client.
+func (h *Handler) GetAllCompletions(w http.ResponseWriter, r *http.Request) {
+	fromStr := r.URL.Query().Get("from")
+	toStr := r.URL.Query().Get("to")
+
+	now := time.Now().UTC()
+	from := now.AddDate(0, 0, -7).Truncate(24 * time.Hour)
+	to := now.Truncate(24 * time.Hour)
+
+	if fromStr != "" {
+		var err error
+		from, err = time.Parse("2006-01-02", fromStr)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "invalid 'from' date format, use YYYY-MM-DD")
+			return
+		}
+	}
+
+	if toStr != "" {
+		var err error
+		to, err = time.Parse("2006-01-02", toStr)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "invalid 'to' date format, use YYYY-MM-DD")
+			return
+		}
+	}
+
+	completions, err := h.service.GetAllTaskCompletions(r.Context(), from, to)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to get all task completions")
+		writeError(w, http.StatusInternalServerError, "failed to get task completions")
+		return
+	}
+
+	responses := make([]taskCompletionResponse, len(completions))
+	for i, c := range completions {
+		responses[i] = toCompletionResponse(c)
+	}
+
+	writeJSON(w, http.StatusOK, responses)
 }
 
 // GetTaskCompletions handles GET /api/v1/tasks/{taskId}/completions
@@ -293,7 +380,7 @@ func (h *Handler) GetTaskCompletions(w http.ResponseWriter, r *http.Request) {
 
 	completions, err := h.service.GetTaskCompletions(r.Context(), id, from, to)
 	if err != nil {
-		if err == ErrTaskNotFound {
+		if errors.Is(err, ErrTaskNotFound) {
 			writeError(w, http.StatusNotFound, "task not found")
 			return
 		}

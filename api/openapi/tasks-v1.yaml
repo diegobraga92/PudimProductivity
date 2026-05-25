@@ -147,6 +147,47 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /api/v1/tasks/completions:
+    get:
+      operationId: getAllTaskCompletions
+      summary: Get all habit completions (batch)
+      description: |
+        Returns all completions across every habit task within an optional date range.
+        Use this endpoint to fetch weekly completion data for all habits in a single
+        request instead of issuing one request per task.
+      tags:
+        - Tasks
+      parameters:
+        - name: from
+          in: query
+          required: false
+          description: Start date (YYYY-MM-DD). Defaults to 7 days ago.
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          required: false
+          description: End date (YYYY-MM-DD). Defaults to today.
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: A flat list of task completions across all habits.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TaskCompletion"
+        "400":
+          description: Invalid date format.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /api/v1/tasks/{taskId}/complete:
     post:
       operationId: completeTask
@@ -551,6 +592,16 @@ components:
           items:
             $ref: "#/components/schemas/RecurrenceDay"
           example: ["mon", "tue", "thu", "fri"]
+        list_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: |
+            Assign or unassign the task from a list.
+            Omit this field to leave the current list assignment unchanged.
+            Set to a valid UUID to assign to that list.
+            Set to null to unassign the task from any list.
+          example: "770e8400-e29b-41d4-a716-446655440002"
 
     TaskList:
       type: object

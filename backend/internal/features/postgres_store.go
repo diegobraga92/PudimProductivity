@@ -2,8 +2,10 @@ package features
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -64,7 +66,7 @@ func (s *PostgresFeatureStore) GetByName(ctx context.Context, name string) (*Fea
 		&f.ID, &f.Name, &f.Description, &f.Enabled, &f.CreatedAt, &f.UpdatedAt,
 	)
 	if err != nil {
-		if err.Error() == "no rows in result set" {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("query feature flag by name: %w", err)

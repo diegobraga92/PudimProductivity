@@ -168,6 +168,29 @@ export async function uncompleteTask(taskId: string, date?: string): Promise<voi
 }
 
 /**
+ * Gets all completions across every habit task within a date range (batch endpoint).
+ * Use this instead of calling getTaskCompletions per task to avoid N+1 requests.
+ */
+export async function getAllTaskCompletions(
+  from?: string,
+  to?: string
+): Promise<TaskCompletion[]> {
+  const params = new URLSearchParams();
+  if (from) params.set("from", from);
+  if (to) params.set("to", to);
+
+  const query = params.toString();
+  const url = `${config.apiBaseUrl}/tasks/completions${query ? `?${query}` : ""}`;
+
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to get all completions: ${response.status}`);
+  }
+
+  return response.json() as Promise<TaskCompletion[]>;
+}
+
+/**
  * Gets completions for a habit task within a date range.
  */
 export async function getTaskCompletions(

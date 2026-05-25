@@ -6,10 +6,11 @@ import {
   updateTask,
   completeTask,
   uncompleteTask,
-  getTaskCompletions,
+  getAllTaskCompletions,
   createTask,
   type Task,
   type TaskStatus,
+  type RecurrenceDay,
 } from "../api/tasks";
 import {
   listTaskLists,
@@ -61,7 +62,7 @@ export default function TaskList() {
   const isLoading = todoLoading || habitLoading;
   const error = todoError || habitError;
 
-  // Fetch completions for all habit tasks
+  // Fetch completions for all habit tasks using a single batch request
   const weekDates = getWeekDates();
   const from = weekDates[0];
   const to = weekDates[6];
@@ -69,13 +70,14 @@ export default function TaskList() {
   const { data: allCompletions } = useQuery({
     queryKey: ["habitCompletions", from, to],
     queryFn: async () => {
+      const completions = await getAllTaskCompletions(from, to);
       const results: Record<string, string[]> = {};
       for (const task of habitTasks) {
-        try {
-          const completions = await getTaskCompletions(task.id, from, to);
-          results[task.id] = completions.map((c) => c.completed_date);
-        } catch {
-          results[task.id] = [];
+        results[task.id] = [];
+      }
+      for (const c of completions) {
+        if (results[c.task_id] !== undefined) {
+          results[c.task_id].push(c.completed_date);
         }
       }
       return results;
@@ -399,8 +401,12 @@ export default function TaskList() {
             {habitTasks.map((task, index) => {
               const taskCompletions = allCompletions?.[task.id] ?? [];
               const { current, longest } = computeStreaks(taskCompletions);
-              const weeklyDone = taskCompletions.filter((d) => d <= today).length;
-              const weeklyTotal = task.recurrence_days?.length ?? 0;
+              const DAY_ORDER: RecurrenceDay[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+              const weekScheduledDates = (task.recurrence_days ?? []).map(
+                (day) => weekDates[DAY_ORDER.indexOf(day)]
+              ).filter((d): d is string => d !== undefined);
+              const weeklyDone = taskCompletions.filter((d) => weekScheduledDates.includes(d) && d <= today).length;
+              const weeklyTotal = weekScheduledDates.filter((d) => d <= today).length;
               const weeklyPct = weeklyTotal > 0 ? Math.round((weeklyDone / weeklyTotal) * 100) : 0;
               const allDone = weeklyTotal > 0 && weeklyDone >= weeklyTotal;
 

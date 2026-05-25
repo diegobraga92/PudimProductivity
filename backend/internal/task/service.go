@@ -12,6 +12,12 @@ import (
 // ErrTaskNotFound is returned when a task is not found in the repository.
 var ErrTaskNotFound = fmt.Errorf("task not found")
 
+// ErrCompletionAlreadyExists is returned when a habit completion already exists for the given task+date.
+var ErrCompletionAlreadyExists = fmt.Errorf("completion already exists for this task on this date")
+
+// ErrCompletionNotFound is returned when no completion exists for the given task+date.
+var ErrCompletionNotFound = fmt.Errorf("completion not found")
+
 // TaskService implements the application logic for task operations.
 type TaskService struct {
 	repo TaskRepository
@@ -74,13 +80,14 @@ func (s *TaskService) ListTasksByListID(ctx context.Context, listID, typeFilter 
 }
 
 // UpdateTask updates an existing task and publishes events.
-func (s *TaskService) UpdateTask(ctx context.Context, id string, title *string, status *TaskStatus, recurrenceDays *[]string) (*Task, error) {
+// listID uses double-pointer semantics: nil = no change, &nil = unassign, &ptr = assign.
+func (s *TaskService) UpdateTask(ctx context.Context, id string, title *string, status *TaskStatus, recurrenceDays *[]string, listID **string) (*Task, error) {
 	task, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := task.Update(title, status, recurrenceDays); err != nil {
+	if err := task.Update(title, status, recurrenceDays, listID); err != nil {
 		return nil, fmt.Errorf("update task: %w", err)
 	}
 
@@ -195,4 +202,10 @@ func (s *TaskService) GetTaskCompletions(ctx context.Context, taskID string, fro
 func (s *TaskService) GetTodayCompletion(ctx context.Context, taskID string) (*TaskCompletion, error) {
 	today := time.Now().UTC().Truncate(24 * time.Hour)
 	return s.repo.GetCompletion(ctx, taskID, today)
+}
+
+// GetAllTaskCompletions returns all completions across all tasks within a date range.
+// This is a batch alternative to calling GetTaskCompletions per task.
+func (s *TaskService) GetAllTaskCompletions(ctx context.Context, from, to time.Time) ([]*TaskCompletion, error) {
+	return s.repo.ListAllCompletions(ctx, from, to)
 }

@@ -19,6 +19,9 @@ func RegisterTaskRoutes(r chi.Router, pool *pgxpool.Pool, bus shared.EventBus) *
 	r.Route("/api/v1/tasks", func(r chi.Router) {
 		r.Get("/", handler.ListTasks)
 		r.Post("/", handler.CreateTask)
+		// Batch completions endpoint — must be registered before /{taskId} to
+		// prevent chi from matching the literal "completions" as a taskId.
+		r.Get("/completions", handler.GetAllCompletions)
 		r.Get("/{taskId}", handler.GetTask)
 		r.Put("/{taskId}", handler.UpdateTask)
 		r.Delete("/{taskId}", handler.DeleteTask)
