@@ -63,7 +63,11 @@ func main() {
 
 	// Initialize event bus (in-memory for Phase 1-2, RabbitMQ in Phase 3)
 	eventBus := shared.NewInMemoryEventBus()
-	defer eventBus.Close()
+	defer func() {
+		if err := eventBus.Close(); err != nil {
+			log.Error().Err(err).Msg("failed to close event bus")
+		}
+	}()
 
 	// Initialize feature flag service
 	var featureStore *features.CachedFeatureStore
@@ -196,7 +200,7 @@ func healthHandler(pool *pgxpool.Pool) http.HandlerFunc {
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(HealthResponse{
+		_ = json.NewEncoder(w).Encode(HealthResponse{
 			Status:  overallStatus,
 			Version: Version,
 			DB:      dbStatus,

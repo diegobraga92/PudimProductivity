@@ -72,7 +72,7 @@ func RunMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 
 		_, err = tx.Exec(ctx, string(content))
 		if err != nil {
-			tx.Rollback(ctx)
+			_ = tx.Rollback(ctx)
 			return fmt.Errorf("execute migration %s: %w", entry.Name(), err)
 		}
 
@@ -81,7 +81,7 @@ func RunMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 			entry.Name(),
 		)
 		if err != nil {
-			tx.Rollback(ctx)
+			_ = tx.Rollback(ctx)
 			return fmt.Errorf("record migration %s: %w", entry.Name(), err)
 		}
 

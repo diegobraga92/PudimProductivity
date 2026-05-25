@@ -25,13 +25,13 @@ func (h *Handler) ListFeatures(w http.ResponseWriter, r *http.Request) {
 		log.Error().Err(err).Msg("failed to list feature flags")
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"error": "failed to list features"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "failed to list features"})
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(flags)
+	_ = json.NewEncoder(w).Encode(flags)
 }
 
 // RegisterFeatureRoutes mounts all feature flag HTTP routes on the given router.

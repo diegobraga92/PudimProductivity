@@ -16,8 +16,7 @@ func TestConnectPool_Select1(t *testing.T) {
 	defer cancel()
 
 	// Start a PostgreSQL container via Testcontainers
-	pgContainer, err := postgres.RunContainer(ctx,
-		testcontainers.WithImage("postgres:16-alpine"),
+	pgContainer, err := postgres.Run(ctx, "postgres:16-alpine",
 		postgres.WithDatabase("pudimproductivity"),
 		postgres.WithUsername("pudim"),
 		postgres.WithPassword("pudim_dev"),
@@ -68,8 +67,7 @@ func TestConnectPool_QueryWithPoolConfig(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
 
-	pgContainer, err := postgres.RunContainer(ctx,
-		testcontainers.WithImage("postgres:16-alpine"),
+	pgContainer, err := postgres.Run(ctx, "postgres:16-alpine",
 		postgres.WithDatabase("pudimproductivity"),
 		postgres.WithUsername("pudim"),
 		postgres.WithPassword("pudim_dev"),

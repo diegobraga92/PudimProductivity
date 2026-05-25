@@ -79,20 +79,18 @@ func (r *PostgresTaskRepository) List(ctx context.Context, statusFilter, typeFil
 		WHERE list_id IS NULL
 	`
 	args := make([]interface{}, 0)
-	argIdx := 1
 
 	if statusFilter != "" {
-		query += fmt.Sprintf(" AND status = $%d", argIdx)
+		query += " AND status = $1"
 		args = append(args, statusFilter)
-		argIdx++
 	}
 
 	if typeFilter != "" {
 		switch typeFilter {
 		case "one-off":
-			query += fmt.Sprintf(" AND recurrence_days IS NULL")
+			query += " AND recurrence_days IS NULL"
 		case "habit":
-			query += fmt.Sprintf(" AND recurrence_days IS NOT NULL")
+			query += " AND recurrence_days IS NOT NULL"
 		}
 	}
 
@@ -147,9 +145,9 @@ func (r *PostgresTaskRepository) ListByListID(ctx context.Context, listID, typeF
 	if typeFilter != "" {
 		switch typeFilter {
 		case "one-off":
-			query += fmt.Sprintf(" AND recurrence_days IS NULL")
+			query += " AND recurrence_days IS NULL"
 		case "habit":
-			query += fmt.Sprintf(" AND recurrence_days IS NOT NULL")
+			query += " AND recurrence_days IS NOT NULL"
 		}
 	}
 
