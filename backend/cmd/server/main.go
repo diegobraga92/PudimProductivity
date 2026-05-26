@@ -82,7 +82,7 @@ func main() {
 	r.Use(requestLogger)
 	r.Use(middleware.Timeout(15 * time.Second))
 
-	r.Get("/api/v1/health", healthHandler(pool))
+	r.Get("/api/v1/health", healthHandler(pool, cfg.Version))
 
 	// Register task module routes
 	var taskService *task.TaskService
@@ -174,7 +174,7 @@ type HealthResponse struct {
 	DB      string `json:"db"`
 }
 
-func healthHandler(pool *pgxpool.Pool) http.HandlerFunc {
+func healthHandler(pool *pgxpool.Pool, version string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		dbStatus := "connected"
 		overallStatus := "ok"
@@ -196,13 +196,11 @@ func healthHandler(pool *pgxpool.Pool) http.HandlerFunc {
 			statusCode = http.StatusServiceUnavailable
 		}
 
-		cfg := shared.LoadConfig()
-
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(statusCode)
 		_ = json.NewEncoder(w).Encode(HealthResponse{
 			Status:  overallStatus,
-			Version: cfg.Version,
+			Version: version,
 			DB:      dbStatus,
 		})
 	}
