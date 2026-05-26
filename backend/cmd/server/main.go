@@ -23,8 +23,6 @@ import (
 	"github.com/diegobraga92/pudimproductivity/backend/internal/tasklist"
 )
 
-var Version = "0.0.1"
-
 func main() {
 	log.Logger = zerolog.New(zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: time.RFC3339}).
 		With().
@@ -40,7 +38,7 @@ func main() {
 	}
 	zerolog.SetGlobalLevel(level)
 
-	log.Info().Str("version", Version).Msg("starting PudimProductivity backend")
+	log.Info().Str("version", cfg.Version).Msg("starting PudimProductivity backend")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -106,9 +104,9 @@ func main() {
 	srv := &http.Server{
 		Addr:         addr,
 		Handler:      r,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 30 * time.Second,
-		IdleTimeout:  60 * time.Second,
+		ReadTimeout:  time.Duration(cfg.ReadTimeout) * time.Second,
+		WriteTimeout: time.Duration(cfg.WriteTimeout) * time.Second,
+		IdleTimeout:  time.Duration(cfg.IdleTimeout) * time.Second,
 	}
 
 	shutdownCh := make(chan os.Signal, 1)
@@ -198,11 +196,13 @@ func healthHandler(pool *pgxpool.Pool) http.HandlerFunc {
 			statusCode = http.StatusServiceUnavailable
 		}
 
+		cfg := shared.LoadConfig()
+
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(statusCode)
 		_ = json.NewEncoder(w).Encode(HealthResponse{
 			Status:  overallStatus,
-			Version: Version,
+			Version: cfg.Version,
 			DB:      dbStatus,
 		})
 	}
