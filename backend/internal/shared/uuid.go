@@ -5,6 +5,8 @@ import (
 	"fmt"
 )
 
+// TODO: Replace with UUID lib (google maybe)
+
 // NewUUID generates a UUID v4 string.
 func NewUUID() string {
 	b := make([]byte, 16)

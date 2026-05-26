@@ -14,11 +14,8 @@ import (
 //go:embed migrations/*.sql
 var migrationsFS embed.FS
 
-// RunMigrations executes all pending SQL migration files in order.
-// It creates a migrations tracking table and applies any files that
-// have not yet been run.
 func RunMigrations(ctx context.Context, pool *pgxpool.Pool) error {
-	// Ensure the migrations tracking table exists
+	// Setup migrations
 	_, err := pool.Exec(ctx, `
 		CREATE TABLE IF NOT EXISTS schema_migrations (
 			filename    TEXT PRIMARY KEY,
@@ -29,7 +26,6 @@ func RunMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 		return fmt.Errorf("create schema_migrations table: %w", err)
 	}
 
-	// Read embedded migration files
 	entries, err := migrationsFS.ReadDir("migrations")
 	if err != nil {
 		return fmt.Errorf("read migrations directory: %w", err)
@@ -41,11 +37,11 @@ func RunMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 	})
 
 	for _, entry := range entries {
+		// Skip already applied and unrelated files
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".sql") {
 			continue
 		}
 
-		// Check if already applied
 		var applied bool
 		err := pool.QueryRow(ctx,
 			"SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE filename = $1)",
@@ -59,7 +55,7 @@ func RunMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 			continue
 		}
 
-		// Read and execute the migration
+		// Applying migrations
 		content, err := migrationsFS.ReadFile("migrations/" + entry.Name())
 		if err != nil {
 			return fmt.Errorf("read migration file %s: %w", entry.Name(), err)

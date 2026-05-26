@@ -7,26 +7,34 @@ import (
 )
 
 type Config struct {
-	Port            int
-	DatabaseURL     string
-	ShutdownTimeout time.Duration
-	LogLevel        string
-	Version         string
-	ReadTimeout		int
-	WriteTimeout	int
-	IdleTimeout		int
+	Port                    int
+	DatabaseURL             string
+	ShutdownTimeout         time.Duration
+	LogLevel                string
+	Version                 string
+	ReadTimeout             int
+	WriteTimeout            int
+	IdleTimeout             int
+	DatabaseMaxConns        int
+	DatabaseMinConns        int
+	DatabaseMaxConnLifetime int
+	DatabaseMaxConnIdletime int
 }
 
 func LoadConfig() Config {
 	return Config{
-		Port:            getEnvInt("PORT", 8080),
-		DatabaseURL:     getEnv("DATABASE_URL", "postgres://pudim:pudim_dev@localhost:5433/pudimproductivity?sslmode=disable"),
-		ShutdownTimeout: getEnvDuration("SHUTDOWN_TIMEOUT", 15*time.Second),
-		LogLevel:        getEnv("LOG_LEVEL", "debug"),
-		Version:		 getEnv("VERSION", "0.0.1"),
-		ReadTimeout:	 getEnvInt("READ_TIMEOUT", 10),
-		WriteTimeout:	 getEnvInt("WRITE_TIMEOUT", 30),
-		IdleTimeout:	 getEnvInt("IDLE_TIMEOUT", 60),
+		Port:                    getEnvInt("PORT", 8080),
+		DatabaseURL:             getEnv("DATABASE_URL", "postgres://pudim:pudim_dev@localhost:5433/pudimproductivity?sslmode=disable"),
+		ShutdownTimeout:         getEnvDuration("SHUTDOWN_TIMEOUT", 15*time.Second),
+		LogLevel:                getEnv("LOG_LEVEL", "debug"),
+		Version:                 getEnv("VERSION", "0.0.1"),
+		ReadTimeout:             getEnvInt("READ_TIMEOUT", 10),
+		WriteTimeout:            getEnvInt("WRITE_TIMEOUT", 30),
+		IdleTimeout:             getEnvInt("IDLE_TIMEOUT", 60),
+		DatabaseMaxConns:        getEnvInt("DATABASE_MAX_CONNS", 20),
+		DatabaseMinConns:        getEnvInt("DATABASE_MIN_CONNS", 2),
+		DatabaseMaxConnLifetime: getEnvInt("DATABASE_MAX_CONN_LIFETIME", 30),
+		DatabaseMaxConnIdletime: getEnvInt("DATABASE_MAX_CONN_IDLETIME", 5),
 	}
 }
 

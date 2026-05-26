@@ -6,6 +6,8 @@ import (
 	"time"
 )
 
+// TODO: Check and rewrite all 'features' code (it was generated automatically)
+
 // FeatureFlag represents a toggleable feature.
 type FeatureFlag struct {
 	ID          string    `json:"id"`

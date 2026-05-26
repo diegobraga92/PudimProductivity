@@ -8,6 +8,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// TODO: Replace this auto code with proper Rabbit or similar implementation
+
 // DomainEvent is the interface that all domain events must implement.
 type DomainEvent interface {
 	// EventName returns a unique name for the event type (e.g., "task.created").

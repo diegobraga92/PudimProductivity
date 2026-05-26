@@ -24,13 +24,13 @@ import (
 )
 
 func main() {
+	// Setup logging and config
+	cfg := shared.LoadConfig()
 	log.Logger = zerolog.New(zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: time.RFC3339}).
 		With().
 		Timestamp().
 		Caller().
 		Logger()
-
-	cfg := shared.LoadConfig()
 
 	level, err := zerolog.ParseLevel(cfg.LogLevel)
 	if err != nil {
@@ -40,18 +40,18 @@ func main() {
 
 	log.Info().Str("version", cfg.Version).Msg("starting PudimProductivity backend")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	// Setup database
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cfg.ReadTimeout)*time.Second)
 	defer cancel()
 
-	pool, err := db.ConnectPool(ctx, cfg.DatabaseURL)
+	pool, err := db.ConnectPool(ctx, cfg)
 	if err != nil {
 		log.Warn().Err(err).Msg("database connection failed — running in degraded mode")
 		pool = nil
 	}
 
-	// Run database migrations if connected
 	if pool != nil {
-		migrateCtx, migrateCancel := context.WithTimeout(context.Background(), 30*time.Second)
+		migrateCtx, migrateCancel := context.WithTimeout(context.Background(), time.Duration(cfg.WriteTimeout)*time.Second)
 		defer migrateCancel()
 
 		if err := db.RunMigrations(migrateCtx, pool); err != nil {
@@ -59,7 +59,7 @@ func main() {
 		}
 	}
 
-	// Initialize event bus (in-memory for Phase 1-2, RabbitMQ in Phase 3)
+	// Setup event bus. TODO: Migrate from in-memory to RabbitMQ when necessary
 	eventBus := shared.NewInMemoryEventBus()
 	defer func() {
 		if err := eventBus.Close(); err != nil {
@@ -67,13 +67,14 @@ func main() {
 		}
 	}()
 
-	// Initialize feature flag service
+	// Setup feature flag service
 	var featureStore *features.CachedFeatureStore
 	if pool != nil {
 		pgFeatureStore := features.NewPostgresFeatureStore(pool)
 		featureStore = features.NewCachedFeatureStore(pgFeatureStore, 30*time.Second)
 	}
 
+	// Setup router
 	r := chi.NewRouter()
 
 	r.Use(middleware.RequestID)
@@ -84,22 +85,22 @@ func main() {
 
 	r.Get("/api/v1/health", healthHandler(pool, cfg.Version))
 
-	// Register task module routes
+	// Setup task routes
 	var taskService *task.TaskService
 	if pool != nil {
 		taskService = task.RegisterTaskRoutes(r, pool, eventBus)
 	}
 
-	// Register task list module routes
 	if pool != nil && taskService != nil {
 		tasklist.RegisterTaskListRoutes(r, pool, taskService)
 	}
 
-	// Register feature flag routes
+	// Setup feature flag routes
 	if featureStore != nil {
 		features.RegisterFeatureRoutes(r, featureStore)
 	}
 
+	// Setup server
 	addr := fmt.Sprintf(":%d", cfg.Port)
 	srv := &http.Server{
 		Addr:         addr,
@@ -113,6 +114,7 @@ func main() {
 	signal.Notify(shutdownCh, syscall.SIGINT, syscall.SIGTERM)
 	defer signal.Stop(shutdownCh)
 
+	// Start server async (background goroutine)
 	go func() {
 		log.Info().Str("addr", addr).Msg("HTTP server listening")
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -120,6 +122,7 @@ func main() {
 		}
 	}()
 
+	// Wait for shutdown signal
 	sig := <-shutdownCh
 	log.Info().Str("signal", sig.String()).Msg("shutting down gracefully")
 
