@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -191,9 +190,7 @@ func healthHandler(pool *pgxpool.Pool, version string) http.HandlerFunc {
 			statusCode = http.StatusServiceUnavailable
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(statusCode)
-		_ = json.NewEncoder(w).Encode(HealthResponse{
+		shared.WriteJSON(w, statusCode, HealthResponse{
 			Status:  overallStatus,
 			Version: version,
 			DB:      dbStatus,

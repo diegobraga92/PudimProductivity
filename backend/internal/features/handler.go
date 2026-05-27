@@ -1,11 +1,12 @@
 package features
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
+
+	"github.com/diegobraga92/pudimproductivity/backend/internal/shared"
 )
 
 // Handler contains HTTP handlers for feature flag operations.
@@ -23,15 +24,11 @@ func (h *Handler) ListFeatures(w http.ResponseWriter, r *http.Request) {
 	flags, err := h.store.GetAll(r.Context())
 	if err != nil {
 		log.Error().Err(err).Msg("failed to list feature flags")
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		_ = json.NewEncoder(w).Encode(map[string]string{"error": "failed to list features"})
+		shared.WriteError(w, http.StatusInternalServerError, "failed to list features")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(flags)
+	shared.WriteJSON(w, http.StatusOK, flags)
 }
 
 // RegisterFeatureRoutes mounts all feature flag HTTP routes on the given router.

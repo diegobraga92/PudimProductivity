@@ -1,15 +1,12 @@
 package tasklist
 
-import "context"
+import (
+	"context"
+	"errors"
+)
 
 // ErrTaskListNotFound is returned when a task list is not found.
-var ErrTaskListNotFound = &notFoundError{}
-
-type notFoundError struct{}
-
-func (e *notFoundError) Error() string {
-	return "task list not found"
-}
+var ErrTaskListNotFound = errors.New("task list not found")
 
 // TaskListRepository defines the interface for task list persistence.
 type TaskListRepository interface {

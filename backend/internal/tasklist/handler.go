@@ -8,6 +8,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
 
+	"github.com/diegobraga92/pudimproductivity/backend/internal/shared"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/task"
 )
 
@@ -40,10 +41,6 @@ type updateTaskListRequest struct {
 	Description *string `json:"description"`
 }
 
-type errorResponse struct {
-	Error string `json:"error"`
-}
-
 // --- Helpers ---
 
 func toTaskListResponse(l *TaskList) taskListResponse {
@@ -56,18 +53,6 @@ func toTaskListResponse(l *TaskList) taskListResponse {
 	}
 }
 
-func writeJSON(w http.ResponseWriter, status int, v interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(v); err != nil {
-		log.Error().Err(err).Msg("failed to encode JSON response")
-	}
-}
-
-func writeError(w http.ResponseWriter, status int, msg string) {
-	writeJSON(w, status, errorResponse{Error: msg})
-}
-
 // --- Handlers ---
 
 // ListTaskLists handles GET /api/v1/task-lists
@@ -75,7 +60,7 @@ func (h *Handler) ListTaskLists(w http.ResponseWriter, r *http.Request) {
 	lists, err := h.service.ListTaskLists(r.Context())
 	if err != nil {
 		log.Error().Err(err).Msg("failed to list task lists")
-		writeError(w, http.StatusInternalServerError, "failed to list task lists")
+		shared.WriteError(w, http.StatusInternalServerError, "failed to list task lists")
 		return
 	}
 
@@ -84,97 +69,97 @@ func (h *Handler) ListTaskLists(w http.ResponseWriter, r *http.Request) {
 		responses[i] = toTaskListResponse(l)
 	}
 
-	writeJSON(w, http.StatusOK, responses)
+	shared.WriteJSON(w, http.StatusOK, responses)
 }
 
 // CreateTaskList handles POST /api/v1/task-lists
 func (h *Handler) CreateTaskList(w http.ResponseWriter, r *http.Request) {
 	var req createTaskListRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		shared.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.Name == "" {
-		writeError(w, http.StatusBadRequest, "name is required")
+		shared.WriteError(w, http.StatusBadRequest, "name is required")
 		return
 	}
 
 	list, err := h.service.CreateTaskList(r.Context(), req.Name)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to create task list")
-		writeError(w, http.StatusInternalServerError, "failed to create task list")
+		shared.WriteError(w, http.StatusInternalServerError, "failed to create task list")
 		return
 	}
 
-	writeJSON(w, http.StatusCreated, toTaskListResponse(list))
+	shared.WriteJSON(w, http.StatusCreated, toTaskListResponse(list))
 }
 
 // GetTaskList handles GET /api/v1/task-lists/{listId}
 func (h *Handler) GetTaskList(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "listId")
 	if id == "" {
-		writeError(w, http.StatusBadRequest, "list ID is required")
+		shared.WriteError(w, http.StatusBadRequest, "list ID is required")
 		return
 	}
 
 	list, err := h.service.GetTaskList(r.Context(), id)
 	if err != nil {
 		if errors.Is(err, ErrTaskListNotFound) {
-			writeError(w, http.StatusNotFound, "task list not found")
+			shared.WriteError(w, http.StatusNotFound, "task list not found")
 			return
 		}
 		log.Error().Err(err).Str("list_id", id).Msg("failed to get task list")
-		writeError(w, http.StatusInternalServerError, "failed to get task list")
+		shared.WriteError(w, http.StatusInternalServerError, "failed to get task list")
 		return
 	}
 
-	writeJSON(w, http.StatusOK, toTaskListResponse(list))
+	shared.WriteJSON(w, http.StatusOK, toTaskListResponse(list))
 }
 
 // UpdateTaskList handles PUT /api/v1/task-lists/{listId}
 func (h *Handler) UpdateTaskList(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "listId")
 	if id == "" {
-		writeError(w, http.StatusBadRequest, "list ID is required")
+		shared.WriteError(w, http.StatusBadRequest, "list ID is required")
 		return
 	}
 
 	var req updateTaskListRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		shared.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	list, err := h.service.UpdateTaskList(r.Context(), id, req.Name, req.Description)
 	if err != nil {
 		if errors.Is(err, ErrTaskListNotFound) {
-			writeError(w, http.StatusNotFound, "task list not found")
+			shared.WriteError(w, http.StatusNotFound, "task list not found")
 			return
 		}
 		log.Error().Err(err).Str("list_id", id).Msg("failed to update task list")
-		writeError(w, http.StatusInternalServerError, "failed to update task list")
+		shared.WriteError(w, http.StatusInternalServerError, "failed to update task list")
 		return
 	}
 
-	writeJSON(w, http.StatusOK, toTaskListResponse(list))
+	shared.WriteJSON(w, http.StatusOK, toTaskListResponse(list))
 }
 
 // DeleteTaskList handles DELETE /api/v1/task-lists/{listId}
 func (h *Handler) DeleteTaskList(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "listId")
 	if id == "" {
-		writeError(w, http.StatusBadRequest, "list ID is required")
+		shared.WriteError(w, http.StatusBadRequest, "list ID is required")
 		return
 	}
 
 	if err := h.service.DeleteTaskList(r.Context(), id); err != nil {
 		if errors.Is(err, ErrTaskListNotFound) {
-			writeError(w, http.StatusNotFound, "task list not found")
+			shared.WriteError(w, http.StatusNotFound, "task list not found")
 			return
 		}
 		log.Error().Err(err).Str("list_id", id).Msg("failed to delete task list")
-		writeError(w, http.StatusInternalServerError, "failed to delete task list")
+		shared.WriteError(w, http.StatusInternalServerError, "failed to delete task list")
 		return
 	}
 
@@ -187,7 +172,7 @@ func (h *Handler) ListTasksByListID(taskService *task.TaskService) http.HandlerF
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "listId")
 		if id == "" {
-			writeError(w, http.StatusBadRequest, "list ID is required")
+			shared.WriteError(w, http.StatusBadRequest, "list ID is required")
 			return
 		}
 
@@ -196,7 +181,7 @@ func (h *Handler) ListTasksByListID(taskService *task.TaskService) http.HandlerF
 		tasks, err := taskService.ListTasksByListID(r.Context(), id, typeFilter)
 		if err != nil {
 			log.Error().Err(err).Str("list_id", id).Msg("failed to list tasks by list")
-			writeError(w, http.StatusInternalServerError, "failed to list tasks")
+			shared.WriteError(w, http.StatusInternalServerError, "failed to list tasks")
 			return
 		}
 
@@ -224,6 +209,6 @@ func (h *Handler) ListTasksByListID(taskService *task.TaskService) http.HandlerF
 			}
 		}
 
-		writeJSON(w, http.StatusOK, responses)
+		shared.WriteJSON(w, http.StatusOK, responses)
 	}
 }
