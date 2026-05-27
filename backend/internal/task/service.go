@@ -21,18 +21,16 @@ var ErrCompletionNotFound = fmt.Errorf("completion not found")
 // TaskService implements the application logic for task operations.
 type TaskService struct {
 	repo TaskRepository
-	bus  shared.EventBus
 }
 
 // NewTaskService creates a new TaskService.
-func NewTaskService(repo TaskRepository, bus shared.EventBus) *TaskService {
+func NewTaskService(repo TaskRepository) *TaskService {
 	return &TaskService{
 		repo: repo,
-		bus:  bus,
 	}
 }
 
-// CreateTask creates a new task and publishes a TaskCreated event.
+// CreateTask creates a new task.
 func (s *TaskService) CreateTask(ctx context.Context, title string, recurrenceDays []string) (*Task, error) {
 	return s.CreateTaskWithList(ctx, title, recurrenceDays, nil)
 }
@@ -50,10 +48,6 @@ func (s *TaskService) CreateTaskWithList(ctx context.Context, title string, recu
 
 	if err := s.repo.Create(ctx, task); err != nil {
 		return nil, fmt.Errorf("persist task: %w", err)
-	}
-
-	if err := s.bus.Publish(ctx, NewTaskCreated(task)); err != nil {
-		log.Warn().Err(err).Str("task_id", task.ID).Msg("failed to publish TaskCreated event")
 	}
 
 	log.Info().Str("task_id", task.ID).Str("title", task.Title).Msg("task created")
@@ -79,7 +73,7 @@ func (s *TaskService) ListTasksByListID(ctx context.Context, listID, typeFilter 
 	return s.repo.ListByListID(ctx, listID, typeFilter)
 }
 
-// UpdateTask updates an existing task and publishes events.
+// UpdateTask updates an existing task.
 // listID uses double-pointer semantics: nil = no change, &nil = unassign, &ptr = assign.
 func (s *TaskService) UpdateTask(ctx context.Context, id string, title *string, status *TaskStatus, recurrenceDays *[]string, listID **string) (*Task, error) {
 	task, err := s.repo.GetByID(ctx, id)
@@ -95,22 +89,14 @@ func (s *TaskService) UpdateTask(ctx context.Context, id string, title *string, 
 		return nil, fmt.Errorf("persist task update: %w", err)
 	}
 
-	if err := s.bus.Publish(ctx, NewTaskUpdated(task)); err != nil {
-		log.Warn().Err(err).Str("task_id", task.ID).Msg("failed to publish TaskUpdated event")
-	}
-
 	log.Info().Str("task_id", task.ID).Msg("task updated")
 	return task, nil
 }
 
-// DeleteTask deletes a task and publishes a TaskDeleted event.
+// DeleteTask deletes a task.
 func (s *TaskService) DeleteTask(ctx context.Context, id string) error {
 	if err := s.repo.Delete(ctx, id); err != nil {
 		return err
-	}
-
-	if err := s.bus.Publish(ctx, NewTaskDeleted(id)); err != nil {
-		log.Warn().Err(err).Str("task_id", id).Msg("failed to publish TaskDeleted event")
 	}
 
 	log.Info().Str("task_id", id).Msg("task deleted")
@@ -147,10 +133,6 @@ func (s *TaskService) CompleteTask(ctx context.Context, taskID, dateStr string) 
 		return nil, fmt.Errorf("persist completion: %w", err)
 	}
 
-	if err := s.bus.Publish(ctx, NewTaskCompleted(taskID, completionDate)); err != nil {
-		log.Warn().Err(err).Str("task_id", taskID).Msg("failed to publish TaskCompleted event")
-	}
-
 	log.Info().Str("task_id", taskID).Str("date", completionDate.Format("2006-01-02")).Msg("task completed")
 	return completion, nil
 }
@@ -177,10 +159,6 @@ func (s *TaskService) UncompleteTask(ctx context.Context, taskID, dateStr string
 
 	if err := s.repo.DeleteCompletion(ctx, taskID, completionDate); err != nil {
 		return err
-	}
-
-	if err := s.bus.Publish(ctx, NewTaskUncompleted(taskID, completionDate)); err != nil {
-		log.Warn().Err(err).Str("task_id", taskID).Msg("failed to publish TaskUncompleted event")
 	}
 
 	log.Info().Str("task_id", taskID).Str("date", completionDate.Format("2006-01-02")).Msg("task uncompleted")

@@ -59,14 +59,6 @@ func main() {
 		}
 	}
 
-	// Setup event bus. TODO: Migrate from in-memory to RabbitMQ when necessary
-	eventBus := shared.NewInMemoryEventBus()
-	defer func() {
-		if err := eventBus.Close(); err != nil {
-			log.Error().Err(err).Msg("failed to close event bus")
-		}
-	}()
-
 	// Setup feature flag service
 	var featureStore *features.CachedFeatureStore
 	if pool != nil {
@@ -88,7 +80,7 @@ func main() {
 	// Setup task routes
 	var taskService *task.TaskService
 	if pool != nil {
-		taskService = task.RegisterTaskRoutes(r, pool, eventBus)
+		taskService = task.RegisterTaskRoutes(r, pool)
 	}
 
 	if pool != nil && taskService != nil {

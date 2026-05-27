@@ -5,7 +5,6 @@ import (
 	"time"
 )
 
-// TaskStatus represents whether a task is still to do or already done.
 type TaskStatus string
 
 const (
@@ -13,27 +12,25 @@ const (
 	TaskStatusDone TaskStatus = "done"
 )
 
-// ValidTaskStatuses contains all valid task statuses.
-var ValidTaskStatuses = map[TaskStatus]bool{
-	TaskStatusTodo: true,
-	TaskStatusDone: true,
+func (s TaskStatus) Valid() bool {
+	switch s {
+	case TaskStatusTodo, TaskStatusDone:
+		return true
+	default:
+		return false
+	}
 }
 
-// ValidRecurrenceDays contains all valid day-of-week abbreviations.
-var ValidRecurrenceDays = map[string]bool{
-	"mon": true,
-	"tue": true,
-	"wed": true,
-	"thu": true,
-	"fri": true,
-	"sat": true,
-	"sun": true,
+var validRecurrenceDays = map[string]struct{}{
+	"mon": {},
+	"tue": {},
+	"wed": {},
+	"thu": {},
+	"fri": {},
+	"sat": {},
+	"sun": {},
 }
 
-// Task is the core domain aggregate for the task bounded context.
-// If RecurrenceDays is non-nil, the task is a habit that repeats on those days.
-// If RecurrenceDays is nil, the task is a one-off task with a simple todo/done status.
-// ListID is optional and links the task to a named task list.
 type Task struct {
 	ID             string
 	Title          string
@@ -44,84 +41,74 @@ type Task struct {
 	UpdatedAt      time.Time
 }
 
-// NewTask creates a new Task with the given title and optional recurrence days.
-// It returns an error if the title is empty or if recurrence days are invalid.
 func NewTask(id, title string, recurrenceDays []string) (*Task, error) {
 	if id == "" {
 		return nil, fmt.Errorf("task id cannot be empty")
 	}
+
 	if title == "" {
 		return nil, fmt.Errorf("task title cannot be empty")
 	}
 
-	if recurrenceDays != nil {
-		if len(recurrenceDays) == 0 {
-			return nil, fmt.Errorf("recurrence days cannot be empty; use nil for one-off tasks")
-		}
-		for _, d := range recurrenceDays {
-			if !ValidRecurrenceDays[d] {
-				return nil, fmt.Errorf("invalid recurrence day: %s", d)
-			}
-		}
+	if err := validateRecurrenceDays(recurrenceDays); err != nil {
+		return nil, err
 	}
 
 	now := time.Now().UTC()
+
 	return &Task{
 		ID:             id,
 		Title:          title,
 		Status:         TaskStatusTodo,
-		RecurrenceDays: recurrenceDays,
+		RecurrenceDays: cloneStrings(recurrenceDays),
 		CreatedAt:      now,
 		UpdatedAt:      now,
 	}, nil
 }
 
-// IsHabit returns true if this task has recurrence days (i.e., it's a habit).
 func (t *Task) IsHabit() bool {
 	return t.RecurrenceDays != nil
 }
 
-// Update applies the provided updates to the task.
-// Only non-nil fields are applied. Returns an error if the resulting state is invalid.
-//
-// listID uses double-pointer semantics:
-//   - nil outer pointer → field absent, ListID is not changed.
-//   - non-nil outer pointer, nil inner pointer → explicitly unassign (set ListID to nil).
-//   - non-nil outer pointer, non-nil inner pointer → assign to the given list.
-func (t *Task) Update(title *string, status *TaskStatus, recurrenceDays *[]string, listID **string) error {
+func (t *Task) Update(
+	title *string,
+	status *TaskStatus,
+	recurrenceDays *[]string,
+	listID **string,
+) error {
 	if title != nil {
 		if *title == "" {
 			return fmt.Errorf("task title cannot be empty")
 		}
+
 		t.Title = *title
 	}
+
 	if status != nil {
-		if !ValidTaskStatuses[*status] {
+		if !status.Valid() {
 			return fmt.Errorf("invalid task status: %s", *status)
 		}
+
 		t.Status = *status
 	}
+
 	if recurrenceDays != nil {
-		if len(*recurrenceDays) == 0 {
-			t.RecurrenceDays = nil
-		} else {
-			for _, d := range *recurrenceDays {
-				if !ValidRecurrenceDays[d] {
-					return fmt.Errorf("invalid recurrence day: %s", d)
-				}
-			}
-			t.RecurrenceDays = *recurrenceDays
+		if err := validateRecurrenceDays(*recurrenceDays); err != nil {
+			return err
 		}
+
+		t.RecurrenceDays = cloneStrings(*recurrenceDays)
 	}
+
 	if listID != nil {
 		t.ListID = *listID
 	}
 
 	t.UpdatedAt = time.Now().UTC()
+
 	return nil
 }
 
-// TaskCompletion represents a single day's completion of a habit task.
 type TaskCompletion struct {
 	ID            string
 	TaskID        string
@@ -129,19 +116,63 @@ type TaskCompletion struct {
 	CreatedAt     time.Time
 }
 
-// NewTaskCompletion creates a new TaskCompletion.
-func NewTaskCompletion(id, taskID string, completedDate time.Time) (*TaskCompletion, error) {
+func NewTaskCompletion(
+	id, taskID string,
+	completedDate time.Time,
+) (*TaskCompletion, error) {
 	if id == "" {
 		return nil, fmt.Errorf("completion id cannot be empty")
 	}
+
 	if taskID == "" {
 		return nil, fmt.Errorf("task id cannot be empty")
+	}
+
+	if completedDate.IsZero() {
+		return nil, fmt.Errorf("completed date cannot be zero")
 	}
 
 	return &TaskCompletion{
 		ID:            id,
 		TaskID:        taskID,
-		CompletedDate: completedDate,
+		CompletedDate: completedDate.UTC(),
 		CreatedAt:     time.Now().UTC(),
 	}, nil
+}
+
+func validateRecurrenceDays(days []string) error {
+	if days == nil {
+		return nil
+	}
+
+	if len(days) == 0 {
+		return fmt.Errorf("recurrence days cannot be empty; use nil for one-off tasks")
+	}
+
+	seen := make(map[string]struct{}, len(days))
+
+	for _, d := range days {
+		if _, ok := validRecurrenceDays[d]; !ok {
+			return fmt.Errorf("invalid recurrence day: %s", d)
+		}
+
+		if _, exists := seen[d]; exists {
+			return fmt.Errorf("duplicate recurrence day: %s", d)
+		}
+
+		seen[d] = struct{}{}
+	}
+
+	return nil
+}
+
+func cloneStrings(v []string) []string {
+	if v == nil {
+		return nil
+	}
+
+	cp := make([]string, len(v))
+	copy(cp, v)
+
+	return cp
 }

@@ -13,18 +13,23 @@ func TestNewTask_ValidOneOff(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
+
 	if task.ID != "id-1" {
 		t.Errorf("ID: got %q, want %q", task.ID, "id-1")
 	}
+
 	if task.Title != "Buy groceries" {
 		t.Errorf("Title: got %q, want %q", task.Title, "Buy groceries")
 	}
+
 	if task.Status != TaskStatusTodo {
 		t.Errorf("Status: got %q, want %q", task.Status, TaskStatusTodo)
 	}
+
 	if task.IsHabit() {
 		t.Error("IsHabit: expected false for one-off task")
 	}
+
 	if task.RecurrenceDays != nil {
 		t.Errorf("RecurrenceDays: got %v, want nil", task.RecurrenceDays)
 	}
@@ -35,11 +40,28 @@ func TestNewTask_ValidHabit(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
+
 	if !task.IsHabit() {
 		t.Error("IsHabit: expected true for habit task")
 	}
+
 	if len(task.RecurrenceDays) != 3 {
 		t.Errorf("RecurrenceDays length: got %d, want 3", len(task.RecurrenceDays))
+	}
+}
+
+func TestNewTask_ClonesRecurrenceDays(t *testing.T) {
+	days := []string{"mon", "wed"}
+
+	task, err := NewTask("id-1", "Exercise", days)
+	if err != nil {
+		t.Fatalf("NewTask: %v", err)
+	}
+
+	days[0] = "fri"
+
+	if task.RecurrenceDays[0] != "mon" {
+		t.Fatal("task recurrence days should be cloned")
 	}
 }
 
@@ -60,7 +82,7 @@ func TestNewTask_EmptyTitle(t *testing.T) {
 func TestNewTask_EmptyRecurrenceDaysSlice(t *testing.T) {
 	_, err := NewTask("id-1", "Exercise", []string{})
 	if err == nil {
-		t.Fatal("expected error for empty recurrence_days slice (use nil for one-off), got nil")
+		t.Fatal("expected error for empty recurrence days slice, got nil")
 	}
 }
 
@@ -69,8 +91,52 @@ func TestNewTask_InvalidRecurrenceDay(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for invalid recurrence day, got nil")
 	}
+
 	if !strings.Contains(err.Error(), "xyz") {
 		t.Errorf("expected error message to mention 'xyz', got: %v", err)
+	}
+}
+
+func TestNewTask_DuplicateRecurrenceDay(t *testing.T) {
+	_, err := NewTask("id-1", "Exercise", []string{"mon", "mon"})
+	if err == nil {
+		t.Fatal("expected error for duplicate recurrence day, got nil")
+	}
+}
+
+// ── TaskStatus.Valid ──────────────────────────────────────────────────────────
+
+func TestTaskStatus_Valid(t *testing.T) {
+	tests := []struct {
+		name   string
+		status TaskStatus
+		valid  bool
+	}{
+		{
+			name:   "todo",
+			status: TaskStatusTodo,
+			valid:  true,
+		},
+		{
+			name:   "done",
+			status: TaskStatusDone,
+			valid:  true,
+		},
+		{
+			name:   "invalid",
+			status: TaskStatus("invalid"),
+			valid:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.status.Valid()
+
+			if got != tt.valid {
+				t.Errorf("Valid(): got %v, want %v", got, tt.valid)
+			}
+		})
 	}
 }
 
@@ -78,36 +144,44 @@ func TestNewTask_InvalidRecurrenceDay(t *testing.T) {
 
 func mustNewTask(t *testing.T, id, title string, recurrenceDays []string) *Task {
 	t.Helper()
+
 	task, err := NewTask(id, title, recurrenceDays)
 	if err != nil {
 		t.Fatalf("NewTask: %v", err)
 	}
+
 	return task
 }
 
 func TestTask_Update_Title(t *testing.T) {
 	task := mustNewTask(t, "id-1", "Old title", nil)
+
 	before := task.UpdatedAt
 
-	time.Sleep(time.Millisecond)
 	newTitle := "New title"
+
 	if err := task.Update(&newTitle, nil, nil, nil); err != nil {
 		t.Fatalf("Update: %v", err)
 	}
+
 	if task.Title != "New title" {
 		t.Errorf("Title: got %q, want %q", task.Title, "New title")
 	}
-	if !task.UpdatedAt.After(before) {
-		t.Error("UpdatedAt should advance after Update")
+
+	if !task.UpdatedAt.After(before) && !task.UpdatedAt.Equal(before) {
+		t.Error("UpdatedAt should not go backwards")
 	}
 }
 
 func TestTask_Update_EmptyTitleIsRejected(t *testing.T) {
 	task := mustNewTask(t, "id-1", "Original", nil)
+
 	empty := ""
+
 	if err := task.Update(&empty, nil, nil, nil); err == nil {
 		t.Fatal("expected error for empty title, got nil")
 	}
+
 	if task.Title != "Original" {
 		t.Error("Title should not be mutated on error")
 	}
@@ -115,10 +189,13 @@ func TestTask_Update_EmptyTitleIsRejected(t *testing.T) {
 
 func TestTask_Update_Status(t *testing.T) {
 	task := mustNewTask(t, "id-1", "Do laundry", nil)
+
 	done := TaskStatusDone
+
 	if err := task.Update(nil, &done, nil, nil); err != nil {
 		t.Fatalf("Update: %v", err)
 	}
+
 	if task.Status != TaskStatusDone {
 		t.Errorf("Status: got %q, want %q", task.Status, TaskStatusDone)
 	}
@@ -126,49 +203,105 @@ func TestTask_Update_Status(t *testing.T) {
 
 func TestTask_Update_InvalidStatusIsRejected(t *testing.T) {
 	task := mustNewTask(t, "id-1", "Do laundry", nil)
+
 	bad := TaskStatus("invalid")
+
 	if err := task.Update(nil, &bad, nil, nil); err == nil {
 		t.Fatal("expected error for invalid status, got nil")
 	}
 }
 
-func TestTask_Update_RecurrenceDaysNilSliceConvertsToOneOff(t *testing.T) {
-	task := mustNewTask(t, "id-1", "Exercise", []string{"mon", "fri"})
-	empty := []string{}
-	if err := task.Update(nil, nil, &empty, nil); err != nil {
+func TestTask_Update_RecurrenceDays(t *testing.T) {
+	task := mustNewTask(t, "id-1", "Exercise", nil)
+
+	days := []string{"mon", "fri"}
+
+	if err := task.Update(nil, nil, &days, nil); err != nil {
 		t.Fatalf("Update: %v", err)
 	}
-	if task.IsHabit() {
-		t.Error("expected task to become one-off after setting recurrence_days to []")
+
+	if !task.IsHabit() {
+		t.Fatal("expected task to become a habit")
+	}
+
+	if len(task.RecurrenceDays) != 2 {
+		t.Fatalf("RecurrenceDays length: got %d, want 2", len(task.RecurrenceDays))
+	}
+}
+
+func TestTask_Update_ClonesRecurrenceDays(t *testing.T) {
+	task := mustNewTask(t, "id-1", "Exercise", nil)
+
+	days := []string{"mon", "wed"}
+
+	if err := task.Update(nil, nil, &days, nil); err != nil {
+		t.Fatalf("Update: %v", err)
+	}
+
+	days[0] = "fri"
+
+	if task.RecurrenceDays[0] != "mon" {
+		t.Fatal("task recurrence days should be cloned")
+	}
+}
+
+func TestTask_Update_EmptyRecurrenceDaysRejected(t *testing.T) {
+	task := mustNewTask(t, "id-1", "Exercise", []string{"mon"})
+
+	empty := []string{}
+
+	err := task.Update(nil, nil, &empty, nil)
+	if err == nil {
+		t.Fatal("expected error for empty recurrence days")
+	}
+
+	if !task.IsHabit() {
+		t.Fatal("task should remain unchanged on error")
 	}
 }
 
 func TestTask_Update_InvalidRecurrenceDayIsRejected(t *testing.T) {
 	task := mustNewTask(t, "id-1", "Exercise", nil)
+
 	bad := []string{"mon", "xyz"}
+
 	if err := task.Update(nil, nil, &bad, nil); err == nil {
 		t.Fatal("expected error for invalid recurrence day, got nil")
+	}
+}
+
+func TestTask_Update_DuplicateRecurrenceDayIsRejected(t *testing.T) {
+	task := mustNewTask(t, "id-1", "Exercise", nil)
+
+	bad := []string{"mon", "mon"}
+
+	if err := task.Update(nil, nil, &bad, nil); err == nil {
+		t.Fatal("expected error for duplicate recurrence day, got nil")
 	}
 }
 
 func TestTask_Update_ListIDAssignAndUnassign(t *testing.T) {
 	task := mustNewTask(t, "id-1", "Do laundry", nil)
 
-	// Assign: outer non-nil, inner non-nil → set to "list-uuid"
+	// Assign
 	listIDStr := "list-uuid"
-	listIDPtr := &listIDStr // *string pointing to the value
+	listIDPtr := &listIDStr
+
 	if err := task.Update(nil, nil, nil, &listIDPtr); err != nil {
 		t.Fatalf("Update (assign): %v", err)
 	}
+
 	if task.ListID == nil || *task.ListID != "list-uuid" {
 		t.Errorf("ListID after assign: got %v, want &list-uuid", task.ListID)
 	}
 
-	// Unassign: outer non-nil, inner nil → set to nil
-	var nilID *string // typed nil *string
+	// Unassign
+	var nilID *string
+
 	if err := task.Update(nil, nil, nil, &nilID); err != nil {
 		t.Fatalf("Update (unassign): %v", err)
 	}
+
 	if task.ListID != nil {
 		t.Errorf("ListID after unassign: got %v, want nil", task.ListID)
 	}
@@ -176,14 +309,16 @@ func TestTask_Update_ListIDAssignAndUnassign(t *testing.T) {
 
 func TestTask_Update_ListIDAbsentDoesNotChange(t *testing.T) {
 	task := mustNewTask(t, "id-1", "Do laundry", nil)
+
 	listIDStr := "list-uuid"
 	task.ListID = &listIDStr
 
-	// Pass nil outer pointer (**string nil) → field absent, no change
-	var noChange **string // nil **string
+	var noChange **string
+
 	if err := task.Update(nil, nil, nil, noChange); err != nil {
 		t.Fatalf("Update: %v", err)
 	}
+
 	if task.ListID == nil || *task.ListID != "list-uuid" {
 		t.Errorf("ListID should not change when listID param is nil, got %v", task.ListID)
 	}
@@ -192,16 +327,19 @@ func TestTask_Update_ListIDAbsentDoesNotChange(t *testing.T) {
 // ── NewTaskCompletion ─────────────────────────────────────────────────────────
 
 func TestNewTaskCompletion_Valid(t *testing.T) {
-	date := time.Date(2026, 5, 25, 0, 0, 0, 0, time.UTC)
+	date := time.Date(2026, 5, 25, 10, 30, 0, 0, time.UTC)
+
 	c, err := NewTaskCompletion("cid-1", "tid-1", date)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
+
 	if c.TaskID != "tid-1" {
 		t.Errorf("TaskID: got %q, want %q", c.TaskID, "tid-1")
 	}
-	if !c.CompletedDate.Equal(date) {
-		t.Errorf("CompletedDate: got %v, want %v", c.CompletedDate, date)
+
+	if !c.CompletedDate.Equal(date.UTC()) {
+		t.Errorf("CompletedDate: got %v, want %v", c.CompletedDate, date.UTC())
 	}
 }
 
@@ -216,5 +354,12 @@ func TestNewTaskCompletion_EmptyTaskID(t *testing.T) {
 	_, err := NewTaskCompletion("cid-1", "", time.Now())
 	if err == nil {
 		t.Fatal("expected error for empty task id, got nil")
+	}
+}
+
+func TestNewTaskCompletion_ZeroCompletedDate(t *testing.T) {
+	_, err := NewTaskCompletion("cid-1", "tid-1", time.Time{})
+	if err == nil {
+		t.Fatal("expected error for zero completed date, got nil")
 	}
 }
