@@ -20,8 +20,8 @@ func NewHandler(service *TaskService) *Handler {
 	return &Handler{service: service}
 }
 
-// DTOs
-type taskResponse struct {
+// DTO
+type TaskResponse struct {
 	ID             string   `json:"id"`
 	Title          string   `json:"title"`
 	Status         string   `json:"status"`
@@ -51,8 +51,8 @@ type taskCompletionResponse struct {
 	CreatedAt     string `json:"created_at"`
 }
 
-func toTaskResponse(t *Task) taskResponse {
-	return taskResponse{
+func ToTaskResponse(t *Task) TaskResponse {
+	return TaskResponse{
 		ID:             t.ID,
 		Title:          t.Title,
 		Status:         string(t.Status),
@@ -84,9 +84,9 @@ func (h *Handler) ListTasks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	responses := make([]taskResponse, len(tasks))
+	responses := make([]TaskResponse, len(tasks))
 	for i, t := range tasks {
-		responses[i] = toTaskResponse(t)
+		responses[i] = ToTaskResponse(t)
 	}
 
 	shared.WriteJSON(w, http.StatusOK, responses)
@@ -112,7 +112,7 @@ func (h *Handler) CreateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	shared.WriteJSON(w, http.StatusCreated, toTaskResponse(task))
+	shared.WriteJSON(w, http.StatusCreated, ToTaskResponse(task))
 }
 
 // GET /api/v1/tasks/{taskId}
@@ -134,7 +134,7 @@ func (h *Handler) GetTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	shared.WriteJSON(w, http.StatusOK, toTaskResponse(task))
+	shared.WriteJSON(w, http.StatusOK, ToTaskResponse(task))
 }
 
 // PUT /api/v1/tasks/{taskId}
@@ -162,7 +162,7 @@ func (h *Handler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	shared.WriteJSON(w, http.StatusOK, toTaskResponse(task))
+	shared.WriteJSON(w, http.StatusOK, ToTaskResponse(task))
 }
 
 // DELETE /api/v1/tasks/{taskId}

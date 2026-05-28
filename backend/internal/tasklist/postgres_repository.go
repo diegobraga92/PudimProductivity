@@ -8,17 +8,14 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// PostgresTaskListRepository implements TaskListRepository using PostgreSQL.
 type PostgresTaskListRepository struct {
 	pool *pgxpool.Pool
 }
 
-// NewPostgresTaskListRepository creates a new PostgresTaskListRepository.
 func NewPostgresTaskListRepository(pool *pgxpool.Pool) *PostgresTaskListRepository {
 	return &PostgresTaskListRepository{pool: pool}
 }
 
-// Create persists a new task list.
 func (r *PostgresTaskListRepository) Create(ctx context.Context, list *TaskList) error {
 	query := `
 		INSERT INTO task_lists (id, name, description, created_at, updated_at)
@@ -39,7 +36,6 @@ func (r *PostgresTaskListRepository) Create(ctx context.Context, list *TaskList)
 	return nil
 }
 
-// GetByID retrieves a task list by its ID.
 func (r *PostgresTaskListRepository) GetByID(ctx context.Context, id string) (*TaskList, error) {
 	query := `
 		SELECT id, name, description, created_at, updated_at
@@ -66,7 +62,6 @@ func (r *PostgresTaskListRepository) GetByID(ctx context.Context, id string) (*T
 	return list, nil
 }
 
-// List returns all task lists.
 func (r *PostgresTaskListRepository) List(ctx context.Context) ([]*TaskList, error) {
 	query := `
 		SELECT id, name, description, created_at, updated_at
@@ -109,7 +104,6 @@ func (r *PostgresTaskListRepository) List(ctx context.Context) ([]*TaskList, err
 	return lists, nil
 }
 
-// Update persists changes to an existing task list.
 func (r *PostgresTaskListRepository) Update(ctx context.Context, list *TaskList) error {
 	query := `
 		UPDATE task_lists
@@ -134,7 +128,6 @@ func (r *PostgresTaskListRepository) Update(ctx context.Context, list *TaskList)
 	return nil
 }
 
-// Delete removes a task list by its ID.
 func (r *PostgresTaskListRepository) Delete(ctx context.Context, id string) error {
 	query := `DELETE FROM task_lists WHERE id = $1`
 

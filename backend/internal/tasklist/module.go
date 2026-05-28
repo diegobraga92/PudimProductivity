@@ -8,8 +8,6 @@ import (
 	"github.com/diegobraga92/pudimproductivity/backend/internal/task"
 )
 
-// RegisterTaskListRoutes mounts all task list HTTP routes on the given router.
-// It accepts the task service to support listing tasks within a list.
 func RegisterTaskListRoutes(r chi.Router, pool *pgxpool.Pool, taskService *task.TaskService) {
 	repo := NewPostgresTaskListRepository(pool)
 	service := NewTaskListService(repo)

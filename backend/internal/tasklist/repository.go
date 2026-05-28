@@ -5,10 +5,8 @@ import (
 	"errors"
 )
 
-// ErrTaskListNotFound is returned when a task list is not found.
 var ErrTaskListNotFound = errors.New("task list not found")
 
-// TaskListRepository defines the interface for task list persistence.
 type TaskListRepository interface {
 	// Create persists a new task list.
 	Create(ctx context.Context, list *TaskList) error

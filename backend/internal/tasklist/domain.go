@@ -5,7 +5,6 @@ import (
 	"time"
 )
 
-// TaskList represents a named grouping of tasks (e.g. "Shopping List", "Project Ideas").
 type TaskList struct {
 	ID          string
 	Name        string
@@ -14,7 +13,6 @@ type TaskList struct {
 	UpdatedAt   time.Time
 }
 
-// NewTaskList creates a new TaskList with the given name.
 func NewTaskList(id, name string) (*TaskList, error) {
 	if id == "" {
 		return nil, fmt.Errorf("task list id cannot be empty")
@@ -32,7 +30,6 @@ func NewTaskList(id, name string) (*TaskList, error) {
 	}, nil
 }
 
-// Update applies the provided updates to the task list.
 func (l *TaskList) Update(name, description *string) error {
 	if name != nil {
 		if *name == "" {

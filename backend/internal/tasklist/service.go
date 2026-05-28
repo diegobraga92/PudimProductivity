@@ -8,17 +8,14 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// TaskListService implements the application logic for task list operations.
 type TaskListService struct {
 	repo TaskListRepository
 }
 
-// NewTaskListService creates a new TaskListService.
 func NewTaskListService(repo TaskListRepository) *TaskListService {
 	return &TaskListService{repo: repo}
 }
 
-// CreateTaskList creates a new task list.
 func (s *TaskListService) CreateTaskList(ctx context.Context, name string) (*TaskList, error) {
 	id := shared.NewUUID()
 
@@ -35,7 +32,6 @@ func (s *TaskListService) CreateTaskList(ctx context.Context, name string) (*Tas
 	return list, nil
 }
 
-// GetTaskList retrieves a task list by its ID.
 func (s *TaskListService) GetTaskList(ctx context.Context, id string) (*TaskList, error) {
 	list, err := s.repo.GetByID(ctx, id)
 	if err != nil {
@@ -44,12 +40,10 @@ func (s *TaskListService) GetTaskList(ctx context.Context, id string) (*TaskList
 	return list, nil
 }
 
-// ListTaskLists returns all task lists.
 func (s *TaskListService) ListTaskLists(ctx context.Context) ([]*TaskList, error) {
 	return s.repo.List(ctx)
 }
 
-// UpdateTaskList updates an existing task list.
 func (s *TaskListService) UpdateTaskList(ctx context.Context, id string, name, description *string) (*TaskList, error) {
 	list, err := s.repo.GetByID(ctx, id)
 	if err != nil {
@@ -68,7 +62,6 @@ func (s *TaskListService) UpdateTaskList(ctx context.Context, id string, name, d
 	return list, nil
 }
 
-// DeleteTaskList deletes a task list.
 func (s *TaskListService) DeleteTaskList(ctx context.Context, id string) error {
 	if err := s.repo.Delete(ctx, id); err != nil {
 		return err
