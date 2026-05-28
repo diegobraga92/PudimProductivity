@@ -324,7 +324,7 @@ class SoundscapeEngine {
 
     // Store the interval so we can clear it on stop
     const originalStop = washSource.stop.bind(washSource);
-    washSource.stop = ((...args: any[]) => {
+    washSource.stop = ((...args: [when?: number]) => {
       if (dropletInterval) {
         clearTimeout(dropletInterval);
         dropletInterval = null;
@@ -471,7 +471,7 @@ class SoundscapeEngine {
 
     // Clean up scheduler on stop
     const originalStop = washSource.stop.bind(washSource);
-    washSource.stop = ((...args: any[]) => {
+    washSource.stop = ((...args: [when?: number]) => {
       if (crashInterval) {
         clearTimeout(crashInterval);
         crashInterval = null;
@@ -604,7 +604,7 @@ class SoundscapeEngine {
 
     // Clean up on stop
     const originalStop = baseSource.stop.bind(baseSource);
-    baseSource.stop = ((...args: any[]) => {
+    baseSource.stop = ((...args: [when?: number]) => {
       if (gustInterval) {
         clearTimeout(gustInterval);
         gustInterval = null;
@@ -763,7 +763,7 @@ class SoundscapeEngine {
 
     // Clean up on stop
     const originalStop = rumbleSource.stop.bind(rumbleSource);
-    rumbleSource.stop = ((...args: any[]) => {
+    rumbleSource.stop = ((...args: [when?: number]) => {
       if (crackleInterval) {
         clearTimeout(crackleInterval);
         crackleInterval = null;
