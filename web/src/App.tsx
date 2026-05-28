@@ -4,9 +4,10 @@ import { getHealth, type HealthResponse } from "./api/client";
 import TaskList from "./pages/TaskList";
 import Dashboard from "./pages/Dashboard";
 import Pomodoro from "./pages/Pomodoro";
+import Soundscape from "./pages/Soundscape";
 import "./styles.css";
 
-type Page = "dashboard" | "tasks" | "pomodoro" | "health";
+type Page = "dashboard" | "tasks" | "pomodoro" | "soundscape" | "health";
 
 function App() {
   const [page, setPage] = useState<Page>("dashboard");
@@ -72,6 +73,7 @@ function App() {
               { id: "dashboard" as Page, label: "Dashboard", icon: "🏠" },
               { id: "tasks" as Page, label: "Tasks", icon: "📋" },
               { id: "pomodoro" as Page, label: "Timer", icon: "🍅" },
+              { id: "soundscape" as Page, label: "Sounds", icon: "🎵" },
               { id: "health" as Page, label: "Status", icon: "💚" },
             ].map((tab) => (
               <button
@@ -133,6 +135,8 @@ function App() {
           {page === "tasks" && <TaskList />}
 
           {page === "pomodoro" && <Pomodoro />}
+
+          {page === "soundscape" && <Soundscape />}
 
           {page === "health" && (
             <div className="animate-fade-in">
