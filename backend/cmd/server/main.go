@@ -17,6 +17,7 @@ import (
 
 	"github.com/diegobraga92/pudimproductivity/backend/internal/db"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/features"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/pomodoro"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/shared"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/task"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/tasklist"
@@ -76,7 +77,7 @@ func main() {
 
 	r.Get("/api/v1/health", healthHandler(pool, cfg.Version))
 
-	// Setup task routes
+	// Setup routes
 	var taskService *task.TaskService
 	if pool != nil {
 		taskService = task.RegisterTaskRoutes(r, pool)
@@ -86,10 +87,11 @@ func main() {
 		tasklist.RegisterTaskListRoutes(r, pool, taskService)
 	}
 
-	// Setup feature flag routes
 	if featureStore != nil {
 		features.RegisterFeatureRoutes(r, featureStore)
 	}
+
+	pomodoro.RegisterPomodoroRoutes(r, nil)
 
 	// Setup server
 	addr := fmt.Sprintf(":%d", cfg.Server.Port)

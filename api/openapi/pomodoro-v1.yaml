@@ -1,0 +1,253 @@
+openapi: "3.0.3"
+info:
+  title: PudimProductivity Pomodoro API
+  description: |
+    Simple in-memory Pomodoro timer. Only one session can be active at a time.
+    Starting a new session cancels any existing one.
+    No database persistence — sessions are lost on server restart.
+  version: "0.1.0"
+  contact:
+    name: PudimProductivity Team
+    url: https://github.com/diegobraga92/PudimProductivity
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+
+paths:
+  /api/v1/pomodoro/start:
+    post:
+      operationId: startPomodoroSession
+      summary: Start a new pomodoro session
+      description: |
+        Creates a new pomodoro session. If a session is already running, it is
+        automatically cancelled first. The session lives in memory only.
+      tags:
+        - Pomodoro
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StartSessionRequest"
+      responses:
+        "201":
+          description: Session started successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PomodoroSession"
+        "400":
+          description: Invalid request body.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/pomodoro/current:
+    get:
+      operationId: getCurrentSession
+      summary: Get the current session state
+      description: |
+        Returns the current session with live elapsed/remaining time, or
+        `{ "active": false }` if no session is running.
+      tags:
+        - Pomodoro
+      responses:
+        "200":
+          description: Current session state.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      active:
+                        type: boolean
+                        enum: [false]
+                    required:
+                      - active
+                  - type: object
+                    properties:
+                      active:
+                        type: boolean
+                        enum: [true]
+                      session:
+                        $ref: "#/components/schemas/PomodoroSession"
+                    required:
+                      - active
+                      - session
+
+  /api/v1/pomodoro/pause:
+    post:
+      operationId: pauseSession
+      summary: Pause the current session
+      description: Pauses the running timer. Returns an error if no session is active or it's not running.
+      tags:
+        - Pomodoro
+      responses:
+        "200":
+          description: Session paused.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PomodoroSession"
+        "409":
+          description: Cannot pause (no active session or session is not running).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/pomodoro/resume:
+    post:
+      operationId: resumeSession
+      summary: Resume the current session
+      description: Resumes a paused timer. Returns an error if no session is active or it's not paused.
+      tags:
+        - Pomodoro
+      responses:
+        "200":
+          description: Session resumed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PomodoroSession"
+        "409":
+          description: Cannot resume (no active session or session is not paused).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/pomodoro/stop:
+    post:
+      operationId: stopSession
+      summary: Stop the current session
+      description: |
+        Completes or cancels the current session. If the session is running or
+        paused, it is marked as completed. If already completed/cancelled, it
+        stays cancelled.
+      tags:
+        - Pomodoro
+      responses:
+        "200":
+          description: Session stopped.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PomodoroSession"
+        "409":
+          description: No active session to stop.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  schemas:
+    SessionStatus:
+      type: string
+      enum: [running, paused, completed, cancelled]
+      description: Current state of the pomodoro session.
+      example: running
+
+    NoiseConfig:
+      type: object
+      description: |
+        Provision for future white noise integration.
+        Currently accepted but ignored.
+      properties:
+        enabled:
+          type: boolean
+          description: Whether white noise should play during the session.
+          example: true
+        track_id:
+          type: string
+          description: Identifier of the noise track to play.
+          example: "rain-forest"
+
+    PomodoroSession:
+      type: object
+      required:
+        - id
+        - status
+        - focus_duration
+        - break_duration
+        - current_cycle
+        - elapsed_seconds
+        - remaining_seconds
+        - started_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the session.
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        status:
+          $ref: "#/components/schemas/SessionStatus"
+        focus_duration:
+          type: integer
+          description: Focus duration in minutes.
+          example: 25
+        break_duration:
+          type: integer
+          description: Break duration in minutes.
+          example: 5
+        current_cycle:
+          type: integer
+          description: Which pomodoro cycle (1-based).
+          example: 1
+        elapsed_seconds:
+          type: integer
+          description: Total elapsed focus time in seconds.
+          example: 120
+        remaining_seconds:
+          type: integer
+          description: Remaining focus time in seconds.
+          example: 1380
+        started_at:
+          type: string
+          format: date-time
+          description: When the session was started.
+          example: "2026-05-28T12:00:00Z"
+        paused_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the session was paused (null if never paused).
+          example: "2026-05-28T12:05:00Z"
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the session was completed (null if not yet completed).
+          example: "2026-05-28T12:25:00Z"
+        noise_config:
+          $ref: "#/components/schemas/NoiseConfig"
+
+    StartSessionRequest:
+      type: object
+      properties:
+        focus_duration:
+          type: integer
+          description: Focus duration in minutes. Defaults to 25 if omitted or zero.
+          example: 25
+          minimum: 1
+        break_duration:
+          type: integer
+          description: Break duration in minutes. Defaults to 5 if omitted or zero.
+          example: 5
+          minimum: 1
+        noise_config:
+          $ref: "#/components/schemas/NoiseConfig"
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: A human-readable error message.
+          example: "no active session"

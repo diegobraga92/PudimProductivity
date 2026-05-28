@@ -3,9 +3,10 @@ import { useState } from "react";
 import { getHealth, type HealthResponse } from "./api/client";
 import TaskList from "./pages/TaskList";
 import Dashboard from "./pages/Dashboard";
+import Pomodoro from "./pages/Pomodoro";
 import "./styles.css";
 
-type Page = "dashboard" | "tasks" | "health";
+type Page = "dashboard" | "tasks" | "pomodoro" | "health";
 
 function App() {
   const [page, setPage] = useState<Page>("dashboard");
@@ -70,6 +71,7 @@ function App() {
             {[
               { id: "dashboard" as Page, label: "Dashboard", icon: "🏠" },
               { id: "tasks" as Page, label: "Tasks", icon: "📋" },
+              { id: "pomodoro" as Page, label: "Timer", icon: "🍅" },
               { id: "health" as Page, label: "Status", icon: "💚" },
             ].map((tab) => (
               <button
@@ -129,6 +131,8 @@ function App() {
           {page === "dashboard" && <Dashboard onNavigate={handleNavigate} />}
 
           {page === "tasks" && <TaskList />}
+
+          {page === "pomodoro" && <Pomodoro />}
 
           {page === "health" && (
             <div className="animate-fade-in">
