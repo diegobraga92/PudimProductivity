@@ -6,7 +6,6 @@
 *.dylib
 *.test
 *.out
-*.test
 server
 tmp/
 

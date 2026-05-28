@@ -40,17 +40,17 @@ func main() {
 	log.Info().Str("version", cfg.Version).Msg("starting PudimProductivity backend")
 
 	// Setup database
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cfg.ReadTimeout)*time.Second)
-	defer cancel()
+	dbCtx, dbCancel := context.WithTimeout(context.Background(), cfg.Database.ConnectTimeout)
+	defer dbCancel()
 
-	pool, err := db.ConnectPool(ctx, cfg)
+	pool, err := db.ConnectPool(dbCtx, cfg.Database)
 	if err != nil {
 		log.Warn().Err(err).Msg("database connection failed — running in degraded mode")
 		pool = nil
 	}
 
 	if pool != nil {
-		migrateCtx, migrateCancel := context.WithTimeout(context.Background(), time.Duration(cfg.WriteTimeout)*time.Second)
+		migrateCtx, migrateCancel := context.WithTimeout(context.Background(), time.Duration(cfg.Server.WriteTimeout)*time.Second)
 		defer migrateCancel()
 
 		if err := db.RunMigrations(migrateCtx, pool); err != nil {
@@ -82,7 +82,7 @@ func main() {
 		taskService = task.RegisterTaskRoutes(r, pool)
 	}
 
-	if pool != nil && taskService != nil {
+	if pool != nil {
 		tasklist.RegisterTaskListRoutes(r, pool, taskService)
 	}
 
@@ -92,13 +92,13 @@ func main() {
 	}
 
 	// Setup server
-	addr := fmt.Sprintf(":%d", cfg.Port)
+	addr := fmt.Sprintf(":%d", cfg.Server.Port)
 	srv := &http.Server{
 		Addr:         addr,
 		Handler:      r,
-		ReadTimeout:  time.Duration(cfg.ReadTimeout) * time.Second,
-		WriteTimeout: time.Duration(cfg.WriteTimeout) * time.Second,
-		IdleTimeout:  time.Duration(cfg.IdleTimeout) * time.Second,
+		ReadTimeout:  time.Duration(cfg.Server.ReadTimeout) * time.Second,
+		WriteTimeout: time.Duration(cfg.Server.WriteTimeout) * time.Second,
+		IdleTimeout:  time.Duration(cfg.Server.IdleTimeout) * time.Second,
 	}
 
 	shutdownCh := make(chan os.Signal, 1)
@@ -117,7 +117,7 @@ func main() {
 	sig := <-shutdownCh
 	log.Info().Str("signal", sig.String()).Msg("shutting down gracefully")
 
-	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), cfg.Server.ShutdownTimeout)
 	defer shutdownCancel()
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {

@@ -12,7 +12,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-func setupTestPostgres(t *testing.T) (context.Context, shared.Config) {
+func setupTestPostgres(t *testing.T) (context.Context, shared.DatabaseConfig) {
 	t.Helper()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
@@ -44,21 +44,21 @@ func setupTestPostgres(t *testing.T) (context.Context, shared.Config) {
 		t.Fatalf("failed to get connection string: %v", err)
 	}
 
-	cfg := shared.Config{
-		DatabaseURL:             connStr,
-		DatabaseMaxConns:        5,
-		DatabaseMinConns:        1,
-		DatabaseMaxConnLifetime: 30,
-		DatabaseMaxConnIdletime: 10,
+	dbCfg := shared.DatabaseConfig{
+		URL:             connStr,
+		MaxConns:        5,
+		MinConns:        1,
+		MaxConnLifetime: 30,
+		MaxConnIdleTime: 10,
 	}
 
-	return ctx, cfg
+	return ctx, dbCfg
 }
 
 func TestConnectPool_Select1(t *testing.T) {
-	ctx, cfg := setupTestPostgres(t)
+	ctx, dbCfg := setupTestPostgres(t)
 
-	pool, err := ConnectPool(ctx, cfg)
+	pool, err := ConnectPool(ctx, dbCfg)
 	if err != nil {
 		t.Fatalf("ConnectPool failed: %v", err)
 	}
@@ -81,10 +81,10 @@ func TestConnectPool_Select1(t *testing.T) {
 }
 
 func TestConnectPool_QueryWithPoolConfig(t *testing.T) {
-	ctx, cfg := setupTestPostgres(t)
+	ctx, dbCfg := setupTestPostgres(t)
 
 	// Build a pool manually to verify the config parsing works
-	config, err := pgxpool.ParseConfig(cfg.DatabaseURL)
+	config, err := pgxpool.ParseConfig(dbCfg.URL)
 	if err != nil {
 		t.Fatalf("ParseConfig failed: %v", err)
 	}
@@ -116,12 +116,12 @@ func TestConnectPool_InvalidConnectionString(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	cfg := shared.Config{
-		DatabaseURL: "postgres://invalid:invalid@localhost:1/invalid?sslmode=disable",
+	dbCfg := shared.DatabaseConfig{
+		URL: "postgres://invalid:invalid@localhost:1/invalid?sslmode=disable",
 	}
 
 	// An invalid connection string should cause ConnectPool to return an error
-	_, err := ConnectPool(ctx, cfg)
+	_, err := ConnectPool(ctx, dbCfg)
 	if err == nil {
 		t.Fatal("expected an error for an invalid connection string, got nil")
 	}
@@ -133,12 +133,12 @@ func TestConnectPool_ConnectionRefused(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	cfg := shared.Config{
-		DatabaseURL: "postgres://pudim:pudim_dev@localhost:15432/pudimproductivity?sslmode=disable",
+	dbCfg := shared.DatabaseConfig{
+		URL: "postgres://pudim:pudim_dev@localhost:15432/pudimproductivity?sslmode=disable",
 	}
 
 	// A valid-looking URL pointing to a port where nothing is listening
-	_, err := ConnectPool(ctx, cfg)
+	_, err := ConnectPool(ctx, dbCfg)
 	if err == nil {
 		t.Fatal("expected an error when connection is refused, got nil")
 	}
