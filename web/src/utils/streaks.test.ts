@@ -1,9 +1,11 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { computeStreaks } from "./streaks";
 
-// Helper: freeze Date.now() and new Date() to a fixed UTC instant.
+// Helper: freeze Date.now() and new Date() to a fixed instant.
+// Uses noon local time to avoid timezone boundary issues with formatLocalDate().
 function mockToday(isoDate: string) {
-  const fixed = new Date(`${isoDate}T12:00:00Z`);
+  const [y, m, d] = isoDate.split("-").map(Number);
+  const fixed = new Date(y, m - 1, d, 12, 0, 0, 0); // noon local time
   vi.useFakeTimers();
   vi.setSystemTime(fixed);
 }

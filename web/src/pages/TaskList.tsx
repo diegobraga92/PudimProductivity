@@ -32,6 +32,8 @@ import { getWeekDates, getToday } from "../utils/dates";
 
 type View = "list" | "create" | "detail";
 
+const DAY_ORDER: RecurrenceDay[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+
 export default function TaskList() {
   const queryClient = useQueryClient();
   const [view, setView] = useState<View>("list");
@@ -401,7 +403,6 @@ export default function TaskList() {
             {habitTasks.map((task, index) => {
               const taskCompletions = allCompletions?.[task.id] ?? [];
               const { current, longest } = computeStreaks(taskCompletions);
-              const DAY_ORDER: RecurrenceDay[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
               const weekScheduledDates = (task.recurrence_days ?? []).map(
                 (day) => weekDates[DAY_ORDER.indexOf(day)]
               ).filter((d): d is string => d !== undefined);

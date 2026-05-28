@@ -1,4 +1,14 @@
 /**
+ * Format a Date as YYYY-MM-DD using local timezone.
+ */
+function formatLocalDate(d: Date): string {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+/**
  * Compute current and longest streak from a sorted list of completion dates.
  * A streak is consecutive days (including today if completed).
  */
@@ -23,8 +33,8 @@ export function computeStreaks(completions: string[]): {
     if (i === 0) {
       tempStreak = 1;
     } else {
-      const prev = new Date(uniqueDates[i - 1]);
-      const curr = new Date(uniqueDates[i]);
+      const prev = new Date(uniqueDates[i - 1] + "T00:00:00");
+      const curr = new Date(uniqueDates[i] + "T00:00:00");
       const diffMs = curr.getTime() - prev.getTime();
       const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
       if (diffDays === 1) {
@@ -38,7 +48,7 @@ export function computeStreaks(completions: string[]): {
 
   // Compute current streak: count backwards from today
   let current = 0;
-  const today = new Date().toISOString().split("T")[0];
+  const today = formatLocalDate(new Date());
 
   // If today is not completed, check if yesterday was (for "active" streak)
   const checkDate = new Date();
@@ -48,7 +58,7 @@ export function computeStreaks(completions: string[]): {
   }
 
   while (true) {
-    const dateStr = checkDate.toISOString().split("T")[0];
+    const dateStr = formatLocalDate(checkDate);
     if (dateSet.has(dateStr)) {
       current++;
       checkDate.setDate(checkDate.getDate() - 1);

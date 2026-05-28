@@ -117,8 +117,8 @@ fi
 
 # ─── 3. Start Docker services ──────────────────────────────────────────────
 if [ "$SKIP_DOCKER" = false ]; then
-    log_info "Starting Docker services (postgres, rabbitmq)..."
-    docker compose -f "$ROOT_DIR/docker-compose.yml" up -d postgres rabbitmq
+    log_info "Starting Docker services (postgres)..."
+    docker compose -f "$ROOT_DIR/docker-compose.yml" up -d postgres
     DOCKER_STARTED=true
 
     log_info "Waiting for PostgreSQL to be healthy..."

@@ -238,19 +238,7 @@ fun TaskDetailScreen(
                     ) {
                         Checkbox(
                             checked = t.status == "done",
-                            onCheckedChange = {
-                                scope.launch {
-                                    try {
-                                        val newStatus = if (t.status == "done") "todo" else "done"
-                                        ApiClient.taskService.updateTask(
-                                            taskId,
-                                            UpdateTaskRequest(status = newStatus)
-                                        )
-                                        loadTask()
-                                        onUpdated()
-                                    } catch (_: Exception) { }
-                                }
-                            }
+                            onCheckedChange = null // handled by Row clickable
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
@@ -289,9 +277,9 @@ fun TaskDetailScreen(
                                     scope.launch {
                                         try {
                                             if (isCompleted) {
-                                                ApiClient.taskService.uncompleteTask(taskId)
+                                                ApiClient.taskService.uncompleteTask(taskId, date)
                                             } else {
-                                                ApiClient.taskService.completeTask(taskId)
+                                                ApiClient.taskService.completeTask(taskId, date)
                                             }
                                             loadTask()
                                         } catch (_: Exception) { }

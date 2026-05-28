@@ -700,12 +700,6 @@ class SoundscapeEngine {
       cSource.start(ctx.currentTime);
       cSource.stop(ctx.currentTime + duration);
 
-      // Random panning for spatial feel
-      const panner = ctx.createStereoPanner();
-      panner.pan.value = (Math.random() * 2 - 1) * 0.6;
-      // We can't easily insert panner after env, so we'll just let it be mono
-      // The crackles naturally feel spatial due to randomness
-
       // Next crackle in 20-200ms
       const nextDelay = 20 + Math.random() * 180;
       crackleInterval = setTimeout(scheduleCrackle, nextDelay);

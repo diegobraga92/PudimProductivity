@@ -40,6 +40,10 @@ type startSessionRequest struct {
 }
 
 func toSessionResponse(s *PomodoroSession) SessionResponse {
+	remaining := int(s.Remaining().Seconds())
+	if remaining < 0 {
+		remaining = 0
+	}
 	resp := SessionResponse{
 		ID:               s.ID,
 		Status:           string(s.Status),
@@ -47,7 +51,7 @@ func toSessionResponse(s *PomodoroSession) SessionResponse {
 		BreakDuration:    int(s.BreakDuration.Minutes()),
 		CurrentCycle:     s.CurrentCycle,
 		ElapsedSeconds:   int(s.Elapsed().Seconds()),
-		RemainingSeconds: int(s.Remaining().Seconds()),
+		RemainingSeconds: remaining,
 		StartedAt:        s.StartedAt.Format(time.RFC3339),
 		NoiseConfig:      s.NoiseConfig,
 	}

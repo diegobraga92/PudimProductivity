@@ -31,6 +31,7 @@ export interface UpdateTaskRequest {
   title?: string;
   status?: TaskStatus;
   recurrence_days?: RecurrenceDay[] | null;
+  list_id?: string | null;
 }
 
 /**

@@ -57,6 +57,10 @@ function Pomodoro() {
     },
   });
 
+  // Use a ref to avoid stale closure issues in the auto-stop effect
+  const stopMutateRef = useRef(stopMutate);
+  stopMutateRef.current = stopMutate;
+
   // Local ticking
   useEffect(() => {
     if (localStatus === "running") {
@@ -81,9 +85,9 @@ function Pomodoro() {
   // When timer hits 0 while running, auto-stop
   useEffect(() => {
     if (localRemaining === 0 && localStatus === "running") {
-      stopMutate.mutate();
+      stopMutateRef.current.mutate();
     }
-  }, [localRemaining, localStatus, stopMutate]);
+  }, [localRemaining, localStatus]);
 
   const startMutate = useMutation({
     mutationFn: () =>
@@ -195,7 +199,7 @@ function Pomodoro() {
           style={{
             width: "100%",
             height: "8px",
-            background: "var(--color-bg-secondary)",
+            background: "var(--color-border-light)",
             borderRadius: "4px",
             overflow: "hidden",
             marginBottom: "var(--space-lg)",
@@ -384,7 +388,7 @@ function Pomodoro() {
       )}
 
       {/* Error display */}
-      {startMutate.error && (
+      {(startMutate.error || pauseMutate.error || resumeMutate.error || stopMutate.error) && (
         <div
           className="card"
           style={{
@@ -396,7 +400,7 @@ function Pomodoro() {
             textAlign: "center",
           }}
         >
-          {startMutate.error.message}
+          {startMutate.error?.message || pauseMutate.error?.message || resumeMutate.error?.message || stopMutate.error?.message}
         </div>
       )}
     </div>

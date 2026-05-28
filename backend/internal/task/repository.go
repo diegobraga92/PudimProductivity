@@ -15,7 +15,8 @@ type TaskRepository interface {
 	// Returns ErrTaskNotFound if the task does not exist.
 	GetByID(ctx context.Context, id string) (*Task, error)
 
-	// List returns all tasks, optionally filtered by status and type.
+	// List returns all unassigned tasks (list_id IS NULL), optionally filtered
+	// by status and type. Tasks that belong to a task list are excluded.
 	// Passing an empty string for statusFilter means "no filter".
 	// Passing an empty string for typeFilter means "no filter".
 	// Valid typeFilter values: "one-off", "habit".

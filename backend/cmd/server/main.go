@@ -16,7 +16,6 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/diegobraga92/pudimproductivity/backend/internal/db"
-	"github.com/diegobraga92/pudimproductivity/backend/internal/features"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/pomodoro"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/shared"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/task"
@@ -59,13 +58,6 @@ func main() {
 		}
 	}
 
-	// Setup feature flag service
-	var featureStore *features.CachedFeatureStore
-	if pool != nil {
-		pgFeatureStore := features.NewPostgresFeatureStore(pool)
-		featureStore = features.NewCachedFeatureStore(pgFeatureStore, 30*time.Second)
-	}
-
 	// Setup router
 	r := chi.NewRouter()
 
@@ -85,10 +77,6 @@ func main() {
 
 	if pool != nil {
 		tasklist.RegisterTaskListRoutes(r, pool, taskService)
-	}
-
-	if featureStore != nil {
-		features.RegisterFeatureRoutes(r, featureStore)
 	}
 
 	pomodoro.RegisterPomodoroRoutes(r, nil)
