@@ -12,18 +12,15 @@ import (
 	"github.com/diegobraga92/pudimproductivity/backend/internal/shared"
 )
 
-// Handler contains HTTP handlers for task operations.
 type Handler struct {
 	service *TaskService
 }
 
-// NewHandler creates a new Handler.
 func NewHandler(service *TaskService) *Handler {
 	return &Handler{service: service}
 }
 
-// --- DTOs ---
-
+// DTOs
 type taskResponse struct {
 	ID             string   `json:"id"`
 	Title          string   `json:"title"`
@@ -54,8 +51,6 @@ type taskCompletionResponse struct {
 	CreatedAt     string `json:"created_at"`
 }
 
-// --- Helpers ---
-
 func toTaskResponse(t *Task) taskResponse {
 	return taskResponse{
 		ID:             t.ID,
@@ -77,9 +72,7 @@ func toCompletionResponse(c *TaskCompletion) taskCompletionResponse {
 	}
 }
 
-// --- Handlers ---
-
-// ListTasks handles GET /api/v1/tasks
+// GET /api/v1/tasks
 func (h *Handler) ListTasks(w http.ResponseWriter, r *http.Request) {
 	statusFilter := r.URL.Query().Get("status")
 	typeFilter := r.URL.Query().Get("type")
@@ -99,7 +92,7 @@ func (h *Handler) ListTasks(w http.ResponseWriter, r *http.Request) {
 	shared.WriteJSON(w, http.StatusOK, responses)
 }
 
-// CreateTask handles POST /api/v1/tasks
+// POST /api/v1/tasks
 func (h *Handler) CreateTask(w http.ResponseWriter, r *http.Request) {
 	var req createTaskRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -122,7 +115,7 @@ func (h *Handler) CreateTask(w http.ResponseWriter, r *http.Request) {
 	shared.WriteJSON(w, http.StatusCreated, toTaskResponse(task))
 }
 
-// GetTask handles GET /api/v1/tasks/{taskId}
+// GET /api/v1/tasks/{taskId}
 func (h *Handler) GetTask(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "taskId")
 	if id == "" {
@@ -144,7 +137,7 @@ func (h *Handler) GetTask(w http.ResponseWriter, r *http.Request) {
 	shared.WriteJSON(w, http.StatusOK, toTaskResponse(task))
 }
 
-// UpdateTask handles PUT /api/v1/tasks/{taskId}
+// PUT /api/v1/tasks/{taskId}
 func (h *Handler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "taskId")
 	if id == "" {
@@ -172,7 +165,7 @@ func (h *Handler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 	shared.WriteJSON(w, http.StatusOK, toTaskResponse(task))
 }
 
-// DeleteTask handles DELETE /api/v1/tasks/{taskId}
+// DELETE /api/v1/tasks/{taskId}
 func (h *Handler) DeleteTask(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "taskId")
 	if id == "" {
@@ -193,7 +186,7 @@ func (h *Handler) DeleteTask(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// CompleteTask handles POST /api/v1/tasks/{taskId}/complete
+// POST /api/v1/tasks/{taskId}/complete
 func (h *Handler) CompleteTask(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "taskId")
 	if id == "" {
@@ -221,7 +214,7 @@ func (h *Handler) CompleteTask(w http.ResponseWriter, r *http.Request) {
 	shared.WriteJSON(w, http.StatusCreated, toCompletionResponse(completion))
 }
 
-// UncompleteTask handles DELETE /api/v1/tasks/{taskId}/complete
+// DELETE /api/v1/tasks/{taskId}/complete
 func (h *Handler) UncompleteTask(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "taskId")
 	if id == "" {
@@ -248,9 +241,7 @@ func (h *Handler) UncompleteTask(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// GetAllCompletions handles GET /api/v1/tasks/completions
-// Returns all completions across every habit task within an optional date range.
-// This is a batch alternative that avoids N+1 per-task requests from the client.
+// GET /api/v1/tasks/completions
 func (h *Handler) GetAllCompletions(w http.ResponseWriter, r *http.Request) {
 	fromStr := r.URL.Query().Get("from")
 	toStr := r.URL.Query().Get("to")
@@ -292,7 +283,7 @@ func (h *Handler) GetAllCompletions(w http.ResponseWriter, r *http.Request) {
 	shared.WriteJSON(w, http.StatusOK, responses)
 }
 
-// GetTaskCompletions handles GET /api/v1/tasks/{taskId}/completions
+// GET /api/v1/tasks/{taskId}/completions
 func (h *Handler) GetTaskCompletions(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "taskId")
 	if id == "" {
@@ -300,7 +291,6 @@ func (h *Handler) GetTaskCompletions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Parse optional date range query params
 	fromStr := r.URL.Query().Get("from")
 	toStr := r.URL.Query().Get("to")
 

@@ -6,8 +6,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// RegisterTaskRoutes mounts all task HTTP routes on the given router.
-// It wires up the repository, service, and handler.
 // Returns the TaskService so other modules (e.g., tasklist) can use it.
 func RegisterTaskRoutes(r chi.Router, pool *pgxpool.Pool) *TaskService {
 	repo := NewPostgresTaskRepository(pool)

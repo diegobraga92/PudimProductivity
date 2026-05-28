@@ -9,17 +9,14 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// PostgresTaskRepository implements TaskRepository using PostgreSQL.
 type PostgresTaskRepository struct {
 	pool *pgxpool.Pool
 }
 
-// NewPostgresTaskRepository creates a new PostgresTaskRepository.
 func NewPostgresTaskRepository(pool *pgxpool.Pool) *PostgresTaskRepository {
 	return &PostgresTaskRepository{pool: pool}
 }
 
-// Create persists a new task.
 func (r *PostgresTaskRepository) Create(ctx context.Context, task *Task) error {
 	query := `
 		INSERT INTO tasks (id, title, status, recurrence_days, list_id, created_at, updated_at)
@@ -42,7 +39,6 @@ func (r *PostgresTaskRepository) Create(ctx context.Context, task *Task) error {
 	return nil
 }
 
-// GetByID retrieves a task by its ID.
 func (r *PostgresTaskRepository) GetByID(ctx context.Context, id string) (*Task, error) {
 	query := `
 		SELECT id, title, status, recurrence_days, list_id, created_at, updated_at
@@ -71,7 +67,6 @@ func (r *PostgresTaskRepository) GetByID(ctx context.Context, id string) (*Task,
 	return task, nil
 }
 
-// List returns all tasks, optionally filtered by status and type.
 func (r *PostgresTaskRepository) List(ctx context.Context, statusFilter, typeFilter string) ([]*Task, error) {
 	query := `
 		SELECT id, title, status, recurrence_days, list_id, created_at, updated_at
@@ -133,7 +128,6 @@ func (r *PostgresTaskRepository) List(ctx context.Context, statusFilter, typeFil
 	return tasks, nil
 }
 
-// ListByListID returns all tasks belonging to a specific task list, optionally filtered by type.
 func (r *PostgresTaskRepository) ListByListID(ctx context.Context, listID, typeFilter string) ([]*Task, error) {
 	query := `
 		SELECT id, title, status, recurrence_days, list_id, created_at, updated_at
@@ -190,7 +184,6 @@ func (r *PostgresTaskRepository) ListByListID(ctx context.Context, listID, typeF
 	return tasks, nil
 }
 
-// Update persists changes to an existing task.
 func (r *PostgresTaskRepository) Update(ctx context.Context, task *Task) error {
 	query := `
 		UPDATE tasks
@@ -217,7 +210,6 @@ func (r *PostgresTaskRepository) Update(ctx context.Context, task *Task) error {
 	return nil
 }
 
-// Delete removes a task by its ID.
 func (r *PostgresTaskRepository) Delete(ctx context.Context, id string) error {
 	query := `DELETE FROM tasks WHERE id = $1`
 
@@ -233,8 +225,6 @@ func (r *PostgresTaskRepository) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
-// CreateCompletion records a habit completion for a specific date.
-// Returns ErrCompletionAlreadyExists if a completion already exists for the given task+date.
 func (r *PostgresTaskRepository) CreateCompletion(ctx context.Context, completion *TaskCompletion) error {
 	query := `
 		INSERT INTO task_completions (id, task_id, completed_date, created_at)
@@ -259,8 +249,6 @@ func (r *PostgresTaskRepository) CreateCompletion(ctx context.Context, completio
 	return nil
 }
 
-// DeleteCompletion removes a habit completion for a specific task+date.
-// Returns ErrCompletionNotFound if no completion exists for that task+date.
 func (r *PostgresTaskRepository) DeleteCompletion(ctx context.Context, taskID string, date time.Time) error {
 	query := `DELETE FROM task_completions WHERE task_id = $1 AND completed_date = $2`
 
@@ -276,7 +264,6 @@ func (r *PostgresTaskRepository) DeleteCompletion(ctx context.Context, taskID st
 	return nil
 }
 
-// GetCompletion retrieves a single completion for a task on a specific date.
 func (r *PostgresTaskRepository) GetCompletion(ctx context.Context, taskID string, date time.Time) (*TaskCompletion, error) {
 	query := `
 		SELECT id, task_id, completed_date, created_at
@@ -302,7 +289,6 @@ func (r *PostgresTaskRepository) GetCompletion(ctx context.Context, taskID strin
 	return completion, nil
 }
 
-// ListAllCompletions returns all completions across all tasks within a date range (inclusive).
 func (r *PostgresTaskRepository) ListAllCompletions(ctx context.Context, from, to time.Time) ([]*TaskCompletion, error) {
 	query := `
 		SELECT id, task_id, completed_date, created_at
@@ -345,7 +331,6 @@ func (r *PostgresTaskRepository) ListAllCompletions(ctx context.Context, from, t
 	return completions, nil
 }
 
-// ListCompletions returns all completions for a task within a date range (inclusive).
 func (r *PostgresTaskRepository) ListCompletions(ctx context.Context, taskID string, from, to time.Time) ([]*TaskCompletion, error) {
 	query := `
 		SELECT id, task_id, completed_date, created_at
