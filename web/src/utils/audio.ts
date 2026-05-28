@@ -217,60 +217,180 @@ class SoundscapeEngine {
     return source;
   }
 
-  /** Rain — band-passed noise with slow modulation. */
+  /** Rain — layered: background wash + randomized droplets. */
   private makeRainSource(ctx: AudioContext, gain: GainNode): AudioBufferSourceNode {
-    const buffer = this.makeNoiseBuffer(ctx, 4);
-    const source = ctx.createBufferSource();
-    source.buffer = buffer;
-    source.loop = true;
+    // ── Layer 1: Background wash ──
+    const washBuffer = this.makeNoiseBuffer(ctx, 4);
+    const washSource = ctx.createBufferSource();
+    washSource.buffer = washBuffer;
+    washSource.loop = true;
 
-    // Band-pass filter centered around rain frequencies
-    const bp = ctx.createBiquadFilter();
-    bp.type = "bandpass";
-    bp.frequency.value = 2000;
-    bp.Q.value = 0.5;
+    const washGain = ctx.createGain();
+    washGain.gain.value = 0.35;
 
-    // Slow LFO to modulate the filter frequency (gives movement)
-    const lfo = ctx.createOscillator();
-    lfo.frequency.value = 0.1; // very slow
-    const lfoGain = ctx.createGain();
-    lfoGain.gain.value = 800;
-    lfo.connect(lfoGain);
-    lfoGain.connect(bp.frequency);
-    lfo.start();
+    const washLP = ctx.createBiquadFilter();
+    washLP.type = "lowpass";
+    washLP.frequency.value = 3000;
+    washLP.Q.value = 0.5;
 
-    source.connect(bp);
-    bp.connect(gain);
-    source.start();
-    return source;
+    washSource.connect(washLP);
+    washLP.connect(washGain);
+    washGain.connect(gain);
+    washSource.start();
+
+    // ── Layer 2: Droplet scheduler ──
+    // Creates short noise bursts at random intervals with randomized pitch.
+    const dropletGain = ctx.createGain();
+    dropletGain.gain.value = 0.5;
+    dropletGain.connect(gain);
+
+    let dropletInterval: ReturnType<typeof setInterval> | null = null;
+
+    const scheduleDroplet = () => {
+      if (!this.active.has("rain" as SoundID)) return;
+
+      const duration = 0.04 + Math.random() * 0.06; // 40-100ms
+      const length = ctx.sampleRate * duration;
+      const buf = ctx.createBuffer(1, length, ctx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < length; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+
+      const dSource = ctx.createBufferSource();
+      dSource.buffer = buf;
+
+      // Randomized bandpass — higher = sharper "tick", lower = softer "tap"
+      const bp = ctx.createBiquadFilter();
+      bp.type = "bandpass";
+      bp.frequency.value = 1800 + Math.random() * 3200;
+      bp.Q.value = 1.5 + Math.random() * 2;
+
+      // Quick gain envelope
+      const env = ctx.createGain();
+      env.gain.setValueAtTime(0, ctx.currentTime);
+      env.gain.linearRampToValueAtTime(0.6 + Math.random() * 0.4, ctx.currentTime + 0.005);
+      env.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+
+      dSource.connect(bp);
+      bp.connect(env);
+      env.connect(dropletGain);
+      dSource.start(ctx.currentTime);
+      dSource.stop(ctx.currentTime + duration);
+
+      // Schedule next droplet in 10-40ms
+      const nextDelay = 10 + Math.random() * 30;
+      dropletInterval = setTimeout(scheduleDroplet, nextDelay);
+    };
+
+    // Start scheduling droplets
+    dropletInterval = setTimeout(scheduleDroplet, 50);
+
+    // Store the interval so we can clear it on stop
+    // We override the source's stop to also clear the scheduler
+    const originalStop = washSource.stop.bind(washSource);
+    washSource.stop = ((...args: any[]) => {
+      if (dropletInterval) {
+        clearTimeout(dropletInterval);
+        dropletInterval = null;
+      }
+      return originalStop(...args);
+    }) as AudioScheduledSourceNode["stop"];
+
+    return washSource;
   }
 
-  /** Ocean — filtered noise with very slow wave-like modulation. */
+  /** Ocean — layered: low-frequency wash + randomized wave crashes. */
   private makeOceanSource(ctx: AudioContext, gain: GainNode): AudioBufferSourceNode {
-    const buffer = this.makeNoiseBuffer(ctx, 4);
-    const source = ctx.createBufferSource();
-    source.buffer = buffer;
-    source.loop = true;
+    // ── Layer 1: Deep wash ──
+    const washBuffer = this.makeNoiseBuffer(ctx, 4);
+    const washSource = ctx.createBufferSource();
+    washSource.buffer = washBuffer;
+    washSource.loop = true;
 
-    // Low-pass filter
-    const lp = ctx.createBiquadFilter();
-    lp.type = "lowpass";
-    lp.frequency.value = 800;
-    lp.Q.value = 0.7;
+    const washLP = ctx.createBiquadFilter();
+    washLP.type = "lowpass";
+    washLP.frequency.value = 600;
+    washLP.Q.value = 0.7;
 
-    // Very slow LFO on gain for wave-like swell
-    const lfo = ctx.createOscillator();
-    lfo.frequency.value = 0.05; // 20-second cycle
-    const lfoGain = ctx.createGain();
-    lfoGain.gain.value = 0.3;
-    lfo.connect(lfoGain);
-    lfoGain.connect(gain.gain);
-    lfo.start();
+    const washGain = ctx.createGain();
+    washGain.gain.value = 0.4;
 
-    source.connect(lp);
-    lp.connect(gain);
-    source.start();
-    return source;
+    // Slow LFO on wash gain for gentle swell
+    const swellLFO = ctx.createOscillator();
+    swellLFO.frequency.value = 0.04; // 25-second cycle
+    const swellGain = ctx.createGain();
+    swellGain.gain.value = 0.2;
+    swellLFO.connect(swellGain);
+    swellGain.connect(washGain.gain);
+    swellLFO.start();
+
+    washSource.connect(washLP);
+    washLP.connect(washGain);
+    washGain.connect(gain);
+    washSource.start();
+
+    // ── Layer 2: Wave crash scheduler ──
+    const crashGain = ctx.createGain();
+    crashGain.gain.value = 0.6;
+    crashGain.connect(gain);
+
+    let crashInterval: ReturnType<typeof setTimeout> | null = null;
+
+    const scheduleCrash = () => {
+      if (!this.active.has("ocean" as SoundID)) return;
+
+      const duration = 1.5 + Math.random() * 2.5; // 1.5-4 seconds
+      const length = ctx.sampleRate * duration;
+      const buf = ctx.createBuffer(1, length, ctx.sampleRate);
+      const data = buf.getChannelData(0);
+
+      // Crash sound: noise burst with exponential decay
+      for (let i = 0; i < length; i++) {
+        const t = i / length;
+        const envelope = Math.exp(-t * 4); // fast decay
+        data[i] = (Math.random() * 2 - 1) * envelope;
+      }
+
+      const cSource = ctx.createBufferSource();
+      cSource.buffer = buf;
+
+      // Low-pass that opens briefly then closes (wave crash)
+      const lp = ctx.createBiquadFilter();
+      lp.type = "lowpass";
+      lp.frequency.setValueAtTime(200, ctx.currentTime);
+      lp.frequency.linearRampToValueAtTime(2500, ctx.currentTime + 0.3);
+      lp.frequency.exponentialRampToValueAtTime(300, ctx.currentTime + duration * 0.6);
+
+      const env = ctx.createGain();
+      env.gain.setValueAtTime(0, ctx.currentTime);
+      env.gain.linearRampToValueAtTime(0.8, ctx.currentTime + 0.15);
+      env.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+
+      cSource.connect(lp);
+      lp.connect(env);
+      env.connect(crashGain);
+      cSource.start(ctx.currentTime);
+      cSource.stop(ctx.currentTime + duration);
+
+      // Next crash in 4-12 seconds
+      const nextDelay = 4000 + Math.random() * 8000;
+      crashInterval = setTimeout(scheduleCrash, nextDelay);
+    };
+
+    crashInterval = setTimeout(scheduleCrash, 1000);
+
+    // Clean up scheduler on stop
+    const originalStop = washSource.stop.bind(washSource);
+    washSource.stop = ((...args: any[]) => {
+      if (crashInterval) {
+        clearTimeout(crashInterval);
+        crashInterval = null;
+      }
+      return originalStop(...args);
+    }) as AudioScheduledSourceNode["stop"];
+
+    return washSource;
   }
 }
 
