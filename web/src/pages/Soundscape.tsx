@@ -14,7 +14,12 @@ const SOUNDS: SoundDef[] = [
   { id: "brown-noise", label: "Brown Noise", icon: "🌫️", description: "Deep rumble — calming bass" },
   { id: "rain", label: "Rain", icon: "🌧️", description: "Gentle rainfall with movement" },
   { id: "ocean", label: "Ocean", icon: "🌊", description: "Slow waves with a natural swell" },
+  { id: "wind", label: "Wind", icon: "💨", description: "Howling wind with occasional gusts" },
+  { id: "campfire", label: "Campfire", icon: "🔥", description: "Crackling fire with embers and pops" },
 ];
+
+const LS_POMODORO_ENABLED = "soundscape_pomodoro_enabled";
+const LS_POMODORO_SOUND = "soundscape_pomodoro_sound";
 
 function Soundscape() {
   const [playing, setPlaying] = useState<Set<SoundID>>(new Set());
@@ -25,6 +30,16 @@ function Soundscape() {
     "brown-noise": 0.5,
     rain: 0.5,
     ocean: 0.5,
+    wind: 0.5,
+    campfire: 0.5,
+  });
+
+  // Pomodoro sync state (persisted to localStorage)
+  const [pomodoroEnabled, setPomodoroEnabled] = useState(() => {
+    return localStorage.getItem(LS_POMODORO_ENABLED) === "true";
+  });
+  const [pomodoroSound, setPomodoroSound] = useState<SoundID>(() => {
+    return (localStorage.getItem(LS_POMODORO_SOUND) as SoundID) || "white-noise";
   });
 
   const soundscape = getSoundscape();
@@ -167,6 +182,101 @@ function Soundscape() {
             </div>
           );
         })}
+      </div>
+
+      {/* Pomodoro Sync */}
+      <div
+        className="card"
+        style={{
+          maxWidth: "480px",
+          margin: "var(--space-lg) auto 0",
+          padding: "var(--space-md) var(--space-lg)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: pomodoroEnabled ? "var(--space-sm)" : 0,
+          }}
+        >
+          <div>
+            <div style={{ fontWeight: 600, fontSize: "var(--font-size-sm)" }}>
+              🎯 Pomodoro Sync
+            </div>
+            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)" }}>
+              Auto-play sound while timer is running
+            </div>
+          </div>
+          <label
+            style={{
+              position: "relative",
+              display: "inline-block",
+              width: "44px",
+              height: "24px",
+              cursor: "pointer",
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={pomodoroEnabled}
+              onChange={(e) => {
+                const v = e.target.checked;
+                setPomodoroEnabled(v);
+                localStorage.setItem(LS_POMODORO_ENABLED, String(v));
+              }}
+              style={{ display: "none" }}
+            />
+            <span
+              style={{
+                position: "absolute",
+                inset: 0,
+                borderRadius: "24px",
+                background: pomodoroEnabled ? "var(--color-primary)" : "var(--color-border)",
+                transition: "background var(--transition-fast)",
+              }}
+            >
+              <span
+                style={{
+                  position: "absolute",
+                  top: "2px",
+                  left: pomodoroEnabled ? "22px" : "2px",
+                  width: "20px",
+                  height: "20px",
+                  borderRadius: "50%",
+                  background: "white",
+                  transition: "left var(--transition-fast)",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+                }}
+              />
+            </span>
+          </label>
+        </div>
+
+        {pomodoroEnabled && (
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)", marginTop: "var(--space-sm)" }}>
+            <span style={{ fontSize: "var(--font-size-sm)", fontWeight: 500, whiteSpace: "nowrap" }}>
+              Sound:
+            </span>
+            <select
+              className="select"
+              value={pomodoroSound}
+              onChange={(e) => {
+                const v = e.target.value as SoundID;
+                setPomodoroSound(v);
+                localStorage.setItem(LS_POMODORO_SOUND, v);
+              }}
+              style={{ flex: 1 }}
+            >
+              {SOUNDS.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.icon} {s.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       {/* Tip */}

@@ -7,6 +7,7 @@ import {
   resumeSession,
   stopSession,
 } from "../api/pomodoro";
+import { getSoundscape, type SoundID } from "../utils/audio";
 
 const FOCUS_PRESETS = [15, 25, 30, 45, 60];
 const BREAK_PRESETS = [5, 10, 15];
@@ -44,7 +45,17 @@ function Pomodoro() {
       setLocalRemaining(null);
       setLocalStatus(null);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.id, session?.status]);
+
+  const stopMutate = useMutation({
+    mutationFn: stopSession,
+    onSuccess: () => {
+      setLocalRemaining(null);
+      setLocalStatus(null);
+      queryClient.invalidateQueries({ queryKey: ["pomodoro"] });
+    },
+  });
 
   // Local ticking
   useEffect(() => {
@@ -72,7 +83,7 @@ function Pomodoro() {
     if (localRemaining === 0 && localStatus === "running") {
       stopMutate.mutate();
     }
-  }, [localRemaining, localStatus]);
+  }, [localRemaining, localStatus, stopMutate]);
 
   const startMutate = useMutation({
     mutationFn: () =>
@@ -102,21 +113,42 @@ function Pomodoro() {
     },
   });
 
-  const stopMutate = useMutation({
-    mutationFn: stopSession,
-    onSuccess: () => {
-      setLocalRemaining(null);
-      setLocalStatus(null);
-      queryClient.invalidateQueries({ queryKey: ["pomodoro"] });
-    },
-  });
-
   const isRunning = localStatus === "running";
   const isPaused = localStatus === "paused";
   const isActive = isRunning || isPaused;
   const displayTime = localRemaining !== null ? localRemaining : (session?.remaining_seconds ?? 0);
   const totalSeconds = session ? session.focus_duration * 60 : focusMinutes * 60;
   const progress = totalSeconds > 0 ? ((totalSeconds - displayTime) / totalSeconds) * 100 : 0;
+
+  // ── Pomodoro ↔ Soundscape sync ──
+  // Reads the user's preference from localStorage (set in Soundscape page).
+  // Plays the selected sound when the timer runs, stops when paused/stopped/completed.
+  useEffect(() => {
+    const enabled = localStorage.getItem("soundscape_pomodoro_enabled") === "true";
+    if (!enabled) return;
+
+    const soundId = (localStorage.getItem("soundscape_pomodoro_sound") || "white-noise") as SoundID;
+    const soundscape = getSoundscape();
+
+    if (localStatus === "running") {
+      // Only play if not already playing (e.g. from manual toggle)
+      if (!soundscape.isPlaying(soundId)) {
+        soundscape.play(soundId);
+      }
+    } else if (localStatus === "paused" || localStatus === "completed" || localStatus === "cancelled" || localStatus === null) {
+      soundscape.stop(soundId);
+    }
+  }, [localStatus]);
+
+  // Stop sound on unmount
+  useEffect(() => {
+    return () => {
+      const enabled = localStorage.getItem("soundscape_pomodoro_enabled") === "true";
+      if (!enabled) return;
+      const soundId = (localStorage.getItem("soundscape_pomodoro_sound") || "white-noise") as SoundID;
+      getSoundscape().stop(soundId);
+    };
+  }, []);
 
   return (
     <div className="animate-fade-in">
