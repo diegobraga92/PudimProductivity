@@ -40,7 +40,7 @@ func LoadConfig() Config {
 			IdleTimeout:     getEnvInt("IDLE_TIMEOUT", 60),
 		},
 		Database: DatabaseConfig{
-			URL:             getEnv("DATABASE_URL", "postgres://pudim:pudim_dev@localhost:5433/pudimproductivity?sslmode=disable"),
+			URL:             getEnv("DATABASE_URL", "postgres://pudim:change_me_in_production@localhost:5433/pudimproductivity?sslmode=disable"),
 			ConnectTimeout:  getEnvDuration("DATABASE_CONNECT_TIMEOUT", 30*time.Second),
 			MaxConns:        getEnvInt("DATABASE_MAX_CONNS", 20),
 			MinConns:        getEnvInt("DATABASE_MIN_CONNS", 2),

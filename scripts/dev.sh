@@ -131,7 +131,18 @@ else
     log_info "Skipping Docker services (--no-db)."
 fi
 
-# ─── 4. Start backend ──────────────────────────────────────────────────────
+# ─── 4. Export .env variables ──────────────────────────────────────────────
+if [ -f "$ROOT_DIR/.env" ]; then
+    set -a
+    source "$ROOT_DIR/.env"
+    set +a
+    log_ok ".env loaded into environment."
+else
+    log_error ".env file not found at $ROOT_DIR/.env"
+    exit 1
+fi
+
+# ─── 5. Start backend ──────────────────────────────────────────────────────
 log_info "Starting backend (go run ./cmd/server)..."
 (cd "$BACKEND_DIR" && go run ./cmd/server) &
 BACKEND_PID=$!
@@ -140,13 +151,13 @@ log_ok "Backend started (PID $BACKEND_PID)."
 # Give the backend a moment to start
 sleep 2
 
-# ─── 5. Start frontend ─────────────────────────────────────────────────────
+# ─── 6. Start frontend ─────────────────────────────────────────────────────
 log_info "Starting frontend (npm run dev)..."
 (cd "$WEB_DIR" && npm run dev) &
 FRONTEND_PID=$!
 log_ok "Frontend started (PID $FRONTEND_PID)."
 
-# ─── 6. Print summary ──────────────────────────────────────────────────────
+# ─── 7. Print summary ──────────────────────────────────────────────────────
 echo ""
 log_ok "═══════════════════════════════════════════════════════════"
 log_ok "  PudimProductivity is running!"
