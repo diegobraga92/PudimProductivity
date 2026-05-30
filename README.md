@@ -34,8 +34,8 @@ Deploy the entire application as a self-contained stack on any Linux machine in 
 
 ```bash
 # 1. Clone the repository on your LAN server
-git clone https://github.com/diegobraga92/PudimProductivity.git /opt/pudimproductivity
-cd /opt/pudimproductivity
+git clone https://github.com/diegobraga92/PudimProductivity.git ~/pudimproductivity
+cd ~/pudimproductivity
 
 # 2. Create and configure environment file
 cp .env.example .env
