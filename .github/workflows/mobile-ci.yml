@@ -18,11 +18,14 @@ jobs:
     runs-on: ubuntu-latest
     # Requires Android SDK — uncomment when JDK and SDK are available on the runner.
     # steps:
+    #   # Check latest: https://github.com/actions/checkout/releases
     #   - uses: actions/checkout@v4
+    #   # Check latest: https://github.com/actions/setup-java/releases
     #   - uses: actions/setup-java@v4
     #     with:
     #       distribution: "temurin"
     #       java-version: "17"
+    #   # Check latest: https://github.com/gradle/actions/setup-gradle/releases
     #   - name: Setup Gradle
     #     uses: gradle/actions/setup-gradle@v4
     #   - name: Build with Gradle
