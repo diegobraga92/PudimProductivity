@@ -29,6 +29,7 @@ import StreakBadge from "../components/StreakBadge";
 import ProgressBar from "../components/ProgressBar";
 import { computeStreaks } from "../utils/streaks";
 import { getWeekDates, getToday } from "../utils/dates";
+import { playCompletionSound } from "../utils/sounds";
 
 type View = "list" | "create" | "detail";
 
@@ -110,6 +111,7 @@ export default function TaskList() {
       if (completed) {
         await uncompleteTask(taskId, date);
       } else {
+        playCompletionSound();
         await completeTask(taskId, date);
       }
     },

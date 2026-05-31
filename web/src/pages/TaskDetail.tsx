@@ -15,6 +15,7 @@ import StreakBadge from "../components/StreakBadge";
 import ProgressBar from "../components/ProgressBar";
 import { computeStreaks } from "../utils/streaks";
 import { getWeekDates, getToday } from "../utils/dates";
+import { playCompletionSound } from "../utils/sounds";
 
 const DAY_LABELS: Record<RecurrenceDay, string> = {
   mon: "Monday",
@@ -101,6 +102,7 @@ export default function TaskDetail({
       if (completedDates.has(date)) {
         await uncompleteTask(taskId, date);
       } else {
+        playCompletionSound();
         await completeTask(taskId, date);
       }
     },
