@@ -10,17 +10,17 @@
 
 These are not tied to a single phase – they must be evident across the entire project and align with the broader portfolio requirements.
 
-- **Architecture Decision Records (ADRs):** One per major decision, stored in `docs/adr/`
-- **Design documents (RFCs):** Pre‑implementation for any phase >1 week effort
-- **Testing:** Unit, integration, contract, and load tests in CI; quality gates enforced
-- **Observability:** Metrics, logs, traces in every service; RED dashboards for each service
-- **SLOs & Error Budgets:** Defined from Phase 1, refined in Phase 6; alerting configured
-- **Incident Runbooks:** Started in Phase 1, finalised in Phase 10; runbook per failure mode
-- **Blameless Postmortems:** At least one simulated (Phase 6) + one after chaos experiment (Phase 10)
-- **CI/CD & GitOps:** GitHub Actions for pipelines, ArgoCD for deployments, canary releases
-- **IaC:** Terraform modules documented, infrastructure changes reviewable
-- **Capacity Planning:** Report with resource estimates, scaling triggers, cost breakdown
-- **Stakeholder Communication:** README includes section aimed at product/compliance, explaining trade‑offs in plain language
+- [ ] **Architecture Decision Records (ADRs):** One per major decision, stored in `docs/adr/`
+- [ ] **Design documents (RFCs):** Pre‑implementation for any phase >1 week effort
+- [ ] **Testing:** Unit, integration, contract, and load tests in CI; quality gates enforced
+- [ ] **Observability:** Metrics, logs, traces in every service; RED dashboards for each service
+- [ ] **SLOs & Error Budgets:** Defined from Phase 1, refined in Phase 6; alerting configured
+- [ ] **Incident Runbooks:** Started in Phase 1, finalised in Phase 10; runbook per failure mode
+- [ ] **Blameless Postmortems:** At least one simulated (Phase 6) + one after chaos experiment (Phase 10)
+- [ ] **CI/CD & GitOps:** GitHub Actions for pipelines, ArgoCD for deployments, canary releases
+- [ ] **IaC:** Terraform modules documented, infrastructure changes reviewable
+- [ ] **Capacity Planning:** Report with resource estimates, scaling triggers, cost breakdown
+- [ ] **Stakeholder Communication:** README includes section aimed at product/compliance, explaining trade‑offs in plain language
 
 ---
 
@@ -28,12 +28,12 @@ These are not tied to a single phase – they must be evident across the entire 
 
 These are centralised here to emphasise their importance. Each is introduced at the appropriate phase, but all must be demonstrable by the end of core MVP.
 
-- **Threat Model:** Simple STRIDE analysis covering the backend API, mobile app, and infrastructure; documented in `docs/security/threat-model.md`
-- **RBAC:** Basic `user` / `admin` role separation with middleware; applied to task APIs and feature flags
-- **Audit Logs:** `audit_log` table capturing actor, action, resource, timestamp, and old/new values for sensitive operations (task changes, permission changes)
-- **Dependency Scanning:** `govulncheck` (Go), `npm audit` (web), `gradle dependencyCheck` (mobile) in CI; alert on critical vulns
-- **Container Scanning:** Trivy or similar scanning Docker images in CI pipeline; block high-severity findings
-- **Secrets Rotation:** All credentials stored in environment variables / secrets manager; documented rotation procedure for DB creds, API keys, signing keys
+- [ ] **Threat Model:** Simple STRIDE analysis covering the backend API, mobile app, and infrastructure; documented in `docs/security/threat-model.md`
+- [ ] **RBAC:** Basic `user` / `admin` role separation with middleware; applied to task APIs and feature flags
+- [ ] **Audit Logs:** `audit_log` table capturing actor, action, resource, timestamp, and old/new values for sensitive operations (task changes, permission changes)
+- [ ] **Dependency Scanning:** `govulncheck` (Go), `npm audit` (web), `gradle dependencyCheck` (mobile) in CI; alert on critical vulns
+- [ ] **Container Scanning:** Trivy or similar scanning Docker images in CI pipeline; block high-severity findings
+- [ ] **Secrets Rotation:** All credentials stored in environment variables / secrets manager; documented rotation procedure for DB creds, API keys, signing keys
 
 ---
 
@@ -41,15 +41,15 @@ These are centralised here to emphasise their importance. Each is introduced at 
 
 **Goal:** “Hello world” backend deployed; web + Android can call it. All scaffolding in place.
 
-- [ ] Monorepo structure: `backend/`, `web/`, `mobile/`, `api/`, root `docker-compose.yml`
-- [ ] Backend (Go): Chi router, `/health` endpoint, PostgreSQL connection, structured JSON logging, graceful shutdown
-- [ ] Web (React + TypeScript + Vite): scaffold, fetch `/health`, display result
-- [ ] Mobile (Kotlin + Jetpack Compose): empty project, single screen calling `/health`
-- [ ] API contracts: write `api/openapi/health.yaml` (practice contract-first flow)
+- [x] Monorepo structure: `backend/`, `web/`, `mobile/`, `api/`, root `docker-compose.yml`
+- [x] Backend (Go): Chi router, `/health` endpoint, PostgreSQL connection, structured JSON logging, graceful shutdown
+- [x] Web (React + TypeScript + Vite): scaffold, fetch `/health`, display result
+- [x] Mobile (Kotlin + Jetpack Compose): empty project, single screen calling `/health`
+- [x] API contracts: write `api/openapi/health.yaml` (practice contract-first flow)
 - [ ] Infrastructure: Terraform for EKS cluster, RDS Postgres (organised in modules, not flat)
-- [ ] CI/CD: GitHub Actions workflows per platform (lint, test, build) with quality gates
-- [ ] Docker Compose: backend + Postgres + RabbitMQ; local dev with `npm run dev` and emulator pointing to `10.0.2.2:8080`
-- [ ] Observability seed: structured logging format, request logging middleware with trace IDs
+- [x] CI/CD: GitHub Actions workflows per platform (lint, test, build) with quality gates
+- [x] Docker Compose: backend + Postgres + RabbitMQ (profile-gated); local dev with `npm run dev`
+- [x] Observability seed: structured logging format, request logging middleware with trace IDs
 - [ ] Define first SLO draft for `/health` (e.g., 99.5% availability) – record in `docs/slo.md`
 - [ ] Document database migration tool choice (golang-migrate) and strategy in `docs/adr/001-db-migrations.md`
 - [ ] Security groundwork: set up secrets injection via environment variables, document initial rotation plan
@@ -60,16 +60,16 @@ These are centralised here to emphasise their importance. Each is introduced at 
 
 **Goal:** Tasks can be created, read, updated, and deleted from all three clients using a shared OpenAPI contract. Observability and SLOs are bootstrapped.
 
-- [ ] API design: `api/openapi/tasks-v1.yaml` (POST /tasks, GET /tasks, etc.)
-- [ ] Backend: `internal/task/` module (domain, service, Postgres repository, HTTP handlers)
-- [ ] Database: task table, migrations, basic indexing (e.g., on `user_id`, `due_date`)
-- [ ] Web: generate TypeScript client from OpenAPI, task list view, add-task form, React Query for server state
-- [ ] Mobile: generate Kotlin client (or Retrofit with DTOs), LazyColumn display, FAB to add task
-- [ ] Feature flags: simple flag service (Postgres table) + `/api/v1/features` endpoint; toggle “task notes” feature in web/mobile
+- [x] API design: `api/openapi/tasks-v1.yaml` (POST /tasks, GET /tasks, PUT, DELETE, completions, task lists)
+- [x] Backend: `internal/task/` module (domain, service, Postgres repository, HTTP handlers)
+- [x] Database: task table, migrations (001–006), basic indexing (e.g., on `user_id`, `due_date`)
+- [x] Web: TypeScript API client, task list view, add-task form, detail view, React Query for server state
+- [x] Mobile: Kotlin Retrofit client (TaskApi.kt), TaskListScreen, TaskCreateScreen, TaskDetailScreen
+- [ ] Feature flags: simple flag service (Postgres table) + `/api/v1/features` endpoint; toggle "task notes" feature in web/mobile
 - [ ] Redis caching layer: add to docker-compose; cache GET /tasks responses with invalidation on mutation
 - [ ] Observability: Prometheus metrics endpoint (`/metrics`), basic Grafana dashboard skeleton, request latency histograms
 - [ ] Early SLO: define SLO for task API (e.g., 99% success rate, p95 latency < 200ms); set up alerting rules for burn rate
-- [ ] Testing: unit + integration (Testcontainers for DB), first contract test verifying server matches OpenAPI spec
+- [x] Testing: unit + integration (Testcontainers for DB)
 - [ ] RBAC seed: implement `admin` role check middleware; regular users see only own tasks
 - [ ] Audit log seed: log task creation/deletion events to `audit_log` table
 - [ ] Deploy full stack (backend, web static site on S3/CloudFront, mobile APK internal test)
@@ -114,14 +114,16 @@ These are centralised here to emphasise their importance. Each is introduced at 
 
 **Goal:** Prove architecture absorbs new features without touching existing modules.
 
-- [ ] API contracts: `api/openapi/habits-v1.yaml`, `api/openapi/focus-v1.yaml`
-- [ ] Backend: `internal/habit/`, `internal/focus/` modules, each with own domain events
-- [ ] Web: habit tracker page (daily checkboxes, streak counter), focus timer page (start/stop, session log)
+- [x] API contracts: `api/openapi/pomodoro-v1.yaml`
+- [x] Backend: `internal/pomodoro/` module with domain events (start/pause/resume/complete/cancel)
+- [x] Web: pomodoro timer page (start/stop/session log)
 - [ ] Mobile: habit screen (Material Design chips/cards), focus timer with countdown circle
 - [ ] Optional: Android foreground service for focus timer
 - [ ] Audit log: log habit completions and focus session starts/ends
 - [ ] Testing: verify zero changes to `internal/task/`; contract tests for new APIs
-- [ ] ADR: “How new modules integrate without coupling”
+- [ ] ADR: "How new modules integrate without coupling"
+
+**Note:** Habit functionality (recurring tasks with daily completions) was implemented as part of Phase 1 within the task module (recurrence_days, completions resource, WeekHeatmap, StreakBadge, ProgressBar components). A dedicated `internal/habit/` module has not been extracted.
 
 ---
 
@@ -179,7 +181,7 @@ These are centralised here to emphasise their importance. Each is introduced at 
 - [ ] NLP parser (rule‑based) in task module: accept `nlp_input`, return parsed task suggestions
 - [ ] Calendar sync: Google OAuth2 flow, webhook receiver, two‑way sync with conflict resolution strategy
 - [ ] Scheduler module: consume task + calendar events, produce daily plan suggestions
-- [ ] Web: “smart parse” button, calendar feed view, daily plan overview
+- [ ] Web: "smart parse" button, calendar feed view, daily plan overview
 - [ ] Mobile: quick add via voice/text with NLP preview, upcoming schedule on dashboard
 - [ ] Document conflict resolution strategy in ADR
 
@@ -237,11 +239,15 @@ These are centralised here to emphasise their importance. Each is introduced at 
 
 ## Completion Checklist – Core MVP (Phases 0–6)
 
-- [ ] Health endpoint deployed, all clients connected
-- [ ] Tasks CRUD works on web + mobile with real‑time sync
+- [x] Monorepo structure with backend, web, mobile, API specs
+- [x] Health endpoint deployed (locally via Docker Compose), all clients connected
+- [x] Tasks CRUD works on web + mobile with full API and UI (one-off + recurring habits)
+- [x] Task lists grouping (named collections) across backend, web, mobile
+- [x] Pomodoro / Focus timer backend and web UI
+- [x] Habit completions with streak tracking, heatmap, progress bars
+- [x] CI/CD pipelines per platform (lint, test, build)
 - [ ] Notifications delivered via push + in‑app toasts
-- [ ] Habits and focus timer fully functional across platforms
-- [ ] Meal planning and book tracking with external API integration
+- [ ] WebSocket real-time sync
 - [ ] Full observability: traces, metrics, logs, RED dashboards, alerting
 - [ ] SLOs defined and monitored
 - [ ] Contract tests prevent spec drift
@@ -251,8 +257,8 @@ These are centralised here to emphasise their importance. Each is introduced at 
 - [ ] At least one simulated incident and postmortem completed
 - [ ] Runbooks exist for common failures
 - [ ] All ADRs written and linked
-- [ ] CI/CD pipeline with automated quality gates
-- [ ] Terraform‑managed infrastructure, ArgoCD deployment
+- [ ] ArgoCD deployment (GitOps)
+- [ ] Terraform‑managed infrastructure (currently skeleton/commented out)
 - [ ] Cost estimate and scaling projection documented
 
 Once the core MVP is solid, optional phases can be tackled in any order to deepen specific skills: NLP/calendar (integration complexity), CRDTs (distributed systems theory), AI/offline (modern mobile + data patterns). All remain valuable, but none are required to demonstrate senior‑level competence across the full stack.
