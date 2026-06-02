@@ -1,0 +1,70 @@
+groups:
+  - name: slo-alerts
+    interval: 30s
+    rules:
+      - alert: HealthEndpointHighErrorRate
+        expr: |
+          (
+            sum(rate(http_requests_total{path="/api/v1/health", status!~"2.."}[1m]))
+            / sum(rate(http_requests_total{path="/api/v1/health"}[1m]))
+          ) > 0.005
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Health endpoint error rate exceeds SLO (0.5%)"
+          description: "The health endpoint error rate is {{ $value | humanizePercentage }} over the last 5 minutes."
+
+      - alert: TaskApiHighErrorRate
+        expr: |
+          (
+            sum(rate(http_requests_total{path=~"/api/v1/tasks.*", status!~"2.."}[1m]))
+            / sum(rate(http_requests_total{path=~"/api/v1/tasks.*"}[1m]))
+          ) > 0.01
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Task API error rate exceeds SLO (1.0%)"
+          description: "The task API error rate is {{ $value | humanizePercentage }} over the last 10 minutes."
+
+      - alert: TaskApiHighLatency
+        expr: |
+          histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{path=~"/api/v1/tasks.*"}[5m])) by (le))
+          > 0.2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Task API p95 latency exceeds 200ms"
+          description: "The p95 latency is {{ $value }}s over the last 5 minutes."
+
+      - alert: BackendInstanceDown
+        expr: up{job="pudim-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Backend instance is down"
+          description: "Instance {{ $labels.instance }} has been unreachable for over 1 minute."
+
+  - name: system-alerts
+    interval: 60s
+    rules:
+      - alert: HighMemoryUsage
+        expr: (process_resident_memory_bytes / 1024 / 1024) > 256
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage"
+          description: "Process memory is {{ $value | humanize1024 }}."
+
+      - alert: HighGoroutineCount
+        expr: go_goroutines > 200
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High goroutine count"
+          description: "Number of goroutines {{ $value }} exceeds 200."
