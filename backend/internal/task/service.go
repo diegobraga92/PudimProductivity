@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/diegobraga92/pudimproductivity/backend/internal/audit"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/shared"
 	"github.com/rs/zerolog/log"
 )
@@ -14,12 +15,17 @@ var ErrCompletionAlreadyExists = fmt.Errorf("completion already exists for this 
 var ErrCompletionNotFound = fmt.Errorf("completion not found")
 
 type TaskService struct {
-	repo TaskRepository
+	repo  TaskRepository
+	audit audit.Logger
 }
 
-func NewTaskService(repo TaskRepository) *TaskService {
+func NewTaskService(repo TaskRepository, auditLogger audit.Logger) *TaskService {
+	if auditLogger == nil {
+		auditLogger = audit.NoopLogger{}
+	}
 	return &TaskService{
-		repo: repo,
+		repo:  repo,
+		audit: auditLogger,
 	}
 }
 
@@ -42,6 +48,12 @@ func (s *TaskService) CreateTaskWithList(ctx context.Context, title string, recu
 	}
 
 	log.Info().Str("task_id", task.ID).Str("title", task.Title).Msg("task created")
+
+	s.audit.Log(ctx, audit.ActionTaskCreated, audit.ResourceTasks, task.ID, nil, map[string]interface{}{
+		"title":  task.Title,
+		"list_id": task.ListID,
+	})
+
 	return task, nil
 }
 
@@ -77,6 +89,12 @@ func (s *TaskService) UpdateTask(ctx context.Context, id string, title *string, 
 	}
 
 	log.Info().Str("task_id", task.ID).Msg("task updated")
+
+	s.audit.Log(ctx, audit.ActionTaskUpdated, audit.ResourceTasks, task.ID, nil, map[string]interface{}{
+		"title":  task.Title,
+		"status": task.Status,
+	})
+
 	return task, nil
 }
 
@@ -86,6 +104,9 @@ func (s *TaskService) DeleteTask(ctx context.Context, id string) error {
 	}
 
 	log.Info().Str("task_id", id).Msg("task deleted")
+
+	s.audit.Log(ctx, audit.ActionTaskDeleted, audit.ResourceTasks, id, nil, nil)
+
 	return nil
 }
 
@@ -117,6 +138,11 @@ func (s *TaskService) CompleteTask(ctx context.Context, taskID, dateStr string) 
 	}
 
 	log.Info().Str("task_id", taskID).Str("date", completionDate.Format("2006-01-02")).Msg("task completed")
+
+	s.audit.Log(ctx, audit.ActionTaskCompleted, audit.ResourceTasks, taskID, nil, map[string]interface{}{
+		"completed_date": completionDate.Format("2006-01-02"),
+	})
+
 	return completion, nil
 }
 
@@ -143,6 +169,9 @@ func (s *TaskService) UncompleteTask(ctx context.Context, taskID, dateStr string
 	}
 
 	log.Info().Str("task_id", taskID).Str("date", completionDate.Format("2006-01-02")).Msg("task uncompleted")
+
+	s.audit.Log(ctx, audit.ActionTaskUncompleted, audit.ResourceTasks, taskID, nil, nil)
+
 	return nil
 }
 

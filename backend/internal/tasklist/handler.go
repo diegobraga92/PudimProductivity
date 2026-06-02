@@ -161,7 +161,7 @@ func (h *Handler) DeleteTaskList(w http.ResponseWriter, r *http.Request) {
 
 // GET /api/v1/{listId}/tasks
 // Returns a handler that lists tasks for a list. Uses task service to fetch tasks by list ID
-func (h *Handler) ListTasksByListID(taskService *task.TaskService) http.HandlerFunc {
+func (h *Handler) ListTasksByListID(taskService task.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "listId")
 		if id == "" {

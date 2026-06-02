@@ -1,6 +1,7 @@
 package task
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -12,11 +13,27 @@ import (
 	"github.com/diegobraga92/pudimproductivity/backend/internal/shared"
 )
 
-type Handler struct {
-	service *TaskService
+// Service defines the interface used by the task handler.
+type Service interface {
+	CreateTask(ctx context.Context, title string, recurrenceDays []string) (*Task, error)
+	CreateTaskWithList(ctx context.Context, title string, recurrenceDays []string, listID *string) (*Task, error)
+	GetTask(ctx context.Context, id string) (*Task, error)
+	ListTasks(ctx context.Context, statusFilter, typeFilter string) ([]*Task, error)
+	ListTasksByListID(ctx context.Context, listID, typeFilter string) ([]*Task, error)
+	UpdateTask(ctx context.Context, id string, title *string, status *TaskStatus, recurrenceDays *[]string, listID **string) (*Task, error)
+	DeleteTask(ctx context.Context, id string) error
+	CompleteTask(ctx context.Context, taskID, dateStr string) (*TaskCompletion, error)
+	UncompleteTask(ctx context.Context, taskID, dateStr string) error
+	GetTaskCompletions(ctx context.Context, taskID string, from, to time.Time) ([]*TaskCompletion, error)
+	GetAllTaskCompletions(ctx context.Context, from, to time.Time) ([]*TaskCompletion, error)
+	GetTodayCompletion(ctx context.Context, taskID string) (*TaskCompletion, error)
 }
 
-func NewHandler(service *TaskService) *Handler {
+type Handler struct {
+	service Service
+}
+
+func NewHandler(service Service) *Handler {
 	return &Handler{service: service}
 }
 

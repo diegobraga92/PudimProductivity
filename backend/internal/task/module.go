@@ -4,12 +4,14 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog/log"
+
+	"github.com/diegobraga92/pudimproductivity/backend/internal/audit"
 )
 
 // Returns the TaskService so other modules (e.g., tasklist) can use it.
-func RegisterTaskRoutes(r chi.Router, pool *pgxpool.Pool) *TaskService {
+func RegisterTaskRoutes(r chi.Router, pool *pgxpool.Pool, auditLogger audit.Logger) *TaskService {
 	repo := NewPostgresTaskRepository(pool)
-	service := NewTaskService(repo)
+	service := NewTaskService(repo, auditLogger)
 	handler := NewHandler(service)
 
 	r.Route("/api/v1/tasks", func(r chi.Router) {

@@ -9,6 +9,7 @@ import (
 type Config struct {
 	Server   ServerConfig
 	Database DatabaseConfig
+	RedisURL string
 	LogLevel string
 	Version  string
 }
@@ -47,6 +48,7 @@ func LoadConfig() Config {
 			MaxConnLifetime: getEnvInt("DATABASE_MAX_CONN_LIFETIME", 30),
 			MaxConnIdleTime: getEnvInt("DATABASE_MAX_CONN_IDLETIME", 5),
 		},
+		RedisURL: getEnv("REDIS_URL", ""),
 		LogLevel: getEnv("LOG_LEVEL", "debug"),
 		Version:  getEnv("VERSION", "0.0.1"),
 	}

@@ -15,7 +15,9 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
+	"github.com/diegobraga92/pudimproductivity/backend/internal/audit"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/db"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/featureflag"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/pomodoro"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/shared"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/task"
@@ -65,18 +67,29 @@ func main() {
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Recoverer)
 	r.Use(requestLogger)
+	r.Use(shared.AuthMiddleware)
 	r.Use(middleware.Timeout(15 * time.Second))
 
 	r.Get("/api/v1/health", healthHandler(pool, cfg.Version))
 
+	var auditService *audit.Service
+	if pool != nil {
+		auditRepo := audit.NewPostgresRepository(pool)
+		auditService = audit.NewService(auditRepo, 1024) // buffer up to 1024 entries
+	}
+
 	// Setup routes
 	var taskService *task.TaskService
 	if pool != nil {
-		taskService = task.RegisterTaskRoutes(r, pool)
+		taskService = task.RegisterTaskRoutes(r, pool, auditService)
 	}
 
 	if pool != nil {
 		tasklist.RegisterTaskListRoutes(r, pool, taskService)
+	}
+
+	if pool != nil {
+		featureflag.RegisterFeatureFlagRoutes(r, pool)
 	}
 
 	pomodoro.RegisterPomodoroRoutes(r, nil)
