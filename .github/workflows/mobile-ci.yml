@@ -20,15 +20,20 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      # Check latest: https://github.com/actions/setup-java/releases
       - uses: actions/setup-java@v5
         with:
           distribution: "temurin"
           java-version: "17"
 
-      # Check latest: https://github.com/gradle/actions/releases
+      # Install Gradle directly (not via wrapper) to generate a validated wrapper JAR
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: "9.5.1"
+
+      - name: Generate Gradle Wrapper
+        run: gradle wrapper --gradle-version 9.5.1
+        working-directory: mobile
 
       - name: Build debug APK with Gradle
         run: ./gradlew assembleDebug

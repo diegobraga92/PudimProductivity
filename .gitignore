@@ -33,6 +33,7 @@ mobile/local.properties
 mobile/captures/
 mobile/.externalNativeBuild/
 mobile/.cxx/
+mobile/gradle/wrapper/gradle-wrapper.jar
 *.apk
 *.aab
 *.ap_
