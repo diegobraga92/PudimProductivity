@@ -26,6 +26,7 @@ Start the PudimProductivity development environment.
 
 Options:
   --no-db    Skip starting Docker services (postgres, rabbitmq)
+  --no-web   Skip starting the web frontend
   --clean    Remove Docker volumes, node_modules, and Go build cache before starting
   --help     Show this help message and exit
 EOF
@@ -64,12 +65,14 @@ trap cleanup SIGINT SIGTERM
 
 # ─── Parse arguments ───────────────────────────────────────────────────────
 SKIP_DOCKER=false
+SKIP_WEB=false
 CLEAN=false
 for arg in "$@"; do
     case "$arg" in
-        --no-db) SKIP_DOCKER=true ;;
-        --clean) CLEAN=true ;;
-        --help)  usage ;;
+        --no-db)  SKIP_DOCKER=true ;;
+        --no-web) SKIP_WEB=true ;;
+        --clean)  CLEAN=true ;;
+        --help)   usage ;;
         *) log_warn "Unknown argument: $arg"; usage ;;
     esac
 done
@@ -151,11 +154,15 @@ log_ok "Backend started (PID $BACKEND_PID)."
 # Give the backend a moment to start
 sleep 2
 
-# ─── 6. Start frontend ─────────────────────────────────────────────────────
-log_info "Starting frontend (npm run dev)..."
-(cd "$WEB_DIR" && npm run dev) &
-FRONTEND_PID=$!
-log_ok "Frontend started (PID $FRONTEND_PID)."
+# ─── 6. Start frontend (unless --no-web) ────────────────────────────────────
+if [ "$SKIP_WEB" = false ]; then
+    log_info "Starting frontend (npm run dev)..."
+    (cd "$WEB_DIR" && npm run dev) &
+    FRONTEND_PID=$!
+    log_ok "Frontend started (PID $FRONTEND_PID)."
+else
+    log_info "Skipping web frontend (--no-web)."
+fi
 
 # ─── 7. Print summary ──────────────────────────────────────────────────────
 echo ""
