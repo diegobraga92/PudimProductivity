@@ -25,15 +25,8 @@ jobs:
           distribution: "temurin"
           java-version: "17"
 
-      # Install Gradle directly (not via wrapper) to generate a validated wrapper JAR
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6
-        with:
-          gradle-version: "9.5.1"
-
-      - name: Generate Gradle Wrapper
-        run: gradle wrapper --gradle-version 9.5.1
-        working-directory: mobile
 
       - name: Build debug APK with Gradle
         run: ./gradlew assembleDebug
