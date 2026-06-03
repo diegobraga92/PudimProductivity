@@ -13,6 +13,7 @@ import com.pudimproductivity.api.ApiClient
 import com.pudimproductivity.api.Task
 import com.pudimproductivity.api.TaskCompletion
 import com.pudimproductivity.api.UpdateTaskRequest
+import com.pudimproductivity.api.taskService
 import kotlinx.coroutines.launch
 import java.time.DayOfWeek
 import java.time.LocalDate
