@@ -16,20 +16,27 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
-    # Requires Android SDK — uncomment when JDK and SDK are available on the runner.
-    # steps:
-    #   # Check latest: https://github.com/actions/checkout/releases
-    #   - uses: actions/checkout@v4
-    #   # Check latest: https://github.com/actions/setup-java/releases
-    #   - uses: actions/setup-java@v4
-    #     with:
-    #       distribution: "temurin"
-    #       java-version: "17"
-    #   # Check latest: https://github.com/gradle/actions/setup-gradle/releases
-    #   - name: Setup Gradle
-    #     uses: gradle/actions/setup-gradle@v4
-    #   - name: Build with Gradle
-    #     run: ./gradlew assembleDebug
-    #     working-directory: mobile
+
     steps:
-      - run: echo "Mobile CI requires Android SDK — skipping until runner is configured."
+      - uses: actions/checkout@v6
+
+      # Check latest: https://github.com/actions/setup-java/releases
+      - uses: actions/setup-java@v5
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      # Check latest: https://github.com/gradle/actions/releases
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Build debug APK with Gradle
+        run: ./gradlew assembleDebug
+        working-directory: mobile
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: app-debug
+          path: mobile/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 7
