@@ -18,14 +18,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Check latest: https://github.com/actions/checkout/releases
       - uses: actions/checkout@v6
 
+      # Check latest: https://github.com/actions/setup-java/releases
       - uses: actions/setup-java@v5
         with:
           distribution: "temurin"
           java-version: "21"
 
       - name: Setup Gradle
+        # Check latest: https://github.com/gradle/actions/releases
         uses: gradle/actions/setup-gradle@v6
         with:
           validate-wrappers: false
@@ -35,6 +38,7 @@ jobs:
         working-directory: mobile
 
       - name: Upload debug APK
+        # Check latest: https://github.com/actions/upload-artifact/releases
         uses: actions/upload-artifact@v7
         with:
           name: app-debug
