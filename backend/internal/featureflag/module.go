@@ -8,9 +8,11 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+const featureFlagCacheTTL = 30 * time.Second
+
 func RegisterFeatureFlagRoutes(r chi.Router, pool *pgxpool.Pool) *Service {
 	repo := NewPostgresRepository(pool)
-	service := NewService(repo, 30*time.Second) // 30s cache TTL
+	service := NewService(repo, featureFlagCacheTTL)
 	handler := NewHandler(service)
 
 	r.Route("/api/v1/features", func(r chi.Router) {

@@ -48,8 +48,8 @@ func setupTestPostgres(t *testing.T) (context.Context, shared.DatabaseConfig) {
 		URL:             connStr,
 		MaxConns:        5,
 		MinConns:        1,
-		MaxConnLifetime: 30,
-		MaxConnIdleTime: 10,
+		MaxConnLifetime: 30 * time.Minute,
+		MaxConnIdleTime: 10 * time.Minute,
 	}
 
 	return ctx, dbCfg

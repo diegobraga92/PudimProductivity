@@ -17,9 +17,10 @@ type Config struct {
 type ServerConfig struct {
 	Port            int
 	ShutdownTimeout time.Duration
-	ReadTimeout     int
-	WriteTimeout    int
-	IdleTimeout     int
+	ReadTimeout     time.Duration
+	WriteTimeout    time.Duration
+	IdleTimeout     time.Duration
+	RequestTimeout  time.Duration
 }
 
 type DatabaseConfig struct {
@@ -27,8 +28,8 @@ type DatabaseConfig struct {
 	ConnectTimeout  time.Duration
 	MaxConns        int
 	MinConns        int
-	MaxConnLifetime int
-	MaxConnIdleTime int
+	MaxConnLifetime time.Duration
+	MaxConnIdleTime time.Duration
 }
 
 func LoadConfig() Config {
@@ -36,17 +37,18 @@ func LoadConfig() Config {
 		Server: ServerConfig{
 			Port:            getEnvInt("PORT", 8080),
 			ShutdownTimeout: getEnvDuration("SHUTDOWN_TIMEOUT", 15*time.Second),
-			ReadTimeout:     getEnvInt("READ_TIMEOUT", 10),
-			WriteTimeout:    getEnvInt("WRITE_TIMEOUT", 30),
-			IdleTimeout:     getEnvInt("IDLE_TIMEOUT", 60),
+			ReadTimeout:     getEnvDuration("READ_TIMEOUT", 10*time.Second),
+			WriteTimeout:    getEnvDuration("WRITE_TIMEOUT", 30*time.Second),
+			IdleTimeout:     getEnvDuration("IDLE_TIMEOUT", 60*time.Second),
+			RequestTimeout:  getEnvDuration("REQUEST_TIMEOUT", 15*time.Second),
 		},
 		Database: DatabaseConfig{
 			URL:             getEnv("DATABASE_URL", "postgres://pudim:change_me_in_production@localhost:5433/pudimproductivity?sslmode=disable"),
 			ConnectTimeout:  getEnvDuration("DATABASE_CONNECT_TIMEOUT", 30*time.Second),
 			MaxConns:        getEnvInt("DATABASE_MAX_CONNS", 20),
 			MinConns:        getEnvInt("DATABASE_MIN_CONNS", 2),
-			MaxConnLifetime: getEnvInt("DATABASE_MAX_CONN_LIFETIME", 30),
-			MaxConnIdleTime: getEnvInt("DATABASE_MAX_CONN_IDLETIME", 5),
+			MaxConnLifetime: getEnvDuration("DATABASE_MAX_CONN_LIFETIME", 30*time.Minute),
+			MaxConnIdleTime: getEnvDuration("DATABASE_MAX_CONN_IDLETIME", 5*time.Minute),
 		},
 		RedisURL: getEnv("REDIS_URL", ""),
 		LogLevel: getEnv("LOG_LEVEL", "debug"),

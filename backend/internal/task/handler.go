@@ -13,6 +13,8 @@ import (
 	"github.com/diegobraga92/pudimproductivity/backend/internal/shared"
 )
 
+const defaultCompletionsLookbackDays = 7
+
 // Service defines the interface used by the task handler.
 type Service interface {
 	CreateTask(ctx context.Context, title string, recurrenceDays []string) (*Task, error)
@@ -264,7 +266,7 @@ func (h *Handler) GetAllCompletions(w http.ResponseWriter, r *http.Request) {
 	toStr := r.URL.Query().Get("to")
 
 	now := time.Now().UTC()
-	from := now.AddDate(0, 0, -7).Truncate(24 * time.Hour)
+	from := now.AddDate(0, 0, -defaultCompletionsLookbackDays).Truncate(24 * time.Hour)
 	to := now.Truncate(24 * time.Hour)
 
 	if fromStr != "" {
@@ -323,7 +325,7 @@ func (h *Handler) GetTaskCompletions(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		// Default to 7 days ago
-		from = now.AddDate(0, 0, -7).Truncate(24 * time.Hour)
+		from = now.AddDate(0, 0, -defaultCompletionsLookbackDays).Truncate(24 * time.Hour)
 	}
 
 	if toStr != "" {

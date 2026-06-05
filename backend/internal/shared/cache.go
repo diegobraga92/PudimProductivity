@@ -10,6 +10,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+const redisPingTimeout = 3 * time.Second
+
 type Cache struct {
 	client *redis.Client
 	ttl    time.Duration
@@ -30,7 +32,7 @@ func NewCache(redisURL string, ttl time.Duration) *Cache {
 
 	client := redis.NewClient(opts)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), redisPingTimeout)
 	defer cancel()
 
 	if err := client.Ping(ctx).Err(); err != nil {

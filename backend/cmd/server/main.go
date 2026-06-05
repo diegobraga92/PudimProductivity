@@ -52,7 +52,7 @@ func main() {
 	}
 
 	if pool != nil {
-		migrateCtx, migrateCancel := context.WithTimeout(context.Background(), time.Duration(cfg.Server.WriteTimeout)*time.Second)
+		migrateCtx, migrateCancel := context.WithTimeout(context.Background(), cfg.Server.WriteTimeout)
 		defer migrateCancel()
 
 		if err := db.RunMigrations(migrateCtx, pool); err != nil {
@@ -68,7 +68,7 @@ func main() {
 	r.Use(middleware.Recoverer)
 	r.Use(requestLogger)
 	r.Use(shared.AuthMiddleware)
-	r.Use(middleware.Timeout(15 * time.Second))
+	r.Use(middleware.Timeout(cfg.Server.RequestTimeout))
 
 	r.Get("/api/v1/health", healthHandler(pool, cfg.Version))
 
@@ -99,9 +99,9 @@ func main() {
 	srv := &http.Server{
 		Addr:         addr,
 		Handler:      r,
-		ReadTimeout:  time.Duration(cfg.Server.ReadTimeout) * time.Second,
-		WriteTimeout: time.Duration(cfg.Server.WriteTimeout) * time.Second,
-		IdleTimeout:  time.Duration(cfg.Server.IdleTimeout) * time.Second,
+		ReadTimeout:  cfg.Server.ReadTimeout,
+		WriteTimeout: cfg.Server.WriteTimeout,
+		IdleTimeout:  cfg.Server.IdleTimeout,
 	}
 
 	shutdownCh := make(chan os.Signal, 1)

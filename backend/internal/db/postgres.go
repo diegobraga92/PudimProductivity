@@ -11,6 +11,8 @@ import (
 	"github.com/diegobraga92/pudimproductivity/backend/internal/shared"
 )
 
+const dbPingTimeout = 5 * time.Second
+
 func ConnectPool(ctx context.Context, dbCfg shared.DatabaseConfig) (*pgxpool.Pool, error) {
 	poolConfig, err := pgxpool.ParseConfig(dbCfg.URL)
 	if err != nil {
@@ -19,15 +21,15 @@ func ConnectPool(ctx context.Context, dbCfg shared.DatabaseConfig) (*pgxpool.Poo
 
 	poolConfig.MaxConns = int32(dbCfg.MaxConns)
 	poolConfig.MinConns = int32(dbCfg.MinConns)
-	poolConfig.MaxConnLifetime = time.Duration(dbCfg.MaxConnLifetime) * time.Minute
-	poolConfig.MaxConnIdleTime = time.Duration(dbCfg.MaxConnIdleTime) * time.Minute
+	poolConfig.MaxConnLifetime = dbCfg.MaxConnLifetime
+	poolConfig.MaxConnIdleTime = dbCfg.MaxConnIdleTime
 
 	pool, err := pgxpool.NewWithConfig(ctx, poolConfig)
 	if err != nil {
 		return nil, fmt.Errorf("create connection pool: %w", err)
 	}
 
-	pingCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	pingCtx, cancel := context.WithTimeout(ctx, dbPingTimeout)
 	defer cancel()
 
 	if err := pool.Ping(pingCtx); err != nil {

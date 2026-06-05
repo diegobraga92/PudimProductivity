@@ -10,6 +10,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+const timerTickInterval = 1 * time.Second
+
 // NoiseProvider is a provision for future white noise integration.
 // When white noise is added later, implement this interface and inject it
 // into PomodoroService. No changes to the pomodoro domain are needed.
@@ -161,7 +163,7 @@ func (s *PomodoroService) startTimer() {
 	focusDuration := s.current.FocusDuration
 
 	go func() {
-		ticker := time.NewTicker(1 * time.Second)
+		ticker := time.NewTicker(timerTickInterval)
 		defer ticker.Stop()
 
 		elapsed := time.Duration(0)
@@ -170,7 +172,7 @@ func (s *PomodoroService) startTimer() {
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				elapsed += 1 * time.Second
+				elapsed += timerTickInterval
 				if elapsed >= focusDuration {
 					s.mu.Lock()
 					// Only auto-complete if this session is still the current one and running

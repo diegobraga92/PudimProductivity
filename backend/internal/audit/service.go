@@ -9,6 +9,14 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+const (
+	auditWriteTimeout        = 5 * time.Second
+	maxAuditQueryLimit       = 100
+	defaultAuditQueryLimit   = 50
+	defaultAuditLookbackDays = 7
+	defaultAuditRecentDays   = 1
+)
+
 type Service struct {
 	repo   Repository
 	events chan *Entry
@@ -77,7 +85,7 @@ func (s *Service) Log(ctx context.Context, action, resource, resourceID string, 
 
 func (s *Service) worker() {
 	for entry := range s.events {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), auditWriteTimeout)
 		if err := s.repo.Insert(ctx, entry); err != nil {
 			log.Error().Err(err).
 				Str("action", entry.Action).
@@ -90,8 +98,8 @@ func (s *Service) worker() {
 
 func (s *Service) Query(ctx context.Context, opts QueryOptions) ([]Entry, error) {
 	limit := opts.Limit
-	if limit <= 0 || limit > 100 {
-		limit = 50
+	if limit <= 0 || limit > maxAuditQueryLimit {
+		limit = defaultAuditQueryLimit
 	}
 	offset := opts.Offset
 	if offset < 0 {
@@ -106,13 +114,13 @@ func (s *Service) Query(ctx context.Context, opts QueryOptions) ([]Entry, error)
 	case opts.Action != "":
 		since := opts.Since
 		if since.IsZero() {
-			since = time.Now().AddDate(0, 0, -7) // default: last 7 days
+			since = time.Now().AddDate(0, 0, -defaultAuditLookbackDays)
 		}
 		return s.repo.ListByAction(ctx, opts.Action, since, limit, offset)
 	default:
 		since := opts.Since
 		if since.IsZero() {
-			since = time.Now().AddDate(0, 0, -1) // default: last 24 hours
+			since = time.Now().AddDate(0, 0, -defaultAuditRecentDays)
 		}
 		return s.repo.ListByAction(ctx, "", since, limit, offset)
 	}

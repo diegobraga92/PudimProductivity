@@ -8,6 +8,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+const cacheOpTimeout = 3 * time.Second
+
 type CachedTaskService struct {
 	*TaskService
 	cache *shared.Cache
@@ -44,7 +46,7 @@ func (s *CachedTaskService) ListTasks(ctx context.Context, statusFilter, typeFil
 
 	// Populate cache asynchronously
 	go func() {
-		cacheCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		cacheCtx, cancel := context.WithTimeout(context.Background(), cacheOpTimeout)
 		defer cancel()
 		if err := s.cache.Set(cacheCtx, cacheKey, tasks); err != nil {
 			log.Warn().Err(err).Str("cache_key", cacheKey).Msg("failed to cache tasks list")
@@ -71,7 +73,7 @@ func (s *CachedTaskService) GetTask(ctx context.Context, id string) (*Task, erro
 
 	// Populate cache asynchronously
 	go func() {
-		cacheCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		cacheCtx, cancel := context.WithTimeout(context.Background(), cacheOpTimeout)
 		defer cancel()
 		if err := s.cache.Set(cacheCtx, cacheKey, task); err != nil {
 			log.Warn().Err(err).Str("cache_key", cacheKey).Msg("failed to cache task")
@@ -135,7 +137,7 @@ func (s *CachedTaskService) UncompleteTask(ctx context.Context, taskID, dateStr 
 
 func (s *CachedTaskService) invalidateAll(ctx context.Context, taskIDs ...string) {
 	go func() {
-		cacheCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		cacheCtx, cancel := context.WithTimeout(context.Background(), cacheOpTimeout)
 		defer cancel()
 		if err := s.cache.Del(cacheCtx, "tasks:list"); err != nil {
 			log.Warn().Err(err).Msg("failed to invalidate tasks list cache")
