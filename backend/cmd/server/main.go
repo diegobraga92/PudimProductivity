@@ -75,7 +75,7 @@ func main() {
 	var auditService *audit.Service
 	if pool != nil {
 		auditRepo := audit.NewPostgresRepository(pool)
-		auditService = audit.NewService(auditRepo, 1024) // buffer up to 1024 entries
+		auditService = audit.NewService(auditRepo, 1024)
 	}
 
 	// Setup routes
