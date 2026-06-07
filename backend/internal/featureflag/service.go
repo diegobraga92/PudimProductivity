@@ -9,11 +9,12 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// Feature flags are per-deployment (not per-user), with a local in-memory cache
 type Service struct {
 	repo        Repository
-	cache       map[string]bool
+	cache       map[string]bool // flag name → enabled state
 	cacheMu     sync.RWMutex
-	cacheTTL    time.Duration
+	cacheTTL    time.Duration // 0 disables caching entirely
 	lastRefresh time.Time
 }
 
