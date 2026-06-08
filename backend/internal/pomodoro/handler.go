@@ -88,13 +88,13 @@ func (h *Handler) StartSession(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetCurrent(w http.ResponseWriter, r *http.Request) {
 	session := h.service.GetCurrent()
 	if session == nil {
-		shared.WriteJSON(w, http.StatusOK, map[string]interface{}{"active": false})
+		shared.WriteJSON(w, http.StatusOK, map[string]any{"active": false})
 		return
 	}
 
 	resp := toSessionResponse(session)
 
-	shared.WriteJSON(w, http.StatusOK, map[string]interface{}{
+	shared.WriteJSON(w, http.StatusOK, map[string]any{
 		"active":  true,
 		"session": resp,
 	})

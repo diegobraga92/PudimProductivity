@@ -73,7 +73,7 @@ func (r *PostgresTaskRepository) List(ctx context.Context, statusFilter, typeFil
 		FROM tasks
 		WHERE list_id IS NULL
 	`
-	args := make([]interface{}, 0)
+	args := make([]any, 0)
 
 	if statusFilter != "" {
 		query += " AND status = $1"
@@ -134,7 +134,7 @@ func (r *PostgresTaskRepository) ListByListID(ctx context.Context, listID, typeF
 		FROM tasks
 		WHERE list_id = $1
 	`
-	args := []interface{}{listID}
+	args := []any{listID}
 
 	if typeFilter != "" {
 		switch typeFilter {

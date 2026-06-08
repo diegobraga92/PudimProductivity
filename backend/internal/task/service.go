@@ -49,7 +49,7 @@ func (s *TaskService) CreateTaskWithList(ctx context.Context, title string, recu
 
 	log.Info().Str("task_id", task.ID).Str("title", task.Title).Msg("task created")
 
-	s.audit.Log(ctx, audit.ActionTaskCreated, audit.ResourceTasks, task.ID, nil, map[string]interface{}{
+	s.audit.Log(ctx, audit.ActionTaskCreated, audit.ResourceTasks, task.ID, nil, map[string]any{
 		"title":  task.Title,
 		"list_id": task.ListID,
 	})
@@ -90,7 +90,7 @@ func (s *TaskService) UpdateTask(ctx context.Context, id string, title *string, 
 
 	log.Info().Str("task_id", task.ID).Msg("task updated")
 
-	s.audit.Log(ctx, audit.ActionTaskUpdated, audit.ResourceTasks, task.ID, nil, map[string]interface{}{
+	s.audit.Log(ctx, audit.ActionTaskUpdated, audit.ResourceTasks, task.ID, nil, map[string]any{
 		"title":  task.Title,
 		"status": task.Status,
 	})
@@ -139,7 +139,7 @@ func (s *TaskService) CompleteTask(ctx context.Context, taskID, dateStr string) 
 
 	log.Info().Str("task_id", taskID).Str("date", completionDate.Format("2006-01-02")).Msg("task completed")
 
-	s.audit.Log(ctx, audit.ActionTaskCompleted, audit.ResourceTasks, taskID, nil, map[string]interface{}{
+	s.audit.Log(ctx, audit.ActionTaskCompleted, audit.ResourceTasks, taskID, nil, map[string]any{
 		"completed_date": completionDate.Format("2006-01-02"),
 	})
 

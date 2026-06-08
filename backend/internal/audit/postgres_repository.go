@@ -98,7 +98,7 @@ func (r *PostgresRepository) ListByActor(ctx context.Context, actorID string, li
 
 func (r *PostgresRepository) ListByAction(ctx context.Context, action string, since time.Time, limit, offset int) ([]Entry, error) {
 	var query string
-	var args []interface{}
+	var args []any
 
 	if action == "" {
 		query = `
@@ -108,7 +108,7 @@ func (r *PostgresRepository) ListByAction(ctx context.Context, action string, si
 			ORDER BY created_at DESC
 			LIMIT $2 OFFSET $3
 		`
-		args = []interface{}{since, limit, offset}
+		args = []any{since, limit, offset}
 	} else {
 		query = `
 			SELECT id, actor_id, action, resource, resource_id, old_values, new_values, created_at
@@ -117,7 +117,7 @@ func (r *PostgresRepository) ListByAction(ctx context.Context, action string, si
 			ORDER BY created_at DESC
 			LIMIT $3 OFFSET $4
 		`
-		args = []interface{}{action, since, limit, offset}
+		args = []any{action, since, limit, offset}
 	}
 
 	rows, err := r.pool.Query(ctx, query, args...)

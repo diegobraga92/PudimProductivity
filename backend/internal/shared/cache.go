@@ -44,7 +44,7 @@ func NewCache(redisURL string, ttl time.Duration) *Cache {
 	return &Cache{client: client, ttl: ttl}
 }
 
-func (c *Cache) Get(ctx context.Context, key string, dest interface{}) (bool, error) {
+func (c *Cache) Get(ctx context.Context, key string, dest any) (bool, error) {
 	if c.client == nil {
 		return false, nil // cache miss (no Redis)
 	}
@@ -66,7 +66,7 @@ func (c *Cache) Get(ctx context.Context, key string, dest interface{}) (bool, er
 	return true, nil
 }
 
-func (c *Cache) Set(ctx context.Context, key string, value interface{}) error {
+func (c *Cache) Set(ctx context.Context, key string, value any) error {
 	if c.client == nil {
 		return nil // no-op
 	}
@@ -112,6 +112,6 @@ const (
 	CacheKeyTaskList  CacheKey = "tasks:list"    // tasks:list (user-specific keys to be added with auth)
 )
 
-func Key(format CacheKey, args ...interface{}) string {
+func Key(format CacheKey, args ...any) string {
 	return fmt.Sprintf(string(format), args...)
 }

@@ -34,7 +34,7 @@ func NewService(repo Repository, bufferSize int) *Service {
 	return s
 }
 
-func (s *Service) Log(ctx context.Context, action, resource, resourceID string, oldValues, newValues interface{}) {
+func (s *Service) Log(ctx context.Context, action, resource, resourceID string, oldValues, newValues any) {
 	actorID := shared.GetUserID(ctx)
 	if actorID == "" {
 		actorID = "system"
