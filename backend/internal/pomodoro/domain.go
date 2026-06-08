@@ -23,23 +23,22 @@ func (s SessionStatus) Valid() bool {
 	}
 }
 
-// NoiseConfig is a provision for future white noise integration.
-// Currently unused — the fields are accepted at session creation but ignored.
 type NoiseConfig struct {
 	Enabled bool   `json:"enabled"`
 	TrackID string `json:"track_id,omitempty"`
 }
 
 type PomodoroSession struct {
-	ID            string
-	Status        SessionStatus
-	FocusDuration time.Duration // e.g. 25 minutes
-	BreakDuration time.Duration // e.g. 5 minutes
-	CurrentCycle  int           // which pomodoro cycle (1-based), for long break tracking
-	StartedAt     time.Time     // shifted forward by pause duration on resume
-	PausedAt      *time.Time    // set on pause, cleared on resume
-	CompletedAt   *time.Time
-	NoiseConfig   *NoiseConfig // provision for white noise
+	ID                 string
+	Status             SessionStatus
+	FocusDuration      time.Duration
+	BreakDuration      time.Duration
+	CurrentCycle       int           // which pomodoro cycle, for long break tracking
+	AccumulatedElapsed time.Duration // holds elapsed from previous play/pauses
+	StartedAt          time.Time     // when the current segment started (session creation or last resume)
+	PausedAt           *time.Time    // set on pause (for display), cleared on resume
+	CompletedAt        *time.Time
+	NoiseConfig        *NoiseConfig
 }
 
 func NewSession(id string, focusMinutes, breakMinutes int, noise *NoiseConfig) (*PomodoroSession, error) {
@@ -56,21 +55,22 @@ func NewSession(id string, focusMinutes, breakMinutes int, noise *NoiseConfig) (
 	now := time.Now().UTC()
 
 	return &PomodoroSession{
-		ID:            id,
-		Status:        SessionRunning,
-		FocusDuration: time.Duration(focusMinutes) * time.Minute,
-		BreakDuration: time.Duration(breakMinutes) * time.Minute,
-		CurrentCycle:  1,
-		StartedAt:     now,
-		NoiseConfig:   noise,
+		ID:                 id,
+		Status:             SessionRunning,
+		FocusDuration:      time.Duration(focusMinutes) * time.Minute,
+		BreakDuration:      time.Duration(breakMinutes) * time.Minute,
+		CurrentCycle:       1,
+		AccumulatedElapsed: 0,
+		StartedAt:          now,
+		NoiseConfig:        noise,
 	}, nil
 }
 
 func (s *PomodoroSession) Elapsed() time.Duration {
-	if s.PausedAt != nil {
-		return s.PausedAt.Sub(s.StartedAt)
+	if s.Status == SessionRunning {
+		return s.AccumulatedElapsed + time.Since(s.StartedAt)
 	}
-	return time.Since(s.StartedAt)
+	return s.AccumulatedElapsed
 }
 
 func (s *PomodoroSession) Remaining() time.Duration {
@@ -86,6 +86,8 @@ func (s *PomodoroSession) Pause() error {
 		return fmt.Errorf("cannot pause a session that is %s", s.Status)
 	}
 	now := time.Now().UTC()
+
+	s.AccumulatedElapsed += now.Sub(s.StartedAt)
 	s.PausedAt = &now
 	s.Status = SessionPaused
 	return nil
@@ -95,9 +97,8 @@ func (s *PomodoroSession) Resume() error {
 	if s.Status != SessionPaused {
 		return fmt.Errorf("cannot resume a session that is %s", s.Status)
 	}
-	now := time.Now().UTC()
-	// Shift StartedAt forward by the pause duration so Elapsed() is continuous.
-	s.StartedAt = now.Add(-s.PausedAt.Sub(s.StartedAt))
+	// Start a new segment; AccumulatedElapsed already holds the elapsed from previous segments.
+	s.StartedAt = time.Now().UTC()
 	s.PausedAt = nil
 	s.Status = SessionRunning
 	return nil
@@ -109,8 +110,7 @@ func (s *PomodoroSession) Complete() error {
 	}
 	now := time.Now().UTC()
 	if s.Status == SessionRunning {
-		// Freeze elapsed at this moment by setting PausedAt.
-		s.PausedAt = &now
+		s.AccumulatedElapsed += now.Sub(s.StartedAt)
 	}
 	s.CompletedAt = &now
 	s.Status = SessionCompleted

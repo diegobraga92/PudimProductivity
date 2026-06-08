@@ -12,9 +12,6 @@ import (
 
 const timerTickInterval = 1 * time.Second
 
-// NoiseProvider is a provision for future white noise integration.
-// When white noise is added later, implement this interface and inject it
-// into PomodoroService. No changes to the pomodoro domain are needed.
 type NoiseProvider interface {
 	Play(ctx context.Context, trackID string) error
 	Stop(ctx context.Context) error
@@ -160,32 +157,26 @@ func (s *PomodoroService) startTimer() {
 	s.cancel = cancel
 
 	sessionID := s.current.ID
-	focusDuration := s.current.FocusDuration
 
 	go func() {
 		ticker := time.NewTicker(timerTickInterval)
 		defer ticker.Stop()
 
-		elapsed := time.Duration(0)
 		for {
 			select {
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				elapsed += timerTickInterval
-				if elapsed >= focusDuration {
-					s.mu.Lock()
-					// Only auto-complete if this session is still the current one and running
-					if s.current != nil && s.current.ID == sessionID && s.current.Status == SessionRunning {
-						now := time.Now().UTC()
-						s.current.PausedAt = &now
-						s.current.CompletedAt = &now
-						s.current.Status = SessionCompleted
+				s.mu.Lock()
+				if s.current != nil && s.current.ID == sessionID && s.current.Status == SessionRunning {
+					if s.current.Remaining() <= 0 {
+						_ = s.current.Complete()
 						log.Info().Str("session_id", sessionID).Msg("pomodoro session auto-completed")
+						s.mu.Unlock()
+						return
 					}
-					s.mu.Unlock()
-					return
 				}
+				s.mu.Unlock()
 			}
 		}
 	}()
