@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import {
   listTasks,
   deleteTask,
@@ -43,6 +43,10 @@ export default function TaskList() {
   const [newTodoTitle, setNewTodoTitle] = useState("");
   const [newHabitTitle, setNewHabitTitle] = useState("");
   const [newListName, setNewListName] = useState("");
+  const [weekOffset, setWeekOffset] = useState(0);
+  const handleWeekOffsetChange = useCallback((newOffset: number) => {
+    setWeekOffset(newOffset);
+  }, []);
 
   // Fetch unassigned one-off tasks
   const { data: todoTasks = [], isLoading: todoLoading, error: todoError } = useQuery<Task[]>({
@@ -66,7 +70,7 @@ export default function TaskList() {
   const error = todoError || habitError;
 
   // Fetch completions for all habit tasks using a single batch request
-  const weekDates = getWeekDates();
+  const weekDates = getWeekDates(weekOffset);
   const from = weekDates[0];
   const to = weekDates[6];
 
@@ -464,16 +468,18 @@ export default function TaskList() {
                   </div>
 
                   {/* Row 2: Completion buttons — primary interaction */}
-                  <div style={{ marginBottom: "0.35rem" }}>
-                    <WeekHeatmap
-                      recurrenceDays={task.recurrence_days ?? []}
-                      completions={taskCompletions}
-                      onToggleDay={(date, completed) => {
-                        habitToggleMutation.mutate({ taskId: task.id, date, completed });
-                      }}
-                      disabled={habitToggleMutation.isPending}
-                    />
-                  </div>
+                    <div style={{ marginBottom: "0.35rem" }}>
+                      <WeekHeatmap
+                        recurrenceDays={task.recurrence_days ?? []}
+                        completions={taskCompletions}
+                        onToggleDay={(date, completed) => {
+                          habitToggleMutation.mutate({ taskId: task.id, date, completed });
+                        }}
+                        disabled={habitToggleMutation.isPending}
+                        weekOffset={weekOffset}
+                        onWeekOffsetChange={handleWeekOffsetChange}
+                      />
+                    </div>
 
                   {/* Row 3: Compact progress bar + count */}
                   <div className="progress-bar-compact">

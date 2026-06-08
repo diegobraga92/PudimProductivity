@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useState, useCallback } from "react";
 import { listTasks, getAllTaskCompletions, type Task } from "../api/tasks";
 import { listTaskLists, type TaskList } from "../api/taskLists";
 import ProgressBar from "../components/ProgressBar";
@@ -10,6 +11,11 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ onNavigate }: DashboardProps) {
+  const [weekOffset, setWeekOffset] = useState(0);
+  const handleWeekOffsetChange = useCallback((newOffset: number) => {
+    setWeekOffset(newOffset);
+  }, []);
+
   const { data: todoTasks = [] } = useQuery<Task[]>({
     queryKey: ["tasks", "one-off"],
     queryFn: () => listTasks(undefined, "one-off"),
@@ -25,7 +31,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
     queryFn: listTaskLists,
   });
 
-  const weekDates = getWeekDates();
+  const weekDates = getWeekDates(weekOffset);
   const from = weekDates[0];
   const to = weekDates[6];
   const today = getToday();
@@ -151,6 +157,46 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
           </span>
         </div>
         <ProgressBar value={weeklyRate} variant="habit" />
+        {/* Week navigation */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginTop: "var(--space-sm)",
+            paddingTop: "var(--space-sm)",
+            borderTop: "1px solid var(--color-border-light)",
+          }}
+        >
+          <button
+            className="btn btn-ghost"
+            style={{ padding: "0.2rem 0.5rem", fontSize: "var(--font-size-sm)" }}
+            onClick={() => handleWeekOffsetChange(weekOffset - 1)}
+            aria-label="Previous week"
+          >
+            &larr; Prev Week
+          </button>
+          <span
+            style={{
+              fontSize: "var(--font-size-sm)",
+              fontWeight: 600,
+              color: "var(--color-text-secondary)",
+            }}
+          >
+            {weekOffset === 0
+              ? "This Week"
+              : `${weekDates[0]} — ${weekDates[6]}`}
+          </span>
+          <button
+            className="btn btn-ghost"
+            style={{ padding: "0.2rem 0.5rem", fontSize: "var(--font-size-sm)" }}
+            onClick={() => handleWeekOffsetChange(weekOffset + 1)}
+            disabled={weekOffset >= 0}
+            aria-label="Next week"
+          >
+            Next Week &rarr;
+          </button>
+        </div>
       </div>
 
       {/* Quick Overview Sections */}

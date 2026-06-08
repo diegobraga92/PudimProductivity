@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import {
   getTask,
   updateTask,
@@ -46,6 +46,10 @@ export default function TaskDetail({
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [weekOffset, setWeekOffset] = useState(0);
+  const handleWeekOffsetChange = useCallback((newOffset: number) => {
+    setWeekOffset(newOffset);
+  }, []);
 
   const {
     data: task,
@@ -57,7 +61,7 @@ export default function TaskDetail({
   });
 
   const isHabit = task?.recurrence_days && task.recurrence_days.length > 0;
-  const weekDates = getWeekDates();
+  const weekDates = getWeekDates(weekOffset);
   const from = weekDates[0];
   const to = weekDates[6];
 
@@ -340,6 +344,8 @@ export default function TaskDetail({
               habitToggleMutation.mutate(date);
             }}
             disabled={habitToggleMutation.isPending}
+            weekOffset={weekOffset}
+            onWeekOffsetChange={handleWeekOffsetChange}
           />
         </div>
       )}

@@ -24,6 +24,8 @@ interface WeekHeatmapProps {
   completions: string[];
   onToggleDay: (date: string, completed: boolean) => void;
   disabled?: boolean;
+  weekOffset?: number;
+  onWeekOffsetChange?: (newOffset: number) => void;
 }
 
 export default function WeekHeatmap({
@@ -31,8 +33,10 @@ export default function WeekHeatmap({
   completions,
   onToggleDay,
   disabled = false,
+  weekOffset = 0,
+  onWeekOffsetChange,
 }: WeekHeatmapProps) {
-  const weekDates = getWeekDates();
+  const weekDates = getWeekDates(weekOffset);
   const completedSet = new Set(completions);
   const today = getToday();
   const [animatingDate, setAnimatingDate] = useState<string | null>(null);
@@ -56,39 +60,82 @@ export default function WeekHeatmap({
     [onToggleDay]
   );
 
+  const isCurrentWeek = weekOffset === 0;
+
   return (
-    <div className="week-heatmap" role="group" aria-label="Weekly habit completion tracker">
-      {weekDates.map((date) => {
-        const dayName = getDayName(date);
-        const isScheduled = recurrenceDays.includes(dayName);
-        const isCompleted = completedSet.has(date);
-        const isToday = date === today;
-
-        let className = "week-day-btn";
-        if (isCompleted) className += " completed";
-        else if (isScheduled) className += " scheduled";
-        if (isToday) className += " today";
-        if (animatingDate === date) className += " animate-complete";
-
-        const label = `${dayName} ${date}${isCompleted ? " — completed" : isScheduled ? " — scheduled" : " — not scheduled"}`;
-
-        return (
+    <div>
+      {/* Week navigation */}
+      {onWeekOffsetChange && (
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "var(--space-sm)",
+          }}
+        >
           <button
-            key={date}
-            className={className}
-            onClick={() => {
-              if (isScheduled || isCompleted) {
-                handleClick(date, isCompleted);
-              }
-            }}
-            disabled={disabled || (!isScheduled && !isCompleted)}
-            aria-label={label}
-            aria-pressed={isCompleted}
+            className="btn btn-ghost"
+            style={{ padding: "0.2rem 0.5rem", fontSize: "var(--font-size-sm)" }}
+            onClick={() => onWeekOffsetChange(weekOffset - 1)}
+            aria-label="Previous week"
           >
-            {DAY_SHORT[dayName]}
+            &larr; Prev
           </button>
-        );
-      })}
+          <span
+            style={{
+              fontSize: "var(--font-size-sm)",
+              fontWeight: 600,
+              color: "var(--color-text-secondary)",
+            }}
+          >
+            {isCurrentWeek ? "This Week" : `${weekDates[0]} — ${weekDates[6]}`}
+          </span>
+          <button
+            className="btn btn-ghost"
+            style={{ padding: "0.2rem 0.5rem", fontSize: "var(--font-size-sm)" }}
+            onClick={() => onWeekOffsetChange(weekOffset + 1)}
+            disabled={weekOffset >= 0}
+            aria-label="Next week"
+          >
+            Next &rarr;
+          </button>
+        </div>
+      )}
+
+      <div className="week-heatmap" role="group" aria-label="Weekly habit completion tracker">
+        {weekDates.map((date) => {
+          const dayName = getDayName(date);
+          const isScheduled = recurrenceDays.includes(dayName);
+          const isCompleted = completedSet.has(date);
+          const isToday = date === today;
+
+          let className = "week-day-btn";
+          if (isCompleted) className += " completed";
+          else if (isScheduled) className += " scheduled";
+          if (isToday) className += " today";
+          if (animatingDate === date) className += " animate-complete";
+
+          const label = `${dayName} ${date}${isCompleted ? " — completed" : isScheduled ? " — scheduled" : " — not scheduled"}`;
+
+          return (
+            <button
+              key={date}
+              className={className}
+              onClick={() => {
+                if (isScheduled || isCompleted) {
+                  handleClick(date, isCompleted);
+                }
+              }}
+              disabled={disabled || (!isScheduled && !isCompleted)}
+              aria-label={label}
+              aria-pressed={isCompleted}
+            >
+              {DAY_SHORT[dayName]}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

@@ -11,15 +11,20 @@ function formatLocalDate(d: Date): string {
 }
 
 /**
- * Get ISO date strings (YYYY-MM-DD) for the current week (Monday to Sunday),
+ * Get ISO date strings (YYYY-MM-DD) for a given week (Monday to Sunday),
  * using local timezone.
+ *
+ * @param weekOffset - Offset relative to the current week:
+ *   0 (default) = current week,
+ *  -1 = previous week,
+ *  +1 = next week, etc.
  */
-export function getWeekDates(): string[] {
+export function getWeekDates(weekOffset = 0): string[] {
   const dates: string[] = [];
   const now = new Date();
   const dayOfWeek = now.getDay();
   const monday = new Date(now);
-  monday.setDate(now.getDate() - ((dayOfWeek + 6) % 7));
+  monday.setDate(now.getDate() - ((dayOfWeek + 6) % 7) + weekOffset * 7);
   for (let i = 0; i < 7; i++) {
     const d = new Date(monday);
     d.setDate(monday.getDate() + i);
