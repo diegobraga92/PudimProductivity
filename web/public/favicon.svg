@@ -1,14 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <!-- Background circle -->
-  <circle cx="32" cy="32" r="30" fill="#FFF3E0" stroke="#E65100" stroke-width="2"/>
-  <!-- Caramel sauce on top -->
-  <path d="M16 28 Q24 18 32 28 Q40 18 48 28" fill="#BF360C"/>
-  <!-- Pudim body -->
-  <ellipse cx="32" cy="40" rx="14" ry="10" fill="#FFB74D"/>
-  <path d="M18 28 Q18 48 32 50 Q46 48 46 28" fill="#FFB74D"/>
-  <!-- Highlight/shine -->
-  <ellipse cx="28" cy="34" rx="4" ry="2" fill="#FFE0B2" opacity="0.6"/>
-  <!-- Caramel drip -->
-  <path d="M24 28 Q23 33 24 35" fill="none" stroke="#BF360C" stroke-width="1.5" stroke-linecap="round"/>
-  <path d="M40 28 Q41 32 40 34" fill="none" stroke="#BF360C" stroke-width="1.5" stroke-linecap="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FFD54F"/>
+      <stop offset="100%" stop-color="#FFB300"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Pudding -->
+  <ellipse cx="32" cy="40" rx="20" ry="14" fill="#D08A3C"/>
+  <path d="M16 24 C16 14, 48 14, 48 24 L44 40 L20 40 Z" fill="url(#g)"/>
+
+  <!-- Productivity: stylized P -->
+  <path d="M26 18 V46" stroke="#5D4037" stroke-width="5" stroke-linecap="round"/>
+  <path d="M26 18 H38 A7 7 0 0 1 38 32 H26" fill="none" stroke="#5D4037" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
