@@ -15,7 +15,6 @@ import (
 
 const defaultCompletionsLookbackDays = 7
 
-// Service defines the interface used by the task handler.
 type Service interface {
 	CreateTask(ctx context.Context, title string, recurrenceDays []string) (*Task, error)
 	CreateTaskWithList(ctx context.Context, title string, recurrenceDays []string, listID *string) (*Task, error)

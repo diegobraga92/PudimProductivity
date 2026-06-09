@@ -8,6 +8,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// TODO: Add wiring
+
 const cacheOpTimeout = 3 * time.Second
 
 type CachedTaskService struct {
@@ -22,15 +24,8 @@ func NewCachedTaskService(service *TaskService, cache *shared.Cache) *CachedTask
 	}
 }
 
-// Cache key: tasks:list?status={status}&type={type}
 func (s *CachedTaskService) ListTasks(ctx context.Context, statusFilter, typeFilter string) ([]*Task, error) {
-	cacheKey := "tasks:list"
-	if statusFilter != "" {
-		cacheKey += "?status=" + statusFilter
-	}
-	if typeFilter != "" {
-		cacheKey += "?type=" + typeFilter
-	}
+	const cacheKey = "tasks:list"
 
 	var cached []*Task
 	found, err := s.cache.Get(ctx, cacheKey, &cached)
@@ -88,7 +83,7 @@ func (s *CachedTaskService) CreateTask(ctx context.Context, title string, recurr
 	if err != nil {
 		return nil, err
 	}
-	s.invalidateAll(ctx)
+	s.invalidateList()
 	return task, nil
 }
 
@@ -97,7 +92,7 @@ func (s *CachedTaskService) CreateTaskWithList(ctx context.Context, title string
 	if err != nil {
 		return nil, err
 	}
-	s.invalidateAll(ctx)
+	s.invalidateList()
 	return task, nil
 }
 
@@ -106,7 +101,8 @@ func (s *CachedTaskService) UpdateTask(ctx context.Context, id string, title *st
 	if err != nil {
 		return nil, err
 	}
-	s.invalidateAll(ctx, id)
+	s.invalidateList()
+	s.invalidateTask(id)
 	return task, nil
 }
 
@@ -114,7 +110,8 @@ func (s *CachedTaskService) DeleteTask(ctx context.Context, id string) error {
 	if err := s.TaskService.DeleteTask(ctx, id); err != nil {
 		return err
 	}
-	s.invalidateAll(ctx, id)
+	s.invalidateList()
+	s.invalidateTask(id)
 	return nil
 }
 
@@ -123,7 +120,7 @@ func (s *CachedTaskService) CompleteTask(ctx context.Context, taskID, dateStr st
 	if err != nil {
 		return nil, err
 	}
-	s.invalidateAll(ctx, taskID)
+	s.invalidateList()
 	return comp, nil
 }
 
@@ -131,22 +128,24 @@ func (s *CachedTaskService) UncompleteTask(ctx context.Context, taskID, dateStr 
 	if err := s.TaskService.UncompleteTask(ctx, taskID, dateStr); err != nil {
 		return err
 	}
-	s.invalidateAll(ctx, taskID)
+	s.invalidateList()
 	return nil
 }
 
-func (s *CachedTaskService) invalidateAll(ctx context.Context, taskIDs ...string) {
-	go func() {
-		cacheCtx, cancel := context.WithTimeout(context.Background(), cacheOpTimeout)
-		defer cancel()
-		if err := s.cache.Del(cacheCtx, "tasks:list"); err != nil {
-			log.Warn().Err(err).Msg("failed to invalidate tasks list cache")
-		}
-		for _, id := range taskIDs {
-			key := shared.Key(shared.CacheKeyTask, id)
-			if err := s.cache.Del(cacheCtx, key); err != nil {
-				log.Warn().Err(err).Str("cache_key", key).Msg("failed to invalidate task cache")
-			}
-		}
-	}()
+// Uses write-invalidate pattern, since we're unsure of what's stale after changes
+func (s *CachedTaskService) invalidateList() {
+	cacheCtx, cancel := context.WithTimeout(context.Background(), cacheOpTimeout)
+	defer cancel()
+	if err := s.cache.Del(cacheCtx, "tasks:list"); err != nil {
+		log.Warn().Err(err).Msg("failed to invalidate tasks list cache")
+	}
+}
+
+func (s *CachedTaskService) invalidateTask(id string) {
+	cacheCtx, cancel := context.WithTimeout(context.Background(), cacheOpTimeout)
+	defer cancel()
+	key := shared.Key(shared.CacheKeyTask, id)
+	if err := s.cache.Del(cacheCtx, key); err != nil {
+		log.Warn().Err(err).Str("cache_key", key).Msg("failed to invalidate task cache")
+	}
 }

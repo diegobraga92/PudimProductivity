@@ -63,6 +63,7 @@ func main() {
 	// Setup router
 	r := chi.NewRouter()
 
+	// TODO: Add Metrics
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Recoverer)
