@@ -4,7 +4,7 @@ import { listTasks, getAllTaskCompletions, type Task } from "../api/tasks";
 import { listTaskLists, type TaskList } from "../api/taskLists";
 import ProgressBar from "../components/ProgressBar";
 import { computeStreaks } from "../utils/streaks";
-import { getWeekDates, getToday } from "../utils/dates";
+import { getWeekDates, getToday, formatWeekRange } from "../utils/dates";
 
 interface DashboardProps {
   onNavigate: (view: string, taskId?: string) => void;
@@ -185,7 +185,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
           >
             {weekOffset === 0
               ? "This Week"
-              : `${weekDates[0]} — ${weekDates[6]}`}
+              : formatWeekRange(weekDates)}
           </span>
           <button
             className="btn btn-ghost"

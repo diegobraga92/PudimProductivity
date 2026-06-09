@@ -28,7 +28,7 @@ import WeekHeatmap from "../components/WeekHeatmap";
 import StreakBadge from "../components/StreakBadge";
 import ProgressBar from "../components/ProgressBar";
 import { computeStreaks } from "../utils/streaks";
-import { getWeekDates, getToday } from "../utils/dates";
+import { getWeekDates, getToday, formatWeekRange } from "../utils/dates";
 import { playCompletionSound } from "../utils/sounds";
 
 type View = "list" | "create" | "detail";
@@ -374,6 +374,47 @@ export default function TaskList() {
             </h2>
           </div>
 
+          {/* Shared week navigation for all habits */}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: "var(--space-md)",
+              padding: "0.4rem 0",
+              borderBottom: "1px solid var(--color-border-light)",
+            }}
+          >
+            <button
+              className="btn btn-ghost"
+              style={{ padding: "0.2rem 0.5rem", fontSize: "var(--font-size-sm)" }}
+              onClick={() => handleWeekOffsetChange(weekOffset - 1)}
+              aria-label="Previous week"
+            >
+              &larr; Prev Week
+            </button>
+            <span
+              style={{
+                fontSize: "var(--font-size-sm)",
+                fontWeight: 600,
+                color: "var(--color-text-secondary)",
+              }}
+            >
+              {weekOffset === 0
+                ? "This Week"
+                : formatWeekRange(weekDates)}
+            </span>
+            <button
+              className="btn btn-ghost"
+              style={{ padding: "0.2rem 0.5rem", fontSize: "var(--font-size-sm)" }}
+              onClick={() => handleWeekOffsetChange(weekOffset + 1)}
+              disabled={weekOffset >= 0}
+              aria-label="Next week"
+            >
+              Next Week &rarr;
+            </button>
+          </div>
+
           {/* Quick-add for habits */}
           <form
             onSubmit={(e) => {
@@ -477,7 +518,6 @@ export default function TaskList() {
                         }}
                         disabled={habitToggleMutation.isPending}
                         weekOffset={weekOffset}
-                        onWeekOffsetChange={handleWeekOffsetChange}
                       />
                     </div>
 

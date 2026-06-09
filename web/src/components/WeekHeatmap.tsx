@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import type { RecurrenceDay } from "../api/tasks";
-import { getWeekDates, getToday } from "../utils/dates";
+import { getWeekDates, getToday, formatWeekRange } from "../utils/dates";
 
 const DAY_ORDER: RecurrenceDay[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 const DAY_SHORT: Record<RecurrenceDay, string> = {
@@ -89,7 +89,7 @@ export default function WeekHeatmap({
               color: "var(--color-text-secondary)",
             }}
           >
-            {isCurrentWeek ? "This Week" : `${weekDates[0]} — ${weekDates[6]}`}
+            {isCurrentWeek ? "This Week" : formatWeekRange(weekDates)}
           </span>
           <button
             className="btn btn-ghost"
