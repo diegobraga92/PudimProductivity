@@ -1,5 +1,6 @@
 # Stage 1: Build
-FROM node:20-alpine AS builder  # https://hub.docker.com/_/node/tags?name=alpine
+# https://hub.docker.com/_/node/tags?name=alpine
+FROM node:20-alpine AS builder
 
 WORKDIR /build
 
@@ -10,7 +11,8 @@ COPY . .
 RUN npm run build
 
 # Stage 2: Serve with nginx
-FROM nginx:1.27-alpine  # https://hub.docker.com/_/nginx/tags?name=alpine
+# https://hub.docker.com/_/nginx/tags?name=alpine
+FROM nginx:1.27-alpine
 
 RUN apk add --no-cache ca-certificates tzdata
 
