@@ -42,12 +42,19 @@ cleanup() {
     if [ -n "${BACKEND_PID:-}" ]; then
         log_info "Stopping backend (PID $BACKEND_PID)..."
         kill "$BACKEND_PID" 2>/dev/null || true
+        sleep 2
+        kill -9 "$BACKEND_PID" 2>/dev/null || true
         wait "$BACKEND_PID" 2>/dev/null || true
     fi
+
+    # Broad fallback: catch any Go backend process that escaped the PID kill
+    pkill -9 -f "go run.*cmd/server" 2>/dev/null || true
 
     if [ -n "${FRONTEND_PID:-}" ]; then
         log_info "Stopping frontend (PID $FRONTEND_PID)..."
         kill "$FRONTEND_PID" 2>/dev/null || true
+        sleep 2
+        kill -9 "$FRONTEND_PID" 2>/dev/null || true
         wait "$FRONTEND_PID" 2>/dev/null || true
     fi
 

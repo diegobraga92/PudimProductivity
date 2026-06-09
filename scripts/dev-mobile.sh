@@ -68,21 +68,30 @@ cleanup() {
     echo ""
     log_info "Shutting down..."
 
-    # 1. Stop the emulator (via ADB + PID fallback)
+    # 1. Stop the emulator (via ADB + PID + force-kill children)
     if [ "${EMULATOR_STARTED:-}" = "true" ]; then
         log_info "Stopping emulator..."
+        # Graceful shutdown via ADB
         adb emu kill 2>/dev/null || true
         if [ -n "${EMULATOR_PID:-}" ]; then
+            # Kill child QEMU processes first
+            pkill -P "$EMULATOR_PID" 2>/dev/null || true
+            # Polite SIGTERM
             kill "$EMULATOR_PID" 2>/dev/null || true
+            sleep 2
+            # Force SIGKILL if still alive
+            kill -9 "$EMULATOR_PID" 2>/dev/null || true
         fi
+        # Catch any orphaned QEMU processes by AVD name
+        pkill -9 -f "qemu.*${AVD_NAME}" 2>/dev/null || true
     fi
 
     # 2. Stop the backend stack launched by dev.sh
     log_info "Stopping backend (go process)..."
-    pkill -f "go run.*cmd/server" 2>/dev/null || true
+    pkill -9 -f "go run.*cmd/server" 2>/dev/null || true
 
     log_info "Stopping frontend (vite)..."
-    pkill -f "vite" 2>/dev/null || true
+    pkill -9 -f "vite" 2>/dev/null || true
 
     log_info "Stopping Docker services..."
     docker compose -f "$ROOT_DIR/docker-compose.yml" down 2>/dev/null || true
@@ -91,11 +100,6 @@ cleanup() {
     if [ -n "${DEV_PID:-}" ]; then
         kill "$DEV_PID" 2>/dev/null || true
         wait "$DEV_PID" 2>/dev/null || true
-    fi
-
-    # 4. Final check for any runaway emulator/qemu processes
-    if [ -n "${EMULATOR_PID:-}" ]; then
-        kill "$EMULATOR_PID" 2>/dev/null || true
     fi
 
     log_ok "All services stopped. Goodbye!"
@@ -121,9 +125,9 @@ if [ "$SKIP_EMULATOR" = false ]; then
         log_warn "  Connect a device via USB or use --no-emulator to skip."
     fi
 
-    DEVICE_COUNT=$("$ANDROID_HOME/platform-tools/adb" devices 2>/dev/null | grep -v "List of devices" | grep -v "^$" | grep -v "offline" | wc -l || echo 0)
+    DEVICE_COUNT=$("$ANDROID_HOME/platform-tools/adb" devices 2>/dev/null | grep -v "List of devices" | grep -v "^$" | grep -v "offline" | wc -l | tr -d '[:space:]' || echo 0)
 
-    if [ "$DEVICE_COUNT" -gt 0 ]; then
+    if [ "${DEVICE_COUNT:-0}" -gt 0 ]; then
         log_ok "Device/emulator already connected, skipping boot."
     else
         AVD_LIST=$("$ANDROID_HOME/emulator/emulator" -list-avds 2>/dev/null)
