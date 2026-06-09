@@ -26,15 +26,15 @@ func GetUserRole(ctx context.Context) string {
 	return ""
 }
 
-// In development, this reads X-User-ID and X-User-Role headers.
-// In production, this would validate JWT tokens or session cookies.
+// TODO: In development, this reads X-User-ID and X-User-Role headers.
+// TODO: In production, this would validate JWT tokens or session cookies.
 func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		userID := r.Header.Get("X-User-ID")
 		userRole := r.Header.Get("X-User-Role")
 
 		if userID == "" {
-			// Most endpoints should reject this
+			// TODO: Most endpoints should reject this
 			userID = "anonymous"
 			userRole = "anonymous"
 		}

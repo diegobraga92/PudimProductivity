@@ -46,16 +46,16 @@ func NewCache(redisURL string, ttl time.Duration) *Cache {
 
 func (c *Cache) Get(ctx context.Context, key string, dest any) (bool, error) {
 	if c.client == nil {
-		return false, nil // cache miss (no Redis)
+		return false, nil
 	}
 
 	data, err := c.client.Get(ctx, key).Bytes()
 	if err != nil {
 		if err == redis.Nil {
-			return false, nil // cache miss
+			return false, nil
 		}
 		log.Warn().Err(err).Str("key", key).Msg("Redis GET error")
-		return false, nil // fail open — treat as miss
+		return false, nil
 	}
 
 	if err := json.Unmarshal(data, dest); err != nil {
@@ -68,7 +68,7 @@ func (c *Cache) Get(ctx context.Context, key string, dest any) (bool, error) {
 
 func (c *Cache) Set(ctx context.Context, key string, value any) error {
 	if c.client == nil {
-		return nil // no-op
+		return nil
 	}
 
 	data, err := json.Marshal(value)
@@ -86,7 +86,7 @@ func (c *Cache) Set(ctx context.Context, key string, value any) error {
 
 func (c *Cache) Del(ctx context.Context, keys ...string) error {
 	if c.client == nil {
-		return nil // no-op
+		return nil
 	}
 
 	if err := c.client.Del(ctx, keys...).Err(); err != nil {
@@ -108,8 +108,8 @@ func (c *Cache) Close() error {
 type CacheKey string
 
 const (
-	CacheKeyTask      CacheKey = "task:%s"       // task:{id}
-	CacheKeyTaskList  CacheKey = "tasks:list"    // tasks:list (user-specific keys to be added with auth)
+	CacheKeyTask     CacheKey = "task:%s"    // task:{id}
+	CacheKeyTaskList CacheKey = "tasks:list" // tasks:list (user-specific keys to be added with auth)
 )
 
 func Key(format CacheKey, args ...any) string {

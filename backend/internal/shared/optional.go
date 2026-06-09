@@ -2,10 +2,8 @@ package shared
 
 import "encoding/json"
 
-// Optional is a generic wrapper that distinguishes between a field not being
-// present in JSON (zero value, Valid=false) and being explicitly set to null
-// (Valid=true, Value=nil). Use Ptr() to convert to a double-pointer (**T)
-// for APIs that need to distinguish "no change" from "set to null".
+// Generic wrapper to distinguish fields not present in JSON and explicitly set to null
+// (e.g. Valid=true, Value=nil) for APIs that need to distinguish "no change" from "set to null".
 type Optional[T any] struct {
 	Value *T
 	Valid bool
@@ -20,7 +18,6 @@ func (o Optional[T]) Ptr() **T {
 	return &o.Value
 }
 
-// UnmarshalJSON implements json.Unmarshaler.
 func (o *Optional[T]) UnmarshalJSON(data []byte) error {
 	o.Valid = true
 	if string(data) == "null" {
