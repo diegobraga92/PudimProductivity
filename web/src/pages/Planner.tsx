@@ -42,8 +42,15 @@ const HOURS = Array.from({ length: 16 }, (_, i) => {
   };
 });
 
+function sanitizeTime(t: string): string {
+  // <input type="time"> can return "14:00", "14:00:00", or "14:00:00.000000"
+  // Normalize to HH:MM
+  const parts = t.split(":");
+  return `${parts[0]}:${parts[1]}`;
+}
+
 function parseTimeToMinutes(t: string): number {
-  const [h, m] = t.split(":").map(Number);
+  const [h, m] = sanitizeTime(t).split(":").map(Number);
   return h * 60 + m;
 }
 
@@ -140,8 +147,8 @@ export default function Planner() {
         req: {
           title: formTitle.trim(),
           days: formDays,
-          start_time: formStartTime,
-          end_time: formEndTime,
+          start_time: sanitizeTime(formStartTime),
+          end_time: sanitizeTime(formEndTime),
           color: formColor,
         },
       });
@@ -149,8 +156,8 @@ export default function Planner() {
       createMutation.mutate({
         title: formTitle.trim(),
         days: formDays,
-        start_time: formStartTime,
-        end_time: formEndTime,
+        start_time: sanitizeTime(formStartTime),
+        end_time: sanitizeTime(formEndTime),
         color: formColor,
       });
     }
