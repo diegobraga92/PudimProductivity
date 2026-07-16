@@ -18,6 +18,7 @@ import (
 	"github.com/diegobraga92/pudimproductivity/backend/internal/audit"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/db"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/featureflag"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/planner"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/pomodoro"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/shared"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/task"
@@ -91,6 +92,10 @@ func main() {
 
 	if pool != nil {
 		featureflag.RegisterFeatureFlagRoutes(r, pool)
+	}
+
+	if pool != nil {
+		planner.RegisterPlannerRoutes(r, pool)
 	}
 
 	pomodoro.RegisterPomodoroRoutes(r, nil)

@@ -3,11 +3,12 @@ import { useState } from "react";
 import { getHealth, type HealthResponse } from "./api/client";
 import TaskList from "./pages/TaskList";
 import Dashboard from "./pages/Dashboard";
+import Planner from "./pages/Planner";
 import Pomodoro from "./pages/Pomodoro";
 import Soundscape from "./pages/Soundscape";
 import "./styles.css";
 
-type Page = "dashboard" | "tasks" | "pomodoro" | "soundscape" | "health";
+type Page = "dashboard" | "planner" | "tasks" | "pomodoro" | "soundscape" | "health";
 
 function App() {
   const [page, setPage] = useState<Page>("dashboard");
@@ -71,6 +72,7 @@ function App() {
           <nav style={{ display: "flex", gap: "0.25rem", height: "100%", alignItems: "stretch" }}>
             {[
               { id: "dashboard" as Page, label: "Dashboard", icon: "🏠" },
+              { id: "planner" as Page, label: "Planner", icon: "📅" },
               { id: "tasks" as Page, label: "Tasks", icon: "📋" },
               { id: "pomodoro" as Page, label: "Timer", icon: "🍅" },
               { id: "soundscape" as Page, label: "Sounds", icon: "🎵" },
@@ -131,6 +133,8 @@ function App() {
       <main style={{ flex: 1, padding: "var(--space-lg) 0" }}>
         <div className="container">
           {page === "dashboard" && <Dashboard onNavigate={handleNavigate} />}
+
+          {page === "planner" && <Planner />}
 
           {page === "tasks" && <TaskList />}
 
