@@ -132,8 +132,8 @@ export default function Planner() {
     setModal({ entry });
     setFormTitle(entry.title);
     setFormDays([...entry.days]);
-    setFormStartTime(entry.start_time);
-    setFormEndTime(entry.end_time);
+    setFormStartTime(sanitizeTime(entry.start_time));
+    setFormEndTime(sanitizeTime(entry.end_time));
     setFormColor(entry.color);
   }, []);
 
