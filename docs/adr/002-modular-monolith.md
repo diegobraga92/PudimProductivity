@@ -38,6 +38,7 @@ internal/{module}/
 | `task` | `shared` | Service interface, TaskResponse, ToTaskResponse |
 | `tasklist` | `shared`, `task` (Service interface) | Handler |
 | `pomodoro` | `shared` | — |
+| `planner` | `shared` | — |
 | `featureflag` | `shared` | Service |
 | `audit` | `shared` | Logger interface |
 

@@ -241,6 +241,7 @@ These are centralised here to emphasise their importance. Each is introduced at 
 - [x] Task lists grouping (named collections) across backend, web, mobile
 - [x] Pomodoro / Focus timer backend and web UI
 - [x] Habit completions with streak tracking, heatmap, progress bars
+- [x] Weekly planner with time-blocked calendar grid (CRUD API + React UI)
 - [x] CI/CD pipelines per platform (lint, test, build)
 - [ ] Notifications delivered via push + in‑app toasts (Phase 3 — not started)
 - [ ] WebSocket real-time sync (Phase 2 — not started)
