@@ -16,6 +16,8 @@ import com.pudimproductivity.api.TaskList
 import com.pudimproductivity.api.UpdateTaskListRequest
 import com.pudimproductivity.api.UpdateTaskRequest
 import com.pudimproductivity.api.taskService
+import com.pudimproductivity.ui.components.ProgressBar
+import com.pudimproductivity.ui.components.ProgressVariant
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -52,6 +54,9 @@ fun TaskListDetailScreen(
     LaunchedEffect(Unit) {
         loadData()
     }
+
+    val doneCount = tasks.count { it.status == "done" }
+    val progress = if (tasks.isNotEmpty()) (doneCount * 100) / tasks.size else 0
 
     Scaffold(
         topBar = {
@@ -91,6 +96,43 @@ fun TaskListDetailScreen(
                 .padding(padding)
                 .padding(16.dp)
         ) {
+            // Progress bar
+            if (tasks.isNotEmpty()) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Progress",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = "$doneCount/${tasks.size}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        ProgressBar(
+                            value = progress,
+                            variant = ProgressVariant.TODO,
+                            height = 6.dp,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
             // Rename form
             if (editingName) {
                 Row(
@@ -232,6 +274,23 @@ fun TaskListDetailScreen(
                                             MaterialTheme.colorScheme.onSurface,
                                         modifier = Modifier.weight(1f)
                                     )
+                                    // Per-task delete button
+                                    TextButton(
+                                        onClick = {
+                                            scope.launch {
+                                                try {
+                                                    ApiClient.taskService.deleteTask(task.id)
+                                                    loadData()
+                                                } catch (_: Exception) { }
+                                            }
+                                        }
+                                    ) {
+                                        Text(
+                                            "✕",
+                                            color = MaterialTheme.colorScheme.error,
+                                            style = MaterialTheme.typography.labelSmall
+                                        )
+                                    }
                                 }
                             }
                         }

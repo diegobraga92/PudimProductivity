@@ -3,10 +3,12 @@ package com.pudimproductivity.ui.screens
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.pudimproductivity.api.ApiClient
 import com.pudimproductivity.api.CreateTaskRequest
+import com.pudimproductivity.api.TaskList
 import com.pudimproductivity.api.taskService
 import kotlinx.coroutines.launch
 
@@ -20,6 +22,7 @@ private val DAYS = listOf(
     "sun" to "Sun"
 )
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TaskCreateScreen(
     onCreated: () -> Unit,
@@ -29,8 +32,18 @@ fun TaskCreateScreen(
     var title by remember { mutableStateOf("") }
     var isHabit by remember { mutableStateOf(false) }
     var selectedDays by remember { mutableStateOf(setOf<String>()) }
+    var selectedListId by remember { mutableStateOf<String?>(null) }
+    var taskLists by remember { mutableStateOf<List<TaskList>>(emptyList()) }
+    var listDropdownExpanded by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var isSubmitting by remember { mutableStateOf(false) }
+
+    // Load task lists for assignment
+    LaunchedEffect(Unit) {
+        try {
+            taskLists = ApiClient.taskService.listTaskLists()
+        } catch (_: Exception) { }
+    }
 
     Column(
         modifier = Modifier
@@ -56,7 +69,7 @@ fun TaskCreateScreen(
         Spacer(modifier = Modifier.height(12.dp))
 
         // Habit toggle
-        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Checkbox(
                 checked = isHabit,
                 onCheckedChange = {
@@ -98,6 +111,54 @@ fun TaskCreateScreen(
             }
         }
 
+        // List assignment dropdown
+        if (taskLists.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = "Add to list (optional):",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+
+            ExposedDropdownMenuBox(
+                expanded = listDropdownExpanded,
+                onExpandedChange = { listDropdownExpanded = it }
+            ) {
+                OutlinedTextField(
+                    value = taskLists.find { it.id == selectedListId }?.name ?: "None",
+                    onValueChange = {},
+                    readOnly = true,
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = listDropdownExpanded) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor()
+                )
+                ExposedDropdownMenu(
+                    expanded = listDropdownExpanded,
+                    onDismissRequest = { listDropdownExpanded = false }
+                ) {
+                    // Option to clear selection
+                    DropdownMenuItem(
+                        text = { Text("None") },
+                        onClick = {
+                            selectedListId = null
+                            listDropdownExpanded = false
+                        }
+                    )
+                    taskLists.forEach { list ->
+                        DropdownMenuItem(
+                            text = { Text(list.name) },
+                            onClick = {
+                                selectedListId = list.id
+                                listDropdownExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+        }
+
         if (error != null) {
             Text(
                 text = error!!,
@@ -126,7 +187,8 @@ fun TaskCreateScreen(
                             ApiClient.taskService.createTask(
                                 CreateTaskRequest(
                                     title = title.trim(),
-                                    recurrence_days = if (isHabit) selectedDays.toList() else null
+                                    recurrence_days = if (isHabit) selectedDays.toList() else null,
+                                    list_id = selectedListId
                                 )
                             )
                             onCreated()

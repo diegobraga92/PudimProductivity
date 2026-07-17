@@ -120,6 +120,13 @@ interface TaskService {
         @Path("listId") listId: String,
         @Query("type") type: String? = null
     ): List<Task>
+
+    // Batch completions
+    @GET("tasks/completions")
+    suspend fun getAllTaskCompletions(
+        @Query("from") from: String? = null,
+        @Query("to") to: String? = null
+    ): List<TaskCompletion>
 }
 
 /**

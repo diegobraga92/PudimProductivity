@@ -8,32 +8,26 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.pudimproductivity.api.ApiClient
 import com.pudimproductivity.api.Task
 import com.pudimproductivity.api.TaskCompletion
 import com.pudimproductivity.api.UpdateTaskRequest
 import com.pudimproductivity.api.taskService
+import com.pudimproductivity.ui.components.ProgressBar
+import com.pudimproductivity.ui.components.ProgressVariant
+import com.pudimproductivity.ui.components.StreakBadge
+import com.pudimproductivity.ui.components.WeekHeatmap
+import com.pudimproductivity.utils.computeStreaks
+import com.pudimproductivity.utils.getToday
+import com.pudimproductivity.utils.getWeekDates
 import kotlinx.coroutines.launch
-import java.time.DayOfWeek
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 
 private val DAY_ORDER = listOf("mon", "tue", "wed", "thu", "fri", "sat", "sun")
 private val DAY_LABELS = mapOf(
     "mon" to "Monday", "tue" to "Tuesday", "wed" to "Wednesday",
     "thu" to "Thursday", "fri" to "Friday", "sat" to "Saturday", "sun" to "Sunday"
 )
-private val DAY_SHORT = mapOf(
-    "mon" to "Mon", "tue" to "Tue", "wed" to "Wed",
-    "thu" to "Thu", "fri" to "Fri", "sat" to "Sat", "sun" to "Sun"
-)
-
-private fun getWeekDates(): List<String> {
-    val today = LocalDate.now()
-    val monday = today.with(DayOfWeek.MONDAY)
-    return (0..6).map { monday.plusDays(it.toLong()).format(DateTimeFormatter.ISO_LOCAL_DATE) }
-}
 
 private fun getDayName(dateStr: String): String {
     val date = LocalDate.parse(dateStr)
@@ -55,6 +49,7 @@ fun TaskDetailScreen(
     var error by remember { mutableStateOf<String?>(null) }
     var isEditing by remember { mutableStateOf(false) }
     var editTitle by remember { mutableStateOf("") }
+    var weekOffset by remember { mutableStateOf(0) }
 
     fun loadTask() {
         scope.launch {
@@ -65,7 +60,7 @@ fun TaskDetailScreen(
                 // Load completions if habit
                 val t = task
                 if (t != null && t.recurrence_days != null && t.recurrence_days.isNotEmpty()) {
-                    val weekDates = getWeekDates()
+                    val weekDates = getWeekDates(weekOffset)
                     completions = ApiClient.taskService.getTaskCompletions(
                         taskId, weekDates.first(), weekDates.last()
                     )
@@ -82,9 +77,28 @@ fun TaskDetailScreen(
         loadTask()
     }
 
+    // Reload when week changes
+    LaunchedEffect(weekOffset) {
+        if (task != null && task!!.recurrence_days?.isNotEmpty() == true) {
+            loadTask()
+        }
+    }
+
     val isHabit = task?.recurrence_days != null && task?.recurrence_days?.isNotEmpty() == true
-    val completedDates = completions.map { it.completed_date }.toSet()
-    val weekDates = getWeekDates()
+    val completionsList = completions.map { it.completed_date }
+    val weekDates = getWeekDates(weekOffset)
+    val streakResult = computeStreaks(completionsList)
+    val today = getToday()
+
+    // Compute weekly progress
+    val scheduledDays = task?.recurrence_days ?: emptyList()
+    val weekScheduledDates = weekDates.filter { date ->
+        val dayName = getDayName(date)
+        scheduledDays.contains(dayName) && date <= today
+    }
+    val weeklyDone = completionsList.count { date -> weekScheduledDates.contains(date) && date <= today }
+    val weeklyTotal = weekScheduledDates.size
+    val weeklyPct = if (weeklyTotal > 0) (weeklyDone * 100) / weeklyTotal else 0
 
     when {
         isLoading -> {
@@ -155,7 +169,11 @@ fun TaskDetailScreen(
         }
         task != null -> {
             val t = task!!
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp)
+            ) {
                 // Top bar
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -207,13 +225,29 @@ fun TaskDetailScreen(
                         MaterialTheme.colorScheme.onSurface
                 )
 
-                // Habit badge
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Habit badge + streak
                 if (isHabit) {
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            text = "Habit · ${t.recurrence_days?.joinToString(", ") { DAY_LABELS[it] ?: it }}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        StreakBadge(result = streakResult)
+                    }
+                } else {
                     Text(
-                        text = "Habit · ${t.recurrence_days?.joinToString(", ") { DAY_LABELS[it] ?: it }}",
+                        text = if (t.status == "done") "Done" else "To Do",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary
+                        color = if (t.status == "done")
+                            MaterialTheme.colorScheme.primary
+                        else
+                            MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
@@ -221,60 +255,85 @@ fun TaskDetailScreen(
 
                 // One-off toggle
                 if (!isHabit) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.clickable {
-                            scope.launch {
-                                try {
-                                    val newStatus = if (t.status == "done") "todo" else "done"
-                                    ApiClient.taskService.updateTask(
-                                        taskId,
-                                        UpdateTaskRequest(status = newStatus)
-                                    )
-                                    loadTask()
-                                    onUpdated()
-                                } catch (_: Exception) { }
-                            }
-                        }
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                        )
                     ) {
-                        Checkbox(
-                            checked = t.status == "done",
-                            onCheckedChange = null // handled by Row clickable
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = if (t.status == "done") "Mark as todo" else "Mark as done"
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    scope.launch {
+                                        try {
+                                            val newStatus = if (t.status == "done") "todo" else "done"
+                                            ApiClient.taskService.updateTask(
+                                                taskId,
+                                                UpdateTaskRequest(status = newStatus)
+                                            )
+                                            loadTask()
+                                            onUpdated()
+                                        } catch (_: Exception) { }
+                                    }
+                                }
+                                .padding(12.dp)
+                        ) {
+                            Checkbox(
+                                checked = t.status == "done",
+                                onCheckedChange = null
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = if (t.status == "done") "Mark as todo" else "Mark as done"
+                            )
+                        }
                     }
                 }
 
-                // Habit weekly calendar
+                // Habit view
                 if (isHabit) {
-                    Text(
-                        text = "This Week",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
+                        )
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            // Weekly progress
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Weekly progress",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = "$weeklyDone/$weeklyTotal",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = if (weeklyTotal > 0 && weeklyDone >= weeklyTotal)
+                                        MaterialTheme.colorScheme.primary
+                                    else
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            ProgressBar(
+                                value = weeklyPct,
+                                variant = ProgressVariant.HABIT,
+                                height = 8.dp,
+                                modifier = Modifier.fillMaxWidth()
+                            )
 
-                    weekDates.forEach { date ->
-                        val dayName = getDayName(date)
-                        val isScheduled = t.recurrence_days?.contains(dayName) == true
-                        val isCompleted = date in completedDates
-                        val isToday = date == LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
+                            Spacer(modifier = Modifier.height(12.dp))
 
-                        Surface(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 2.dp),
-                            shape = MaterialTheme.shapes.small,
-                            color = when {
-                                isCompleted -> MaterialTheme.colorScheme.primaryContainer
-                                isScheduled -> MaterialTheme.colorScheme.tertiaryContainer
-                                else -> MaterialTheme.colorScheme.surfaceVariant
-                            },
-                            onClick = {
-                                if (isScheduled || isCompleted) {
+                            // WeekHeatmap
+                            WeekHeatmap(
+                                recurrenceDays = t.recurrence_days ?: emptyList(),
+                                completions = completionsList,
+                                onToggleDay = { date, isCompleted ->
                                     scope.launch {
                                         try {
                                             if (isCompleted) {
@@ -285,60 +344,31 @@ fun TaskDetailScreen(
                                             loadTask()
                                         } catch (_: Exception) { }
                                     }
+                                },
+                                weekOffset = weekOffset,
+                                onWeekOffsetChange = { newOffset ->
+                                    weekOffset = newOffset
                                 }
-                            }
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        text = DAY_SHORT[dayName] ?: "",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = if (isToday) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = date.substring(5),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                                Text(
-                                    text = when {
-                                        isCompleted -> "✓ Completed"
-                                        isScheduled -> "○ Pending"
-                                        else -> "—"
-                                    },
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = when {
-                                        isCompleted -> MaterialTheme.colorScheme.primary
-                                        isScheduled -> MaterialTheme.colorScheme.onTertiaryContainer
-                                        else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                                    }
-                                )
-                            }
+                            )
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.weight(1f))
 
                 // Timestamps
-                Text(
-                    text = "Created: ${t.created_at}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = "Updated: ${t.updated_at}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Column {
+                    Text(
+                        text = "Created: ${t.created_at}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "Updated: ${t.updated_at}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
     }
