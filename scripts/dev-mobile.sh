@@ -176,7 +176,16 @@ fi
 log_info "Building and installing the Android app..."
 
 cd "$MOBILE_DIR"
-if ! ./gradlew installDebug; then
+# When running on the emulator, force the API URL to the emulator loopback,
+# overriding any value in local.properties (which is for real devices).
+if [ "$SKIP_EMULATOR" = false ]; then
+    log_info "Using emulator API base URL (10.0.2.2:8080)..."
+    GRADLE_ARGS="-Papi.base.url=http://10.0.2.2:8080/api/v1"
+else
+    GRADLE_ARGS=""
+fi
+
+if ! ./gradlew $GRADLE_ARGS installDebug; then
     log_error "Build or install failed."
     exit 1
 fi

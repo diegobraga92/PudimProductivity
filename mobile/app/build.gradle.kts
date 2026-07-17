@@ -1,6 +1,19 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
+}
+
+fun readLocalProperty(key: String): String? {
+    return try {
+        val props = Properties()
+        FileInputStream(rootProject.file("local.properties")).use { props.load(it) }
+        props.getProperty(key)
+    } catch (_: Exception) {
+        null
+    }
 }
 
 android {
@@ -14,8 +27,15 @@ android {
         versionCode = 1
         versionName = "0.0.1"
 
-        // Backend URL, override via local.properties or build config.
-        buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:8080/api/v1\"")
+        // Backend URL.
+        // Priority: -P flag > local.properties > default emulator loopback.
+        //   ./gradlew -Papi.base.url=http://10.0.2.2:8080/api/v1 assembleDebug
+        //  or in mobile/local.properties:
+        //   api.base.url=http://192.168.3.99:8080/api/v1
+        val apiBaseUrl: String = (project.findProperty("api.base.url") as String?)
+            ?: readLocalProperty("api.base.url")
+            ?: "http://10.0.2.2:8080/api/v1"
+        buildConfigField("String", "API_BASE_URL", "\"$apiBaseUrl\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
