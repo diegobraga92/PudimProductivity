@@ -357,10 +357,10 @@ export default function Planner() {
                     key={entry.id}
                     style={{
                       position: "absolute",
-                      top: `${((parseTimeToMinutes(entry.start_time) / 60 - 6) / 16) * 100}%`,
+                      top: `${parseTimeToMinutes(entry.start_time) - 360}px`,
                       left: "2px",
                       right: "2px",
-                      height: `${((parseTimeToMinutes(entry.end_time) - parseTimeToMinutes(entry.start_time)) / 60 / 16) * 100}%`,
+                      height: `${parseTimeToMinutes(entry.end_time) - parseTimeToMinutes(entry.start_time)}px`,
                       background: entry.color,
                       borderRadius: "6px",
                       padding: "2px 4px",
