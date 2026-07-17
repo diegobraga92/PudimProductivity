@@ -15,7 +15,7 @@ import StreakBadge from "../components/StreakBadge";
 import ProgressBar from "../components/ProgressBar";
 import { computeStreaks } from "../utils/streaks";
 import { getWeekDates, getToday } from "../utils/dates";
-import { playCompletionSound } from "../utils/sounds";
+import { playHabitCompletionSound, playTodoCompletionSound } from "../utils/sounds";
 
 const DAY_LABELS: Record<RecurrenceDay, string> = {
   mon: "Monday",
@@ -93,7 +93,12 @@ export default function TaskDetail({
   });
 
   const toggleMutation = useMutation({
-    mutationFn: (newStatus: TaskStatus) => updateTask(taskId, { status: newStatus }),
+    mutationFn: async (newStatus: TaskStatus) => {
+      if (newStatus === "done") {
+        playTodoCompletionSound();
+      }
+      return updateTask(taskId, { status: newStatus });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["task", taskId] });
       onUpdated();
@@ -106,7 +111,7 @@ export default function TaskDetail({
       if (completedDates.has(date)) {
         await uncompleteTask(taskId, date);
       } else {
-        playCompletionSound();
+        playHabitCompletionSound();
         await completeTask(taskId, date);
       }
     },

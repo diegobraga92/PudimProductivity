@@ -29,7 +29,7 @@ import StreakBadge from "../components/StreakBadge";
 import ProgressBar from "../components/ProgressBar";
 import { computeStreaks } from "../utils/streaks";
 import { getWeekDates, getToday, formatWeekRange } from "../utils/dates";
-import { playCompletionSound } from "../utils/sounds";
+import { playHabitCompletionSound, playTodoCompletionSound } from "../utils/sounds";
 
 type View = "list" | "create" | "detail";
 
@@ -102,8 +102,12 @@ export default function TaskList() {
   });
 
   const toggleMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: TaskStatus }) =>
-      updateTask(id, { status: status === "done" ? "todo" : "done" }),
+    mutationFn: async ({ id, status }: { id: string; status: TaskStatus }) => {
+      if (status === "todo") {
+        playTodoCompletionSound();
+      }
+      return updateTask(id, { status: status === "done" ? "todo" : "done" });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks", "one-off"] });
       queryClient.invalidateQueries({ queryKey: ["tasks", "habit"] });
@@ -115,7 +119,7 @@ export default function TaskList() {
       if (completed) {
         await uncompleteTask(taskId, date);
       } else {
-        playCompletionSound();
+        playHabitCompletionSound();
         await completeTask(taskId, date);
       }
     },
@@ -674,8 +678,12 @@ function ListDetailPanel({ listId, onListDeleted }: { listId: string; onListDele
   });
 
   const toggleMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: TaskStatus }) =>
-      updateTask(id, { status: status === "done" ? "todo" : "done" }),
+    mutationFn: async ({ id, status }: { id: string; status: TaskStatus }) => {
+      if (status === "todo") {
+        playTodoCompletionSound();
+      }
+      return updateTask(id, { status: status === "done" ? "todo" : "done" });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["taskListTasks", listId] });
     },
