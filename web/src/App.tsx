@@ -8,7 +8,7 @@ import Pomodoro from "./pages/Pomodoro";
 import Soundscape from "./pages/Soundscape";
 import "./styles.css";
 
-type Page = "dashboard" | "planner" | "tasks" | "pomodoro" | "soundscape" | "health";
+type Page = "dashboard" | "tasks" | "planner" | "pomodoro" | "soundscape" | "health";
 
 function App() {
   const [page, setPage] = useState<Page>("dashboard");
@@ -72,8 +72,8 @@ function App() {
           <nav style={{ display: "flex", gap: "0.25rem", height: "100%", alignItems: "stretch" }}>
             {[
               { id: "dashboard" as Page, label: "Dashboard", icon: "🏠" },
-              { id: "planner" as Page, label: "Planner", icon: "📅" },
               { id: "tasks" as Page, label: "Tasks", icon: "📋" },
+              { id: "planner" as Page, label: "Planner", icon: "📅" },
               { id: "pomodoro" as Page, label: "Timer", icon: "🍅" },
               { id: "soundscape" as Page, label: "Sounds", icon: "🎵" },
               { id: "health" as Page, label: "Status", icon: "💚" },
@@ -134,9 +134,9 @@ function App() {
         <div className="container">
           {page === "dashboard" && <Dashboard onNavigate={handleNavigate} />}
 
-          {page === "planner" && <Planner />}
-
           {page === "tasks" && <TaskList />}
+
+          {page === "planner" && <Planner />}
 
           {page === "pomodoro" && <Pomodoro />}
 
