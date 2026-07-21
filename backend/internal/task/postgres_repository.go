@@ -24,22 +24,39 @@ func (r *PostgresTaskRepository) scanTask(scanner interface {
 	Scan(dest ...any) error
 }) (*Task, error) {
 	task := &Task{}
+
+	// pgx cannot scan DATE/TIME into *string directly in binary mode.
+	// Use intermediate variables for time/date columns.
+	var startTime, endTime *string
+	var color *string
+	var scheduledDate *time.Time
+
 	err := scanner.Scan(
 		&task.ID,
 		&task.Title,
 		(*string)(&task.Status),
 		&task.RecurrenceDays,
 		&task.ListID,
-		&task.StartTime,
-		&task.EndTime,
-		&task.Color,
-		&task.ScheduledDate,
+		&startTime,
+		&endTime,
+		&color,
+		&scheduledDate,
 		&task.CreatedAt,
 		&task.UpdatedAt,
 	)
 	if err != nil {
 		return nil, err
 	}
+
+	// Copy scalar values back
+	task.StartTime = startTime
+	task.EndTime = endTime
+	task.Color = color
+	if scheduledDate != nil {
+		s := scheduledDate.Format("2006-01-02")
+		task.ScheduledDate = &s
+	}
+
 	return task, nil
 }
 
