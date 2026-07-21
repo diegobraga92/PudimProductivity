@@ -32,6 +32,13 @@ function parseTimeToMinutes(t: string): number {
   return h * 60 + m;
 }
 
+function hexToRgba(hex: string, alpha: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 interface PlannerProps {
   onNavigate: (view: string) => void;
 }
@@ -306,7 +313,7 @@ export default function Planner({ onNavigate }: PlannerProps) {
                         left: "2px",
                         right: "2px",
                         height: `${height}px`,
-                        background: color,
+                        background: hexToRgba(color, 0.85),
                         borderRadius: "6px",
                         padding: "2px 4px",
                         fontSize: "var(--font-size-xs)",
