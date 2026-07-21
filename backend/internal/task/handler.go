@@ -18,10 +18,12 @@ const defaultCompletionsLookbackDays = 7
 type Service interface {
 	CreateTask(ctx context.Context, title string, recurrenceDays []string) (*Task, error)
 	CreateTaskWithList(ctx context.Context, title string, recurrenceDays []string, listID *string) (*Task, error)
+	CreateTaskWithSchedule(ctx context.Context, title string, recurrenceDays []string, listID *string, startTime, endTime, color, scheduledDate *string) (*Task, error)
 	GetTask(ctx context.Context, id string) (*Task, error)
 	ListTasks(ctx context.Context, statusFilter, typeFilter string) ([]*Task, error)
+	ListScheduledTasks(ctx context.Context) ([]*Task, error)
 	ListTasksByListID(ctx context.Context, listID, typeFilter string) ([]*Task, error)
-	UpdateTask(ctx context.Context, id string, title *string, status *TaskStatus, recurrenceDays *[]string, listID **string) (*Task, error)
+	UpdateTask(ctx context.Context, id string, title *string, status *TaskStatus, recurrenceDays *[]string, listID **string, startTime, endTime, color, scheduledDate **string) (*Task, error)
 	DeleteTask(ctx context.Context, id string) error
 	CompleteTask(ctx context.Context, taskID, dateStr string) (*TaskCompletion, error)
 	UncompleteTask(ctx context.Context, taskID, dateStr string) error
@@ -45,6 +47,10 @@ type TaskResponse struct {
 	Status         string   `json:"status"`
 	RecurrenceDays []string `json:"recurrence_days,omitempty"`
 	ListID         *string  `json:"list_id,omitempty"`
+	StartTime      *string  `json:"start_time,omitempty"`
+	EndTime        *string  `json:"end_time,omitempty"`
+	Color          *string  `json:"color,omitempty"`
+	ScheduledDate  *string  `json:"scheduled_date,omitempty"`
 	CreatedAt      string   `json:"created_at"`
 	UpdatedAt      string   `json:"updated_at"`
 }
@@ -53,6 +59,10 @@ type createTaskRequest struct {
 	Title          string   `json:"title"`
 	RecurrenceDays []string `json:"recurrence_days,omitempty"`
 	ListID         *string  `json:"list_id,omitempty"`
+	StartTime      *string  `json:"start_time,omitempty"`
+	EndTime        *string  `json:"end_time,omitempty"`
+	Color          *string  `json:"color,omitempty"`
+	ScheduledDate  *string  `json:"scheduled_date,omitempty"`
 }
 
 type updateTaskRequest struct {
@@ -60,6 +70,10 @@ type updateTaskRequest struct {
 	Status         *TaskStatus             `json:"status"`
 	RecurrenceDays *[]string               `json:"recurrence_days"`
 	ListID         shared.Optional[string] `json:"list_id"`
+	StartTime      shared.Optional[string] `json:"start_time"`
+	EndTime        shared.Optional[string] `json:"end_time"`
+	Color          shared.Optional[string] `json:"color"`
+	ScheduledDate  shared.Optional[string] `json:"scheduled_date"`
 }
 
 type taskCompletionResponse struct {
@@ -76,6 +90,10 @@ func ToTaskResponse(t *Task) TaskResponse {
 		Status:         string(t.Status),
 		RecurrenceDays: t.RecurrenceDays,
 		ListID:         t.ListID,
+		StartTime:      t.StartTime,
+		EndTime:        t.EndTime,
+		Color:          t.Color,
+		ScheduledDate:  t.ScheduledDate,
 		CreatedAt:      t.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:      t.UpdatedAt.Format(time.RFC3339),
 	}
@@ -110,6 +128,23 @@ func (h *Handler) ListTasks(w http.ResponseWriter, r *http.Request) {
 	shared.WriteJSON(w, http.StatusOK, responses)
 }
 
+// GET /api/v1/tasks/scheduled — returns all tasks with time-blocking info for the planner
+func (h *Handler) ListScheduledTasks(w http.ResponseWriter, r *http.Request) {
+	tasks, err := h.service.ListScheduledTasks(r.Context())
+	if err != nil {
+		log.Error().Err(err).Msg("failed to list scheduled tasks")
+		shared.WriteError(w, http.StatusInternalServerError, "failed to list scheduled tasks")
+		return
+	}
+
+	responses := make([]TaskResponse, len(tasks))
+	for i, t := range tasks {
+		responses[i] = ToTaskResponse(t)
+	}
+
+	shared.WriteJSON(w, http.StatusOK, responses)
+}
+
 // POST /api/v1/tasks
 func (h *Handler) CreateTask(w http.ResponseWriter, r *http.Request) {
 	var req createTaskRequest
@@ -123,7 +158,7 @@ func (h *Handler) CreateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	task, err := h.service.CreateTaskWithList(r.Context(), req.Title, req.RecurrenceDays, req.ListID)
+	task, err := h.service.CreateTaskWithSchedule(r.Context(), req.Title, req.RecurrenceDays, req.ListID, req.StartTime, req.EndTime, req.Color, req.ScheduledDate)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to create task")
 		shared.WriteError(w, http.StatusInternalServerError, "failed to create task")
@@ -169,7 +204,7 @@ func (h *Handler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	task, err := h.service.UpdateTask(r.Context(), id, req.Title, req.Status, req.RecurrenceDays, req.ListID.Ptr())
+	task, err := h.service.UpdateTask(r.Context(), id, req.Title, req.Status, req.RecurrenceDays, req.ListID.Ptr(), req.StartTime.Ptr(), req.EndTime.Ptr(), req.Color.Ptr(), req.ScheduledDate.Ptr())
 	if err != nil {
 		if errors.Is(err, ErrTaskNotFound) {
 			shared.WriteError(w, http.StatusNotFound, "task not found")

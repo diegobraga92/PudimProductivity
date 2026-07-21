@@ -22,6 +22,10 @@ type TaskRepository interface {
 	// Valid typeFilter values: "one-off", "habit".
 	List(ctx context.Context, statusFilter, typeFilter string) ([]*Task, error)
 
+	// ListScheduled returns all tasks that have scheduling info (start_time IS NOT NULL).
+	// This is used by the Planner view to show all time-blocked tasks.
+	ListScheduled(ctx context.Context) ([]*Task, error)
+
 	// ListByListID returns all tasks belonging to a specific task list,
 	// optionally filtered by type.
 	// Valid typeFilter values: "one-off", "habit".

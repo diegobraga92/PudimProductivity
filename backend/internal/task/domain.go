@@ -2,6 +2,7 @@ package task
 
 import (
 	"fmt"
+	"regexp"
 	"time"
 )
 
@@ -37,6 +38,10 @@ type Task struct {
 	Status         TaskStatus
 	RecurrenceDays []string // nil = one-off task, non-nil = habit
 	ListID         *string  // nil = not part of a list, non-nil = belongs to a task list
+	StartTime      *string  // nil = not scheduled on planner, "09:00" format
+	EndTime        *string  // nil = not scheduled on planner, "10:00" format
+	Color          *string  // nil = default (#3B82F6)
+	ScheduledDate  *string  // nil for habits, "2026-07-20" for one-off tasks
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 }
@@ -66,8 +71,44 @@ func NewTask(id, title string, recurrenceDays []string) (*Task, error) {
 	}, nil
 }
 
+func NewTaskWithSchedule(id, title string, recurrenceDays []string, startTime, endTime, color, scheduledDate *string) (*Task, error) {
+	task, err := NewTask(id, title, recurrenceDays)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := validateSchedule(startTime, endTime, color, scheduledDate, recurrenceDays); err != nil {
+		return nil, err
+	}
+
+	task.StartTime = startTime
+	task.EndTime = endTime
+	task.Color = color
+	task.ScheduledDate = scheduledDate
+
+	return task, nil
+}
+
 func (t *Task) IsHabit() bool {
 	return t.RecurrenceDays != nil
+}
+
+func (t *Task) HasSchedule() bool {
+	return t.StartTime != nil && t.EndTime != nil
+}
+
+func (t *Task) EffectiveDays() []string {
+	if t.IsHabit() {
+		return t.RecurrenceDays
+	}
+	if t.ScheduledDate != nil {
+		parsed, err := time.Parse("2006-01-02", *t.ScheduledDate)
+		if err != nil {
+			return nil
+		}
+		return []string{parsed.UTC().Weekday().String()[:3]}
+	}
+	return nil
 }
 
 func (t *Task) Update(
@@ -75,6 +116,10 @@ func (t *Task) Update(
 	status *TaskStatus,
 	recurrenceDays *[]string,
 	listID **string,
+	startTime **string,
+	endTime **string,
+	color **string,
+	scheduledDate **string,
 ) error {
 	if title != nil {
 		if *title == "" {
@@ -102,6 +147,35 @@ func (t *Task) Update(
 
 	if listID != nil {
 		t.ListID = *listID
+	}
+
+	// Determine the actual start/end/color/scheduledDate values after update
+	var curStartTime, curEndTime, curColor, curScheduledDate *string
+
+	if startTime != nil {
+		t.StartTime = *startTime
+	}
+	curStartTime = t.StartTime
+
+	if endTime != nil {
+		t.EndTime = *endTime
+	}
+	curEndTime = t.EndTime
+
+	if color != nil {
+		t.Color = *color
+	}
+	curColor = t.Color
+
+	if scheduledDate != nil {
+		t.ScheduledDate = *scheduledDate
+	}
+	curScheduledDate = t.ScheduledDate
+
+	// Validate schedule constraints after applying changes
+	recurrenceAfter := t.RecurrenceDays
+	if err := validateSchedule(curStartTime, curEndTime, curColor, curScheduledDate, recurrenceAfter); err != nil {
+		return err
 	}
 
 	t.UpdatedAt = time.Now().UTC()
@@ -161,6 +235,60 @@ func validateRecurrenceDays(days []string) error {
 		}
 
 		seen[d] = struct{}{}
+	}
+
+	return nil
+}
+
+func validateSchedule(startTime, endTime, color, scheduledDate *string, recurrenceDays []string) error {
+	// Both start and end must be set together (or both null = not scheduled)
+	if startTime == nil && endTime == nil {
+		return nil // not scheduled, no validation needed
+	}
+
+	if startTime == nil {
+		return fmt.Errorf("end_time requires start_time")
+	}
+	if endTime == nil {
+		return fmt.Errorf("start_time requires end_time")
+	}
+
+	// Validate time format
+	startParsed, err := time.Parse("15:04", *startTime)
+	if err != nil {
+		return fmt.Errorf("start_time: invalid time format %q, expected HH:MM (24h)", *startTime)
+	}
+
+	endParsed, err := time.Parse("15:04", *endTime)
+	if err != nil {
+		return fmt.Errorf("end_time: invalid time format %q, expected HH:MM (24h)", *endTime)
+	}
+
+	if !startParsed.Before(endParsed) {
+		return fmt.Errorf("start_time must be before end_time")
+	}
+
+	// Validate color format if set
+	if color != nil {
+		matched, _ := regexp.MatchString(`^#[0-9A-Fa-f]{6}$`, *color)
+		if !matched {
+			return fmt.Errorf("color: invalid hex color format %q, expected e.g. #3B82F6", *color)
+		}
+	}
+
+	// ScheduledDate is required for one-off tasks (no recurrence), forbidden for habits
+	if recurrenceDays == nil && scheduledDate == nil {
+		return fmt.Errorf("scheduled_date is required for one-off tasks when start_time is set")
+	}
+	if recurrenceDays != nil && scheduledDate != nil {
+		return fmt.Errorf("scheduled_date must not be set for habits (use recurrence_days instead)")
+	}
+
+	// Validate scheduled_date format if present
+	if scheduledDate != nil {
+		if _, err := time.Parse("2006-01-02", *scheduledDate); err != nil {
+			return fmt.Errorf("scheduled_date: invalid date format %q, expected YYYY-MM-DD", *scheduledDate)
+		}
 	}
 
 	return nil

@@ -29,6 +29,11 @@ const DAY_LABELS: Record<RecurrenceDay, string> = {
 
 const DAY_ORDER: RecurrenceDay[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 
+const COLOR_PALETTE = [
+  "#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899",
+  "#06B6D4", "#F97316", "#6366F1", "#14B8A6", "#D946EF", "#84CC16",
+];
+
 interface TaskDetailProps {
   taskId: string;
   onUpdated: () => void;
@@ -47,6 +52,14 @@ export default function TaskDetail({
   const [title, setTitle] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [weekOffset, setWeekOffset] = useState(0);
+
+  // Schedule editing state
+  const [showSchedule, setShowSchedule] = useState(false);
+  const [startTime, setStartTime] = useState("09:00");
+  const [endTime, setEndTime] = useState("10:00");
+  const [color, setColor] = useState("#3B82F6");
+  const [scheduledDate, setScheduledDate] = useState("");
+
   const handleWeekOffsetChange = useCallback((newOffset: number) => {
     setWeekOffset(newOffset);
   }, []);
@@ -124,6 +137,11 @@ export default function TaskDetail({
   const startEditing = () => {
     if (!task) return;
     setTitle(task.title);
+    setShowSchedule(!!task.start_time);
+    setStartTime(task.start_time || "09:00");
+    setEndTime(task.end_time || "10:00");
+    setColor(task.color || "#3B82F6");
+    setScheduledDate(task.scheduled_date || "");
     setEditing(true);
   };
 
@@ -136,7 +154,18 @@ export default function TaskDetail({
       return;
     }
 
-    updateMutation.mutate({ title: title.trim() });
+    if (showSchedule && startTime >= endTime) {
+      setError("Start time must be before end time");
+      return;
+    }
+
+    updateMutation.mutate({
+      title: title.trim(),
+      start_time: showSchedule ? startTime : null,
+      end_time: showSchedule ? endTime : null,
+      color: showSchedule ? color : null,
+      scheduled_date: showSchedule && !isHabit ? scheduledDate : null,
+    });
   };
 
   if (isLoading) {
@@ -186,6 +215,150 @@ export default function TaskDetail({
               autoFocus
             />
           </div>
+
+          {/* Schedule toggle */}
+          <div
+            style={{
+              marginBottom: "var(--space-md)",
+              padding: "var(--space-sm) var(--space-md)",
+              background: "var(--color-bg)",
+              borderRadius: "var(--radius-sm)",
+            }}
+          >
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.5rem",
+                cursor: "pointer",
+                fontWeight: 500,
+                fontSize: "var(--font-size-sm)",
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={showSchedule}
+                onChange={(e) => setShowSchedule(e.target.checked)}
+                style={{ width: "1.1rem", height: "1.1rem", accentColor: "var(--color-primary)" }}
+              />
+              Schedule on Planner 📅
+            </label>
+          </div>
+
+          {showSchedule && (
+            <div
+              style={{
+                marginBottom: "var(--space-md)",
+                padding: "var(--space-sm) var(--space-md)",
+                border: "1px solid var(--color-border-light)",
+                borderRadius: "var(--radius-sm)",
+              }}
+            >
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "var(--space-sm)",
+                  marginBottom: "var(--space-md)",
+                }}
+              >
+                <div>
+                  <label
+                    style={{
+                      display: "block",
+                      fontSize: "var(--font-size-xs)",
+                      fontWeight: 600,
+                      color: "var(--color-text-secondary)",
+                      marginBottom: "var(--space-xs)",
+                    }}
+                  >
+                    Start
+                  </label>
+                  <input
+                    className="input"
+                    type="time"
+                    value={startTime}
+                    onChange={(e) => setStartTime(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label
+                    style={{
+                      display: "block",
+                      fontSize: "var(--font-size-xs)",
+                      fontWeight: 600,
+                      color: "var(--color-text-secondary)",
+                      marginBottom: "var(--space-xs)",
+                    }}
+                  >
+                    End
+                  </label>
+                  <input
+                    className="input"
+                    type="time"
+                    value={endTime}
+                    onChange={(e) => setEndTime(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {!isHabit && (
+                <div style={{ marginBottom: "var(--space-md)" }}>
+                  <label
+                    style={{
+                      display: "block",
+                      fontSize: "var(--font-size-xs)",
+                      fontWeight: 600,
+                      color: "var(--color-text-secondary)",
+                      marginBottom: "var(--space-xs)",
+                    }}
+                  >
+                    Date
+                  </label>
+                  <input
+                    className="input"
+                    type="date"
+                    value={scheduledDate}
+                    onChange={(e) => setScheduledDate(e.target.value)}
+                  />
+                </div>
+              )}
+
+              <div style={{ marginBottom: 0 }}>
+                <label
+                  style={{
+                    display: "block",
+                    fontSize: "var(--font-size-xs)",
+                    fontWeight: 600,
+                    color: "var(--color-text-secondary)",
+                    marginBottom: "var(--space-xs)",
+                  }}
+                >
+                  Color
+                </label>
+                <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
+                  {COLOR_PALETTE.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setColor(c)}
+                      style={{
+                        width: "28px",
+                        height: "28px",
+                        borderRadius: "50%",
+                        background: c,
+                        border: color === c ? "3px solid var(--color-text)" : "2px solid transparent",
+                        cursor: "pointer",
+                        transition: "all var(--transition-fast)",
+                        padding: 0,
+                      }}
+                      aria-label={`Select color ${c}`}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
           {error && (
             <p style={{ color: "var(--color-danger)", marginBottom: "0.5rem", fontSize: "var(--font-size-sm)" }}>
@@ -275,6 +448,49 @@ export default function TaskDetail({
             </span>
           )}
         </div>
+
+        {/* Schedule info */}
+        {task.start_time && task.end_time && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "var(--space-sm)",
+              marginTop: "var(--space-sm)",
+              fontSize: "var(--font-size-xs)",
+              color: "var(--color-text-muted)",
+            }}
+          >
+            <span>📅</span>
+            <span>
+              {task.start_time} – {task.end_time}
+              {task.color && (
+                <span
+                  style={{
+                    display: "inline-block",
+                    width: "10px",
+                    height: "10px",
+                    borderRadius: "50%",
+                    background: task.color,
+                    marginLeft: "0.4rem",
+                    verticalAlign: "middle",
+                  }}
+                />
+              )}
+            </span>
+          </div>
+        )}
+        {task.scheduled_date && (
+          <div
+            style={{
+              fontSize: "var(--font-size-xs)",
+              color: "var(--color-text-muted)",
+              marginTop: "0.2rem",
+            }}
+          >
+            Scheduled for: {task.scheduled_date}
+          </div>
+        )}
       </div>
 
       {/* One-off task toggle */}

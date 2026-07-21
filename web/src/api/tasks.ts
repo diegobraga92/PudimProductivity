@@ -10,6 +10,10 @@ export interface Task {
   status: TaskStatus;
   recurrence_days?: RecurrenceDay[];
   list_id?: string | null;
+  start_time?: string | null;
+  end_time?: string | null;
+  color?: string | null;
+  scheduled_date?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -25,6 +29,10 @@ export interface CreateTaskRequest {
   title: string;
   recurrence_days?: RecurrenceDay[];
   list_id?: string | null;
+  start_time?: string | null;
+  end_time?: string | null;
+  color?: string | null;
+  scheduled_date?: string | null;
 }
 
 export interface UpdateTaskRequest {
@@ -32,6 +40,10 @@ export interface UpdateTaskRequest {
   status?: TaskStatus;
   recurrence_days?: RecurrenceDay[] | null;
   list_id?: string | null;
+  start_time?: string | null;
+  end_time?: string | null;
+  color?: string | null;
+  scheduled_date?: string | null;
 }
 
 /**
@@ -48,6 +60,18 @@ export async function listTasks(status?: TaskStatus, type?: "one-off" | "habit")
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error(`Failed to list tasks: ${response.status}`);
+  }
+  return response.json() as Promise<Task[]>;
+}
+
+/**
+ * Fetches all tasks that have scheduling info (for the Planner view).
+ */
+export async function listScheduledTasks(): Promise<Task[]> {
+  const url = `${config.apiBaseUrl}/tasks/scheduled`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to list scheduled tasks: ${response.status}`);
   }
   return response.json() as Promise<Task[]>;
 }

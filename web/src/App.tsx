@@ -136,7 +136,7 @@ function App() {
 
           {page === "tasks" && <TaskList />}
 
-          {page === "planner" && <Planner />}
+          {page === "planner" && <Planner onNavigate={handleNavigate} />}
 
           {page === "pomodoro" && <Pomodoro />}
 

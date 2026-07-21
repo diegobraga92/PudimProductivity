@@ -30,13 +30,17 @@ func NewTaskService(repo TaskRepository, auditLogger audit.Logger) *TaskService 
 }
 
 func (s *TaskService) CreateTask(ctx context.Context, title string, recurrenceDays []string) (*Task, error) {
-	return s.CreateTaskWithList(ctx, title, recurrenceDays, nil)
+	return s.CreateTaskWithSchedule(ctx, title, recurrenceDays, nil, nil, nil, nil, nil)
 }
 
 func (s *TaskService) CreateTaskWithList(ctx context.Context, title string, recurrenceDays []string, listID *string) (*Task, error) {
+	return s.CreateTaskWithSchedule(ctx, title, recurrenceDays, listID, nil, nil, nil, nil)
+}
+
+func (s *TaskService) CreateTaskWithSchedule(ctx context.Context, title string, recurrenceDays []string, listID *string, startTime, endTime, color, scheduledDate *string) (*Task, error) {
 	id := shared.NewUUID()
 
-	task, err := NewTask(id, title, recurrenceDays)
+	task, err := NewTaskWithSchedule(id, title, recurrenceDays, startTime, endTime, color, scheduledDate)
 	if err != nil {
 		return nil, fmt.Errorf("create task: %w", err)
 	}
@@ -50,7 +54,7 @@ func (s *TaskService) CreateTaskWithList(ctx context.Context, title string, recu
 	log.Info().Str("task_id", task.ID).Str("title", task.Title).Msg("task created")
 
 	s.audit.Log(ctx, audit.ActionTaskCreated, audit.ResourceTasks, task.ID, nil, map[string]any{
-		"title":  task.Title,
+		"title":   task.Title,
 		"list_id": task.ListID,
 	})
 
@@ -69,18 +73,24 @@ func (s *TaskService) ListTasks(ctx context.Context, statusFilter, typeFilter st
 	return s.repo.List(ctx, statusFilter, typeFilter)
 }
 
+func (s *TaskService) ListScheduledTasks(ctx context.Context) ([]*Task, error) {
+	return s.repo.ListScheduled(ctx)
+}
+
 func (s *TaskService) ListTasksByListID(ctx context.Context, listID, typeFilter string) ([]*Task, error) {
 	return s.repo.ListByListID(ctx, listID, typeFilter)
 }
 
 // listID uses double-pointer semantics: nil = no change, &nil = unassign, &ptr = assign.
-func (s *TaskService) UpdateTask(ctx context.Context, id string, title *string, status *TaskStatus, recurrenceDays *[]string, listID **string) (*Task, error) {
+// startTime, endTime, color, scheduledDate also use double-pointer:
+// nil = no change, &nil = unset, &ptr = assign value.
+func (s *TaskService) UpdateTask(ctx context.Context, id string, title *string, status *TaskStatus, recurrenceDays *[]string, listID **string, startTime, endTime, color, scheduledDate **string) (*Task, error) {
 	task, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := task.Update(title, status, recurrenceDays, listID); err != nil {
+	if err := task.Update(title, status, recurrenceDays, listID, startTime, endTime, color, scheduledDate); err != nil {
 		return nil, fmt.Errorf("update task: %w", err)
 	}
 

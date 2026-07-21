@@ -17,10 +17,36 @@ func NewPostgresTaskRepository(pool *pgxpool.Pool) *PostgresTaskRepository {
 	return &PostgresTaskRepository{pool: pool}
 }
 
+// returns the full set of columns used in SELECT, INSERT, and UPDATE queries.
+const taskColumns = `id, title, status, recurrence_days, list_id, start_time, end_time, color, scheduled_date, created_at, updated_at`
+
+func (r *PostgresTaskRepository) scanTask(scanner interface {
+	Scan(dest ...any) error
+}) (*Task, error) {
+	task := &Task{}
+	err := scanner.Scan(
+		&task.ID,
+		&task.Title,
+		(*string)(&task.Status),
+		&task.RecurrenceDays,
+		&task.ListID,
+		&task.StartTime,
+		&task.EndTime,
+		&task.Color,
+		&task.ScheduledDate,
+		&task.CreatedAt,
+		&task.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return task, nil
+}
+
 func (r *PostgresTaskRepository) Create(ctx context.Context, task *Task) error {
 	query := `
-		INSERT INTO tasks (id, title, status, recurrence_days, list_id, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO tasks (` + taskColumns + `)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 	`
 
 	_, err := r.pool.Exec(ctx, query,
@@ -29,6 +55,10 @@ func (r *PostgresTaskRepository) Create(ctx context.Context, task *Task) error {
 		string(task.Status),
 		task.RecurrenceDays,
 		task.ListID,
+		task.StartTime,
+		task.EndTime,
+		task.Color,
+		task.ScheduledDate,
 		task.CreatedAt,
 		task.UpdatedAt,
 	)
@@ -40,23 +70,9 @@ func (r *PostgresTaskRepository) Create(ctx context.Context, task *Task) error {
 }
 
 func (r *PostgresTaskRepository) GetByID(ctx context.Context, id string) (*Task, error) {
-	query := `
-		SELECT id, title, status, recurrence_days, list_id, created_at, updated_at
-		FROM tasks
-		WHERE id = $1
-	`
+	query := `SELECT ` + taskColumns + ` FROM tasks WHERE id = $1`
 
-	task := &Task{}
-
-	err := r.pool.QueryRow(ctx, query, id).Scan(
-		&task.ID,
-		&task.Title,
-		(*string)(&task.Status),
-		&task.RecurrenceDays,
-		&task.ListID,
-		&task.CreatedAt,
-		&task.UpdatedAt,
-	)
+	task, err := r.scanTask(r.pool.QueryRow(ctx, query, id))
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, ErrTaskNotFound
@@ -68,16 +84,12 @@ func (r *PostgresTaskRepository) GetByID(ctx context.Context, id string) (*Task,
 }
 
 func (r *PostgresTaskRepository) List(ctx context.Context, statusFilter, typeFilter string) ([]*Task, error) {
-	query := `
-		SELECT id, title, status, recurrence_days, list_id, created_at, updated_at
-		FROM tasks
-		WHERE list_id IS NULL
-	`
+	query := `SELECT ` + taskColumns + ` FROM tasks WHERE list_id IS NULL`
 	args := make([]any, 0)
 
 	if statusFilter != "" {
-		query += " AND status = $1"
 		args = append(args, statusFilter)
+		query += fmt.Sprintf(" AND status = $%d", len(args))
 	}
 
 	if typeFilter != "" {
@@ -99,21 +111,10 @@ func (r *PostgresTaskRepository) List(ctx context.Context, statusFilter, typeFil
 
 	var tasks []*Task
 	for rows.Next() {
-		task := &Task{}
-
-		err := rows.Scan(
-			&task.ID,
-			&task.Title,
-			(*string)(&task.Status),
-			&task.RecurrenceDays,
-			&task.ListID,
-			&task.CreatedAt,
-			&task.UpdatedAt,
-		)
+		task, err := r.scanTask(rows)
 		if err != nil {
 			return nil, fmt.Errorf("scan task row: %w", err)
 		}
-
 		tasks = append(tasks, task)
 	}
 
@@ -128,12 +129,37 @@ func (r *PostgresTaskRepository) List(ctx context.Context, statusFilter, typeFil
 	return tasks, nil
 }
 
+func (r *PostgresTaskRepository) ListScheduled(ctx context.Context) ([]*Task, error) {
+	query := `SELECT ` + taskColumns + ` FROM tasks WHERE start_time IS NOT NULL ORDER BY start_time ASC`
+
+	rows, err := r.pool.Query(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("list scheduled tasks: %w", err)
+	}
+	defer rows.Close()
+
+	var tasks []*Task
+	for rows.Next() {
+		task, err := r.scanTask(rows)
+		if err != nil {
+			return nil, fmt.Errorf("scan scheduled task row: %w", err)
+		}
+		tasks = append(tasks, task)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate scheduled task rows: %w", err)
+	}
+
+	if tasks == nil {
+		tasks = make([]*Task, 0)
+	}
+
+	return tasks, nil
+}
+
 func (r *PostgresTaskRepository) ListByListID(ctx context.Context, listID, typeFilter string) ([]*Task, error) {
-	query := `
-		SELECT id, title, status, recurrence_days, list_id, created_at, updated_at
-		FROM tasks
-		WHERE list_id = $1
-	`
+	query := `SELECT ` + taskColumns + ` FROM tasks WHERE list_id = $1`
 	args := []any{listID}
 
 	if typeFilter != "" {
@@ -155,21 +181,10 @@ func (r *PostgresTaskRepository) ListByListID(ctx context.Context, listID, typeF
 
 	var tasks []*Task
 	for rows.Next() {
-		task := &Task{}
-
-		err := rows.Scan(
-			&task.ID,
-			&task.Title,
-			(*string)(&task.Status),
-			&task.RecurrenceDays,
-			&task.ListID,
-			&task.CreatedAt,
-			&task.UpdatedAt,
-		)
+		task, err := r.scanTask(rows)
 		if err != nil {
 			return nil, fmt.Errorf("scan task row: %w", err)
 		}
-
 		tasks = append(tasks, task)
 	}
 
@@ -187,8 +202,10 @@ func (r *PostgresTaskRepository) ListByListID(ctx context.Context, listID, typeF
 func (r *PostgresTaskRepository) Update(ctx context.Context, task *Task) error {
 	query := `
 		UPDATE tasks
-		SET title = $1, status = $2, recurrence_days = $3, list_id = $4, updated_at = $5
-		WHERE id = $6
+		SET title = $1, status = $2, recurrence_days = $3, list_id = $4,
+		    start_time = $5, end_time = $6, color = $7, scheduled_date = $8,
+		    updated_at = $9
+		WHERE id = $10
 	`
 
 	result, err := r.pool.Exec(ctx, query,
@@ -196,6 +213,10 @@ func (r *PostgresTaskRepository) Update(ctx context.Context, task *Task) error {
 		string(task.Status),
 		task.RecurrenceDays,
 		task.ListID,
+		task.StartTime,
+		task.EndTime,
+		task.Color,
+		task.ScheduledDate,
 		task.UpdatedAt,
 		task.ID,
 	)
