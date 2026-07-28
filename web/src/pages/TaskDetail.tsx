@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useCallback } from "react";
-import { useConfirm } from "../components/ConfirmProvider";
+import { useConfirm } from "../components/useConfirm";
 import {
   getTask,
   updateTask,

@@ -1,23 +1,8 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import { useState, useCallback, type ReactNode } from "react";
+import { ConfirmContext } from "./useConfirm";
 import ConfirmDialog, { type ConfirmDialogOptions } from "./ConfirmDialog";
 
-interface ConfirmFn {
-  (options: ConfirmDialogOptions): Promise<boolean>;
-}
-
-interface ConfirmContextValue {
-  confirm: ConfirmFn;
-}
-
-const ConfirmContext = createContext<ConfirmContextValue | null>(null);
-
-export function useConfirm(): ConfirmFn {
-  const ctx = useContext(ConfirmContext);
-  if (!ctx) {
-    throw new Error("useConfirm must be used within a ConfirmProvider");
-  }
-  return ctx.confirm;
-}
+type ConfirmFn = (options: ConfirmDialogOptions) => Promise<boolean>;
 
 interface PendingConfirm {
   resolve: (value: boolean) => void;
