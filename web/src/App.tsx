@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { getHealth, type HealthResponse } from "./api/client";
+import { ConfirmProvider } from "./components/ConfirmProvider";
 import TaskList from "./pages/TaskList";
 import Dashboard from "./pages/Dashboard";
 import Planner from "./pages/Planner";
@@ -30,6 +31,7 @@ function App() {
   const isBackendOk = healthData?.status === "ok" && healthData?.db === "connected";
 
   return (
+    <ConfirmProvider>
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
       {/* ===== Habitica-Inspired Header ===== */}
       <header
@@ -214,6 +216,7 @@ function App() {
         </div>
       </main>
     </div>
+    </ConfirmProvider>
   );
 }
 

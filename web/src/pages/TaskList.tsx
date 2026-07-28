@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useCallback } from "react";
+import { useConfirm } from "../components/ConfirmProvider";
 import {
   listTasks,
   deleteTask,
@@ -91,6 +92,8 @@ export default function TaskList() {
     },
     enabled: habitTasks.length > 0,
   });
+
+  const confirm = useConfirm();
 
   // Mutations
   const deleteMutation = useMutation({
@@ -356,9 +359,14 @@ export default function TaskList() {
                 </span>
                 <button
                   className="btn btn-danger btn-sm"
-                  onClick={(e) => {
+                  onClick={async (e) => {
                     e.stopPropagation();
-                    if (confirm("Delete this task?")) {
+                    const ok = await confirm({
+                      title: "Delete this task?",
+                      confirmLabel: "Delete",
+                      confirmVariant: "danger",
+                    });
+                    if (ok) {
                       deleteMutation.mutate(task.id);
                     }
                   }}
@@ -499,9 +507,14 @@ export default function TaskList() {
                     <StreakBadge current={current} longest={longest} />
                     <button
                       className="btn btn-danger btn-sm habit-kebab"
-                      onClick={(e) => {
+                      onClick={async (e) => {
                         e.stopPropagation();
-                        if (confirm("Delete this habit?")) {
+                        const ok = await confirm({
+                          title: "Delete this habit?",
+                          confirmLabel: "Delete",
+                          confirmVariant: "danger",
+                        });
+                        if (ok) {
                           deleteMutation.mutate(task.id);
                         }
                       }}
@@ -607,9 +620,14 @@ export default function TaskList() {
                   <button
                     className="btn btn-danger btn-sm"
                     style={{ padding: "0.15rem 0.4rem", fontSize: "0.65rem" }}
-                    onClick={(e) => {
+                    onClick={async (e) => {
                       e.stopPropagation();
-                      if (confirm(`Delete list "${list.name}"?`)) {
+                      const ok = await confirm({
+                        title: `Delete list "${list.name}"?`,
+                        confirmLabel: "Delete",
+                        confirmVariant: "danger",
+                      });
+                      if (ok) {
                         deleteListMutation.mutate(list.id);
                       }
                     }}
@@ -650,6 +668,7 @@ function ListDetailPanel({ listId, onListDeleted }: { listId: string; onListDele
   const [newTitle, setNewTitle] = useState("");
   const [editingName, setEditingName] = useState(false);
   const [editName, setEditName] = useState("");
+  const confirm = useConfirm();
 
   const { data: taskList, isLoading: listLoading } = useQuery({
     queryKey: ["taskList", listId],
@@ -769,8 +788,14 @@ function ListDetailPanel({ listId, onListDeleted }: { listId: string; onListDele
             </button>
             <button
               className="btn btn-danger btn-sm"
-              onClick={() => {
-                if (confirm(`Delete list "${taskList.name}" and all its tasks?`)) {
+              onClick={async () => {
+                const ok = await confirm({
+                  title: `Delete list "${taskList.name}"?`,
+                  message: "All tasks in this list will also be deleted.",
+                  confirmLabel: "Delete",
+                  confirmVariant: "danger",
+                });
+                if (ok) {
                   deleteListMutation.mutate();
                 }
               }}
@@ -860,8 +885,13 @@ function ListDetailPanel({ listId, onListDeleted }: { listId: string; onListDele
               </span>
               <button
                 className="btn btn-danger btn-sm"
-                onClick={() => {
-                  if (confirm("Delete this task?")) {
+                onClick={async () => {
+                  const ok = await confirm({
+                    title: "Delete this task?",
+                    confirmLabel: "Delete",
+                    confirmVariant: "danger",
+                  });
+                  if (ok) {
                     deleteTaskMutation.mutate(task.id);
                   }
                 }}

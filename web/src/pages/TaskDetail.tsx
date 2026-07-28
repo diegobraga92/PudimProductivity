@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useCallback } from "react";
+import { useConfirm } from "../components/ConfirmProvider";
 import {
   getTask,
   updateTask,
@@ -98,6 +99,8 @@ export default function TaskDetail({
     },
     onError: (err) => setError((err as Error).message),
   });
+
+  const confirm = useConfirm();
 
   const deleteMutation = useMutation({
     mutationFn: () => deleteTask(taskId),
@@ -407,8 +410,13 @@ export default function TaskDetail({
           </button>
           <button
             className="btn btn-danger"
-            onClick={() => {
-              if (confirm("Delete this task?")) {
+            onClick={async () => {
+              const ok = await confirm({
+                title: "Delete this task?",
+                confirmLabel: "Delete",
+                confirmVariant: "danger",
+              });
+              if (ok) {
                 deleteMutation.mutate();
               }
             }}
