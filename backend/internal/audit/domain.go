@@ -7,10 +7,10 @@ import (
 
 // Action constants for audit log entries.
 const (
-	ActionTaskCreated    = "task.created"
-	ActionTaskUpdated    = "task.updated"
-	ActionTaskDeleted    = "task.deleted"
-	ActionTaskCompleted  = "task.completed"
+	ActionTaskCreated     = "task.created"
+	ActionTaskUpdated     = "task.updated"
+	ActionTaskDeleted     = "task.deleted"
+	ActionTaskCompleted   = "task.completed"
 	ActionTaskUncompleted = "task.uncompleted"
 
 	ActionListCreated = "list.created"
@@ -22,9 +22,9 @@ const (
 
 // Resource constants.
 const (
-	ResourceTasks      = "tasks"
-	ResourceTaskLists  = "task_lists"
-	ResourceFeatures   = "feature_flags"
+	ResourceTasks     = "tasks"
+	ResourceTaskLists = "task_lists"
+	ResourceFeatures  = "feature_flags"
 )
 
 // Entry represents a single audit log record.
