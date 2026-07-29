@@ -8,6 +8,9 @@ info:
     - Habits (tasks with `recurrence_days`) track daily completions via a separate completions resource.
     - Tasks can be scheduled on the weekly planner by setting `start_time`, `end_time`, and `color`.
     - Task lists allow grouping tasks into named collections (e.g. "Shopping List", "Project Ideas").
+  license:
+    name: MIT
+    url: https://github.com/diegobraga92/PudimProductivity/blob/main/LICENSE
   version: "0.5.0"
   contact:
     name: PudimProductivity Team
@@ -23,6 +26,7 @@ paths:
       operationId: listScheduledTasks
       summary: List all scheduled tasks
       description: Returns all tasks that have time-blocking info (start_time IS NOT NULL), ordered by start time. Used by the Planner view.
+      security: []
       tags:
         - Tasks
       responses:
@@ -34,12 +38,19 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Task"
+        "400":
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/v1/tasks:
     get:
       operationId: listTasks
       summary: List all tasks
       description: Returns a list of all tasks not assigned to any list, optionally filtered by status.
+      security: []
       tags:
         - Tasks
       parameters:
@@ -64,11 +75,18 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Task"
+        "400":
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
     post:
       operationId: createTask
       summary: Create a new task
       description: Creates a new task with the given title and optional recurrence days and list assignment.
+      security: []
       tags:
         - Tasks
       requestBody:
@@ -96,6 +114,7 @@ paths:
       operationId: getTask
       summary: Get a task by ID
       description: Returns a single task by its unique identifier.
+      security: []
       tags:
         - Tasks
       parameters:
@@ -118,6 +137,7 @@ paths:
       operationId: updateTask
       summary: Update a task
       description: Updates the title, status, or recurrence days of an existing task.
+      security: []
       tags:
         - Tasks
       parameters:
@@ -152,6 +172,7 @@ paths:
       operationId: deleteTask
       summary: Delete a task
       description: Deletes a task by its unique identifier.
+      security: []
       tags:
         - Tasks
       parameters:
@@ -174,6 +195,7 @@ paths:
         Returns all completions across every habit task within an optional date range.
         Use this endpoint to fetch weekly completion data for all habits in a single
         request instead of issuing one request per task.
+      security: []
       tags:
         - Tasks
       parameters:
@@ -213,6 +235,7 @@ paths:
       summary: Complete a habit for a specific date
       description: |
         Marks a habit task as completed for the specified date, or today if no date is provided.
+      security: []
       tags:
         - Tasks
       parameters:
@@ -250,6 +273,7 @@ paths:
       summary: Uncomplete a habit for a specific date
       description: |
         Removes a habit task's completion for the specified date, or today if no date is provided.
+      security: []
       tags:
         - Tasks
       parameters:
@@ -277,6 +301,7 @@ paths:
       operationId: getTaskCompletions
       summary: Get habit completions
       description: Returns all completions for a habit task within an optional date range.
+      security: []
       tags:
         - Tasks
       parameters:
@@ -317,6 +342,7 @@ paths:
       operationId: listTaskLists
       summary: List all task lists
       description: Returns a list of all task lists.
+      security: []
       tags:
         - Task Lists
       responses:
@@ -328,11 +354,18 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/TaskList"
+        "400":
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
     post:
       operationId: createTaskList
       summary: Create a new task list
       description: Creates a new named task list.
+      security: []
       tags:
         - Task Lists
       requestBody:
@@ -360,6 +393,7 @@ paths:
       operationId: getTaskList
       summary: Get a task list by ID
       description: Returns a single task list by its unique identifier.
+      security: []
       tags:
         - Task Lists
       parameters:
@@ -382,6 +416,7 @@ paths:
       operationId: updateTaskList
       summary: Update a task list
       description: Updates the name or description of a task list.
+      security: []
       tags:
         - Task Lists
       parameters:
@@ -416,6 +451,7 @@ paths:
       operationId: deleteTaskList
       summary: Delete a task list
       description: Deletes a task list by its unique identifier. Tasks in the list are not deleted.
+      security: []
       tags:
         - Task Lists
       parameters:
@@ -435,6 +471,7 @@ paths:
       operationId: listTasksByListID
       summary: List tasks in a task list
       description: Returns all tasks belonging to a specific task list.
+      security: []
       tags:
         - Task Lists
       parameters:
@@ -520,39 +557,33 @@ components:
         status:
           $ref: "#/components/schemas/TaskStatus"
         recurrence_days:
-          type: array
-          nullable: true
+          type: [array, "null"]
           description: Days of the week this habit repeats on. null/absent for one-off tasks.
           items:
             $ref: "#/components/schemas/RecurrenceDay"
           example: ["mon", "tue", "thu", "fri"]
         list_id:
-          type: string
+          type: [string, "null"]
           format: uuid
-          nullable: true
           description: The UUID of the task list this task belongs to, or null if unassigned.
           example: "770e8400-e29b-41d4-a716-446655440002"
         start_time:
-          type: string
+          type: [string, "null"]
           format: time
-          nullable: true
           description: Start time for planner scheduling (HH:MM). null for unscheduled tasks.
-          example: "09:00"
+          example: "09:00:00"
         end_time:
-          type: string
+          type: [string, "null"]
           format: time
-          nullable: true
           description: End time for planner scheduling (HH:MM). null for unscheduled tasks.
-          example: "10:00"
+          example: "10:00:00"
         color:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: Hex color for planner visualization. null for unscheduled tasks.
           example: "#3B82F6"
         scheduled_date:
-          type: string
+          type: [string, "null"]
           format: date
-          nullable: true
           description: Specific date for one-off task scheduling (YYYY-MM-DD). null for habits.
           example: "2026-07-20"
         created_at:
@@ -605,39 +636,33 @@ components:
           description: The task title.
           example: "Have hair cut"
         recurrence_days:
-          type: array
-          nullable: true
+          type: [array, "null"]
           description: Days of the week for habit recurrence. Omit or set to null for one-off tasks.
           items:
             $ref: "#/components/schemas/RecurrenceDay"
           example: ["mon", "wed", "fri"]
         list_id:
-          type: string
+          type: [string, "null"]
           format: uuid
-          nullable: true
           description: The UUID of the task list to assign this task to.
           example: "770e8400-e29b-41d4-a716-446655440002"
         start_time:
-          type: string
+          type: [string, "null"]
           format: time
-          nullable: true
           description: Start time for planner scheduling (HH:MM). Set to null for unscheduled.
-          example: "09:00"
+          example: "09:00:00"
         end_time:
-          type: string
+          type: [string, "null"]
           format: time
-          nullable: true
           description: End time for planner scheduling (HH:MM). Must be after start_time.
-          example: "10:00"
+          example: "10:00:00"
         color:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: Hex color for planner visualization. Defaults to blue if omitted.
           example: "#10B981"
         scheduled_date:
-          type: string
+          type: [string, "null"]
           format: date
-          nullable: true
           description: Specific date for one-off task scheduling. Not used for habits.
           example: "2026-07-20"
 
@@ -651,16 +676,14 @@ components:
         status:
           $ref: "#/components/schemas/TaskStatus"
         recurrence_days:
-          type: array
+          type: [array, "null"]
           description: Days of the week for habit recurrence. Set to [] to convert back to one-off.
-          nullable: true
           items:
             $ref: "#/components/schemas/RecurrenceDay"
           example: ["mon", "tue", "thu", "fri"]
         list_id:
-          type: string
+          type: [string, "null"]
           format: uuid
-          nullable: true
           description: |
             Assign or unassign the task from a list.
             Omit this field to leave the current list assignment unchanged.
@@ -668,32 +691,28 @@ components:
             Set to null to unassign the task from any list.
           example: "770e8400-e29b-41d4-a716-446655440002"
         start_time:
-          type: string
+          type: [string, "null"]
           format: time
-          nullable: true
           description: |
             Start time for planner scheduling (HH:MM).
             Omit to leave unchanged. Set to null to unschedule.
-          example: "09:00"
+          example: "09:00:00"
         end_time:
-          type: string
+          type: [string, "null"]
           format: time
-          nullable: true
           description: |
             End time for planner scheduling (HH:MM).
             Omit to leave unchanged. Set to null to unschedule.
-          example: "10:00"
+          example: "10:00:00"
         color:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: |
             Hex color for planner visualization.
             Omit to leave unchanged.
           example: "#10B981"
         scheduled_date:
-          type: string
+          type: [string, "null"]
           format: date
-          nullable: true
           description: |
             Specific date for one-off task scheduling.
             Omit to leave unchanged. Set to null to clear.

@@ -6,6 +6,9 @@ info:
     Simple in-memory Pomodoro timer. Only one session can be active at a time.
     Starting a new session cancels any existing one.
     No database persistence — sessions are lost on server restart.
+  license:
+    name: MIT
+    url: https://github.com/diegobraga92/PudimProductivity/blob/main/LICENSE
   version: "0.1.0"
   contact:
     name: PudimProductivity Team
@@ -23,6 +26,7 @@ paths:
       description: |
         Creates a new pomodoro session. If a session is already running, it is
         automatically cancelled first. The session lives in memory only.
+      security: []
       tags:
         - Pomodoro
       requestBody:
@@ -52,6 +56,7 @@ paths:
       description: |
         Returns the current session with live elapsed/remaining time, or
         `{ "active": false }` if no session is running.
+      security: []
       tags:
         - Pomodoro
       responses:
@@ -78,12 +83,19 @@ paths:
                     required:
                       - active
                       - session
+        "400":
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/v1/pomodoro/pause:
     post:
       operationId: pauseSession
       summary: Pause the current session
       description: Pauses the running timer. Returns an error if no session is active or it's not running.
+      security: []
       tags:
         - Pomodoro
       responses:
@@ -105,6 +117,7 @@ paths:
       operationId: resumeSession
       summary: Resume the current session
       description: Resumes a paused timer. Returns an error if no session is active or it's not paused.
+      security: []
       tags:
         - Pomodoro
       responses:
@@ -129,6 +142,7 @@ paths:
         Completes or cancels the current session. If the session is running or
         paused, it is marked as completed. If already completed/cancelled, it
         stays cancelled.
+      security: []
       tags:
         - Pomodoro
       responses:
@@ -213,15 +227,13 @@ components:
           description: When the session was started.
           example: "2026-05-28T12:00:00Z"
         paused_at:
-          type: string
+          type: [string, "null"]
           format: date-time
-          nullable: true
           description: When the session was paused (null if never paused).
           example: "2026-05-28T12:05:00Z"
         completed_at:
-          type: string
+          type: [string, "null"]
           format: date-time
-          nullable: true
           description: When the session was completed (null if not yet completed).
           example: "2026-05-28T12:25:00Z"
         noise_config:
