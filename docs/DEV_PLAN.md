@@ -149,6 +149,23 @@ These are centralised here to emphasise their importance. Each is introduced at 
 - [ ] Mobile: barcode scanner (CameraX + ML Kit) → ISBN → backend book endpoint; meal planning UI adapted for small screens; optional upload meal plan image to S3 via presigned URL
 - [ ] S3 presigned URL flow documented, security review of IAM policy
 
+
+---
+
+## Phase 5a (Optional) – Recipes Module (2–3 weeks)
+
+**Goal:** A full‑featured cooking recipe manager with media upload support. Complements Phase 5 meal planning.
+
+- [ ] API contract: `api/openapi/recipes-v1.yaml` (CRUD, search by title/tag/difficulty)
+- [ ] Backend: `internal/recipe/` module (domain, service, Postgres repository, HTTP handlers)
+- [ ] Database: `recipes`, `recipe_ingredients`, `recipe_steps`, `recipe_tags` tables (migration 011)
+- [ ] Media: image & video upload via presigned S3 URLs; ingest from external download links
+- [ ] Web: recipe list (search + tag/difficulty filters), detail view, create/edit form
+- [ ] Mobile: recipe list/detail/create screens, camera integration for ingredient photos
+- [ ] Events: `recipe.created`, `recipe.updated`, `recipe.deleted` published to event bus
+- [ ] Audit logging: log recipe CRUD operations via existing `internal/audit/` module
+- [ ] Testing: unit + integration, contract tests for new API
+
 ---
 
 ## Phase 6 – Observability, Testing, Database Performance & Contract Enforcement (1–2 weeks)
