@@ -13,9 +13,8 @@ import {
 } from "../api/tasks";
 import WeekHeatmap from "../components/WeekHeatmap";
 import StreakBadge from "../components/StreakBadge";
-import ProgressBar from "../components/ProgressBar";
 import { computeStreaks } from "../utils/streaks";
-import { getWeekDates, getToday } from "../utils/dates";
+import { getToday } from "../utils/dates";
 import { playHabitCompletionSound, playTodoCompletionSound } from "../utils/sounds";
 
 const DAY_LABELS: Record<RecurrenceDay, string> = {
@@ -27,8 +26,6 @@ const DAY_LABELS: Record<RecurrenceDay, string> = {
   sat: "Saturday",
   sun: "Sunday",
 };
-
-const DAY_ORDER: RecurrenceDay[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 
 const COLOR_PALETTE = [
   "#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899",
@@ -75,19 +72,23 @@ export default function TaskDetail({
   });
 
   const isHabit = task?.recurrence_days && task.recurrence_days.length > 0;
-  const weekDates = getWeekDates(weekOffset);
-  const from = weekDates[0];
-  const to = weekDates[6];
+  const today = getToday();
 
+  // Fetch the habit's full completion history (not just the visible 7-day
+  // window) so the streak can grow across calendar weeks without a hard reset.
+  const STREAK_HISTORY_START = "2020-01-01";
   const { data: completions = [] } = useQuery({
-    queryKey: ["taskCompletions", taskId, from, to],
-    queryFn: () => getTaskCompletions(taskId, from, to),
+    queryKey: ["taskCompletions", taskId, STREAK_HISTORY_START, today],
+    queryFn: () => getTaskCompletions(taskId, STREAK_HISTORY_START, today),
     enabled: !!task && isHabit,
   });
 
   const completedDates = new Set(completions.map((c) => c.completed_date));
   const completionDateStrings = completions.map((c) => c.completed_date);
-  const { current: currentStreak, longest: longestStreak } = computeStreaks(completionDateStrings);
+  const { current: currentStreak, longest: longestStreak } = computeStreaks(
+    completionDateStrings,
+    task?.recurrence_days
+  );
 
   const updateMutation = useMutation({
     mutationFn: (req: Parameters<typeof updateTask>[1]) =>
@@ -532,39 +533,8 @@ export default function TaskDetail({
       {isHabit && (
         <div className="card card-habit" style={{ marginBottom: "var(--space-lg)" }}>
           <h3 style={{ fontSize: "var(--font-size-base)", fontWeight: 600, marginBottom: "var(--space-md)" }}>
-            📅 This Week
+            🔥 Current Streak
           </h3>
-
-          {/* Weekly progress */}
-          {task.recurrence_days && (() => {
-            const today = getToday();
-            const weekScheduledDates = task.recurrence_days.map(
-              (day) => weekDates[DAY_ORDER.indexOf(day)]
-            ).filter((d): d is string => d !== undefined);
-            const weeklyTotal = weekScheduledDates.filter((d) => d <= today).length;
-            const weeklyDone = completionDateStrings.filter(
-              (d) => weekScheduledDates.includes(d) && d <= today
-            ).length;
-            const weeklyPct = weeklyTotal > 0 ? Math.round((weeklyDone / weeklyTotal) * 100) : 0;
-
-            return (
-              <div style={{ marginBottom: "var(--space-md)" }}>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    fontSize: "var(--font-size-xs)",
-                    color: "var(--color-text-muted)",
-                    marginBottom: "0.2rem",
-                  }}
-                >
-                  <span>Weekly progress</span>
-                  <span>{weeklyDone}/{weeklyTotal}</span>
-                </div>
-                <ProgressBar value={weeklyPct} variant="habit" />
-              </div>
-            );
-          })()}
 
           <WeekHeatmap
             recurrenceDays={task.recurrence_days ?? []}

@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import type { RecurrenceDay } from "../api/tasks";
-import { getWeekDates, getToday, formatWeekRange } from "../utils/dates";
+import { getRollingWindowDates, getToday, formatWeekRange } from "../utils/dates";
 
 const DAY_ORDER: RecurrenceDay[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 const DAY_SHORT: Record<RecurrenceDay, string> = {
@@ -36,7 +36,7 @@ export default function WeekHeatmap({
   weekOffset = 0,
   onWeekOffsetChange,
 }: WeekHeatmapProps) {
-  const weekDates = getWeekDates(weekOffset);
+  const weekDates = getRollingWindowDates(weekOffset);
   const completedSet = new Set(completions);
   const today = getToday();
   const [animatingDate, setAnimatingDate] = useState<string | null>(null);

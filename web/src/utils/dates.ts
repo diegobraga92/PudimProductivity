@@ -23,8 +23,9 @@ function formatShortDisplay(dateStr: string): string {
 }
 
 /**
- * Get ISO date strings (YYYY-MM-DD) for a given week (Monday to Sunday),
- * using local timezone.
+ * Get ISO date strings (YYYY-MM-DD) for a given calendar week
+ * (Monday to Sunday), using local timezone. Used by the weekly Planner grid,
+ * which is anchored to fixed Monday–Sunday columns.
  *
  * @param weekOffset - Offset relative to the current week:
  *   0 (default) = current week,
@@ -40,6 +41,35 @@ export function getWeekDates(weekOffset = 0): string[] {
   for (let i = 0; i < 7; i++) {
     const d = new Date(monday);
     d.setDate(monday.getDate() + i);
+    dates.push(formatLocalDate(d));
+  }
+  return dates;
+}
+
+/**
+ * Get ISO date strings (YYYY-MM-DD) for a rolling 7-day window.
+ *
+ * Unlike getWeekDates (anchored to Monday), this window is anchored to today:
+ * offset 0 returns the last 7 days ending today, with today as the final
+ * column. This keeps habit streaks flowing continuously between calendar
+ * weeks — on Monday you still see the previous week's completions instead of
+ * a hard reset to a blank Monday–Sunday grid.
+ *
+ * @param offset - Offset relative to the current window:
+ *   0 (default) = last 7 days ending today,
+ *  -1 = the 7 days before that,
+ *  +1 = the 7 days after that (future — usually not shown).
+ */
+export function getRollingWindowDates(offset = 0): string[] {
+  const dates: string[] = [];
+  const today = new Date();
+  const end = new Date(today);
+  end.setDate(today.getDate() + offset * 7);
+  const start = new Date(end);
+  start.setDate(end.getDate() - 6);
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(start);
+    d.setDate(start.getDate() + i);
     dates.push(formatLocalDate(d));
   }
   return dates;

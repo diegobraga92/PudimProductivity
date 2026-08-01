@@ -11,7 +11,6 @@ import {
   createTask,
   type Task,
   type TaskStatus,
-  type RecurrenceDay,
 } from "../api/tasks";
 import {
   listTaskLists,
@@ -29,12 +28,10 @@ import WeekHeatmap from "../components/WeekHeatmap";
 import StreakBadge from "../components/StreakBadge";
 import ProgressBar from "../components/ProgressBar";
 import { computeStreaks } from "../utils/streaks";
-import { getWeekDates, getToday, formatWeekRange } from "../utils/dates";
+import { getRollingWindowDates, getToday, formatWeekRange } from "../utils/dates";
 import { playHabitCompletionSound, playTodoCompletionSound } from "../utils/sounds";
 
 type View = "list" | "create" | "detail";
-
-const DAY_ORDER: RecurrenceDay[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 
 export default function TaskList() {
   const queryClient = useQueryClient();
@@ -70,15 +67,17 @@ export default function TaskList() {
   const isLoading = todoLoading || habitLoading;
   const error = todoError || habitError;
 
-  // Fetch completions for all habit tasks using a single batch request
-  const weekDates = getWeekDates(weekOffset);
-  const from = weekDates[0];
-  const to = weekDates[6];
+  // Fetch completion history for all habit tasks using a single batch request.
+  // The window is widened to the habit's full history so streaks can grow
+  // across calendar weeks without a hard reset.
+  const weekDates = getRollingWindowDates(weekOffset);
+  const STREAK_HISTORY_START = "2020-01-01";
+  const todayForFetch = getToday();
 
   const { data: allCompletions } = useQuery({
-    queryKey: ["habitCompletions", from, to],
+    queryKey: ["habitCompletions", STREAK_HISTORY_START, todayForFetch],
     queryFn: async () => {
-      const completions = await getAllTaskCompletions(from, to);
+      const completions = await getAllTaskCompletions(STREAK_HISTORY_START, todayForFetch);
       const results: Record<string, string[]> = {};
       for (const task of habitTasks) {
         results[task.id] = [];
@@ -201,12 +200,6 @@ export default function TaskList() {
   const doneTodos = todoTasks.filter((t) => t.status === "done").length;
   const todoProgress = todoTasks.length > 0 ? Math.round((doneTodos / todoTasks.length) * 100) : 0;
 
-  const today = getToday();
-  const todayHabitCompletions = Object.values(allCompletions ?? {}).filter((dates) =>
-    dates.includes(today)
-  ).length;
-  const habitProgress = habitTasks.length > 0 ? Math.round((todayHabitCompletions / habitTasks.length) * 100) : 0;
-
   return (
     <div className="animate-fade-in">
       {/* Page Header */}
@@ -253,12 +246,6 @@ export default function TaskList() {
             <span className="badge badge-todo">{doneTodos}/{todoTasks.length}</span>
             <div style={{ width: "100px" }}>
               <ProgressBar value={todoProgress} variant="todo" />
-            </div>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)" }}>
-            <span className="badge badge-habit">{todayHabitCompletions}/{habitTasks.length}</span>
-            <div style={{ width: "100px" }}>
-              <ProgressBar value={habitProgress} variant="habit" />
             </div>
           </div>
         </div>
@@ -413,7 +400,7 @@ export default function TaskList() {
               }}
             >
               {weekOffset === 0
-                ? "This Week"
+                ? "Last 7 Days"
                 : formatWeekRange(weekDates)}
             </span>
             <button
@@ -461,14 +448,7 @@ export default function TaskList() {
           <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
             {habitTasks.map((task, index) => {
               const taskCompletions = allCompletions?.[task.id] ?? [];
-              const { current, longest } = computeStreaks(taskCompletions);
-              const weekScheduledDates = (task.recurrence_days ?? []).map(
-                (day) => weekDates[DAY_ORDER.indexOf(day)]
-              ).filter((d): d is string => d !== undefined);
-              const weeklyDone = taskCompletions.filter((d) => weekScheduledDates.includes(d) && d <= today).length;
-              const weeklyTotal = weekScheduledDates.filter((d) => d <= today).length;
-              const weeklyPct = weeklyTotal > 0 ? Math.round((weeklyDone / weeklyTotal) * 100) : 0;
-              const allDone = weeklyTotal > 0 && weeklyDone >= weeklyTotal;
+              const { current, longest } = computeStreaks(taskCompletions, task.recurrence_days);
 
               return (
                 <div
@@ -538,18 +518,6 @@ export default function TaskList() {
                       />
                     </div>
 
-                  {/* Row 3: Compact progress bar + count */}
-                  <div className="progress-bar-compact">
-                    <div className="progress-bar">
-                      <div
-                        className="progress-bar-fill habit"
-                        style={{ width: `${weeklyPct}%` }}
-                      />
-                    </div>
-                    <span className={`progress-count ${allDone ? "done" : ""}`}>
-                      {weeklyDone}/{weeklyTotal}
-                    </span>
-                  </div>
                 </div>
               );
             })}
