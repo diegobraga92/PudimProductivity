@@ -29,7 +29,12 @@ import StreakBadge from "../components/StreakBadge";
 import ProgressBar from "../components/ProgressBar";
 import { computeStreaks } from "../utils/streaks";
 import { getRollingWindowDates, getToday, formatWeekRange } from "../utils/dates";
-import { playHabitCompletionSound, playTodoCompletionSound } from "../utils/sounds";
+import {
+  playHabitCompletionSound,
+  playTodoCompletionSound,
+  playHabitUncompletionSound,
+  playTodoUncompletionSound,
+} from "../utils/sounds";
 
 type View = "list" | "create" | "detail";
 
@@ -107,6 +112,8 @@ export default function TaskList() {
     mutationFn: async ({ id, status }: { id: string; status: TaskStatus }) => {
       if (status === "todo") {
         playTodoCompletionSound();
+      } else {
+        playTodoUncompletionSound();
       }
       return updateTask(id, { status: status === "done" ? "todo" : "done" });
     },
@@ -119,6 +126,7 @@ export default function TaskList() {
   const habitToggleMutation = useMutation({
     mutationFn: async ({ taskId, date, completed }: { taskId: string; date: string; completed: boolean }) => {
       if (completed) {
+        playHabitUncompletionSound();
         await uncompleteTask(taskId, date);
       } else {
         playHabitCompletionSound();
@@ -668,6 +676,8 @@ function ListDetailPanel({ listId, onListDeleted }: { listId: string; onListDele
     mutationFn: async ({ id, status }: { id: string; status: TaskStatus }) => {
       if (status === "todo") {
         playTodoCompletionSound();
+      } else {
+        playTodoUncompletionSound();
       }
       return updateTask(id, { status: status === "done" ? "todo" : "done" });
     },

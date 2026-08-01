@@ -15,7 +15,12 @@ import WeekHeatmap from "../components/WeekHeatmap";
 import StreakBadge from "../components/StreakBadge";
 import { computeStreaks } from "../utils/streaks";
 import { getToday } from "../utils/dates";
-import { playHabitCompletionSound, playTodoCompletionSound } from "../utils/sounds";
+import {
+  playHabitCompletionSound,
+  playTodoCompletionSound,
+  playHabitUncompletionSound,
+  playTodoUncompletionSound,
+} from "../utils/sounds";
 
 const DAY_LABELS: Record<RecurrenceDay, string> = {
   mon: "Monday",
@@ -113,6 +118,8 @@ export default function TaskDetail({
     mutationFn: async (newStatus: TaskStatus) => {
       if (newStatus === "done") {
         playTodoCompletionSound();
+      } else {
+        playTodoUncompletionSound();
       }
       return updateTask(taskId, { status: newStatus });
     },
@@ -126,6 +133,7 @@ export default function TaskDetail({
   const habitToggleMutation = useMutation({
     mutationFn: async (date: string) => {
       if (completedDates.has(date)) {
+        playHabitUncompletionSound();
         await uncompleteTask(taskId, date);
       } else {
         playHabitCompletionSound();
