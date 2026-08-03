@@ -134,10 +134,22 @@ export function playHabitUncompletionSound(): void {
  * Play a repeating three-beep alarm sound to signal a scheduled habit is
  * coming up. Uses a distinctive ascending pattern (E5 → G5 → A5) with
  * short gaps, distinct from the completion/uncompletion chimes.
+ *
+ * Note: This function is async because an AudioContext created outside of a
+ * user gesture (e.g. from a setTimeout/setInterval callback) starts in a
+ * "suspended" state in modern browsers, and must be resumed explicitly via
+ * ctx.resume() before any scheduled oscillators will produce sound.
  */
-export function playAlarmSound(): void {
+export async function playAlarmSound(): Promise<void> {
   try {
     const ctx = new AudioContext({ latencyHint: "interactive" });
+
+    // Resume the context first — critical for alarms fired from timers
+    // (no user gesture available). Without this, oscillators are scheduled
+    // on a suspended context and produce silence.
+    if (ctx.state === "suspended") {
+      await ctx.resume();
+    }
 
     const now = ctx.currentTime;
     const noteDuration = 0.18;

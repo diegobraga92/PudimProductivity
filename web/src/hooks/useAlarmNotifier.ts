@@ -77,14 +77,20 @@ export function useAlarmNotifier(): void {
 
     const checkAlarms = async () => {
       try {
-        let tasks: Task[] = queryClient.getQueryData<Task[]>(["scheduledTasks"]) ?? [];
+        const cached = queryClient.getQueryData<Task[]>(["scheduledTasks"]);
+        let tasks: Task[] = cached ?? [];
         if (tasks.length === 0) {
           tasks = await listScheduledTasks();
+          // Write back to the react-query cache so the planner and future
+          // alarm checks share the same data without redundant fetches.
+          queryClient.setQueryData<Task[]>(["scheduledTasks"], tasks);
         }
 
         const now = new Date();
         const nowMinutes = now.getHours() * 60 + now.getMinutes();
         const todayKey = getToday();
+
+        let firedAny = false;
 
         for (const task of tasks) {
           if (!task.recurrence_days || !task.start_time || task.alarm_minutes == null || task.alarm_minutes <= 0) {
@@ -116,14 +122,22 @@ export function useAlarmNotifier(): void {
           saveFiredAlarms(firedRef.current);
 
           if (isMounted) {
-            playAlarmSound();
+            console.debug(`[alarm] Firing alarm for "${task.title}" (${task.id}) at ${nowMinutes} min, alarm was ${alarmMinutes} min`);
+            await playAlarmSound();
             void showAlarmNotification(task);
+            firedAny = true;
           }
         }
 
+        console.debug(
+          `[alarm] check at ${nowMinutes}min (lastCheck=${lastCheckMinutes}) — ${tasks.length} scheduled task(s), fired ${firedAny ? "yes" : "no"}`
+        );
+
         lastCheckMinutes = nowMinutes;
-      } catch {
-        // API errors — ignore silently
+      } catch (err) {
+        // API errors — log instead of silently swallowing so future
+        // alarm issues are diagnosable.
+        console.debug("[alarm] check failed", err);
       }
     };
 
