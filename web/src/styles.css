@@ -212,6 +212,31 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: 0 0 0 4px rgba(234, 88, 12, 0.15);
 }
 
+/* Compact sort dropdown for section headers */
+.sort-select {
+  height: 30px;
+  padding: 0 0.4rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-family);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  background: var(--color-surface);
+  cursor: pointer;
+  outline: none;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.sort-select:hover {
+  border-color: var(--color-text-muted);
+}
+
+.sort-select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.12);
+}
+
 /* --- Cards --- */
 .card {
   background: var(--color-surface);

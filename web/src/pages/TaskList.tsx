@@ -38,6 +38,117 @@ import {
 
 type View = "list" | "create" | "detail";
 
+type SortOption =
+  | "alpha-asc"
+  | "alpha-desc"
+  | "created-asc"
+  | "created-desc"
+  | "time-asc"
+  | "time-desc";
+
+const SORT_LABELS: Record<SortOption, string> = {
+  "alpha-asc": "Name A-Z",
+  "alpha-desc": "Name Z-A",
+  "created-asc": "Oldest first",
+  "created-desc": "Newest first",
+  "time-asc": "Time ↑",
+  "time-desc": "Time ↓",
+};
+
+function sortTasks(tasks: Task[], option: SortOption): Task[] {
+  const sorted = [...tasks];
+
+  switch (option) {
+    case "alpha-asc": {
+      return sorted.sort((a, b) => a.title.localeCompare(b.title));
+    }
+    case "alpha-desc": {
+      return sorted.sort((a, b) => b.title.localeCompare(a.title));
+    }
+    case "created-asc": {
+      return sorted.sort((a, b) => (a.created_at < b.created_at ? -1 : a.created_at > b.created_at ? 1 : 0));
+    }
+    case "created-desc": {
+      return sorted.sort((a, b) => (b.created_at < a.created_at ? -1 : b.created_at > a.created_at ? 1 : 0));
+    }
+    case "time-asc":
+    case "time-desc": {
+      const scheduled = sorted.filter((t) => t.start_time != null);
+      const unscheduled = sorted.filter((t) => t.start_time == null);
+      scheduled.sort((a, b) =>
+        option === "time-asc"
+          ? (a.start_time ?? "").localeCompare(b.start_time ?? "")
+          : (b.start_time ?? "").localeCompare(a.start_time ?? "")
+      );
+      return [...scheduled, ...unscheduled];
+    }
+    default: {
+      return sorted;
+    }
+  }
+}
+
+const VALID_SORT_OPTIONS = new Set<string>([
+  "alpha-asc",
+  "alpha-desc",
+  "created-asc",
+  "created-desc",
+  "time-asc",
+  "time-desc",
+]);
+
+function usePersistedSort(key: string, initial: SortOption) {
+  const [sort, setSort] = useState<SortOption>(() => {
+    try {
+      const stored = localStorage.getItem(key);
+      return stored !== null && VALID_SORT_OPTIONS.has(stored)
+        ? (stored as SortOption)
+        : initial;
+    } catch {
+      return initial;
+    }
+  });
+
+  const updateSort = useCallback(
+    (option: SortOption) => {
+      try {
+        localStorage.setItem(key, option);
+      } catch {
+        // Ignore storage errors (e.g. private mode)
+      }
+      setSort(option);
+    },
+    [key]
+  );
+
+  return [sort, updateSort] as const;
+}
+
+function SortSelect({
+  value,
+  onChange,
+  options,
+}: {
+  value: SortOption;
+  onChange: (option: SortOption) => void;
+  options: SortOption[];
+}) {
+  return (
+    <select
+      className="sort-select"
+      value={value}
+      onChange={(e) => onChange(e.target.value as SortOption)}
+      aria-label="Sort tasks"
+    >
+      {options.map((opt) => (
+        <option key={opt} value={opt}>
+          {SORT_LABELS[opt]}
+        </option>
+      ))}
+    </select>
+  );
+}
+
 export default function TaskList() {
   const queryClient = useQueryClient();
   const [view, setView] = useState<View>("list");
@@ -47,6 +158,8 @@ export default function TaskList() {
   const [newHabitTitle, setNewHabitTitle] = useState("");
   const [newListName, setNewListName] = useState("");
   const [weekOffset, setWeekOffset] = useState(0);
+  const [todoSort, setTodoSort] = usePersistedSort("taskSort.todos", "created-desc");
+  const [habitSort, setHabitSort] = usePersistedSort("taskSort.habits", "created-desc");
   const handleWeekOffsetChange = useCallback((newOffset: number) => {
     setWeekOffset(newOffset);
   }, []);
@@ -208,6 +321,10 @@ export default function TaskList() {
   const doneTodos = todoTasks.filter((t) => t.status === "done").length;
   const todoProgress = todoTasks.length > 0 ? Math.round((doneTodos / todoTasks.length) * 100) : 0;
 
+  // Sort tasks based on selected sort options
+  const sortedTodoTasks = sortTasks(todoTasks, todoSort);
+  const sortedHabitTasks = sortTasks(habitTasks, habitSort);
+
   return (
     <div className="animate-fade-in">
       {/* Page Header */}
@@ -280,6 +397,11 @@ export default function TaskList() {
             <h2 className="section-header" style={{ marginBottom: 0 }}>
               📋 To-Dos <span className="badge badge-todo">{todoTasks.length}</span>
             </h2>
+            <SortSelect
+              value={todoSort}
+              onChange={setTodoSort}
+              options={["created-desc", "created-asc", "alpha-asc", "alpha-desc"]}
+            />
           </div>
 
           {/* Quick-add for todos */}
@@ -314,7 +436,7 @@ export default function TaskList() {
           )}
 
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-            {todoTasks.map((task, index) => (
+            {sortedTodoTasks.map((task, index) => (
               <div
                 key={task.id}
                 className={`card card-todo ${task.status === "done" ? "card-done" : ""}`}
@@ -379,6 +501,11 @@ export default function TaskList() {
             <h2 className="section-header" style={{ marginBottom: 0 }}>
               🔄 Habits <span className="badge badge-habit">{habitTasks.length}</span>
             </h2>
+            <SortSelect
+              value={habitSort}
+              onChange={setHabitSort}
+              options={["created-desc", "created-asc", "alpha-asc", "alpha-desc", "time-asc", "time-desc"]}
+            />
           </div>
 
           {/* Shared week navigation for all habits */}
@@ -454,7 +581,7 @@ export default function TaskList() {
           )}
 
           <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
-            {habitTasks.map((task, index) => {
+            {sortedHabitTasks.map((task, index) => {
               const taskCompletions = allCompletions?.[task.id] ?? [];
               const { current, longest } = computeStreaks(taskCompletions, task.recurrence_days);
 
@@ -644,6 +771,7 @@ function ListDetailPanel({ listId, onListDeleted }: { listId: string; onListDele
   const [newTitle, setNewTitle] = useState("");
   const [editingName, setEditingName] = useState(false);
   const [editName, setEditName] = useState("");
+  const [listSort, setListSort] = usePersistedSort("taskSort.list", "created-desc");
   const confirm = useConfirm();
 
   const { data: taskList, isLoading: listLoading } = useQuery({
@@ -725,6 +853,8 @@ function ListDetailPanel({ listId, onListDeleted }: { listId: string; onListDele
   const doneCount = tasks.filter((t) => t.status === "done").length;
   const progress = tasks.length > 0 ? Math.round((doneCount / tasks.length) * 100) : 0;
 
+  const sortedTasks = sortTasks(tasks, listSort);
+
   return (
     <div>
       {/* Title / Edit */}
@@ -789,6 +919,11 @@ function ListDetailPanel({ listId, onListDeleted }: { listId: string; onListDele
                   <div className="progress-bar-fill" style={{ width: `${progress}%` }} />
                 </div>
               </div>
+              <SortSelect
+                value={listSort}
+                onChange={setListSort}
+                options={["created-desc", "created-asc", "alpha-asc", "alpha-desc"]}
+              />
             </div>
           )}
         </div>
@@ -830,7 +965,7 @@ function ListDetailPanel({ listId, onListDeleted }: { listId: string; onListDele
 
       {tasks.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
-          {tasks.map((task) => (
+          {sortedTasks.map((task) => (
             <div
               key={task.id}
               className={`card card-list ${task.status === "done" ? "card-done" : ""}`}
