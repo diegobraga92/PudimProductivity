@@ -5,7 +5,7 @@ import {
   getAllTaskCompletions,
   type Task,
 } from "../api/tasks";
-import { getWeekDates, formatWeekRange } from "../utils/dates";
+import { getWeekDates, formatWeekRange, sanitizeTime } from "../utils/dates";
 
 const DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
 const DAY_LABELS: Record<string, string> = {
@@ -21,11 +21,6 @@ const HOURS = Array.from({ length: 16 }, (_, i) => {
     value: `${String(h).padStart(2, "0")}:00`,
   };
 });
-
-function sanitizeTime(t: string): string {
-  const parts = t.split(":");
-  return `${parts[0]}:${parts[1]}`;
-}
 
 function parseTimeToMinutes(t: string): number {
   const [h, m] = sanitizeTime(t).split(":").map(Number);

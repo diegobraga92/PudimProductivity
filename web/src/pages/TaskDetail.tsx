@@ -14,7 +14,7 @@ import {
 import WeekHeatmap from "../components/WeekHeatmap";
 import StreakBadge from "../components/StreakBadge";
 import { computeStreaks } from "../utils/streaks";
-import { getToday } from "../utils/dates";
+import { getToday, sanitizeTime } from "../utils/dates";
 import {
   playHabitCompletionSound,
   playTodoCompletionSound,
@@ -151,8 +151,8 @@ export default function TaskDetail({
     if (!task) return;
     setTitle(task.title);
     setShowSchedule(!!task.start_time);
-    setStartTime(task.start_time || "09:00");
-    setEndTime(task.end_time || "10:00");
+    setStartTime(sanitizeTime(task.start_time) || "09:00");
+    setEndTime(sanitizeTime(task.end_time) || "10:00");
     setColor(task.color || "#3B82F6");
     setScheduledDate(task.scheduled_date || "");
     setAlarmMinutes(task.alarm_minutes != null ? String(task.alarm_minutes) : "");

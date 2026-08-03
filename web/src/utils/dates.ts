@@ -98,3 +98,15 @@ export function formatWeekRange(weekDates: string[]): string {
   }
   return `${start} – ${end}`;
 }
+
+/**
+ * Normalize a time string from the backend (e.g. "09:00:00") to the
+ * HH:MM format expected by HTML <input type="time"> elements.
+ * If the input is invalid or empty, returns an empty string.
+ */
+export function sanitizeTime(t: string | null | undefined): string {
+  if (!t) return "";
+  const parts = t.split(":");
+  if (parts.length < 2) return "";
+  return `${parts[0]}:${parts[1]}`;
+}
