@@ -329,7 +329,7 @@ export default function Planner({ onNavigate }: PlannerProps) {
                         e.stopPropagation();
                         handleEntryClick(task);
                       }}
-                      title={`${task.title} (${task.start_time}–${task.end_time})${isWeekdayCompleted ? " ✓ Done" : ""}`}
+                      title={`${task.title} (${sanitizeTime(task.start_time)}–${sanitizeTime(task.end_time)})${isWeekdayCompleted ? " ✓ Done" : ""}`}
                       onMouseEnter={(e) => {
                         (e.currentTarget as HTMLElement).style.opacity = "0.9";
                       }}

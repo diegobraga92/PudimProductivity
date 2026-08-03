@@ -511,7 +511,7 @@ export default function TaskDetail({
           >
             <span>📅</span>
             <span>
-              {task.start_time} – {task.end_time}
+              {sanitizeTime(task.start_time)} – {sanitizeTime(task.end_time)}
               {task.color && (
                 <span
                   style={{
