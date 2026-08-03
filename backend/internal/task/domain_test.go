@@ -160,7 +160,7 @@ func TestTask_Update_Title(t *testing.T) {
 
 	newTitle := "New title"
 
-	if err := task.Update(&newTitle, nil, nil, nil, nil, nil, nil, nil); err != nil {
+	if err := task.Update(&newTitle, nil, nil, nil, nil, nil, nil, nil, nil); err != nil {
 		t.Fatalf("Update: %v", err)
 	}
 
@@ -178,7 +178,7 @@ func TestTask_Update_EmptyTitleIsRejected(t *testing.T) {
 
 	empty := ""
 
-	if err := task.Update(&empty, nil, nil, nil, nil, nil, nil, nil); err == nil {
+	if err := task.Update(&empty, nil, nil, nil, nil, nil, nil, nil, nil); err == nil {
 		t.Fatal("expected error for empty title, got nil")
 	}
 
@@ -192,7 +192,7 @@ func TestTask_Update_Status(t *testing.T) {
 
 	done := TaskStatusDone
 
-	if err := task.Update(nil, &done, nil, nil, nil, nil, nil, nil); err != nil {
+	if err := task.Update(nil, &done, nil, nil, nil, nil, nil, nil, nil); err != nil {
 		t.Fatalf("Update: %v", err)
 	}
 
@@ -206,7 +206,7 @@ func TestTask_Update_InvalidStatusIsRejected(t *testing.T) {
 
 	bad := TaskStatus("invalid")
 
-	if err := task.Update(nil, &bad, nil, nil, nil, nil, nil, nil); err == nil {
+	if err := task.Update(nil, &bad, nil, nil, nil, nil, nil, nil, nil); err == nil {
 		t.Fatal("expected error for invalid status, got nil")
 	}
 }
@@ -216,7 +216,7 @@ func TestTask_Update_RecurrenceDays(t *testing.T) {
 
 	days := []string{"mon", "fri"}
 
-	if err := task.Update(nil, nil, &days, nil, nil, nil, nil, nil); err != nil {
+	if err := task.Update(nil, nil, &days, nil, nil, nil, nil, nil, nil); err != nil {
 		t.Fatalf("Update: %v", err)
 	}
 
@@ -234,7 +234,7 @@ func TestTask_Update_ClonesRecurrenceDays(t *testing.T) {
 
 	days := []string{"mon", "wed"}
 
-	if err := task.Update(nil, nil, &days, nil, nil, nil, nil, nil); err != nil {
+	if err := task.Update(nil, nil, &days, nil, nil, nil, nil, nil, nil); err != nil {
 		t.Fatalf("Update: %v", err)
 	}
 
@@ -250,7 +250,7 @@ func TestTask_Update_EmptyRecurrenceDaysRejected(t *testing.T) {
 
 	empty := []string{}
 
-	err := task.Update(nil, nil, &empty, nil, nil, nil, nil, nil)
+	err := task.Update(nil, nil, &empty, nil, nil, nil, nil, nil, nil)
 	if err == nil {
 		t.Fatal("expected error for empty recurrence days")
 	}
@@ -265,7 +265,7 @@ func TestTask_Update_InvalidRecurrenceDayIsRejected(t *testing.T) {
 
 	bad := []string{"mon", "xyz"}
 
-	if err := task.Update(nil, nil, &bad, nil, nil, nil, nil, nil); err == nil {
+	if err := task.Update(nil, nil, &bad, nil, nil, nil, nil, nil, nil); err == nil {
 		t.Fatal("expected error for invalid recurrence day, got nil")
 	}
 }
@@ -275,7 +275,7 @@ func TestTask_Update_DuplicateRecurrenceDayIsRejected(t *testing.T) {
 
 	bad := []string{"mon", "mon"}
 
-	if err := task.Update(nil, nil, &bad, nil, nil, nil, nil, nil); err == nil {
+	if err := task.Update(nil, nil, &bad, nil, nil, nil, nil, nil, nil); err == nil {
 		t.Fatal("expected error for duplicate recurrence day, got nil")
 	}
 }
@@ -287,7 +287,7 @@ func TestTask_Update_ListIDAssignAndUnassign(t *testing.T) {
 	listIDStr := "list-uuid"
 	listIDPtr := &listIDStr
 
-	if err := task.Update(nil, nil, nil, &listIDPtr, nil, nil, nil, nil); err != nil {
+	if err := task.Update(nil, nil, nil, &listIDPtr, nil, nil, nil, nil, nil); err != nil {
 		t.Fatalf("Update (assign): %v", err)
 	}
 
@@ -298,7 +298,7 @@ func TestTask_Update_ListIDAssignAndUnassign(t *testing.T) {
 	// Unassign
 	var nilID *string
 
-	if err := task.Update(nil, nil, nil, &nilID, nil, nil, nil, nil); err != nil {
+	if err := task.Update(nil, nil, nil, &nilID, nil, nil, nil, nil, nil); err != nil {
 		t.Fatalf("Update (unassign): %v", err)
 	}
 
@@ -315,12 +315,66 @@ func TestTask_Update_ListIDAbsentDoesNotChange(t *testing.T) {
 
 	var noChange **string
 
-	if err := task.Update(nil, nil, nil, noChange, nil, nil, nil, nil); err != nil {
+	if err := task.Update(nil, nil, nil, noChange, nil, nil, nil, nil, nil); err != nil {
 		t.Fatalf("Update: %v", err)
 	}
 
 	if task.ListID == nil || *task.ListID != "list-uuid" {
 		t.Errorf("ListID should not change when listID param is nil, got %v", task.ListID)
+	}
+}
+
+func TestTask_Update_AlarmMinutes(t *testing.T) {
+	task := mustNewTask(t, "id-1", "Stand up", nil)
+
+	alarm := 5
+	alarmPtr := &alarm
+
+	if err := task.Update(nil, nil, nil, nil, nil, nil, nil, nil, &alarmPtr); err != nil {
+		t.Fatalf("Update: %v", err)
+	}
+
+	if task.AlarmMinutes == nil || *task.AlarmMinutes != 5 {
+		t.Errorf("AlarmMinutes: got %v, want &5", task.AlarmMinutes)
+	}
+}
+
+func TestTask_Update_NegativeAlarmMinutesRejected(t *testing.T) {
+	task := mustNewTask(t, "id-1", "Stand up", nil)
+
+	bad := -5
+	badPtr := &bad
+
+	if err := task.Update(nil, nil, nil, nil, nil, nil, nil, nil, &badPtr); err == nil {
+		t.Fatal("expected error for negative alarm_minutes, got nil")
+	}
+}
+
+// ── NewTaskWithSchedule ───────────────────────────────────────────────────────
+
+func TestNewTaskWithSchedule_ValidWithAlarm(t *testing.T) {
+	start := "09:00"
+	end := "10:00"
+	alarm := 10
+
+	task, err := NewTaskWithSchedule("id-1", "Morning run", []string{"mon", "wed", "fri"}, &start, &end, nil, nil, &alarm)
+	if err != nil {
+		t.Fatalf("NewTaskWithSchedule: %v", err)
+	}
+
+	if task.AlarmMinutes == nil || *task.AlarmMinutes != 10 {
+		t.Errorf("AlarmMinutes: got %v, want &10", task.AlarmMinutes)
+	}
+}
+
+func TestNewTaskWithSchedule_NegativeAlarmRejected(t *testing.T) {
+	start := "09:00"
+	end := "10:00"
+	bad := -1
+
+	_, err := NewTaskWithSchedule("id-1", "Morning run", []string{"mon"}, &start, &end, nil, nil, &bad)
+	if err == nil {
+		t.Fatal("expected error for negative alarm_minutes, got nil")
 	}
 }
 

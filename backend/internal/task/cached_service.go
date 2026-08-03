@@ -96,8 +96,8 @@ func (s *CachedTaskService) CreateTaskWithList(ctx context.Context, title string
 	return task, nil
 }
 
-func (s *CachedTaskService) UpdateTask(ctx context.Context, id string, title *string, status *TaskStatus, recurrenceDays *[]string, listID **string, startTime, endTime, color, scheduledDate **string) (*Task, error) {
-	task, err := s.TaskService.UpdateTask(ctx, id, title, status, recurrenceDays, listID, startTime, endTime, color, scheduledDate)
+func (s *CachedTaskService) UpdateTask(ctx context.Context, id string, title *string, status *TaskStatus, recurrenceDays *[]string, listID **string, startTime, endTime, color, scheduledDate **string, alarmMinutes **int) (*Task, error) {
+	task, err := s.TaskService.UpdateTask(ctx, id, title, status, recurrenceDays, listID, startTime, endTime, color, scheduledDate, alarmMinutes)
 	if err != nil {
 		return nil, err
 	}

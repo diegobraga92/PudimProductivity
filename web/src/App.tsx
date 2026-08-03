@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { getHealth, type HealthResponse } from "./api/client";
 import { ConfirmProvider } from "./components/ConfirmProvider";
+import { useAlarmNotifier } from "./hooks/useAlarmNotifier";
 import TaskList from "./pages/TaskList";
 import Dashboard from "./pages/Dashboard";
 import Planner from "./pages/Planner";
@@ -13,6 +14,9 @@ type Page = "dashboard" | "tasks" | "planner" | "pomodoro" | "soundscape" | "hea
 
 function App() {
   const [page, setPage] = useState<Page>("dashboard");
+
+  // Polls scheduled habit tasks and fires sound + notification alarms
+  useAlarmNotifier();
 
   const { data: healthData } = useQuery<HealthResponse>({
     queryKey: ["health"],

@@ -18,7 +18,7 @@ func NewPostgresTaskRepository(pool *pgxpool.Pool) *PostgresTaskRepository {
 }
 
 // returns the full set of columns used in SELECT, INSERT, and UPDATE queries.
-const taskColumns = `id, title, status, recurrence_days, list_id, start_time, end_time, color, scheduled_date, created_at, updated_at`
+const taskColumns = `id, title, status, recurrence_days, list_id, start_time, end_time, color, scheduled_date, alarm_minutes, created_at, updated_at`
 
 func (r *PostgresTaskRepository) scanTask(scanner interface {
 	Scan(dest ...any) error
@@ -30,6 +30,7 @@ func (r *PostgresTaskRepository) scanTask(scanner interface {
 	var startTime, endTime *string
 	var color *string
 	var scheduledDate *time.Time
+	var alarmMinutes *int
 
 	err := scanner.Scan(
 		&task.ID,
@@ -41,6 +42,7 @@ func (r *PostgresTaskRepository) scanTask(scanner interface {
 		&endTime,
 		&color,
 		&scheduledDate,
+		&alarmMinutes,
 		&task.CreatedAt,
 		&task.UpdatedAt,
 	)
@@ -56,6 +58,7 @@ func (r *PostgresTaskRepository) scanTask(scanner interface {
 		s := scheduledDate.Format("2006-01-02")
 		task.ScheduledDate = &s
 	}
+	task.AlarmMinutes = alarmMinutes
 
 	return task, nil
 }
@@ -63,7 +66,7 @@ func (r *PostgresTaskRepository) scanTask(scanner interface {
 func (r *PostgresTaskRepository) Create(ctx context.Context, task *Task) error {
 	query := `
 		INSERT INTO tasks (` + taskColumns + `)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 	`
 
 	_, err := r.pool.Exec(ctx, query,
@@ -76,6 +79,7 @@ func (r *PostgresTaskRepository) Create(ctx context.Context, task *Task) error {
 		task.EndTime,
 		task.Color,
 		task.ScheduledDate,
+		task.AlarmMinutes,
 		task.CreatedAt,
 		task.UpdatedAt,
 	)
@@ -221,8 +225,8 @@ func (r *PostgresTaskRepository) Update(ctx context.Context, task *Task) error {
 		UPDATE tasks
 		SET title = $1, status = $2, recurrence_days = $3, list_id = $4,
 		    start_time = $5, end_time = $6, color = $7, scheduled_date = $8,
-		    updated_at = $9
-		WHERE id = $10
+		    alarm_minutes = $9, updated_at = $10
+		WHERE id = $11
 	`
 
 	result, err := r.pool.Exec(ctx, query,
@@ -234,6 +238,7 @@ func (r *PostgresTaskRepository) Update(ctx context.Context, task *Task) error {
 		task.EndTime,
 		task.Color,
 		task.ScheduledDate,
+		task.AlarmMinutes,
 		task.UpdatedAt,
 		task.ID,
 	)

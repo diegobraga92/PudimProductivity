@@ -131,6 +131,48 @@ export function playHabitUncompletionSound(): void {
 }
 
 /**
+ * Play a repeating three-beep alarm sound to signal a scheduled habit is
+ * coming up. Uses a distinctive ascending pattern (E5 → G5 → A5) with
+ * short gaps, distinct from the completion/uncompletion chimes.
+ */
+export function playAlarmSound(): void {
+  try {
+    const ctx = new AudioContext({ latencyHint: "interactive" });
+
+    const now = ctx.currentTime;
+    const noteDuration = 0.18;
+    const gap = 0.12;
+    const totalDuration = noteDuration * 3 + gap * 2 + 0.05;
+
+    // Envelope — moderate peak, clear and audible
+    const gain = ctx.createGain();
+    gain.connect(ctx.destination);
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.35, now + 0.008);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + totalDuration);
+
+    // --- Three ascending notes: E5 (659.25 Hz), G5 (784.00 Hz), A5 (880.00 Hz) ---
+    const notes = [659.25, 784.0, 880.0];
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      osc.connect(gain);
+      const start = now + i * (noteDuration + gap);
+      osc.start(start);
+      osc.stop(start + noteDuration);
+    });
+
+    // Clean up the context after the sound finishes
+    setTimeout(() => {
+      ctx.close();
+    }, totalDuration * 1000 + 100);
+  } catch {
+    // Web Audio API unavailable — silently ignore
+  }
+}
+
+/**
  * Play a short low single-note ping to signal a regular to-do task uncompletion.
  * Uses G4 (392 Hz) with a quick attack and decay — a lower, softer tone
  * distinct from the completion ping, signaling the action was reversed.

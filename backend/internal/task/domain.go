@@ -42,6 +42,7 @@ type Task struct {
 	EndTime        *string  // nil = not scheduled on planner, "10:00" format
 	Color          *string  // nil = default (#3B82F6)
 	ScheduledDate  *string  // nil for habits, "2026-07-20" for one-off tasks
+	AlarmMinutes   *int     // nil = no alarm, e.g. 5 = notify 5 min before start_time
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 }
@@ -71,7 +72,7 @@ func NewTask(id, title string, recurrenceDays []string) (*Task, error) {
 	}, nil
 }
 
-func NewTaskWithSchedule(id, title string, recurrenceDays []string, startTime, endTime, color, scheduledDate *string) (*Task, error) {
+func NewTaskWithSchedule(id, title string, recurrenceDays []string, startTime, endTime, color, scheduledDate *string, alarmMinutes *int) (*Task, error) {
 	task, err := NewTask(id, title, recurrenceDays)
 	if err != nil {
 		return nil, err
@@ -81,10 +82,15 @@ func NewTaskWithSchedule(id, title string, recurrenceDays []string, startTime, e
 		return nil, err
 	}
 
+	if err := validateAlarmMinutes(alarmMinutes); err != nil {
+		return nil, err
+	}
+
 	task.StartTime = startTime
 	task.EndTime = endTime
 	task.Color = color
 	task.ScheduledDate = scheduledDate
+	task.AlarmMinutes = alarmMinutes
 
 	return task, nil
 }
@@ -120,6 +126,7 @@ func (t *Task) Update(
 	endTime **string,
 	color **string,
 	scheduledDate **string,
+	alarmMinutes **int,
 ) error {
 	if title != nil {
 		if *title == "" {
@@ -171,6 +178,13 @@ func (t *Task) Update(
 		t.ScheduledDate = *scheduledDate
 	}
 	curScheduledDate = t.ScheduledDate
+
+	if alarmMinutes != nil {
+		if err := validateAlarmMinutes(*alarmMinutes); err != nil {
+			return err
+		}
+		t.AlarmMinutes = *alarmMinutes
+	}
 
 	// Validate schedule constraints after applying changes
 	recurrenceAfter := t.RecurrenceDays
@@ -237,6 +251,16 @@ func validateRecurrenceDays(days []string) error {
 		seen[d] = struct{}{}
 	}
 
+	return nil
+}
+
+func validateAlarmMinutes(alarmMinutes *int) error {
+	if alarmMinutes == nil {
+		return nil
+	}
+	if *alarmMinutes < 0 {
+		return fmt.Errorf("alarm_minutes cannot be negative")
+	}
 	return nil
 }
 

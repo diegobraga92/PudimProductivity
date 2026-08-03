@@ -18,12 +18,12 @@ const defaultCompletionsLookbackDays = 7
 type Service interface {
 	CreateTask(ctx context.Context, title string, recurrenceDays []string) (*Task, error)
 	CreateTaskWithList(ctx context.Context, title string, recurrenceDays []string, listID *string) (*Task, error)
-	CreateTaskWithSchedule(ctx context.Context, title string, recurrenceDays []string, listID *string, startTime, endTime, color, scheduledDate *string) (*Task, error)
+	CreateTaskWithSchedule(ctx context.Context, title string, recurrenceDays []string, listID *string, startTime, endTime, color, scheduledDate *string, alarmMinutes *int) (*Task, error)
 	GetTask(ctx context.Context, id string) (*Task, error)
 	ListTasks(ctx context.Context, statusFilter, typeFilter string) ([]*Task, error)
 	ListScheduledTasks(ctx context.Context) ([]*Task, error)
 	ListTasksByListID(ctx context.Context, listID, typeFilter string) ([]*Task, error)
-	UpdateTask(ctx context.Context, id string, title *string, status *TaskStatus, recurrenceDays *[]string, listID **string, startTime, endTime, color, scheduledDate **string) (*Task, error)
+	UpdateTask(ctx context.Context, id string, title *string, status *TaskStatus, recurrenceDays *[]string, listID **string, startTime, endTime, color, scheduledDate **string, alarmMinutes **int) (*Task, error)
 	DeleteTask(ctx context.Context, id string) error
 	CompleteTask(ctx context.Context, taskID, dateStr string) (*TaskCompletion, error)
 	UncompleteTask(ctx context.Context, taskID, dateStr string) error
@@ -51,6 +51,7 @@ type TaskResponse struct {
 	EndTime        *string  `json:"end_time,omitempty"`
 	Color          *string  `json:"color,omitempty"`
 	ScheduledDate  *string  `json:"scheduled_date,omitempty"`
+	AlarmMinutes   *int     `json:"alarm_minutes,omitempty"`
 	CreatedAt      string   `json:"created_at"`
 	UpdatedAt      string   `json:"updated_at"`
 }
@@ -63,6 +64,7 @@ type createTaskRequest struct {
 	EndTime        *string  `json:"end_time,omitempty"`
 	Color          *string  `json:"color,omitempty"`
 	ScheduledDate  *string  `json:"scheduled_date,omitempty"`
+	AlarmMinutes   *int     `json:"alarm_minutes,omitempty"`
 }
 
 type updateTaskRequest struct {
@@ -74,6 +76,7 @@ type updateTaskRequest struct {
 	EndTime        shared.Optional[string] `json:"end_time"`
 	Color          shared.Optional[string] `json:"color"`
 	ScheduledDate  shared.Optional[string] `json:"scheduled_date"`
+	AlarmMinutes   shared.Optional[int]    `json:"alarm_minutes"`
 }
 
 type taskCompletionResponse struct {
@@ -94,6 +97,7 @@ func ToTaskResponse(t *Task) TaskResponse {
 		EndTime:        t.EndTime,
 		Color:          t.Color,
 		ScheduledDate:  t.ScheduledDate,
+		AlarmMinutes:   t.AlarmMinutes,
 		CreatedAt:      t.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:      t.UpdatedAt.Format(time.RFC3339),
 	}
@@ -158,7 +162,7 @@ func (h *Handler) CreateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	task, err := h.service.CreateTaskWithSchedule(r.Context(), req.Title, req.RecurrenceDays, req.ListID, req.StartTime, req.EndTime, req.Color, req.ScheduledDate)
+	task, err := h.service.CreateTaskWithSchedule(r.Context(), req.Title, req.RecurrenceDays, req.ListID, req.StartTime, req.EndTime, req.Color, req.ScheduledDate, req.AlarmMinutes)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to create task")
 		shared.WriteError(w, http.StatusInternalServerError, "failed to create task")
@@ -204,7 +208,7 @@ func (h *Handler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	task, err := h.service.UpdateTask(r.Context(), id, req.Title, req.Status, req.RecurrenceDays, req.ListID.Ptr(), req.StartTime.Ptr(), req.EndTime.Ptr(), req.Color.Ptr(), req.ScheduledDate.Ptr())
+	task, err := h.service.UpdateTask(r.Context(), id, req.Title, req.Status, req.RecurrenceDays, req.ListID.Ptr(), req.StartTime.Ptr(), req.EndTime.Ptr(), req.Color.Ptr(), req.ScheduledDate.Ptr(), req.AlarmMinutes.Ptr())
 	if err != nil {
 		if errors.Is(err, ErrTaskNotFound) {
 			shared.WriteError(w, http.StatusNotFound, "task not found")

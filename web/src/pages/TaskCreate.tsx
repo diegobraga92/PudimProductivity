@@ -26,6 +26,14 @@ const COLOR_PALETTE = [
   "#84CC16", // lime
 ];
 
+const ALARM_OPTIONS = [
+  { value: "", label: "No alarm" },
+  { value: "5", label: "5 min before" },
+  { value: "10", label: "10 min before" },
+  { value: "15", label: "15 min before" },
+  { value: "30", label: "30 min before" },
+];
+
 interface TaskCreateProps {
   onCreated: () => void;
   onCancel: () => void;
@@ -44,6 +52,7 @@ export default function TaskCreate({ onCreated, onCancel }: TaskCreateProps) {
   const [endTime, setEndTime] = useState("10:00");
   const [color, setColor] = useState(COLOR_PALETTE[0]);
   const [scheduledDate, setScheduledDate] = useState("");
+  const [alarmMinutes, setAlarmMinutes] = useState("");
 
   // Check for planner prefill data
   useEffect(() => {
@@ -108,6 +117,7 @@ export default function TaskCreate({ onCreated, onCancel }: TaskCreateProps) {
         end_time: showSchedule ? endTime : undefined,
         color: showSchedule ? color : undefined,
         scheduled_date: showSchedule && !isHabit ? scheduledDate : undefined,
+        alarm_minutes: showSchedule && isHabit && alarmMinutes !== "" ? Number(alarmMinutes) : undefined,
       });
       onCreated();
     } catch (err) {
@@ -330,6 +340,34 @@ export default function TaskCreate({ onCreated, onCancel }: TaskCreateProps) {
                     value={scheduledDate}
                     onChange={(e) => setScheduledDate(e.target.value)}
                   />
+                </div>
+              )}
+
+              {/* Alarm (for habits only) */}
+              {isHabit && (
+                <div style={{ marginBottom: "var(--space-md)" }}>
+                  <label
+                    style={{
+                      display: "block",
+                      fontSize: "var(--font-size-xs)",
+                      fontWeight: 600,
+                      color: "var(--color-text-secondary)",
+                      marginBottom: "var(--space-xs)",
+                    }}
+                  >
+                    Alarm ⏰
+                  </label>
+                  <select
+                    className="select"
+                    value={alarmMinutes}
+                    onChange={(e) => setAlarmMinutes(e.target.value)}
+                  >
+                    {ALARM_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               )}
 

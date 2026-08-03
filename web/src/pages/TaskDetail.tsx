@@ -62,6 +62,7 @@ export default function TaskDetail({
   const [endTime, setEndTime] = useState("10:00");
   const [color, setColor] = useState("#3B82F6");
   const [scheduledDate, setScheduledDate] = useState("");
+  const [alarmMinutes, setAlarmMinutes] = useState("");
 
   const handleWeekOffsetChange = useCallback((newOffset: number) => {
     setWeekOffset(newOffset);
@@ -154,6 +155,7 @@ export default function TaskDetail({
     setEndTime(task.end_time || "10:00");
     setColor(task.color || "#3B82F6");
     setScheduledDate(task.scheduled_date || "");
+    setAlarmMinutes(task.alarm_minutes != null ? String(task.alarm_minutes) : "");
     setEditing(true);
   };
 
@@ -177,6 +179,7 @@ export default function TaskDetail({
       end_time: showSchedule ? endTime : null,
       color: showSchedule ? color : null,
       scheduled_date: showSchedule && !isHabit ? scheduledDate : null,
+      alarm_minutes: showSchedule && isHabit && alarmMinutes !== "" ? Number(alarmMinutes) : null,
     });
   };
 
@@ -336,6 +339,33 @@ export default function TaskDetail({
                 </div>
               )}
 
+              {isHabit && (
+                <div style={{ marginBottom: "var(--space-md)" }}>
+                  <label
+                    style={{
+                      display: "block",
+                      fontSize: "var(--font-size-xs)",
+                      fontWeight: 600,
+                      color: "var(--color-text-secondary)",
+                      marginBottom: "var(--space-xs)",
+                    }}
+                  >
+                    Alarm ⏰
+                  </label>
+                  <select
+                    className="select"
+                    value={alarmMinutes}
+                    onChange={(e) => setAlarmMinutes(e.target.value)}
+                  >
+                    <option value="">No alarm</option>
+                    <option value="5">5 min before</option>
+                    <option value="10">10 min before</option>
+                    <option value="15">15 min before</option>
+                    <option value="30">30 min before</option>
+                  </select>
+                </div>
+              )}
+
               <div style={{ marginBottom: 0 }}>
                 <label
                   style={{
@@ -476,6 +506,7 @@ export default function TaskDetail({
               marginTop: "var(--space-sm)",
               fontSize: "var(--font-size-xs)",
               color: "var(--color-text-muted)",
+              flexWrap: "wrap",
             }}
           >
             <span>📅</span>
@@ -493,6 +524,17 @@ export default function TaskDetail({
                     verticalAlign: "middle",
                   }}
                 />
+              )}
+              {task.alarm_minutes != null && task.alarm_minutes > 0 && (
+                <span
+                  style={{
+                    marginLeft: "0.5rem",
+                    color: "var(--color-warning)",
+                    fontWeight: 600,
+                  }}
+                >
+                  ⏰ {task.alarm_minutes} min before
+                </span>
               )}
             </span>
           </div>

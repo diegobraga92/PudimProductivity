@@ -586,6 +586,10 @@ components:
           format: date
           description: Specific date for one-off task scheduling (YYYY-MM-DD). null for habits.
           example: "2026-07-20"
+        alarm_minutes:
+          type: [integer, "null"]
+          description: Number of minutes before start_time to trigger an alarm notification. null for no alarm.
+          example: 10
         created_at:
           type: string
           format: date-time
@@ -665,6 +669,10 @@ components:
           format: date
           description: Specific date for one-off task scheduling. Not used for habits.
           example: "2026-07-20"
+        alarm_minutes:
+          type: [integer, "null"]
+          description: Number of minutes before start_time to trigger an alarm. Only for habits.
+          example: 10
 
     UpdateTaskRequest:
       type: object
@@ -718,6 +726,13 @@ components:
             Omit to leave unchanged. Set to null to clear.
             Not used for habits.
           example: "2026-07-20"
+        alarm_minutes:
+          type: [integer, "null"]
+          description: |
+            Number of minutes before start_time to trigger an alarm.
+            Omit to leave unchanged. Set to null to disable.
+            Only for habits.
+          example: 10
 
     TaskList:
       type: object

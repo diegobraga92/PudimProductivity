@@ -14,6 +14,7 @@ export interface Task {
   end_time?: string | null;
   color?: string | null;
   scheduled_date?: string | null;
+  alarm_minutes?: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -33,6 +34,7 @@ export interface CreateTaskRequest {
   end_time?: string | null;
   color?: string | null;
   scheduled_date?: string | null;
+  alarm_minutes?: number | null;
 }
 
 export interface UpdateTaskRequest {
@@ -44,6 +46,7 @@ export interface UpdateTaskRequest {
   end_time?: string | null;
   color?: string | null;
   scheduled_date?: string | null;
+  alarm_minutes?: number | null;
 }
 
 /**
