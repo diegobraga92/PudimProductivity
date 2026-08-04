@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { listScheduledTasks, type Task } from "../api/tasks";
+import { useAlarm } from "../components/useAlarm";
 import { playAlarmSound } from "../utils/sounds";
 import { getToday } from "../utils/dates";
 
@@ -38,33 +39,14 @@ function saveFiredAlarms(keys: Set<string>): void {
   }
 }
 
-async function ensureNotificationPermission(): Promise<boolean> {
-  if (!("Notification" in window)) return false;
-  if (Notification.permission === "granted") return true;
-  if (Notification.permission === "denied") return false;
-  const permission = await Notification.requestPermission();
-  return permission === "granted";
-}
-
-async function showAlarmNotification(task: Task): Promise<void> {
-  try {
-    if (!(await ensureNotificationPermission())) return;
-    new Notification(`⏰ ${task.title}`, {
-      body: `${task.title} starts at ${task.start_time} • ${task.alarm_minutes} minute${(task.alarm_minutes ?? 0) > 1 ? "s" : ""} from now!`,
-      tag: `alarm-${task.id}`,
-    });
-  } catch {
-    // Notification API unavailable — silently ignore
-  }
-}
-
 /**
- * Polls scheduled habit tasks and fires an alarm (sound + notification) when
- * the alarm time (start_time minus alarm_minutes) arrives for a habit that
- * recurs on today.
+ * Polls scheduled habit tasks and fires an in-app alarm toast (sound + UI
+ * notification) when the alarm time (start_time minus alarm_minutes) arrives
+ * for a habit that recurs on today.
  */
 export function useAlarmNotifier(): void {
   const queryClient = useQueryClient();
+  const { fireAlarm } = useAlarm();
   const firedRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
@@ -124,7 +106,7 @@ export function useAlarmNotifier(): void {
           if (isMounted) {
             console.debug(`[alarm] Firing alarm for "${task.title}" (${task.id}) at ${nowMinutes} min, alarm was ${alarmMinutes} min`);
             await playAlarmSound();
-            void showAlarmNotification(task);
+            fireAlarm(task);
             firedAny = true;
           }
         }
@@ -148,5 +130,5 @@ export function useAlarmNotifier(): void {
       isMounted = false;
       clearInterval(interval);
     };
-  }, [queryClient]);
+  }, [queryClient, fireAlarm]);
 }

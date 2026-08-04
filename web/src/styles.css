@@ -793,6 +793,102 @@ h1, h2, h3, h4, h5, h6 {
   gap: var(--space-sm);
 }
 
+/* --- Alarm Toast --- */
+.alarm-toast-container {
+  position: fixed;
+  top: calc(56px + var(--space-md));
+  right: var(--space-md);
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  max-width: 340px;
+  width: calc(100% - 2 * var(--space-md));
+  pointer-events: none;
+}
+
+.alarm-toast-card {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-left: 4px solid var(--color-primary);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  box-shadow: var(--shadow-lg);
+  animation: toastSlideIn 250ms ease forwards;
+}
+
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.alarm-toast-icon {
+  font-size: 1.25rem;
+  line-height: 1;
+  margin-top: 2px;
+}
+
+.alarm-toast-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.alarm-toast-title {
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.alarm-toast-meta {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  margin-top: 2px;
+}
+
+.alarm-toast-dismiss {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  padding: 2px 4px;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.alarm-toast-dismiss:hover {
+  background: var(--color-danger-light);
+  color: var(--color-danger);
+}
+
+/* Header alarm count badge */
+.alarm-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.15rem 0.5rem;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  white-space: nowrap;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
 /* --- Scrollbar --- */
 ::-webkit-scrollbar {
   width: 6px;

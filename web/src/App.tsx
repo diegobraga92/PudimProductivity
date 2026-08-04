@@ -1,7 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { getHealth, type HealthResponse } from "./api/client";
+import { AlarmProvider } from "./components/AlarmProvider";
+import { AlarmToast } from "./components/AlarmToast";
 import { ConfirmProvider } from "./components/ConfirmProvider";
+import { useAlarm } from "./components/useAlarm";
 import { useAlarmNotifier } from "./hooks/useAlarmNotifier";
 import TaskList from "./pages/TaskList";
 import Dashboard from "./pages/Dashboard";
@@ -12,10 +15,20 @@ import "./styles.css";
 
 type Page = "dashboard" | "tasks" | "planner" | "pomodoro" | "soundscape" | "health";
 
-function App() {
+function HeaderBadge() {
+  const { activeAlarms } = useAlarm();
+  if (activeAlarms.length === 0) return null;
+  return (
+    <span className="alarm-badge" title={`${activeAlarms.length} active alarm${activeAlarms.length > 1 ? "s" : ""}`}>
+      🔔 {activeAlarms.length}
+    </span>
+  );
+}
+
+function AppInner() {
   const [page, setPage] = useState<Page>("dashboard");
 
-  // Polls scheduled habit tasks and fires sound + notification alarms
+  // Polls scheduled habit tasks and fires sound + in-app toast alarms
   useAlarmNotifier();
 
   const { data: healthData } = useQuery<HealthResponse>({
@@ -35,7 +48,6 @@ function App() {
   const isBackendOk = healthData?.status === "ok" && healthData?.db === "connected";
 
   return (
-    <ConfirmProvider>
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
       {/* ===== Habitica-Inspired Header ===== */}
       <header
@@ -111,7 +123,7 @@ function App() {
             ))}
           </nav>
 
-          {/* Status Badge */}
+          {/* Status Badge + Alarm Badge */}
           <div
             style={{
               display: "flex",
@@ -121,6 +133,7 @@ function App() {
               opacity: 0.8,
             }}
           >
+            <HeaderBadge />
             <span
               style={{
                 width: "8px",
@@ -219,8 +232,20 @@ function App() {
           )}
         </div>
       </main>
+
+      {/* ===== Alarm Toast Stack ===== */}
+      <AlarmToast />
     </div>
-    </ConfirmProvider>
+  );
+}
+
+function App() {
+  return (
+    <AlarmProvider>
+      <ConfirmProvider>
+        <AppInner />
+      </ConfirmProvider>
+    </AlarmProvider>
   );
 }
 
