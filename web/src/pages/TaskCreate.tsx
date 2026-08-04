@@ -1,38 +1,7 @@
 import { useState, useEffect } from "react";
 import { createTask, type RecurrenceDay } from "../api/tasks";
-
-const DAY_LABELS: { value: RecurrenceDay; label: string }[] = [
-  { value: "mon", label: "Mon" },
-  { value: "tue", label: "Tue" },
-  { value: "wed", label: "Wed" },
-  { value: "thu", label: "Thu" },
-  { value: "fri", label: "Fri" },
-  { value: "sat", label: "Sat" },
-  { value: "sun", label: "Sun" },
-];
-
-const COLOR_PALETTE = [
-  "#3B82F6", // blue
-  "#10B981", // green
-  "#F59E0B", // amber
-  "#EF4444", // red
-  "#8B5CF6", // violet
-  "#EC4899", // pink
-  "#06B6D4", // cyan
-  "#F97316", // orange
-  "#6366F1", // indigo
-  "#14B8A6", // teal
-  "#D946EF", // fuchsia
-  "#84CC16", // lime
-];
-
-const ALARM_OPTIONS = [
-  { value: "", label: "No alarm" },
-  { value: "5", label: "5 min before" },
-  { value: "10", label: "10 min before" },
-  { value: "15", label: "15 min before" },
-  { value: "30", label: "30 min before" },
-];
+import ScheduleFields from "../components/ScheduleFields";
+import { COLOR_PALETTE, DAY_OPTIONS } from "../utils/constants";
 
 interface TaskCreateProps {
   onCreated: () => void;
@@ -129,21 +98,14 @@ export default function TaskCreate({ onCreated, onCancel }: TaskCreateProps) {
 
   return (
     <div className="animate-fade-in" style={{ maxWidth: "450px" }}>
-      <h2 style={{ fontSize: "var(--font-size-xl)", fontWeight: 700, marginBottom: "var(--space-lg)" }}>
+      <h2 className="page-heading" style={{ marginBottom: "var(--space-lg)" }}>
         ✨ New Task
       </h2>
 
       <form onSubmit={handleSubmit}>
         <div className="card" style={{ marginBottom: "var(--space-lg)" }}>
           <div style={{ marginBottom: "var(--space-md)" }}>
-            <label
-              style={{
-                display: "block",
-                marginBottom: "0.3rem",
-                fontWeight: 600,
-                fontSize: "var(--font-size-sm)",
-              }}
-            >
+            <label className="form-label">
               What do you need to do?
             </label>
             <input
@@ -157,24 +119,8 @@ export default function TaskCreate({ onCreated, onCancel }: TaskCreateProps) {
           </div>
 
           {/* Habit toggle */}
-          <div
-            style={{
-              marginBottom: "var(--space-md)",
-              padding: "var(--space-sm) var(--space-md)",
-              background: "var(--color-bg)",
-              borderRadius: "var(--radius-sm)",
-            }}
-          >
-            <label
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "0.5rem",
-                cursor: "pointer",
-                fontWeight: 500,
-                fontSize: "var(--font-size-sm)",
-              }}
-            >
+          <div className="toggle-box">
+            <label className="toggle-label">
               <input
                 type="checkbox"
                 checked={isHabit}
@@ -182,7 +128,8 @@ export default function TaskCreate({ onCreated, onCancel }: TaskCreateProps) {
                   setIsHabit(e.target.checked);
                   if (!e.target.checked) setSelectedDays([]);
                 }}
-                style={{ width: "1.1rem", height: "1.1rem", accentColor: "var(--color-habit)" }}
+                className="toggle-checkbox"
+                style={{ accentColor: "var(--color-habit)" }}
               />
               Make this a habit (repeats weekly)
             </label>
@@ -191,18 +138,11 @@ export default function TaskCreate({ onCreated, onCancel }: TaskCreateProps) {
           {/* Day picker */}
           {isHabit && (
             <div style={{ marginBottom: "var(--space-md)" }}>
-              <label
-                style={{
-                  display: "block",
-                  marginBottom: "0.3rem",
-                  fontWeight: 600,
-                  fontSize: "var(--font-size-sm)",
-                }}
-              >
+              <label className="form-label">
                 Repeat on:
               </label>
               <div style={{ display: "flex", gap: "0.3rem", flexWrap: "wrap" }}>
-                {DAY_LABELS.map(({ value, label }) => {
+                {DAY_OPTIONS.map(({ value, label }) => {
                   const isSelected = selectedDays.includes(value);
                   return (
                     <button
@@ -232,181 +172,21 @@ export default function TaskCreate({ onCreated, onCancel }: TaskCreateProps) {
             </div>
           )}
 
-          {/* Schedule toggle */}
-          <div
-            style={{
-              marginBottom: "var(--space-md)",
-              padding: "var(--space-sm) var(--space-md)",
-              background: "var(--color-bg)",
-              borderRadius: "var(--radius-sm)",
-            }}
-          >
-            <label
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "0.5rem",
-                cursor: "pointer",
-                fontWeight: 500,
-                fontSize: "var(--font-size-sm)",
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={showSchedule}
-                onChange={(e) => setShowSchedule(e.target.checked)}
-                style={{ width: "1.1rem", height: "1.1rem", accentColor: "var(--color-primary)" }}
-              />
-              Schedule on Planner 📅
-            </label>
-          </div>
-
-          {/* Planner scheduling fields */}
-          {showSchedule && (
-            <div
-              style={{
-                marginBottom: "var(--space-md)",
-                padding: "var(--space-sm) var(--space-md)",
-                border: "1px solid var(--color-border-light)",
-                borderRadius: "var(--radius-sm)",
-              }}
-            >
-              {/* Time range */}
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: "var(--space-sm)",
-                  marginBottom: "var(--space-md)",
-                }}
-              >
-                <div>
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: "var(--font-size-xs)",
-                      fontWeight: 600,
-                      color: "var(--color-text-secondary)",
-                      marginBottom: "var(--space-xs)",
-                    }}
-                  >
-                    Start
-                  </label>
-                  <input
-                    className="input"
-                    type="time"
-                    value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: "var(--font-size-xs)",
-                      fontWeight: 600,
-                      color: "var(--color-text-secondary)",
-                      marginBottom: "var(--space-xs)",
-                    }}
-                  >
-                    End
-                  </label>
-                  <input
-                    className="input"
-                    type="time"
-                    value={endTime}
-                    onChange={(e) => setEndTime(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              {/* Date picker (for one-off tasks only) */}
-              {!isHabit && (
-                <div style={{ marginBottom: "var(--space-md)" }}>
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: "var(--font-size-xs)",
-                      fontWeight: 600,
-                      color: "var(--color-text-secondary)",
-                      marginBottom: "var(--space-xs)",
-                    }}
-                  >
-                    Date
-                  </label>
-                  <input
-                    className="input"
-                    type="date"
-                    value={scheduledDate}
-                    onChange={(e) => setScheduledDate(e.target.value)}
-                  />
-                </div>
-              )}
-
-              {/* Alarm (for habits only) */}
-              {isHabit && (
-                <div style={{ marginBottom: "var(--space-md)" }}>
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: "var(--font-size-xs)",
-                      fontWeight: 600,
-                      color: "var(--color-text-secondary)",
-                      marginBottom: "var(--space-xs)",
-                    }}
-                  >
-                    Alarm ⏰
-                  </label>
-                  <select
-                    className="select"
-                    value={alarmMinutes}
-                    onChange={(e) => setAlarmMinutes(e.target.value)}
-                  >
-                    {ALARM_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {/* Color picker */}
-              <div style={{ marginBottom: 0 }}>
-                <label
-                  style={{
-                    display: "block",
-                    fontSize: "var(--font-size-xs)",
-                    fontWeight: 600,
-                    color: "var(--color-text-secondary)",
-                    marginBottom: "var(--space-xs)",
-                  }}
-                >
-                  Color
-                </label>
-                <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
-                  {COLOR_PALETTE.map((c) => (
-                    <button
-                      key={c}
-                      type="button"
-                      onClick={() => setColor(c)}
-                      style={{
-                        width: "28px",
-                        height: "28px",
-                        borderRadius: "50%",
-                        background: c,
-                        border: color === c ? "3px solid var(--color-text)" : "2px solid transparent",
-                        cursor: "pointer",
-                        transition: "all var(--transition-fast)",
-                        padding: 0,
-                      }}
-                      aria-label={`Select color ${c}`}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
+          <ScheduleFields
+            showSchedule={showSchedule}
+            onToggleSchedule={setShowSchedule}
+            startTime={startTime}
+            endTime={endTime}
+            color={color}
+            scheduledDate={scheduledDate}
+            alarmMinutes={alarmMinutes}
+            isHabit={isHabit}
+            onStartTimeChange={setStartTime}
+            onEndTimeChange={setEndTime}
+            onColorChange={setColor}
+            onScheduledDateChange={setScheduledDate}
+            onAlarmMinutesChange={setAlarmMinutes}
+          />
 
           {error && (
             <p style={{ color: "var(--color-danger)", marginBottom: "0.5rem", fontSize: "var(--font-size-sm)" }}>

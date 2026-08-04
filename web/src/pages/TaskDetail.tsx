@@ -9,33 +9,19 @@ import {
   uncompleteTask,
   getTaskCompletions,
   type TaskStatus,
-  type RecurrenceDay,
 } from "../api/tasks";
 import WeekHeatmap from "../components/WeekHeatmap";
 import StreakBadge from "../components/StreakBadge";
+import ScheduleFields from "../components/ScheduleFields";
 import { computeStreaks } from "../utils/streaks";
 import { getToday, sanitizeTime } from "../utils/dates";
+import { COLOR_PALETTE, DAY_LABELS_FULL, STREAK_HISTORY_START } from "../utils/constants";
 import {
   playHabitCompletionSound,
   playTodoCompletionSound,
   playHabitUncompletionSound,
   playTodoUncompletionSound,
 } from "../utils/sounds";
-
-const DAY_LABELS: Record<RecurrenceDay, string> = {
-  mon: "Monday",
-  tue: "Tuesday",
-  wed: "Wednesday",
-  thu: "Thursday",
-  fri: "Friday",
-  sat: "Saturday",
-  sun: "Sunday",
-};
-
-const COLOR_PALETTE = [
-  "#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899",
-  "#06B6D4", "#F97316", "#6366F1", "#14B8A6", "#D946EF", "#84CC16",
-];
 
 interface TaskDetailProps {
   taskId: string;
@@ -60,7 +46,7 @@ export default function TaskDetail({
   const [showSchedule, setShowSchedule] = useState(false);
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("10:00");
-  const [color, setColor] = useState("#3B82F6");
+  const [color, setColor] = useState(COLOR_PALETTE[0]);
   const [scheduledDate, setScheduledDate] = useState("");
   const [alarmMinutes, setAlarmMinutes] = useState("");
 
@@ -77,12 +63,11 @@ export default function TaskDetail({
     queryFn: () => getTask(taskId),
   });
 
-  const isHabit = task?.recurrence_days && task.recurrence_days.length > 0;
+  const isHabit = !!(task?.recurrence_days && task.recurrence_days.length > 0);
   const today = getToday();
 
   // Fetch the habit's full completion history (not just the visible 7-day
   // window) so the streak can grow across calendar weeks without a hard reset.
-  const STREAK_HISTORY_START = "2020-01-01";
   const { data: completions = [] } = useQuery({
     queryKey: ["taskCompletions", taskId, STREAK_HISTORY_START, today],
     queryFn: () => getTaskCompletions(taskId, STREAK_HISTORY_START, today),
@@ -153,7 +138,7 @@ export default function TaskDetail({
     setShowSchedule(!!task.start_time);
     setStartTime(sanitizeTime(task.start_time) || "09:00");
     setEndTime(sanitizeTime(task.end_time) || "10:00");
-    setColor(task.color || "#3B82F6");
+    setColor(task.color || COLOR_PALETTE[0]);
     setScheduledDate(task.scheduled_date || "");
     setAlarmMinutes(task.alarm_minutes != null ? String(task.alarm_minutes) : "");
     setEditing(true);
@@ -185,16 +170,16 @@ export default function TaskDetail({
 
   if (isLoading) {
     return (
-      <div className="card" style={{ textAlign: "center", padding: "var(--space-xl)" }}>
-        <p style={{ color: "var(--color-text-secondary)" }}>Loading task...</p>
+      <div className="card loading-card">
+        <p className="text-secondary">Loading task...</p>
       </div>
     );
   }
 
   if (fetchError) {
     return (
-      <div className="card" style={{ borderLeft: "3px solid var(--color-danger)" }}>
-        <p style={{ color: "var(--color-danger)" }}>Error: {(fetchError as Error).message}</p>
+      <div className="card error-card" style={{ borderWidth: "3px 0 0" }}>
+        <p className="error-text">Error: {(fetchError as Error).message}</p>
         <button className="btn btn-ghost mt-sm" onClick={onBack}>
           &larr; Back
         </button>
@@ -207,19 +192,12 @@ export default function TaskDetail({
   if (editing) {
     return (
       <div className="animate-fade-in" style={{ maxWidth: "400px" }}>
-        <h2 style={{ fontSize: "var(--font-size-xl)", fontWeight: 700, marginBottom: "var(--space-lg)" }}>
+        <h2 className="page-heading" style={{ marginBottom: "var(--space-lg)" }}>
           ✏️ Edit Task
         </h2>
         <form onSubmit={handleUpdate}>
           <div style={{ marginBottom: "var(--space-md)" }}>
-            <label
-              style={{
-                display: "block",
-                marginBottom: "0.3rem",
-                fontWeight: 600,
-                fontSize: "var(--font-size-sm)",
-              }}
-            >
+            <label className="form-label">
               Title
             </label>
             <input
@@ -231,176 +209,21 @@ export default function TaskDetail({
             />
           </div>
 
-          {/* Schedule toggle */}
-          <div
-            style={{
-              marginBottom: "var(--space-md)",
-              padding: "var(--space-sm) var(--space-md)",
-              background: "var(--color-bg)",
-              borderRadius: "var(--radius-sm)",
-            }}
-          >
-            <label
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "0.5rem",
-                cursor: "pointer",
-                fontWeight: 500,
-                fontSize: "var(--font-size-sm)",
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={showSchedule}
-                onChange={(e) => setShowSchedule(e.target.checked)}
-                style={{ width: "1.1rem", height: "1.1rem", accentColor: "var(--color-primary)" }}
-              />
-              Schedule on Planner 📅
-            </label>
-          </div>
-
-          {showSchedule && (
-            <div
-              style={{
-                marginBottom: "var(--space-md)",
-                padding: "var(--space-sm) var(--space-md)",
-                border: "1px solid var(--color-border-light)",
-                borderRadius: "var(--radius-sm)",
-              }}
-            >
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: "var(--space-sm)",
-                  marginBottom: "var(--space-md)",
-                }}
-              >
-                <div>
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: "var(--font-size-xs)",
-                      fontWeight: 600,
-                      color: "var(--color-text-secondary)",
-                      marginBottom: "var(--space-xs)",
-                    }}
-                  >
-                    Start
-                  </label>
-                  <input
-                    className="input"
-                    type="time"
-                    value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: "var(--font-size-xs)",
-                      fontWeight: 600,
-                      color: "var(--color-text-secondary)",
-                      marginBottom: "var(--space-xs)",
-                    }}
-                  >
-                    End
-                  </label>
-                  <input
-                    className="input"
-                    type="time"
-                    value={endTime}
-                    onChange={(e) => setEndTime(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              {!isHabit && (
-                <div style={{ marginBottom: "var(--space-md)" }}>
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: "var(--font-size-xs)",
-                      fontWeight: 600,
-                      color: "var(--color-text-secondary)",
-                      marginBottom: "var(--space-xs)",
-                    }}
-                  >
-                    Date
-                  </label>
-                  <input
-                    className="input"
-                    type="date"
-                    value={scheduledDate}
-                    onChange={(e) => setScheduledDate(e.target.value)}
-                  />
-                </div>
-              )}
-
-              {isHabit && (
-                <div style={{ marginBottom: "var(--space-md)" }}>
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: "var(--font-size-xs)",
-                      fontWeight: 600,
-                      color: "var(--color-text-secondary)",
-                      marginBottom: "var(--space-xs)",
-                    }}
-                  >
-                    Alarm ⏰
-                  </label>
-                  <select
-                    className="select"
-                    value={alarmMinutes}
-                    onChange={(e) => setAlarmMinutes(e.target.value)}
-                  >
-                    <option value="">No alarm</option>
-                    <option value="5">5 min before</option>
-                    <option value="10">10 min before</option>
-                    <option value="15">15 min before</option>
-                    <option value="30">30 min before</option>
-                  </select>
-                </div>
-              )}
-
-              <div style={{ marginBottom: 0 }}>
-                <label
-                  style={{
-                    display: "block",
-                    fontSize: "var(--font-size-xs)",
-                    fontWeight: 600,
-                    color: "var(--color-text-secondary)",
-                    marginBottom: "var(--space-xs)",
-                  }}
-                >
-                  Color
-                </label>
-                <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
-                  {COLOR_PALETTE.map((c) => (
-                    <button
-                      key={c}
-                      type="button"
-                      onClick={() => setColor(c)}
-                      style={{
-                        width: "28px",
-                        height: "28px",
-                        borderRadius: "50%",
-                        background: c,
-                        border: color === c ? "3px solid var(--color-text)" : "2px solid transparent",
-                        cursor: "pointer",
-                        transition: "all var(--transition-fast)",
-                        padding: 0,
-                      }}
-                      aria-label={`Select color ${c}`}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
+          <ScheduleFields
+            showSchedule={showSchedule}
+            onToggleSchedule={setShowSchedule}
+            startTime={startTime}
+            endTime={endTime}
+            color={color}
+            scheduledDate={scheduledDate}
+            alarmMinutes={alarmMinutes}
+            isHabit={isHabit}
+            onStartTimeChange={setStartTime}
+            onEndTimeChange={setEndTime}
+            onColorChange={setColor}
+            onScheduledDateChange={setScheduledDate}
+            onAlarmMinutesChange={setAlarmMinutes}
+          />
 
           {error && (
             <p style={{ color: "var(--color-danger)", marginBottom: "0.5rem", fontSize: "var(--font-size-sm)" }}>
@@ -432,18 +255,11 @@ export default function TaskDetail({
   return (
     <div className="animate-fade-in" style={{ maxWidth: "500px" }}>
       {/* Header */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "var(--space-lg)",
-        }}
-      >
+      <div className="flex-between" style={{ marginBottom: "var(--space-lg)" }}>
         <button className="btn btn-ghost" onClick={onBack}>
           &larr; Back
         </button>
-        <div style={{ display: "flex", gap: "0.5rem" }}>
+        <div className="flex" style={{ gap: "0.5rem" }}>
           <button className="btn btn-ghost" onClick={startEditing}>
             ✏️ Edit
           </button>
@@ -480,13 +296,13 @@ export default function TaskDetail({
           {task.title}
         </h2>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)", flexWrap: "wrap" }}>
+        <div className="flex flex-wrap" style={{ gap: "var(--space-sm)" }}>
           {isHabit ? (
             <>
               <span className="badge badge-habit">Habit</span>
               <StreakBadge current={currentStreak} longest={longestStreak} />
               <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>
-                {task.recurrence_days?.map((d) => DAY_LABELS[d]).join(", ")}
+                {task.recurrence_days?.map((d) => DAY_LABELS_FULL[d]).join(", ")}
               </span>
             </>
           ) : (
@@ -499,15 +315,8 @@ export default function TaskDetail({
         {/* Schedule info */}
         {task.start_time && task.end_time && (
           <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "var(--space-sm)",
-              marginTop: "var(--space-sm)",
-              fontSize: "var(--font-size-xs)",
-              color: "var(--color-text-muted)",
-              flexWrap: "wrap",
-            }}
+            className="flex flex-wrap text-xs text-muted"
+            style={{ gap: "var(--space-sm)", marginTop: "var(--space-sm)" }}
           >
             <span>📅</span>
             <span>
@@ -555,15 +364,7 @@ export default function TaskDetail({
       {/* One-off task toggle */}
       {!isHabit && (
         <div className="card card-todo" style={{ marginBottom: "var(--space-lg)" }}>
-          <label
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "var(--space-sm)",
-              cursor: "pointer",
-              fontWeight: 500,
-            }}
-          >
+          <label className="toggle-label">
             <input
               type="checkbox"
               checked={task.status === "done"}
@@ -600,14 +401,10 @@ export default function TaskDetail({
       )}
 
       {/* Metadata */}
-      <div
-        style={{
-          fontSize: "var(--font-size-xs)",
-          color: "var(--color-text-muted)",
-          padding: "var(--space-sm) 0",
-          borderTop: "1px solid var(--color-border-light)",
-        }}
-      >
+        <div
+          className="text-xs text-muted"
+          style={{ padding: "var(--space-sm) 0", borderTop: "1px solid var(--color-border-light)" }}
+        >
         <p style={{ margin: "0.2rem 0" }}>
           Created: {new Date(task.created_at).toLocaleString()}
         </p>

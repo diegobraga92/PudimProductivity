@@ -7,7 +7,6 @@ import {
   updateTask,
   completeTask,
   uncompleteTask,
-  getAllTaskCompletions,
   createTask,
   type Task,
   type TaskStatus,
@@ -23,12 +22,14 @@ import {
 } from "../api/taskLists";
 import TaskCreate from "./TaskCreate";
 import TaskDetail from "./TaskDetail";
-import Checkbox from "../components/Checkbox";
+import QuickAddForm from "../components/QuickAddForm";
+import TaskCard from "../components/TaskCard";
 import WeekHeatmap from "../components/WeekHeatmap";
 import StreakBadge from "../components/StreakBadge";
 import ProgressBar from "../components/ProgressBar";
+import { useHabitCompletions } from "../hooks/useHabitCompletions";
 import { computeStreaks } from "../utils/streaks";
-import { getRollingWindowDates, getToday, formatWeekRange } from "../utils/dates";
+import { getRollingWindowDates, formatWeekRange } from "../utils/dates";
 import {
   playHabitCompletionSound,
   playTodoCompletionSound,
@@ -186,29 +187,8 @@ export default function TaskList() {
   const error = todoError || habitError;
 
   // Fetch completion history for all habit tasks using a single batch request.
-  // The window is widened to the habit's full history so streaks can grow
-  // across calendar weeks without a hard reset.
   const weekDates = getRollingWindowDates(weekOffset);
-  const STREAK_HISTORY_START = "2020-01-01";
-  const todayForFetch = getToday();
-
-  const { data: allCompletions } = useQuery({
-    queryKey: ["habitCompletions", STREAK_HISTORY_START, todayForFetch],
-    queryFn: async () => {
-      const completions = await getAllTaskCompletions(STREAK_HISTORY_START, todayForFetch);
-      const results: Record<string, string[]> = {};
-      for (const task of habitTasks) {
-        results[task.id] = [];
-      }
-      for (const c of completions) {
-        if (results[c.task_id] !== undefined) {
-          results[c.task_id].push(c.completed_date);
-        }
-      }
-      return results;
-    },
-    enabled: habitTasks.length > 0,
-  });
+  const allCompletions = useHabitCompletions(habitTasks);
 
   const confirm = useConfirm();
 
@@ -328,19 +308,12 @@ export default function TaskList() {
   return (
     <div className="animate-fade-in">
       {/* Page Header */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          marginBottom: "var(--space-xl)",
-        }}
-      >
+      <div className="page-header">
         <div>
-          <h1 style={{ fontSize: "var(--font-size-xl)", fontWeight: 700, marginBottom: "0.25rem" }}>
+          <h1 className="page-heading" style={{ marginBottom: "0.25rem" }}>
             📋 Tasks
           </h1>
-          <p style={{ margin: 0, fontSize: "var(--font-size-sm)", color: "var(--color-text-muted)" }}>
+          <p className="page-subtitle">
             Manage your todos, habits, and lists
           </p>
         </div>
@@ -377,13 +350,13 @@ export default function TaskList() {
       </div>
 
       {isLoading && (
-        <div className="card" style={{ textAlign: "center", padding: "var(--space-xl)" }}>
-          <p style={{ color: "var(--color-text-secondary)" }}>Loading tasks...</p>
+        <div className="card loading-card">
+          <p className="text-secondary">Loading tasks...</p>
         </div>
       )}
       {error && (
-        <div className="card" style={{ borderLeft: "3px solid var(--color-danger)", marginBottom: "var(--space-md)" }}>
-          <p style={{ color: "var(--color-danger)", margin: 0 }}>
+        <div className="card error-card">
+          <p className="error-text">
             Error: {(error as Error).message}
           </p>
         </div>
@@ -405,28 +378,15 @@ export default function TaskList() {
           </div>
 
           {/* Quick-add for todos */}
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
+          <QuickAddForm
+            value={newTodoTitle}
+            onChange={setNewTodoTitle}
+            onSubmit={() => {
               if (newTodoTitle.trim()) createTodoMutation.mutate(newTodoTitle.trim());
             }}
-            style={{ display: "flex", gap: "0.5rem", marginBottom: "var(--space-md)" }}
-          >
-            <input
-              type="text"
-              className="input"
-              value={newTodoTitle}
-              onChange={(e) => setNewTodoTitle(e.target.value)}
-              placeholder="Quick add todo..."
-            />
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={createTodoMutation.isPending || !newTodoTitle.trim()}
-            >
-              {createTodoMutation.isPending ? "..." : "Add"}
-            </button>
-          </form>
+            placeholder="Quick add todo..."
+            isPending={createTodoMutation.isPending}
+          />
 
           {todoTasks.length === 0 && !isLoading && (
             <div className="empty-state">
@@ -437,60 +397,28 @@ export default function TaskList() {
 
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             {sortedTodoTasks.map((task, index) => (
-              <div
+              <TaskCard
                 key={task.id}
-                className={`card card-todo ${task.status === "done" ? "card-done" : ""}`}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "var(--space-sm)",
-                  padding: "0.75rem 1rem",
-                  animationDelay: `${index * 30}ms`,
-                }}
-              >
-                <Checkbox
-                  checked={task.status === "done"}
-                  onChange={() =>
-                    toggleMutation.mutate({ id: task.id, status: task.status })
+                variant="todo"
+                title={task.title}
+                done={task.status === "done"}
+                onToggle={() => toggleMutation.mutate({ id: task.id, status: task.status })}
+                onDelete={async () => {
+                  const ok = await confirm({
+                    title: "Delete this task?",
+                    confirmLabel: "Delete",
+                    confirmVariant: "danger",
+                  });
+                  if (ok) {
+                    deleteMutation.mutate(task.id);
                   }
-                />
-                <span
-                  style={{
-                    flex: 1,
-                    cursor: "pointer",
-                    textDecoration: task.status === "done" ? "line-through" : "none",
-                    color: task.status === "done" ? "var(--color-text-muted)" : "var(--color-text)",
-                    fontSize: "var(--font-size-base)",
-                    fontWeight: 500,
-                    transition: "all var(--transition-fast)",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                  }}
-                  onClick={() => {
-                    setSelectedTaskId(task.id);
-                    setView("detail");
-                  }}
-                >
-                  {task.title}
-                </span>
-                <button
-                  className="btn btn-danger btn-sm"
-                  onClick={async (e) => {
-                    e.stopPropagation();
-                    const ok = await confirm({
-                      title: "Delete this task?",
-                      confirmLabel: "Delete",
-                      confirmVariant: "danger",
-                    });
-                    if (ok) {
-                      deleteMutation.mutate(task.id);
-                    }
-                  }}
-                >
-                  ✕
-                </button>
-              </div>
+                }}
+                onTitleClick={() => {
+                  setSelectedTaskId(task.id);
+                  setView("detail");
+                }}
+                animationDelay={`${index * 30}ms`}
+              />
             ))}
           </div>
         </div>
@@ -550,28 +478,15 @@ export default function TaskList() {
           </div>
 
           {/* Quick-add for habits */}
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
+          <QuickAddForm
+            value={newHabitTitle}
+            onChange={setNewHabitTitle}
+            onSubmit={() => {
               if (newHabitTitle.trim()) createHabitMutation.mutate(newHabitTitle.trim());
             }}
-            style={{ display: "flex", gap: "0.5rem", marginBottom: "var(--space-md)" }}
-          >
-            <input
-              type="text"
-              className="input"
-              value={newHabitTitle}
-              onChange={(e) => setNewHabitTitle(e.target.value)}
-              placeholder="Quick add habit (weekdays)..."
-            />
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={createHabitMutation.isPending || !newHabitTitle.trim()}
-            >
-              {createHabitMutation.isPending ? "..." : "Add"}
-            </button>
-          </form>
+            placeholder="Quick add habit (weekdays)..."
+            isPending={createHabitMutation.isPending}
+          />
 
           {habitTasks.length === 0 && !isLoading && (
             <div className="empty-state">
@@ -828,24 +743,23 @@ function ListDetailPanel({ listId, onListDeleted }: { listId: string; onListDele
     },
   });
 
-  const handleQuickAdd = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleQuickAdd = () => {
     if (!newTitle.trim()) return;
     createMutation.mutate(newTitle.trim());
   };
 
   if (listLoading) {
     return (
-      <div className="card" style={{ textAlign: "center", padding: "var(--space-lg)" }}>
-        <p style={{ color: "var(--color-text-secondary)" }}>Loading list...</p>
+      <div className="card loading-card" style={{ padding: "var(--space-lg)" }}>
+        <p className="text-secondary">Loading list...</p>
       </div>
     );
   }
 
   if (!taskList) {
     return (
-      <div className="card" style={{ borderLeft: "3px solid var(--color-danger)" }}>
-        <p style={{ color: "var(--color-danger)" }}>List not found</p>
+      <div className="card error-card" style={{ borderWidth: "3px 0 0" }}>
+        <p className="error-text">List not found</p>
       </div>
     );
   }
@@ -882,9 +796,9 @@ function ListDetailPanel({ listId, onListDeleted }: { listId: string; onListDele
         </form>
       ) : (
         <div style={{ marginBottom: "var(--space-md)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)" }}>
+          <div className="flex-center" style={{ gap: "var(--space-sm)" }}>
             <span style={{ fontSize: "1.2rem" }}>📁</span>
-            <h3 style={{ fontSize: "var(--font-size-lg)", fontWeight: 700, flex: 1 }}>{taskList.name}</h3>
+            <h3 className="flex-1" style={{ fontSize: "var(--font-size-lg)", fontWeight: 700 }}>{taskList.name}</h3>
             <button
               className="btn btn-ghost btn-sm"
               onClick={() => {
@@ -912,7 +826,7 @@ function ListDetailPanel({ listId, onListDeleted }: { listId: string; onListDele
             </button>
           </div>
           {tasks.length > 0 && (
-            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)", marginTop: "var(--space-sm)" }}>
+            <div className="flex-center" style={{ gap: "var(--space-sm)", marginTop: "var(--space-sm)" }}>
               <span className="badge badge-done">{doneCount}/{tasks.length} done</span>
               <div style={{ flex: 1, maxWidth: "150px" }}>
                 <div className="progress-bar">
@@ -930,29 +844,17 @@ function ListDetailPanel({ listId, onListDeleted }: { listId: string; onListDele
       )}
 
       {/* Quick-add form */}
-      <form
+      <QuickAddForm
+        value={newTitle}
+        onChange={setNewTitle}
         onSubmit={handleQuickAdd}
-        style={{ display: "flex", gap: "0.5rem", marginBottom: "var(--space-md)" }}
-      >
-        <input
-          type="text"
-          className="input"
-          value={newTitle}
-          onChange={(e) => setNewTitle(e.target.value)}
-          placeholder="Add a task to this list..."
-        />
-        <button
-          type="submit"
-          className="btn btn-primary"
-          disabled={createMutation.isPending || !newTitle.trim()}
-        >
-          {createMutation.isPending ? "..." : "Add"}
-        </button>
-      </form>
+        placeholder="Add a task to this list..."
+        isPending={createMutation.isPending}
+      />
 
       {tasksLoading && (
-        <div className="card" style={{ textAlign: "center", padding: "var(--space-lg)" }}>
-          <p style={{ color: "var(--color-text-secondary)" }}>Loading tasks...</p>
+        <div className="card loading-card" style={{ padding: "var(--space-lg)" }}>
+          <p className="text-secondary">Loading tasks...</p>
         </div>
       )}
 
@@ -966,52 +868,24 @@ function ListDetailPanel({ listId, onListDeleted }: { listId: string; onListDele
       {tasks.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
           {sortedTasks.map((task) => (
-            <div
+            <TaskCard
               key={task.id}
-              className={`card card-list ${task.status === "done" ? "card-done" : ""}`}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "var(--space-sm)",
-                padding: "0.6rem 0.85rem",
-              }}
-            >
-              <Checkbox
-                checked={task.status === "done"}
-                onChange={() =>
-                  toggleMutation.mutate({ id: task.id, status: task.status })
+              variant="list"
+              title={task.title}
+              done={task.status === "done"}
+              onToggle={() => toggleMutation.mutate({ id: task.id, status: task.status })}
+              onDelete={async () => {
+                const ok = await confirm({
+                  title: "Delete this task?",
+                  confirmLabel: "Delete",
+                  confirmVariant: "danger",
+                });
+                if (ok) {
+                  deleteTaskMutation.mutate(task.id);
                 }
-              />
-              <span
-                style={{
-                  flex: 1,
-                  textDecoration: task.status === "done" ? "line-through" : "none",
-                  color: task.status === "done" ? "var(--color-text-muted)" : "var(--color-text)",
-                  fontSize: "var(--font-size-sm)",
-                  fontWeight: 500,
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {task.title}
-              </span>
-              <button
-                className="btn btn-danger btn-sm"
-                onClick={async () => {
-                  const ok = await confirm({
-                    title: "Delete this task?",
-                    confirmLabel: "Delete",
-                    confirmVariant: "danger",
-                  });
-                  if (ok) {
-                    deleteTaskMutation.mutate(task.id);
-                  }
-                }}
-              >
-                ✕
-              </button>
-            </div>
+              }}
+              compact
+            />
           ))}
         </div>
       )}

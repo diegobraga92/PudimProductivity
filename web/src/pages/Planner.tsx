@@ -2,16 +2,13 @@ import { useQuery } from "@tanstack/react-query";
 import { useState, useCallback } from "react";
 import {
   listScheduledTasks,
-  getAllTaskCompletions,
   type Task,
 } from "../api/tasks";
+import { useHabitCompletions } from "../hooks/useHabitCompletions";
 import { getWeekDates, formatWeekRange, sanitizeTime } from "../utils/dates";
+import { DAY_LABELS } from "../utils/constants";
 
 const DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
-const DAY_LABELS: Record<string, string> = {
-  mon: "Mon", tue: "Tue", wed: "Wed", thu: "Thu",
-  fri: "Fri", sat: "Sat", sun: "Sun",
-};
 
 // Grid hours: 6AM to 10PM (16 hours)
 const HOURS = Array.from({ length: 16 }, (_, i) => {
@@ -42,8 +39,6 @@ export default function Planner({ onNavigate }: PlannerProps) {
   const [weekOffset, setWeekOffset] = useState(0);
 
   const weekDates = getWeekDates(weekOffset);
-  const from = weekDates[0];
-  const to = weekDates[6];
 
   const { data: scheduledTasks = [] } = useQuery<Task[]>({
     queryKey: ["scheduledTasks"],
@@ -51,18 +46,7 @@ export default function Planner({ onNavigate }: PlannerProps) {
   });
 
   // Fetch habit completions for the visible week
-  const { data: allCompletions } = useQuery({
-    queryKey: ["habitCompletions", from, to],
-    queryFn: async () => {
-      const completions = await getAllTaskCompletions(from, to);
-      const results: Record<string, string[]> = {};
-      for (const c of completions) {
-        if (!results[c.task_id]) results[c.task_id] = [];
-        results[c.task_id].push(c.completed_date);
-      }
-      return results;
-    },
-  });
+  const allCompletions = useHabitCompletions(scheduledTasks.filter((t) => t.recurrence_days && t.recurrence_days.length > 0));
 
   // Handle clicking an empty cell — navigate to task create with pre-filled day/time
   const handleCellClick = useCallback((day: string, time: string) => {

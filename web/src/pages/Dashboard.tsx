@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { listTasks, getAllTaskCompletions, type Task } from "../api/tasks";
+import { listTasks, type Task } from "../api/tasks";
 import { listTaskLists, type TaskList } from "../api/taskLists";
+import { useHabitCompletions } from "../hooks/useHabitCompletions";
 import { computeStreaks } from "../utils/streaks";
 import { getToday } from "../utils/dates";
 
@@ -25,27 +26,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   });
 
   const today = getToday();
-
-  // Fetch full completion history for all habits (not just the visible week)
-  // so streaks can grow across calendar weeks without a hard reset.
-  const STREAK_HISTORY_START = "2020-01-01";
-  const { data: allCompletions = {} } = useQuery({
-    queryKey: ["habitCompletions", STREAK_HISTORY_START, today],
-    queryFn: async () => {
-      const completions = await getAllTaskCompletions(STREAK_HISTORY_START, today);
-      const results: Record<string, string[]> = {};
-      for (const task of habitTasks) {
-        results[task.id] = [];
-      }
-      for (const c of completions) {
-        if (results[c.task_id] !== undefined) {
-          results[c.task_id].push(c.completed_date);
-        }
-      }
-      return results;
-    },
-    enabled: habitTasks.length > 0,
-  });
+  const allCompletions = useHabitCompletions(habitTasks);
 
   // Stats
   const totalTasks = todoTasks.length + habitTasks.length;
@@ -109,15 +90,8 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
       >
         {/* Todos Overview */}
         <div className="card card-todo" style={{ cursor: "pointer" }} onClick={() => onNavigate("tasks")}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: "var(--space-sm)",
-            }}
-          >
-            <h3 style={{ fontSize: "var(--font-size-base)", fontWeight: 600 }}>
+          <div className="section-card-header">
+            <h3 className="card-title">
               📋 To-Dos
             </h3>
             <span className="badge badge-todo">{todoTasks.length}</span>
@@ -157,15 +131,8 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
 
         {/* Habits Overview */}
         <div className="card card-habit" style={{ cursor: "pointer" }} onClick={() => onNavigate("tasks")}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: "var(--space-sm)",
-            }}
-          >
-            <h3 style={{ fontSize: "var(--font-size-base)", fontWeight: 600 }}>
+          <div className="section-card-header">
+            <h3 className="card-title">
               🔄 Habits
             </h3>
             <span className="badge badge-habit">{habitTasks.length}</span>
@@ -215,15 +182,8 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
       {/* Lists Overview */}
       {taskLists.length > 0 && (
         <div className="card card-list mt-lg" style={{ cursor: "pointer" }} onClick={() => onNavigate("tasks")}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: "var(--space-sm)",
-            }}
-          >
-            <h3 style={{ fontSize: "var(--font-size-base)", fontWeight: 600 }}>
+          <div className="section-card-header">
+            <h3 className="card-title">
               📁 Task Lists
             </h3>
             <span className="badge" style={{ background: "var(--color-list-light)", color: "var(--color-list)" }}>

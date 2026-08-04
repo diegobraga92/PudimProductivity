@@ -719,6 +719,21 @@ h1, h2, h3, h4, h5, h6 {
   flex-direction: column;
 }
 
+.flex-wrap {
+  flex-wrap: wrap;
+}
+
+.flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.flex-center {
+  display: flex;
+  align-items: center;
+}
+
 .items-center {
   align-items: center;
 }
@@ -727,6 +742,7 @@ h1, h2, h3, h4, h5, h6 {
   justify-content: space-between;
 }
 
+.gap-xs { gap: var(--space-xs); }
 .gap-sm { gap: var(--space-sm); }
 .gap-md { gap: var(--space-md); }
 .gap-lg { gap: var(--space-lg); }
@@ -737,6 +753,102 @@ h1, h2, h3, h4, h5, h6 {
 .mb-sm { margin-bottom: var(--space-sm); }
 .mb-md { margin-bottom: var(--space-md); }
 .mb-lg { margin-bottom: var(--space-lg); }
+
+/* --- Typography Helpers --- */
+.page-heading {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--space-xl);
+}
+
+.page-subtitle {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.section-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-sm);
+}
+
+.card-title {
+  font-size: var(--font-size-base);
+  font-weight: 600;
+}
+
+.text-sm { font-size: var(--font-size-sm); }
+.text-xs { font-size: var(--font-size-xs); }
+.text-muted { color: var(--color-text-muted); }
+.text-secondary { color: var(--color-text-secondary); }
+.text-primary { color: var(--color-primary); }
+.text-danger { color: var(--color-danger); }
+.text-bold { font-weight: 600; }
+.text-center { text-align: center; }
+
+.flex-1 { flex: 1; }
+
+/* --- Loading / Error States --- */
+.loading-card {
+  text-align: center;
+  padding: var(--space-xl);
+}
+
+.error-card {
+  border-left: 3px solid var(--color-danger);
+  margin-bottom: var(--space-md);
+}
+
+.error-text {
+  color: var(--color-danger);
+  margin: 0;
+}
+
+/* --- Form Helpers --- */
+.form-label {
+  display: block;
+  margin-bottom: 0.3rem;
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+}
+
+.form-label-xs {
+  display: block;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-xs);
+}
+
+.toggle-box {
+  margin-bottom: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--color-bg);
+  border-radius: var(--radius-sm);
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: var(--font-size-sm);
+}
+
+.toggle-checkbox {
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: var(--color-primary);
+}
 
 /* --- Modal / Confirm Dialog --- */
 .modal-backdrop {
