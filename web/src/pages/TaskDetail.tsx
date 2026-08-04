@@ -401,10 +401,10 @@ export default function TaskDetail({
       )}
 
       {/* Metadata */}
-        <div
-          className="text-xs text-muted"
-          style={{ padding: "var(--space-sm) 0", borderTop: "1px solid var(--color-border-light)" }}
-        >
+      <div
+        className="text-xs text-muted"
+        style={{ padding: "var(--space-sm) 0", borderTop: "1px solid var(--color-border-light)" }}
+      >
         <p style={{ margin: "0.2rem 0" }}>
           Created: {new Date(task.created_at).toLocaleString()}
         </p>

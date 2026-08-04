@@ -1,3 +1,5 @@
+import { getSharedAudioContext, scheduleContextCleanup } from "./audioContext";
+
 /**
  * Lightweight utility for short UI feedback sounds.
  * Uses Web Audio API — no external files needed.
@@ -10,7 +12,7 @@
  */
 export function playHabitCompletionSound(): void {
   try {
-    const ctx = new AudioContext({ latencyHint: "interactive" });
+    const ctx = getSharedAudioContext();
 
     const now = ctx.currentTime;
     const noteDuration = 0.12;
@@ -41,9 +43,7 @@ export function playHabitCompletionSound(): void {
     osc2.stop(now + noteDuration * 2 + gap);
 
     // Clean up the context after the sound finishes
-    setTimeout(() => {
-      ctx.close();
-    }, totalDuration * 1000 + 100);
+    scheduleContextCleanup(totalDuration * 1000 + 100);
   } catch {
     // Web Audio API unavailable — silently ignore
   }
@@ -56,7 +56,7 @@ export function playHabitCompletionSound(): void {
  */
 export function playTodoCompletionSound(): void {
   try {
-    const ctx = new AudioContext({ latencyHint: "interactive" });
+    const ctx = getSharedAudioContext();
 
     const now = ctx.currentTime;
     const totalDuration = 0.2;
@@ -76,9 +76,7 @@ export function playTodoCompletionSound(): void {
     osc.start(now);
     osc.stop(now + totalDuration);
 
-    setTimeout(() => {
-      ctx.close();
-    }, totalDuration * 1000 + 100);
+    scheduleContextCleanup(totalDuration * 1000 + 100);
   } catch {
     // Web Audio API unavailable — silently ignore
   }
@@ -91,7 +89,7 @@ export function playTodoCompletionSound(): void {
  */
 export function playHabitUncompletionSound(): void {
   try {
-    const ctx = new AudioContext({ latencyHint: "interactive" });
+    const ctx = getSharedAudioContext();
 
     const now = ctx.currentTime;
     const noteDuration = 0.12;
@@ -122,9 +120,7 @@ export function playHabitUncompletionSound(): void {
     osc2.stop(now + noteDuration * 2 + gap);
 
     // Clean up the context after the sound finishes
-    setTimeout(() => {
-      ctx.close();
-    }, totalDuration * 1000 + 100);
+    scheduleContextCleanup(totalDuration * 1000 + 100);
   } catch {
     // Web Audio API unavailable — silently ignore
   }
@@ -142,7 +138,7 @@ export function playHabitUncompletionSound(): void {
  */
 export async function playAlarmSound(): Promise<void> {
   try {
-    const ctx = new AudioContext({ latencyHint: "interactive" });
+    const ctx = getSharedAudioContext();
 
     // Resume the context first — critical for alarms fired from timers
     // (no user gesture available). Without this, oscillators are scheduled
@@ -176,9 +172,7 @@ export async function playAlarmSound(): Promise<void> {
     });
 
     // Clean up the context after the sound finishes
-    setTimeout(() => {
-      ctx.close();
-    }, totalDuration * 1000 + 100);
+    scheduleContextCleanup(totalDuration * 1000 + 100);
   } catch {
     // Web Audio API unavailable — silently ignore
   }
@@ -191,7 +185,7 @@ export async function playAlarmSound(): Promise<void> {
  */
 export function playTodoUncompletionSound(): void {
   try {
-    const ctx = new AudioContext({ latencyHint: "interactive" });
+    const ctx = getSharedAudioContext();
 
     const now = ctx.currentTime;
     const totalDuration = 0.2;
@@ -211,9 +205,7 @@ export function playTodoUncompletionSound(): void {
     osc.start(now);
     osc.stop(now + totalDuration);
 
-    setTimeout(() => {
-      ctx.close();
-    }, totalDuration * 1000 + 100);
+    scheduleContextCleanup(totalDuration * 1000 + 100);
   } catch {
     // Web Audio API unavailable — silently ignore
   }

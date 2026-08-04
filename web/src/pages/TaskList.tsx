@@ -15,21 +15,22 @@ import {
   listTaskLists,
   createTaskList,
   deleteTaskList,
-  getTaskList,
-  listTasksByListID,
-  updateTaskList,
   type TaskList,
 } from "../api/taskLists";
 import TaskCreate from "./TaskCreate";
 import TaskDetail from "./TaskDetail";
 import QuickAddForm from "../components/QuickAddForm";
 import TaskCard from "../components/TaskCard";
+import ListDetailPanel from "../components/ListDetailPanel";
 import WeekHeatmap from "../components/WeekHeatmap";
 import StreakBadge from "../components/StreakBadge";
 import ProgressBar from "../components/ProgressBar";
+import SortSelect from "../components/SortSelect";
+import { usePersistedSort } from "../hooks/usePersistedSort";
 import { useHabitCompletions } from "../hooks/useHabitCompletions";
 import { computeStreaks } from "../utils/streaks";
 import { getRollingWindowDates, formatWeekRange } from "../utils/dates";
+import { sortTasks } from "../utils/sort";
 import {
   playHabitCompletionSound,
   playTodoCompletionSound,
@@ -38,117 +39,6 @@ import {
 } from "../utils/sounds";
 
 type View = "list" | "create" | "detail";
-
-type SortOption =
-  | "alpha-asc"
-  | "alpha-desc"
-  | "created-asc"
-  | "created-desc"
-  | "time-asc"
-  | "time-desc";
-
-const SORT_LABELS: Record<SortOption, string> = {
-  "alpha-asc": "Name A-Z",
-  "alpha-desc": "Name Z-A",
-  "created-asc": "Oldest first",
-  "created-desc": "Newest first",
-  "time-asc": "Time ↑",
-  "time-desc": "Time ↓",
-};
-
-function sortTasks(tasks: Task[], option: SortOption): Task[] {
-  const sorted = [...tasks];
-
-  switch (option) {
-    case "alpha-asc": {
-      return sorted.sort((a, b) => a.title.localeCompare(b.title));
-    }
-    case "alpha-desc": {
-      return sorted.sort((a, b) => b.title.localeCompare(a.title));
-    }
-    case "created-asc": {
-      return sorted.sort((a, b) => (a.created_at < b.created_at ? -1 : a.created_at > b.created_at ? 1 : 0));
-    }
-    case "created-desc": {
-      return sorted.sort((a, b) => (b.created_at < a.created_at ? -1 : b.created_at > a.created_at ? 1 : 0));
-    }
-    case "time-asc":
-    case "time-desc": {
-      const scheduled = sorted.filter((t) => t.start_time != null);
-      const unscheduled = sorted.filter((t) => t.start_time == null);
-      scheduled.sort((a, b) =>
-        option === "time-asc"
-          ? (a.start_time ?? "").localeCompare(b.start_time ?? "")
-          : (b.start_time ?? "").localeCompare(a.start_time ?? "")
-      );
-      return [...scheduled, ...unscheduled];
-    }
-    default: {
-      return sorted;
-    }
-  }
-}
-
-const VALID_SORT_OPTIONS = new Set<string>([
-  "alpha-asc",
-  "alpha-desc",
-  "created-asc",
-  "created-desc",
-  "time-asc",
-  "time-desc",
-]);
-
-function usePersistedSort(key: string, initial: SortOption) {
-  const [sort, setSort] = useState<SortOption>(() => {
-    try {
-      const stored = localStorage.getItem(key);
-      return stored !== null && VALID_SORT_OPTIONS.has(stored)
-        ? (stored as SortOption)
-        : initial;
-    } catch {
-      return initial;
-    }
-  });
-
-  const updateSort = useCallback(
-    (option: SortOption) => {
-      try {
-        localStorage.setItem(key, option);
-      } catch {
-        // Ignore storage errors (e.g. private mode)
-      }
-      setSort(option);
-    },
-    [key]
-  );
-
-  return [sort, updateSort] as const;
-}
-
-function SortSelect({
-  value,
-  onChange,
-  options,
-}: {
-  value: SortOption;
-  onChange: (option: SortOption) => void;
-  options: SortOption[];
-}) {
-  return (
-    <select
-      className="sort-select"
-      value={value}
-      onChange={(e) => onChange(e.target.value as SortOption)}
-      aria-label="Sort tasks"
-    >
-      {options.map((opt) => (
-        <option key={opt} value={opt}>
-          {SORT_LABELS[opt]}
-        </option>
-      ))}
-    </select>
-  );
-}
 
 export default function TaskList() {
   const queryClient = useQueryClient();
@@ -324,23 +214,21 @@ export default function TaskList() {
 
       {/* Progress Row */}
       <div
+        className="flex flex-wrap"
         style={{
-          display: "flex",
-          alignItems: "center",
           gap: "var(--space-lg)",
           marginBottom: "var(--space-xl)",
-          flexWrap: "wrap",
           background: "var(--color-surface)",
           border: "1px solid var(--color-border)",
           borderRadius: "var(--radius-md)",
           padding: "var(--space-md) var(--space-lg)",
         }}
       >
-        <span style={{ fontSize: "var(--font-size-sm)", fontWeight: 600, color: "var(--color-text-secondary)" }}>
+        <span className="text-sm text-bold text-secondary">
           Today's Progress
         </span>
-        <div style={{ display: "flex", gap: "var(--space-lg)", alignItems: "center" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)" }}>
+        <div className="flex" style={{ gap: "var(--space-lg)", alignItems: "center" }}>
+          <div className="flex-center" style={{ gap: "var(--space-sm)" }}>
             <span className="badge badge-todo">{doneTodos}/{todoTasks.length}</span>
             <div style={{ width: "100px" }}>
               <ProgressBar value={todoProgress} variant="todo" />
@@ -438,10 +326,8 @@ export default function TaskList() {
 
           {/* Shared week navigation for all habits */}
           <div
+            className="flex-between"
             style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
               marginBottom: "var(--space-md)",
               padding: "0.4rem 0",
               borderBottom: "1px solid var(--color-border-light)",
@@ -456,11 +342,7 @@ export default function TaskList() {
               &larr; Prev Week
             </button>
             <span
-              style={{
-                fontSize: "var(--font-size-sm)",
-                fontWeight: 600,
-                color: "var(--color-text-secondary)",
-              }}
+              className="text-sm text-bold text-secondary"
             >
               {weekOffset === 0
                 ? "Last 7 Days"
@@ -504,22 +386,13 @@ export default function TaskList() {
                 <div
                   key={task.id}
                   className="card card-habit"
-                  style={{
-                    animationDelay: `${index * 30}ms`,
-                  }}
+                  style={{ animationDelay: `${index * 30}ms` }}
                 >
                   {/* Row 1: Title + Streak + Kebab (hover reveal) */}
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "var(--space-sm)",
-                      marginBottom: "0.35rem",
-                    }}
-                  >
+                  <div className="flex-center" style={{ gap: "var(--space-sm)", marginBottom: "0.35rem" }}>
                     <span
+                      className="flex-1"
                       style={{
-                        flex: 1,
                         cursor: "pointer",
                         fontSize: "var(--font-size-sm)",
                         fontWeight: 600,
@@ -556,18 +429,17 @@ export default function TaskList() {
                   </div>
 
                   {/* Row 2: Completion buttons — primary interaction */}
-                    <div style={{ marginBottom: "0.35rem" }}>
-                      <WeekHeatmap
-                        recurrenceDays={task.recurrence_days ?? []}
-                        completions={taskCompletions}
-                        onToggleDay={(date, completed) => {
-                          habitToggleMutation.mutate({ taskId: task.id, date, completed });
-                        }}
-                        disabled={habitToggleMutation.isPending}
-                        weekOffset={weekOffset}
-                      />
-                    </div>
-
+                  <div style={{ marginBottom: "0.35rem" }}>
+                    <WeekHeatmap
+                      recurrenceDays={task.recurrence_days ?? []}
+                      completions={taskCompletions}
+                      onToggleDay={(date, completed) => {
+                        habitToggleMutation.mutate({ taskId: task.id, date, completed });
+                      }}
+                      disabled={habitToggleMutation.isPending}
+                      weekOffset={weekOffset}
+                    />
+                  </div>
                 </div>
               );
             })}
@@ -585,28 +457,16 @@ export default function TaskList() {
           {/* ===== LEFT: LIST PICKER ===== */}
           <div className="list-picker">
             {/* Create new list */}
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
+            <QuickAddForm
+              value={newListName}
+              onChange={setNewListName}
+              onSubmit={() => {
                 if (newListName.trim()) createListMutation.mutate(newListName.trim());
               }}
-              style={{ display: "flex", gap: "0.5rem", marginBottom: "var(--space-md)" }}
-            >
-              <input
-                type="text"
-                className="input"
-                value={newListName}
-                onChange={(e) => setNewListName(e.target.value)}
-                placeholder="New list name..."
-              />
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={createListMutation.isPending || !newListName.trim()}
-              >
-                {createListMutation.isPending ? "..." : "Create"}
-              </button>
-            </form>
+              placeholder="New list name..."
+              submitLabel="Create"
+              isPending={createListMutation.isPending}
+            />
 
             {taskLists.length === 0 && (
               <div className="empty-state" style={{ padding: "var(--space-md)" }}>
@@ -624,8 +484,8 @@ export default function TaskList() {
                 >
                   <span style={{ fontSize: "1rem" }}>📁</span>
                   <span
+                    className="flex-1"
                     style={{
-                      flex: 1,
                       fontWeight: selectedListForDetail === list.id ? 600 : 500,
                       fontSize: "var(--font-size-sm)",
                       overflow: "hidden",
@@ -676,219 +536,6 @@ export default function TaskList() {
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-/* ===== Inline List Detail Panel ===== */
-function ListDetailPanel({ listId, onListDeleted }: { listId: string; onListDeleted: () => void }) {
-  const queryClient = useQueryClient();
-  const [newTitle, setNewTitle] = useState("");
-  const [editingName, setEditingName] = useState(false);
-  const [editName, setEditName] = useState("");
-  const [listSort, setListSort] = usePersistedSort("taskSort.list", "created-desc");
-  const confirm = useConfirm();
-
-  const { data: taskList, isLoading: listLoading } = useQuery({
-    queryKey: ["taskList", listId],
-    queryFn: () => getTaskList(listId),
-  });
-
-  const { data: tasks = [], isLoading: tasksLoading } = useQuery<Task[]>({
-    queryKey: ["taskListTasks", listId],
-    queryFn: () => listTasksByListID(listId),
-  });
-
-  const createMutation = useMutation({
-    mutationFn: (title: string) =>
-      createTask({ title, list_id: listId }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["taskListTasks", listId] });
-      setNewTitle("");
-    },
-  });
-
-  const deleteTaskMutation = useMutation({
-    mutationFn: deleteTask,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["taskListTasks", listId] });
-    },
-  });
-
-  const toggleMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: TaskStatus }) => {
-      if (status === "todo") {
-        playTodoCompletionSound();
-      } else {
-        playTodoUncompletionSound();
-      }
-      return updateTask(id, { status: status === "done" ? "todo" : "done" });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["taskListTasks", listId] });
-    },
-  });
-
-  const deleteListMutation = useMutation({
-    mutationFn: () => deleteTaskList(listId),
-    onSuccess: onListDeleted,
-  });
-
-  const updateListMutation = useMutation({
-    mutationFn: (name: string) => updateTaskList(listId, { name }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["taskList", listId] });
-      queryClient.invalidateQueries({ queryKey: ["taskLists"] });
-      setEditingName(false);
-    },
-  });
-
-  const handleQuickAdd = () => {
-    if (!newTitle.trim()) return;
-    createMutation.mutate(newTitle.trim());
-  };
-
-  if (listLoading) {
-    return (
-      <div className="card loading-card" style={{ padding: "var(--space-lg)" }}>
-        <p className="text-secondary">Loading list...</p>
-      </div>
-    );
-  }
-
-  if (!taskList) {
-    return (
-      <div className="card error-card" style={{ borderWidth: "3px 0 0" }}>
-        <p className="error-text">List not found</p>
-      </div>
-    );
-  }
-
-  const doneCount = tasks.filter((t) => t.status === "done").length;
-  const progress = tasks.length > 0 ? Math.round((doneCount / tasks.length) * 100) : 0;
-
-  const sortedTasks = sortTasks(tasks, listSort);
-
-  return (
-    <div>
-      {/* Title / Edit */}
-      {editingName ? (
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (editName.trim()) updateListMutation.mutate(editName.trim());
-          }}
-          style={{ marginBottom: "var(--space-md)", display: "flex", gap: "0.5rem" }}
-        >
-          <input
-            type="text"
-            className="input"
-            value={editName}
-            onChange={(e) => setEditName(e.target.value)}
-            autoFocus
-          />
-          <button type="submit" className="btn btn-primary btn-sm">
-            Save
-          </button>
-          <button type="button" className="btn btn-ghost btn-sm" onClick={() => setEditingName(false)}>
-            Cancel
-          </button>
-        </form>
-      ) : (
-        <div style={{ marginBottom: "var(--space-md)" }}>
-          <div className="flex-center" style={{ gap: "var(--space-sm)" }}>
-            <span style={{ fontSize: "1.2rem" }}>📁</span>
-            <h3 className="flex-1" style={{ fontSize: "var(--font-size-lg)", fontWeight: 700 }}>{taskList.name}</h3>
-            <button
-              className="btn btn-ghost btn-sm"
-              onClick={() => {
-                setEditName(taskList.name);
-                setEditingName(true);
-              }}
-            >
-              ✏️
-            </button>
-            <button
-              className="btn btn-danger btn-sm"
-              onClick={async () => {
-                const ok = await confirm({
-                  title: `Delete list "${taskList.name}"?`,
-                  message: "All tasks in this list will also be deleted.",
-                  confirmLabel: "Delete",
-                  confirmVariant: "danger",
-                });
-                if (ok) {
-                  deleteListMutation.mutate();
-                }
-              }}
-            >
-              🗑
-            </button>
-          </div>
-          {tasks.length > 0 && (
-            <div className="flex-center" style={{ gap: "var(--space-sm)", marginTop: "var(--space-sm)" }}>
-              <span className="badge badge-done">{doneCount}/{tasks.length} done</span>
-              <div style={{ flex: 1, maxWidth: "150px" }}>
-                <div className="progress-bar">
-                  <div className="progress-bar-fill" style={{ width: `${progress}%` }} />
-                </div>
-              </div>
-              <SortSelect
-                value={listSort}
-                onChange={setListSort}
-                options={["created-desc", "created-asc", "alpha-asc", "alpha-desc"]}
-              />
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Quick-add form */}
-      <QuickAddForm
-        value={newTitle}
-        onChange={setNewTitle}
-        onSubmit={handleQuickAdd}
-        placeholder="Add a task to this list..."
-        isPending={createMutation.isPending}
-      />
-
-      {tasksLoading && (
-        <div className="card loading-card" style={{ padding: "var(--space-lg)" }}>
-          <p className="text-secondary">Loading tasks...</p>
-        </div>
-      )}
-
-      {!tasksLoading && tasks.length === 0 && (
-        <div className="empty-state" style={{ padding: "var(--space-md)" }}>
-          <div className="empty-state-icon" style={{ fontSize: "1.5rem" }}>📝</div>
-          <p className="empty-state-text">No tasks in this list yet.<br />Add your first one above!</p>
-        </div>
-      )}
-
-      {tasks.length > 0 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
-          {sortedTasks.map((task) => (
-            <TaskCard
-              key={task.id}
-              variant="list"
-              title={task.title}
-              done={task.status === "done"}
-              onToggle={() => toggleMutation.mutate({ id: task.id, status: task.status })}
-              onDelete={async () => {
-                const ok = await confirm({
-                  title: "Delete this task?",
-                  confirmLabel: "Delete",
-                  confirmVariant: "danger",
-                });
-                if (ok) {
-                  deleteTaskMutation.mutate(task.id);
-                }
-              }}
-              compact
-            />
-          ))}
-        </div>
-      )}
     </div>
   );
 }

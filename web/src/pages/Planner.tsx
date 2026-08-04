@@ -6,9 +6,9 @@ import {
 } from "../api/tasks";
 import { useHabitCompletions } from "../hooks/useHabitCompletions";
 import { getWeekDates, formatWeekRange, sanitizeTime } from "../utils/dates";
-import { DAY_LABELS } from "../utils/constants";
+import { DAY_OPTIONS } from "../utils/constants";
 
-const DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
+const DAYS = DAY_OPTIONS.map((d) => d.value);
 
 // Grid hours: 6AM to 10PM (16 hours)
 const HOURS = Array.from({ length: 16 }, (_, i) => {
@@ -191,7 +191,7 @@ export default function Planner({ onNavigate }: PlannerProps) {
                 color: "var(--color-text)",
               }}
             >
-              {DAY_LABELS[day]}
+              {DAY_OPTIONS.find((d) => d.value === day)?.label ?? day}
               <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", fontWeight: 400 }}>
                 {weekDates[idx]?.slice(5) ?? ""}
               </div>

@@ -49,6 +49,24 @@ export interface UpdateTaskRequest {
   alarm_minutes?: number | null;
 }
 
+/** Parse an error response body, falling back to a generic message. */
+async function parseError(response: Response, fallback: string): Promise<Error> {
+  try {
+    const body = await response.json();
+    return new Error(body.error || fallback);
+  } catch {
+    return new Error(fallback);
+  }
+}
+
+/** Handle non-OK responses consistently, with 404 special-casing. */
+async function handleApiError(response: Response, action: string): Promise<never> {
+  if (response.status === 404) {
+    throw new Error("Task not found");
+  }
+  throw await parseError(response, `Failed to ${action}: ${response.status}`);
+}
+
 /**
  * Fetches all tasks, optionally filtered by status and/or type.
  */
@@ -62,7 +80,7 @@ export async function listTasks(status?: TaskStatus, type?: "one-off" | "habit")
 
   const response = await fetch(url);
   if (!response.ok) {
-    throw new Error(`Failed to list tasks: ${response.status}`);
+    await handleApiError(response, "list tasks");
   }
   return response.json() as Promise<Task[]>;
 }
@@ -74,7 +92,7 @@ export async function listScheduledTasks(): Promise<Task[]> {
   const url = `${config.apiBaseUrl}/tasks/scheduled`;
   const response = await fetch(url);
   if (!response.ok) {
-    throw new Error(`Failed to list scheduled tasks: ${response.status}`);
+    await handleApiError(response, "list scheduled tasks");
   }
   return response.json() as Promise<Task[]>;
 }
@@ -90,8 +108,7 @@ export async function createTask(req: CreateTaskRequest): Promise<Task> {
   });
 
   if (!response.ok) {
-    const err = await response.json().catch(() => ({ error: "Unknown error" }));
-    throw new Error(err.error || `Failed to create task: ${response.status}`);
+    await handleApiError(response, "create task");
   }
 
   return response.json() as Promise<Task>;
@@ -104,10 +121,7 @@ export async function getTask(taskId: string): Promise<Task> {
   const response = await fetch(`${config.apiBaseUrl}/tasks/${taskId}`);
 
   if (!response.ok) {
-    if (response.status === 404) {
-      throw new Error("Task not found");
-    }
-    throw new Error(`Failed to get task: ${response.status}`);
+    await handleApiError(response, "get task");
   }
 
   return response.json() as Promise<Task>;
@@ -127,11 +141,7 @@ export async function updateTask(
   });
 
   if (!response.ok) {
-    if (response.status === 404) {
-      throw new Error("Task not found");
-    }
-    const err = await response.json().catch(() => ({ error: "Unknown error" }));
-    throw new Error(err.error || `Failed to update task: ${response.status}`);
+    await handleApiError(response, "update task");
   }
 
   return response.json() as Promise<Task>;
@@ -146,10 +156,7 @@ export async function deleteTask(taskId: string): Promise<void> {
   });
 
   if (!response.ok) {
-    if (response.status === 404) {
-      throw new Error("Task not found");
-    }
-    throw new Error(`Failed to delete task: ${response.status}`);
+    await handleApiError(response, "delete task");
   }
 }
 
@@ -165,11 +172,7 @@ export async function completeTask(taskId: string, date?: string): Promise<TaskC
   });
 
   if (!response.ok) {
-    if (response.status === 404) {
-      throw new Error("Task not found");
-    }
-    const err = await response.json().catch(() => ({ error: "Unknown error" }));
-    throw new Error(err.error || `Failed to complete task: ${response.status}`);
+    await handleApiError(response, "complete task");
   }
 
   return response.json() as Promise<TaskCompletion>;
@@ -187,11 +190,7 @@ export async function uncompleteTask(taskId: string, date?: string): Promise<voi
   });
 
   if (!response.ok) {
-    if (response.status === 404) {
-      throw new Error("Task not found");
-    }
-    const err = await response.json().catch(() => ({ error: "Unknown error" }));
-    throw new Error(err.error || `Failed to uncomplete task: ${response.status}`);
+    await handleApiError(response, "uncomplete task");
   }
 }
 
@@ -212,7 +211,7 @@ export async function getAllTaskCompletions(
 
   const response = await fetch(url);
   if (!response.ok) {
-    throw new Error(`Failed to get all completions: ${response.status}`);
+    await handleApiError(response, "get all completions");
   }
 
   return response.json() as Promise<TaskCompletion[]>;
@@ -236,10 +235,7 @@ export async function getTaskCompletions(
   const response = await fetch(url);
 
   if (!response.ok) {
-    if (response.status === 404) {
-      throw new Error("Task not found");
-    }
-    throw new Error(`Failed to get completions: ${response.status}`);
+    await handleApiError(response, "get completions");
   }
 
   return response.json() as Promise<TaskCompletion[]>;
