@@ -10,8 +10,28 @@
 |------|-------|--------|
 | `govulncheck` (Go stdlib + modules) | backend | ✅ **No vulnerabilities found** (Go 1.26.5) |
 | `npm audit` (runtime deps) | web | ✅ **0 vulnerabilities** (`--omit=dev`) |
-| OWASP `dependencyCheckAnalyze` | mobile (Gradle) | ✅ Wired in CI (`mobile-ci.yml`) |
+| OWASP `dependencyCheckAnalyze` | mobile (Gradle) | ✅ Wired in CI (`mobile-ci.yml`), plugin **12.2.2** |
 | `Trivy` (container images) | backend + web images | ✅ **0 CRITICAL/HIGH** on both |
+
+### 1.4 OWASP dependency-check — version pin (2026-08-09 CI fix)
+
+The scan was red on `main` for two reasons, both addressed:
+
+| Cause | Fix |
+|-------|-----|
+| **12.1.0 schema bug**: NVD reference URL column (`VARCHAR(1000)`) overflowed on long Mozilla Bugzilla URLs (CVE-2026-6785/6786) → `DatabaseException` during update | Bump to **12.2.2**, which widens the column (`fix(db)` in 12.2.2 changelog) |
+| **Sonatype OSS Index analyzer** failed on ~40 jars in CI (requires a Sonatype PAT; remote errors) | Disabled via `analyzers.ossIndex.enabled = false` — NVD + CISA KEV remain the coverage sources |
+
+**Deliberately NOT on 13.0.0:** 13.0.0 regressed no-API-key usage
+([#8715](https://github.com/dependency-check/DependencyCheck/issues/8715) —
+empty NVD key string treated as invalid, crashes the update). 12.2.2 has the
+URL fix without that regression.
+
+CI additions: `actions/cache` on `~/.gradle/dependency-check-data` (skip the
+multi-GB feed download on repeat runs) and optional `NVD_API_KEY` secret passed
+via `-PdependencyCheck.nvd.apiKey` (only when non-empty) to cut a cold run from
+~1h20m to ~2m. Cold anonymous runs are rate-limited by NVD (HTTP 429 retries)
+but succeed — the plugin retries transparently.
 
 ### 1.1 govulncheck
 

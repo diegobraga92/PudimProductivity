@@ -90,6 +90,19 @@ android {
     }
 }
 
+// OWASP dependency-check tuning (task: ./gradlew dependencyCheckAnalyze).
+// - OSS Index analyzer requires a Sonatype PAT and is unreliable in CI (remote
+//   errors per jar) — disabled; NVD + CISA KEV remain the coverage sources.
+// - NVD API key (optional) is provided via -PdependencyCheck.nvd.apiKey in CI;
+//   with no key the plugin uses the (slow, rate-limited) anonymous path.
+dependencyCheck {
+    autoUpdate = true
+    failOnError = true
+    analyzers {
+        ossIndex.enabled = false
+    }
+}
+
 dependencies {
     // Core
     implementation("androidx.core:core-ktx:1.15.0")

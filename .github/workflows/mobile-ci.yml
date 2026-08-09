@@ -124,6 +124,10 @@ jobs:
   dependency-scan:
     name: Dependency Vulnerability Scan (OWASP)
     runs-on: ubuntu-latest
+    # Cold run (no NVD cache + no API key) downloads the full feed — allow up
+    # to 90 min. With the NVD data cache hit or an NVD_API_KEY secret this is
+    # 1–5 min.
+    timeout-minutes: 90
     steps:
       # Check latest: https://github.com/actions/checkout/releases
       - uses: actions/checkout@v6
@@ -140,6 +144,27 @@ jobs:
         with:
           validate-wrappers: false
 
+      # The NVD feed download dominates the job time. Cache the dependency-check
+      # data dir (keyed on the feed version marker) so repeat runs are fast.
+      # First run still does the full download (~30 min without an API key,
+      # ~2 min with NVD_API_KEY set in repository secrets).
+      - name: Cache NVD data
+        # Check latest: https://github.com/actions/cache/releases
+        uses: actions/cache@v4
+        with:
+          path: ~/.gradle/dependency-check-data
+          key: nvd-data-${{ runner.os }}-${{ hashFiles('mobile/build.gradle.kts', 'mobile/app/build.gradle.kts') }}
+
       - name: Run OWASP dependency-check
-        run: ./gradlew dependencyCheckAnalyze
+        # NVD_API_KEY (optional secret) makes the feed download dramatically
+        # faster. Passed via -P only when non-empty: an empty -P value would be
+        # treated as an invalid key by dependency-check.
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+        run: |
+          if [ -n "$NVD_API_KEY" ]; then
+            ./gradlew dependencyCheckAnalyze -PdependencyCheck.nvd.apiKey="$NVD_API_KEY"
+          else
+            ./gradlew dependencyCheckAnalyze
+          fi
         working-directory: mobile
