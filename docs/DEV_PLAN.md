@@ -41,10 +41,10 @@ These are not tied to a single phase – they must be evident across the entire 
 
 These are centralised here to emphasise their importance. Each is introduced at the appropriate phase, but all must be demonstrable by the end of core MVP.
 
-- [ ] **Threat Model:** Simple STRIDE analysis in `docs/security/threat-model.md` — file does not exist
-- [x] **RBAC:** `auth_middleware.go` with `RequireRole()` exists but NOT enforced on any actual route
+- [x] **Threat Model:** STRIDE analysis in `docs/security/threat-model.md` (created 2026-08-08; P0 items: replace dev headers with JWT, enforce per-user scoping)
+- [x] **RBAC:** `RequireRole()` enforced on task + task-list mutations (`admin`, `user`) and feature-flag toggles (`admin`); web/mobile clients send dev identity headers
 - [x] **Audit Logs:** Full `internal/audit/` module (Postgres repo, service, logger interface); migration `008_create_audit_log.sql`; wired into task service for task CRUD events
-- [ ] **Dependency Scanning:** `govulncheck`, `npm audit`, `gradle dependencyCheck` — not in any CI workflow
+- [x] **Dependency Scanning:** `govulncheck` (backend CI job), `npm audit` (web CI), OWASP `dependencyCheck` (mobile CI) all wired into GitHub Actions
 - [ ] **Container Scanning:** Trivy — not configured
 - [x] **Secrets Rotation:** Documented in `docs/security/secrets-management.md`; `.env.example` at project root; `.gitignore` prevents committed secrets
 
@@ -80,10 +80,10 @@ These are centralised here to emphasise their importance. Each is introduced at 
 - [x] Mobile: Kotlin Retrofit client (TaskApi.kt), TaskListScreen, TaskCreateScreen, TaskDetailScreen
 - [x] Feature flags: Full `internal/featureflag/` module (Postgres table + `/api/v1/features` endpoint) wired into `main.go` and web via `useFeatureFlag` hook
 - [x] Redis caching layer: `shared/cache.go`, `task/cached_service.go`, redis in `docker-compose.yml`
-- [x] Observability: `shared/metrics.go` defines counter, histogram, gauge, DB query metrics, and `SetupInternalMetricsServer` — but server is NOT started in `main.go` (`:9090` not wired); `infra/prometheus/alerts.yml` with SLO burn-rate rules exists; Grafana dashboard JSON not yet created
+- [x] Observability: `shared/metrics.go` wired into `main.go` — metrics middleware on the public router, scrape endpoint on internal `:9090` server (not publicly exposed); `infra/prometheus/alerts.yml` with SLO burn-rate rules exists; Grafana RED + business KPI dashboards in `infra/grafana/`
 - [x] Early SLO: `docs/slo.md` defines targets (99% success rate, p95 < 200ms) and alerting rules
 - [x] Testing: unit + integration (Testcontainers for DB); `domain_test.go` exists
-- [ ] RBAC seed: `auth_middleware.go` with `RequireRole()` exists but not applied to any route; task handlers do not filter by user ID
+- [x] RBAC seed: `RequireRole()` enforced on task/task-list mutations and feature-flag toggles (see Security section); task handlers do not yet filter by user ID
 - [x] Audit log seed: Full audit module, migration 008, wired into `task.NewTaskService(repo, auditLogger)`
 - [x] Deploy full stack (backend, web static site on S3/CloudFront, mobile APK internal test) — no cloud deployment; Terraform is skeleton
 - [x] Document: ADR for modular monolith choice (`docs/adr/002-modular-monolith.md`)
@@ -94,14 +94,14 @@ These are centralised here to emphasise their importance. Each is introduced at 
 
 **Goal:** Live task updates push to all clients without polling.
 
-- [ ] Backend: WebSocket endpoint, in‑memory event bus (`TaskChanged` events)
-- [ ] Sync hub: fan out events to connected clients
-- [ ] Web: replace polling with WebSocket connection, update React state in real time
-- [ ] Mobile: open WebSocket (OkHttp / ktor-client-websockets), observe task changes in ViewModel
-- [ ] API contract: document WebSocket message formats in `api/ws/` (JSON schemas)
-- [ ] Consistency model: document chosen strategy (e.g., last-write-wins, event ordering) in `docs/adr/002-websocket-consistency.md`
-- [ ] Reconnection handling: sequence numbers for catch-up after disconnect
-- [ ] Testing: integration test for event fanout, contract test for WS messages
+- [x] Backend: WebSocket endpoint (`GET /api/v1/ws`) and in‑memory event bus (`internal/eventbus/`, `task.created/updated/deleted/completed/uncompleted` events)
+- [x] Sync hub: `internal/sync/` fans out events to connected clients with atomic registration (replay snapshot + add client), slow-client disconnect
+- [x] Web: `web/src/api/sync.ts` + `useLiveUpdates` hook wired at app root — real-time cache updates (replaces polling for task data)
+- [x] Mobile: `SyncClient.kt` (OkHttp WebSocket + SharedFlow), started in `MainActivity`, TaskListScreen reloads on events
+- [x] API contract: `api/ws/events-v1.json` (JSON Schema for envelope + all payloads)
+- [x] Consistency model: documented in `docs/adr/004-websocket-consistency.md` (server-authoritative, last-write-wins, seq-based replay)
+- [x] Reconnection handling: monotonic sequence numbers, `?last_seq=N` catch-up, ring-buffer replay (1000 events), `stale` → full REST refetch
+- [x] Testing: unit tests for in-memory bus + replay buffer; integration tests for fan-out, replay-on-reconnect, and stale signal (all with `-race`); end-to-end verified with a real server + WS client
 
 ---
 
@@ -173,8 +173,8 @@ These are centralised here to emphasise their importance. Each is introduced at 
 **Goal:** Make the entire cross‑stack system observable, prevent regressions, and demonstrate deep database engineering.
 
 - [ ] Backend: OpenTelemetry instrumentation (traces + metrics), trace IDs propagated (HTTP, RabbitMQ) — OTEL packages appear in go.mod as indirect deps from testcontainers but not wired
-- [ ] Prometheus: `shared/metrics.go` defines metrics but `SetupInternalMetricsServer` not called in `main.go`; `infra/prometheus/alerts.yml` with SLO burn-rate rules exists
-- [ ] Grafana: RED dashboards for every service, business KPI dashboard — no dashboard JSON files
+- [x] Prometheus: metrics server started in `main.go` on internal `:9090` (metrics middleware on public router); `infra/prometheus/alerts.yml` with SLO burn-rate rules exists
+- [x] Grafana: RED dashboard (`infra/grafana/red-dashboard.json`) + business KPI dashboard (`infra/grafana/business-kpi.json`) created — datasource uid must be `prometheus`
 - [X] Structured logging: JSON format, trace ID in every log line — zerolog with `RequestID` middleware and structured fields
 - [ ] Web: client‑side error monitoring (Sentry or custom beacon to backend)
 - [ ] Mobile: error reporting (Sentry or similar)
@@ -261,19 +261,19 @@ These are centralised here to emphasise their importance. Each is introduced at 
 - [x] Weekly planner with time-blocked calendar grid (CRUD API + React UI)
 - [x] CI/CD pipelines per platform (lint, test, build)
 - [ ] Notifications delivered via push + in‑app toasts (Phase 3 — not started)
-- [ ] WebSocket real-time sync (Phase 2 — not started)
+- [x] WebSocket real-time sync (Phase 2 — completed: event bus, sync hub, web + mobile clients, replay/reconnect, ADR 004)
 - [x] Feature flags service + web integration (Phase 1 — completed)
 - [x] Redis caching layer for task API (Phase 1 — completed)
 - [x] Audit logging for task operations (Phase 1 — completed)
-- [x] RBAC middleware infrastructure (middleware exists; enforcement not wired)
-- [x] Prometheus metrics endpoint definition (Phase 1 — code exists; not started in main.go)
+- [x] RBAC middleware infrastructure (enforced on task/task-list mutations + feature-flag toggles; dev-header identity)
+- [x] Prometheus metrics endpoint (wired in main.go — internal :9090 scrape endpoint)
 - [x] SLOs defined for health and task API (docs/slo.md)
 - [x] Prometheus alerting rules for SLO burn rate (infra/prometheus/alerts.yml)
-- [ ] Full observability: Grafana RED dashboards, OpenTelemetry tracing
+- [ ] Full observability: Grafana RED dashboards exist (infra/grafana/); OpenTelemetry tracing still pending
 - [ ] Contract tests prevent spec drift
 - [ ] Database performance review complete (EXPLAIN ANALYZE, indexing, pooling)
-- [ ] Threat model written (docs/security/threat-model.md — does not exist)
-- [ ] Dependency/container scanning in CI
+- [x] Threat model written (docs/security/threat-model.md — STRIDE analysis)
+- [x] Dependency/container scanning in CI (govulncheck + npm audit + OWASP dependencyCheck; Trivy still pending)
 - [ ] At least one simulated incident and postmortem completed
 - [ ] Runbooks exist for common failures
 - [x] ADRs written and linked (001: db-migrations, 002: modular-monolith)

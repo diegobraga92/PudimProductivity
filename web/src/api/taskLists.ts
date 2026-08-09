@@ -1,4 +1,5 @@
 import config from "../config";
+import { apiHeaders } from "./client";
 
 export interface TaskList {
   id: string;
@@ -34,7 +35,7 @@ export async function listTaskLists(): Promise<TaskList[]> {
 export async function createTaskList(req: CreateTaskListRequest): Promise<TaskList> {
   const response = await fetch(`${config.apiBaseUrl}/task-lists`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: apiHeaders(),
     body: JSON.stringify(req),
   });
 
@@ -71,7 +72,7 @@ export async function updateTaskList(
 ): Promise<TaskList> {
   const response = await fetch(`${config.apiBaseUrl}/task-lists/${listId}`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    headers: apiHeaders(),
     body: JSON.stringify(req),
   });
 
@@ -92,6 +93,7 @@ export async function updateTaskList(
 export async function deleteTaskList(listId: string): Promise<void> {
   const response = await fetch(`${config.apiBaseUrl}/task-lists/${listId}`, {
     method: "DELETE",
+    headers: apiHeaders(),
   });
 
   if (!response.ok) {

@@ -1,6 +1,8 @@
 package shared
 
 import (
+	"bufio"
+	"net"
 	"net/http"
 	"strconv"
 	"time"
@@ -87,6 +89,23 @@ type metricsResponseWriter struct {
 func (w *metricsResponseWriter) WriteHeader(code int) {
 	w.statusCode = code
 	w.ResponseWriter.WriteHeader(code)
+}
+
+// Hijack preserves http.Hijacker support through the metrics middleware so
+// WebSocket upgrades (used by the sync hub) keep working.
+func (w *metricsResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	hj, ok := w.ResponseWriter.(http.Hijacker)
+	if !ok {
+		return nil, nil, http.ErrNotSupported
+	}
+	return hj.Hijack()
+}
+
+// Flush forwards flushes to the underlying writer, if supported.
+func (w *metricsResponseWriter) Flush() {
+	if f, ok := w.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
 }
 
 func RegisterMetricsRoutes(r chi.Router, metrics *Metrics) {

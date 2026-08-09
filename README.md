@@ -64,6 +64,28 @@ All host ports are **configurable via `.env`** — see `.env.example` for defaul
 
 Using API-first, `api/openapi/` should be the source of truth.
 
+## Monitoring & Observability
+
+- **Metrics:** the backend exposes a Prometheus scrape endpoint on an internal-only
+  port (`:9090/metrics`) — it is deliberately not exposed on the public port.
+  Metrics include request rate/duration/in-flight, DB query counts, and Go runtime stats.
+- **Alerting:** SLO burn-rate rules live in `infra/prometheus/alerts.yml`
+  (health 99.5%, task API 99.0% / p95 < 200ms — see `docs/slo.md`).
+- **Dashboards:** Grafana dashboard JSON files are in `infra/grafana/`
+  (`red-dashboard.json` for RED metrics + SLOs, `business-kpi.json` for product KPIs).
+  When provisioning, set the Prometheus datasource `uid` to `prometheus`.
+- **Security:** a STRIDE threat model is maintained in `docs/security/threat-model.md`.
+
+## Real-Time Sync
+
+- Task changes push to all clients over WebSocket (`GET /api/v1/ws`), so updates
+  made on any client (web, mobile) appear everywhere immediately — no polling.
+- The sync hub uses monotonic sequence numbers and a bounded replay buffer:
+  reconnecting clients pass `?last_seq=N` to catch up, or receive a `stale`
+  signal to do a full REST refetch. See `docs/adr/004-websocket-consistency.md`.
+- Message schema: `api/ws/events-v1.json`. Both the Vite dev proxy and the
+  nginx config are wired to forward WebSocket upgrades.
+
 ## License
 
 MIT

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/diegobraga92/pudimproductivity/backend/internal/audit"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/eventbus"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/shared"
 	"github.com/rs/zerolog/log"
 )
@@ -17,15 +18,29 @@ var ErrCompletionNotFound = fmt.Errorf("completion not found")
 type TaskService struct {
 	repo  TaskRepository
 	audit audit.Logger
+	bus   eventbus.Bus
 }
 
-func NewTaskService(repo TaskRepository, auditLogger audit.Logger) *TaskService {
+func NewTaskService(repo TaskRepository, auditLogger audit.Logger, bus eventbus.Bus) *TaskService {
 	if auditLogger == nil {
 		auditLogger = audit.NoopLogger{}
 	}
 	return &TaskService{
 		repo:  repo,
 		audit: auditLogger,
+		bus:   bus,
+	}
+}
+
+// publish emits an event to the bus. A nil bus (tests, or degraded startup) is a
+// no-op. Event publication is best-effort: a failure is logged, not propagated,
+// so the core operation is never rolled back because the bus hiccuped.
+func (s *TaskService) publish(ctx context.Context, typ eventbus.EventType, payload interface{}) {
+	if s.bus == nil {
+		return
+	}
+	if err := s.bus.Publish(ctx, typ, payload); err != nil {
+		log.Warn().Err(err).Str("event_type", string(typ)).Msg("failed to publish domain event")
 	}
 }
 
@@ -57,6 +72,8 @@ func (s *TaskService) CreateTaskWithSchedule(ctx context.Context, title string, 
 		"title":   task.Title,
 		"list_id": task.ListID,
 	})
+
+	s.publish(ctx, eventbus.EventTaskCreated, ToTaskResponse(task))
 
 	return task, nil
 }
@@ -105,6 +122,8 @@ func (s *TaskService) UpdateTask(ctx context.Context, id string, title *string, 
 		"status": task.Status,
 	})
 
+	s.publish(ctx, eventbus.EventTaskUpdated, ToTaskResponse(task))
+
 	return task, nil
 }
 
@@ -116,6 +135,8 @@ func (s *TaskService) DeleteTask(ctx context.Context, id string) error {
 	log.Info().Str("task_id", id).Msg("task deleted")
 
 	s.audit.Log(ctx, audit.ActionTaskDeleted, audit.ResourceTasks, id, nil, nil)
+
+	s.publish(ctx, eventbus.EventTaskDeleted, map[string]any{"id": id})
 
 	return nil
 }
@@ -153,6 +174,8 @@ func (s *TaskService) CompleteTask(ctx context.Context, taskID, dateStr string) 
 		"completed_date": completionDate.Format("2006-01-02"),
 	})
 
+	s.publish(ctx, eventbus.EventTaskCompleted, toCompletionResponse(completion))
+
 	return completion, nil
 }
 
@@ -181,6 +204,11 @@ func (s *TaskService) UncompleteTask(ctx context.Context, taskID, dateStr string
 	log.Info().Str("task_id", taskID).Str("date", completionDate.Format("2006-01-02")).Msg("task uncompleted")
 
 	s.audit.Log(ctx, audit.ActionTaskUncompleted, audit.ResourceTasks, taskID, nil, nil)
+
+	s.publish(ctx, eventbus.EventTaskUncompleted, map[string]any{
+		"id":   taskID,
+		"date": completionDate.Format("2006-01-02"),
+	})
 
 	return nil
 }

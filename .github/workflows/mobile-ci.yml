@@ -39,6 +39,7 @@ jobs:
         run: >
           ./gradlew
           -Papi.base.url="${{ vars.API_BASE_URL || 'http://10.0.2.2:8080/api/v1' }}"
+          lint
           assembleDebug
         working-directory: mobile
 
@@ -54,3 +55,26 @@ jobs:
           name: app-debug
           path: mobile/app/build/outputs/apk/debug/app-debug-*.apk
           retention-days: 3
+
+  dependency-scan:
+    name: Dependency Vulnerability Scan (OWASP)
+    runs-on: ubuntu-latest
+    steps:
+      # Check latest: https://github.com/actions/checkout/releases
+      - uses: actions/checkout@v6
+
+      # Check latest: https://github.com/actions/setup-java/releases
+      - uses: actions/setup-java@v5
+        with:
+          distribution: "temurin"
+          java-version: "21"
+
+      - name: Setup Gradle
+        # Check latest: https://github.com/gradle/actions/releases
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          validate-wrappers: false
+
+      - name: Run OWASP dependency-check
+        run: ./gradlew dependencyCheckAnalyze
+        working-directory: mobile

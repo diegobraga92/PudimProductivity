@@ -1,0 +1,61 @@
+// Package eventbus provides the event-dispatch abstraction used across the
+// backend. Phase 2 introduces an in-memory implementation; Phase 3 will add a
+// RabbitMQ-backed implementation that satisfies the same Bus interface so that
+// producers (task service) and consumers (sync hub) do not change.
+package eventbus
+
+import (
+	"context"
+	"errors"
+	"time"
+)
+
+// EventType identifies the kind of domain event. Payload shapes are documented
+// in api/ws/events-v1.json.
+type EventType string
+
+const (
+	// EventTaskCreated is published after a task is persisted.
+	EventTaskCreated EventType = "task.created"
+	// EventTaskUpdated is published after a task mutation is persisted.
+	EventTaskUpdated EventType = "task.updated"
+	// EventTaskDeleted is published after a task is removed.
+	EventTaskDeleted EventType = "task.deleted"
+	// EventTaskCompleted is published after a habit task is completed for a date.
+	EventTaskCompleted EventType = "task.completed"
+	// EventTaskUncompleted is published after a habit task completion is removed.
+	EventTaskUncompleted EventType = "task.uncompleted"
+)
+
+// Event is the wire envelope pushed to subscribers and, ultimately, over the
+// WebSocket to connected clients.
+//
+// Seq is assigned by the Bus implementation and is guaranteed to be strictly
+// increasing within a single process, which lets clients resume after a
+// disconnect without missing updates (see docs/adr/004-websocket-consistency.md).
+type Event struct {
+	Type      EventType   `json:"type"`
+	Seq       int64       `json:"seq"`
+	Timestamp time.Time   `json:"timestamp"`
+	Payload   interface{} `json:"payload,omitempty"`
+}
+
+// ErrBusClosed is returned by Publish/Subscribe after Close has been called.
+var ErrBusClosed = errors.New("event bus closed")
+
+// Handler receives a single event. Handlers MUST NOT block for long periods:
+// the in-memory implementation invokes handlers synchronously in publish order,
+// so a slow handler would stall publishers. Handlers must be safe for concurrent
+// use (the same handler instance can be invoked from multiple publishers).
+type Handler func(ctx context.Context, event Event) error
+
+// Bus is the event-dispatch abstraction.
+type Bus interface {
+	// Publish delivers an event to all subscribers in publish order.
+	Publish(ctx context.Context, typ EventType, payload interface{}) error
+	// Subscribe registers a handler. The returned function removes the handler
+	// and is safe to call multiple times.
+	Subscribe(ctx context.Context, handler Handler) (unsubscribe func(), err error)
+	// Close stops the bus. Publish/Subscribe fail afterwards.
+	Close() error
+}

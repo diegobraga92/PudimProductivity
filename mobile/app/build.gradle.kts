@@ -4,6 +4,7 @@ import java.util.Properties
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
+    id("org.owasp.dependencycheck")
 }
 
 fun readLocalProperty(key: String): String? {

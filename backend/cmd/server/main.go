@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -17,9 +19,11 @@ import (
 
 	"github.com/diegobraga92/pudimproductivity/backend/internal/audit"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/db"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/eventbus"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/featureflag"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/pomodoro"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/shared"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/sync"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/task"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/tasklist"
 )
@@ -63,7 +67,11 @@ func main() {
 	// Setup router
 	r := chi.NewRouter()
 
-	// TODO: Add Metrics
+	// Prometheus metrics: record request metrics on the main router. The scrape
+	// endpoint is served by the internal :9090 server (see below) so it is not
+	// exposed on the public port.
+	metrics := shared.NewMetrics()
+	r.Use(metrics.MetricsMiddleware)
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Recoverer)
@@ -72,6 +80,15 @@ func main() {
 	r.Use(middleware.Timeout(cfg.Server.RequestTimeout))
 
 	r.Get("/api/v1/health", healthHandler(pool, cfg.Version))
+
+	// Event bus + real-time sync hub (Phase 2). The hub subscribes to the bus
+	// and fans events out to connected WebSocket clients.
+	bus := eventbus.NewInMemoryBus()
+	syncHub := sync.NewHub(bus, sync.Config{ReplayBufferSize: 1000})
+	if err := syncHub.Start(context.Background()); err != nil {
+		log.Fatal().Err(err).Msg("failed to start sync hub")
+	}
+	sync.RegisterSyncRoutes(r, syncHub)
 
 	var auditService *audit.Service
 	if pool != nil {
@@ -82,7 +99,7 @@ func main() {
 	// Setup routes
 	var taskService *task.TaskService
 	if pool != nil {
-		taskService = task.RegisterTaskRoutes(r, pool, auditService)
+		taskService = task.RegisterTaskRoutes(r, pool, auditService, bus)
 	}
 
 	if pool != nil {
@@ -117,6 +134,16 @@ func main() {
 		}
 	}()
 
+	// Start the internal metrics server on a separate, non-public port (:9090).
+	// Prometheus scrapes metrics from here; the public router never exposes /metrics.
+	internalMetricsServer := shared.SetupInternalMetricsServer(metrics)
+	go func() {
+		log.Info().Str("addr", internalMetricsServer.Addr).Msg("internal metrics server listening")
+		if err := internalMetricsServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatal().Err(err).Msg("internal metrics server error")
+		}
+	}()
+
 	// Wait for shutdown signal
 	sig := <-shutdownCh
 	log.Info().Str("signal", sig.String()).Msg("shutting down gracefully")
@@ -126,6 +153,15 @@ func main() {
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		log.Error().Err(err).Msg("HTTP server shutdown error")
+	}
+
+	if err := internalMetricsServer.Shutdown(shutdownCtx); err != nil {
+		log.Error().Err(err).Msg("internal metrics server shutdown error")
+	}
+
+	syncHub.Close()
+	if err := bus.Close(); err != nil {
+		log.Warn().Err(err).Msg("event bus close error")
 	}
 
 	if pool != nil {
@@ -164,6 +200,23 @@ type responseWriter struct {
 func (rw *responseWriter) WriteHeader(code int) {
 	rw.statusCode = code
 	rw.ResponseWriter.WriteHeader(code)
+}
+
+// Hijack lets the WebSocket upgrade pass through the logger wrapper. Without
+// it, http.Hijacker support would be lost and upgrades would fail with 501.
+func (rw *responseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	hj, ok := rw.ResponseWriter.(http.Hijacker)
+	if !ok {
+		return nil, nil, fmt.Errorf("underlying ResponseWriter does not support hijacking")
+	}
+	return hj.Hijack()
+}
+
+// Flush forwards flushes to the underlying writer, if supported.
+func (rw *responseWriter) Flush() {
+	if f, ok := rw.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
 }
 
 type HealthResponse struct {

@@ -12,6 +12,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.pudimproductivity.api.ApiClient
 import com.pudimproductivity.api.CreateTaskRequest
+import com.pudimproductivity.api.SyncClient
 import com.pudimproductivity.api.Task
 import com.pudimproductivity.api.TaskList
 import com.pudimproductivity.api.UpdateTaskRequest
@@ -23,6 +24,8 @@ import com.pudimproductivity.ui.components.WeekHeatmap
 import com.pudimproductivity.utils.computeStreaks
 import com.pudimproductivity.utils.getToday
 import com.pudimproductivity.utils.getWeekDates
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
@@ -92,6 +95,17 @@ fun TaskListScreen(
 
     LaunchedEffect(Unit) {
         loadData()
+    }
+
+    // Reload data in response to real-time task events from any client.
+    // Debounced to coalesce bursts of events into a single refresh.
+    @OptIn(FlowPreview::class)
+    LaunchedEffect(Unit) {
+        SyncClient.events
+            .debounce(300)
+            .collect {
+                loadData()
+            }
     }
 
     // Reload completions when week changes

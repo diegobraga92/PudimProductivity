@@ -34,17 +34,30 @@ interface HealthService {
  * at a real device / LAN server instead of the AVD emulator loopback.
  */
 object ApiClient {
-    val retrofit: Retrofit by lazy {
+    /** Shared OkHttpClient, reused by Retrofit and the WebSocket sync client. */
+    val client: OkHttpClient by lazy {
         val logging = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
         }
 
-        val client = OkHttpClient.Builder()
+        OkHttpClient.Builder()
             .addInterceptor(logging)
+            // Dev-mode identity headers, mirroring the backend's shared.AuthMiddleware.
+            // The backend trusts X-User-ID / X-User-Role in development; production
+            // will validate JWTs. Required for protected (POST/PUT/DELETE) endpoints.
+            .addInterceptor { chain ->
+                val request = chain.request().newBuilder()
+                    .header("X-User-ID", "dev-user")
+                    .header("X-User-Role", "user")
+                    .build()
+                chain.proceed(request)
+            }
             .connectTimeout(10, TimeUnit.SECONDS)
             .readTimeout(10, TimeUnit.SECONDS)
             .build()
+    }
 
+    val retrofit: Retrofit by lazy {
         val baseUrl = BuildConfig.API_BASE_URL.trimEnd('/') + "/"
 
         Retrofit.Builder()

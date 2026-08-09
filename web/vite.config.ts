@@ -15,6 +15,9 @@ export default defineConfig(({ mode }) => {
         "/api": {
           target: `http://localhost:${backendPort}`,
           changeOrigin: true,
+          // Enable WebSocket proxying for the real-time sync endpoint
+          // (/api/v1/ws).
+          ws: true,
         },
       },
     },

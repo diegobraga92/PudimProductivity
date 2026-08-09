@@ -6,6 +6,7 @@ import { AlarmToast } from "./components/AlarmToast";
 import { ConfirmProvider } from "./components/ConfirmProvider";
 import { useAlarm } from "./components/useAlarm";
 import { useAlarmNotifier } from "./hooks/useAlarmNotifier";
+import { useLiveUpdates } from "./hooks/useLiveUpdates";
 import TaskList from "./pages/TaskList";
 import Dashboard from "./pages/Dashboard";
 import Planner from "./pages/Planner";
@@ -30,6 +31,10 @@ function AppInner() {
 
   // Polls scheduled habit tasks and fires sound + in-app toast alarms
   useAlarmNotifier();
+
+  // Real-time task updates from the backend WebSocket stream (Phase 2). This
+  // replaces polling: task changes made on any client appear here immediately.
+  useLiveUpdates();
 
   const { data: healthData } = useQuery<HealthResponse>({
     queryKey: ["health"],

@@ -1,4 +1,5 @@
 import config from "../config";
+import { apiHeaders } from "./client";
 
 export type TaskStatus = "todo" | "done";
 
@@ -103,7 +104,7 @@ export async function listScheduledTasks(): Promise<Task[]> {
 export async function createTask(req: CreateTaskRequest): Promise<Task> {
   const response = await fetch(`${config.apiBaseUrl}/tasks`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: apiHeaders(),
     body: JSON.stringify(req),
   });
 
@@ -136,7 +137,7 @@ export async function updateTask(
 ): Promise<Task> {
   const response = await fetch(`${config.apiBaseUrl}/tasks/${taskId}`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    headers: apiHeaders(),
     body: JSON.stringify(req),
   });
 
@@ -153,6 +154,7 @@ export async function updateTask(
 export async function deleteTask(taskId: string): Promise<void> {
   const response = await fetch(`${config.apiBaseUrl}/tasks/${taskId}`, {
     method: "DELETE",
+    headers: apiHeaders(),
   });
 
   if (!response.ok) {
@@ -169,6 +171,7 @@ export async function completeTask(taskId: string, date?: string): Promise<TaskC
   const params = date ? `?date=${encodeURIComponent(date)}` : "";
   const response = await fetch(`${config.apiBaseUrl}/tasks/${taskId}/complete${params}`, {
     method: "POST",
+    headers: apiHeaders(),
   });
 
   if (!response.ok) {
@@ -187,6 +190,7 @@ export async function uncompleteTask(taskId: string, date?: string): Promise<voi
   const params = date ? `?date=${encodeURIComponent(date)}` : "";
   const response = await fetch(`${config.apiBaseUrl}/tasks/${taskId}/complete${params}`, {
     method: "DELETE",
+    headers: apiHeaders(),
   });
 
   if (!response.ok) {

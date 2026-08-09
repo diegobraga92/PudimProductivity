@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.pudimproductivity.api.ApiClient
 import com.pudimproductivity.api.HealthResponse
+import com.pudimproductivity.api.SyncClient
 import com.pudimproductivity.ui.screens.TaskCreateScreen
 import com.pudimproductivity.ui.screens.TaskDetailScreen
 import com.pudimproductivity.ui.screens.TaskListDetailScreen
@@ -24,6 +25,10 @@ enum class Screen {
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Real-time task sync (Phase 2): app-lifetime WebSocket connection.
+        SyncClient.start(applicationContext)
+
         setContent {
             PudimProductivityTheme {
                 Surface(
