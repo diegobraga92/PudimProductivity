@@ -19,7 +19,7 @@ function getDayName(dateStr: string): string {
  * Whether a date falls on a scheduled day for the habit.
  * When scheduledDays is omitted, every calendar day counts as scheduled.
  */
-function isScheduledDay(dateStr: string, scheduledDays?: string[]): boolean {
+function isScheduledDay(dateStr: string, scheduledDays?: readonly string[] | null): boolean {
   if (!scheduledDays || scheduledDays.length === 0) return true;
   return scheduledDays.includes(getDayName(dateStr));
 }
@@ -31,7 +31,7 @@ function isScheduledDay(dateStr: string, scheduledDays?: string[]): boolean {
 function countScheduledGapDays(
   fromDate: string,
   toDate: string,
-  scheduledDays?: string[]
+  scheduledDays?: readonly string[] | null
 ): number {
   const from = new Date(fromDate + "T00:00:00");
   const to = new Date(toDate + "T00:00:00");
@@ -58,8 +58,8 @@ function countScheduledGapDays(
  *   as scheduled, preserving the original behavior.
  */
 export function computeStreaks(
-  completions: string[],
-  scheduledDays?: string[]
+  completions: readonly string[],
+  scheduledDays?: readonly string[] | null
 ): {
   current: number;
   longest: number;

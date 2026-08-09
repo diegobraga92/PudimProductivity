@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { getHealth, type HealthResponse } from "./api/client";
 import { AlarmProvider } from "./components/AlarmProvider";
 import { AlarmToast } from "./components/AlarmToast";
@@ -11,14 +11,25 @@ import { useAlarmNotifier } from "./hooks/useAlarmNotifier";
 import { useErrorReporter } from "./hooks/useErrorReporter";
 import { useLiveUpdates } from "./hooks/useLiveUpdates";
 import { useTaskNotifier } from "./hooks/useTaskNotifier";
-import TaskList from "./pages/TaskList";
 import Dashboard from "./pages/Dashboard";
-import Planner from "./pages/Planner";
-import Pomodoro from "./pages/Pomodoro";
-import Soundscape from "./pages/Soundscape";
 import "./styles.css";
 
+// Secondary pages are code-split (React.lazy) so the initial bundle only
+// contains the app shell + Dashboard (the landing page). TaskList, Planner,
+// Pomodoro and Soundscape chunks load on demand. Run `npm run build:analyze`
+// to inspect chunk sizes.
+const TaskList = lazy(() => import("./pages/TaskList"));
+const Planner = lazy(() => import("./pages/Planner"));
+const Pomodoro = lazy(() => import("./pages/Pomodoro"));
+const Soundscape = lazy(() => import("./pages/Soundscape"));
+
 type Page = "dashboard" | "tasks" | "planner" | "pomodoro" | "soundscape" | "health";
+
+const pageFallback = (
+  <div className="container" style={{ paddingTop: "var(--space-xl)", textAlign: "center", color: "var(--color-text-secondary)" }}>
+    Loading…
+  </div>
+);
 
 function HeaderBadge() {
   const { activeAlarms } = useAlarm();
@@ -167,15 +178,17 @@ function AppInner() {
       {/* ===== Main Content ===== */}
       <main style={{ flex: 1, padding: "var(--space-lg) 0" }}>
         <div className="container">
-          {page === "dashboard" && <Dashboard onNavigate={handleNavigate} />}
+          <Suspense fallback={pageFallback}>
+            {page === "dashboard" && <Dashboard onNavigate={handleNavigate} />}
 
-          {page === "tasks" && <TaskList />}
+            {page === "tasks" && <TaskList />}
 
-          {page === "planner" && <Planner onNavigate={handleNavigate} />}
+            {page === "planner" && <Planner onNavigate={handleNavigate} />}
 
-          {page === "pomodoro" && <Pomodoro />}
+            {page === "pomodoro" && <Pomodoro />}
 
-          {page === "soundscape" && <Soundscape />}
+            {page === "soundscape" && <Soundscape />}
+          </Suspense>
 
           {page === "health" && (
             <div className="animate-fade-in">

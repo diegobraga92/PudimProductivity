@@ -1,36 +1,15 @@
 import config from "../config";
+import type { components, paths } from "./generated/pomodoro-v1";
 
-export type SessionStatus = "running" | "paused" | "completed" | "cancelled";
+// Types are generated from api/openapi/pomodoro-v1.yaml (the source of truth).
+export type SessionStatus = components["schemas"]["SessionStatus"];
+export type NoiseConfig = components["schemas"]["NoiseConfig"];
+export type PomodoroSession = components["schemas"]["PomodoroSession"];
+export type StartSessionRequest = components["schemas"]["StartSessionRequest"];
 
-export interface NoiseConfig {
-  enabled: boolean;
-  track_id?: string;
-}
-
-export interface PomodoroSession {
-  id: string;
-  status: SessionStatus;
-  focus_duration: number;
-  break_duration: number;
-  current_cycle: number;
-  elapsed_seconds: number;
-  remaining_seconds: number;
-  started_at: string;
-  paused_at?: string | null;
-  completed_at?: string | null;
-  noise_config?: NoiseConfig;
-}
-
-export interface CurrentSessionResponse {
-  active: boolean;
-  session?: PomodoroSession;
-}
-
-export interface StartSessionRequest {
-  focus_duration?: number;
-  break_duration?: number;
-  noise_config?: NoiseConfig;
-}
+/** Response of GET /api/v1/pomodoro/current — an active-session discriminated union. */
+export type CurrentSessionResponse =
+  paths["/api/v1/pomodoro/current"]["get"]["responses"]["200"]["content"]["application/json"];
 
 /**
  * Starts a new pomodoro session. Cancels any existing session.

@@ -64,11 +64,15 @@ func main() {
 
 	log.Info().Str("version", cfg.Version).Msg("starting PudimProductivity backend")
 
+	// Prometheus metrics registry — created before the DB pool so every query
+	// can be traced (see db.ConnectPoolWithMetrics).
+	metrics := shared.NewMetrics()
+
 	// Setup database
 	dbCtx, dbCancel := context.WithTimeout(context.Background(), cfg.Database.ConnectTimeout)
 	defer dbCancel()
 
-	pool, err := db.ConnectPool(dbCtx, cfg.Database)
+	pool, err := db.ConnectPoolWithMetrics(dbCtx, cfg.Database, metrics)
 	if err != nil {
 		log.Warn().Err(err).Msg("database connection failed — running in degraded mode")
 		pool = nil
@@ -93,7 +97,6 @@ func main() {
 	// Prometheus metrics: record request metrics on the main router. The scrape
 	// endpoint is served by the internal :9090 server (see below) so it is not
 	// exposed on the public port.
-	metrics := shared.NewMetrics()
 	r.Use(metrics.MetricsMiddleware)
 	r.Use(middleware.RequestID)
 	// Note: middleware.RealIP is intentionally omitted — it is deprecated

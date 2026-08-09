@@ -1,5 +1,6 @@
 # Stage 1: Build
-FROM golang:1.26-alpine AS builder
+# Pinned patch for the stdlib vulnerability fixes in the 1.26 line.
+FROM golang:1.26.5-alpine AS builder
 
 RUN apk add --no-cache git ca-certificates
 
@@ -13,9 +14,10 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o /build/server ./cmd/server
 
 # Stage 2: Runtime
-FROM alpine:3.19
+# Alpine 3.22 + apk upgrade keeps OS packages patched (musl CVE-2026-40200 etc.).
+FROM alpine:3.22
 
-RUN apk add --no-cache ca-certificates tzdata
+RUN apk upgrade --no-cache && apk add --no-cache ca-certificates tzdata
 
 WORKDIR /app
 

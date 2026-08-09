@@ -1,54 +1,16 @@
 import config from "../config";
 import { apiHeaders } from "./client";
+import type { components } from "./generated/tasks-v1";
 
-export type TaskStatus = "todo" | "done";
-
-export type RecurrenceDay = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
-
-export interface Task {
-  id: string;
-  title: string;
-  status: TaskStatus;
-  recurrence_days?: RecurrenceDay[];
-  list_id?: string | null;
-  start_time?: string | null;
-  end_time?: string | null;
-  color?: string | null;
-  scheduled_date?: string | null;
-  alarm_minutes?: number | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface TaskCompletion {
-  id: string;
-  task_id: string;
-  completed_date: string;
-  created_at: string;
-}
-
-export interface CreateTaskRequest {
-  title: string;
-  recurrence_days?: RecurrenceDay[];
-  list_id?: string | null;
-  start_time?: string | null;
-  end_time?: string | null;
-  color?: string | null;
-  scheduled_date?: string | null;
-  alarm_minutes?: number | null;
-}
-
-export interface UpdateTaskRequest {
-  title?: string;
-  status?: TaskStatus;
-  recurrence_days?: RecurrenceDay[] | null;
-  list_id?: string | null;
-  start_time?: string | null;
-  end_time?: string | null;
-  color?: string | null;
-  scheduled_date?: string | null;
-  alarm_minutes?: number | null;
-}
+// Types are generated from api/openapi/tasks-v1.yaml (the source of truth).
+// Edit the spec, run `npm run generate:api`, and commit — CI fails on drift.
+export type Task = components["schemas"]["Task"];
+export type TaskStatus = components["schemas"]["TaskStatus"];
+export type TaskType = components["schemas"]["TaskType"];
+export type RecurrenceDay = components["schemas"]["RecurrenceDay"];
+export type TaskCompletion = components["schemas"]["TaskCompletion"];
+export type CreateTaskRequest = components["schemas"]["CreateTaskRequest"];
+export type UpdateTaskRequest = components["schemas"]["UpdateTaskRequest"];
 
 /** Parse an error response body, falling back to a generic message. */
 async function parseError(response: Response, fallback: string): Promise<Error> {

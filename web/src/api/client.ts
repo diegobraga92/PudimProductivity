@@ -1,10 +1,7 @@
 import config from "../config";
+import type { components } from "./generated/health-v1";
 
-export interface HealthResponse {
-  status: "ok" | "degraded" | "down";
-  version: string;
-  db: "connected" | "disconnected";
-}
+export type HealthResponse = components["schemas"]["HealthResponse"];
 
 /**
  * Development-only auth headers, mirroring the backend's `shared.AuthMiddleware`

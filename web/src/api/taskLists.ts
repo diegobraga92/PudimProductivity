@@ -1,22 +1,11 @@
 import config from "../config";
 import { apiHeaders } from "./client";
+import type { components } from "./generated/tasks-v1";
 
-export interface TaskList {
-  id: string;
-  name: string;
-  description: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface CreateTaskListRequest {
-  name: string;
-}
-
-export interface UpdateTaskListRequest {
-  name?: string;
-  description?: string;
-}
+// Types are generated from api/openapi/tasks-v1.yaml (the source of truth).
+export type TaskList = components["schemas"]["TaskList"];
+export type CreateTaskListRequest = components["schemas"]["CreateTaskListRequest"];
+export type UpdateTaskListRequest = components["schemas"]["UpdateTaskListRequest"];
 
 /**
  * Fetches all task lists.

@@ -56,6 +56,71 @@ jobs:
           path: mobile/app/build/outputs/apk/debug/app-debug-*.apk
           retention-days: 3
 
+  release-sign:
+    name: Signed Release Build (AAB + APK)
+    runs-on: ubuntu-latest
+    needs: build
+    # Release artifacts are produced from main after the debug build passes.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      # Check latest: https://github.com/actions/checkout/releases
+      - uses: actions/checkout@v6
+
+      # Check latest: https://github.com/actions/setup-java/releases
+      - uses: actions/setup-java@v5
+        with:
+          distribution: "temurin"
+          java-version: "21"
+
+      - name: Setup Gradle
+        # Check latest: https://github.com/gradle/actions/releases
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          validate-wrappers: false
+
+      - name: Decode release keystore
+        # The keystore is never committed. Create one locally and add it plus
+        # the passwords to GitHub Secrets (mobile/app/../docs/security/…):
+        #   keytool -genkeypair -v -keystore release.keystore \
+        #     -alias pudim -keyalg RSA -keysize 4096 -validity 10000
+        #   base64 -w0 release.keystore   # -> KEYSTORE_BASE64
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::warning::KEYSTORE_BASE64 not set — skipping signed release build"
+            exit 0
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+
+      - name: Build signed release AAB + APK
+        env:
+          KEYSTORE_FILE: ${{ runner.temp }}/release.keystore
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ ! -f "$KEYSTORE_FILE" ]; then
+            echo "::warning::keystore not configured — skipping signed release build"
+            exit 0
+          fi
+          ./gradlew \
+            -Papi.base.url="${{ vars.API_BASE_URL || 'http://10.0.2.2:8080/api/v1' }}" \
+            bundleRelease \
+            assembleRelease
+        working-directory: mobile
+
+      - name: Upload release artifacts (AAB + APK)
+        # Check latest: https://github.com/actions/upload-artifact/releases
+        uses: actions/upload-artifact@v7
+        with:
+          name: app-release
+          path: |
+            mobile/app/build/outputs/apk/release/*.apk
+            mobile/app/build/outputs/bundle/release/*.aab
+          retention-days: 7
+
   dependency-scan:
     name: Dependency Vulnerability Scan (OWASP)
     runs-on: ubuntu-latest

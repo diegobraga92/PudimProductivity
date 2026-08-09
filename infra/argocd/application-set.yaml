@@ -1,0 +1,57 @@
+# ArgoCD ApplicationSet for PudimProductivity.
+#
+# NOT ACTIVATED — see infra/argocd/README.md and ADR 006. This file is ready to
+# apply once a cluster exists; it generates one ArgoCD Application per overlay
+# (dev, prod), each pointing at the matching Kustomize overlay.
+#
+#   kubectl apply -f infra/argocd/application-set.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: pudimproductivity
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - list:
+        elements:
+          - name: dev
+            path: overlays/dev
+            cluster: in-cluster
+            autoSync: "false"
+          - name: prod
+            path: overlays/prod
+            cluster: in-cluster
+            autoSync: "true"
+  template:
+    metadata:
+      name: pudimproductivity-{{ .name }}
+      labels:
+        app.kubernetes.io/part-of: pudimproductivity
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/diegobraga92/PudimProductivity.git
+        targetRevision: HEAD
+        path: infra/kustomize/{{ .path }}
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: pudimproductivity
+      syncPolicy:
+        automated:
+          # Prod auto-syncs on commit (GitOps); dev requires a manual "Sync" in
+          # the ArgoCD UI to avoid churn while iterating.
+          prune: true
+          selfHeal: {{ .autoSync }}
+          allowEmpty: true
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true
+      # Image updates flow through CI pushing new tags; Argo CD Image Updater
+      # (argocd-image-updater) is the natural follow-up for automated rollouts.
+      ignoreDifferences:
+        - group: apps
+          kind: Deployment
+          jsonPointers:
+            - /spec/replicas

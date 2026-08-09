@@ -115,6 +115,83 @@ Using API-first, `api/openapi/` should be the source of truth.
 - See `docs/adr/005-async-notifications.md` for the design and degradation
   matrix.
 
+## Architecture
+
+- **C4 model:** [System Context](docs/architecture/c4-system-context.md) and
+  [Container](docs/architecture/c4-container.md) diagrams (Mermaid).
+- **ADRs:** [Index of all architecture decision records](docs/adr/README.md) —
+  migrations, modular monolith, caching, WebSocket consistency, async
+  notifications, deployment strategy.
+
+## For Product & Compliance Stakeholders
+
+This section explains, in plain language, the trade-offs that matter for
+non-engineering readers. Engineering detail lives in `docs/`.
+
+### What the product is
+
+A personal productivity suite: **tasks & habits**, a **weekly planner**, a
+**focus timer (pomodoro)**, **real-time sync** between devices, and
+**notifications** (email + push). Web, Android, and a Go API backend.
+
+### The data model: one source of truth
+
+Every task, habit completion, and planner entry lives in one PostgreSQL
+database. When you tick a task on one device, the change is saved to the
+database first, then pushed to your other devices in real time. If a device
+loses connectivity and misses an update, it re-synchronises from the database
+the next time it connects. **You can never "lose" a completed task because a
+push failed** — the database always wins.
+
+### How changes reach other devices
+
+We use a live connection (WebSocket) so updates feel instant. If that
+connection drops — flaky Wi-Fi, phone in airplane mode, backend restart — the
+device reconnects and catches up automatically. The trade-off: a notification
+such as a "habit reminder" email may be delayed while the messaging service is
+down. Notifications are best-effort convenience; they never change your data.
+
+### What is (and isn't) available offline
+
+- **Data is stored on the server**, not just on your phone. A fresh install
+  pulls everything back from the database.
+- **The Android app works offline for the focus timer** (a foreground service
+  keeps the countdown accurate), but task *changes* made offline are queued in
+  memory and require a connection to sync. Full offline editing (changes saved
+  locally and merged later) is planned but not yet shipped.
+
+### Security & privacy posture
+
+- All sensitive configuration (database passwords, messaging credentials) lives
+  in environment variables — never in the code or the repo.
+- The current build uses **development-only identity headers** instead of real
+  user accounts. This is the single most important known gap: before any
+  multi-user or public deployment, authentication (JWT/session) and per-user
+  data isolation must be implemented. It is tracked as a P0 item in our threat
+  model.
+- Dependency scanning runs in CI for Go, npm, and Android dependencies; a
+  container image scan (Trivy) is part of the backend pipeline.
+
+### Reliability expectations (SLOs)
+
+- **Health of the service:** 99.5% uptime target.
+- **Task API:** 99.0% of requests succeed, and 95% of them respond in under
+  200 ms. These targets are monitored with burn-rate alerting.
+
+### Data retention
+
+We do not auto-delete data. Deleting a task is permanent (the database honours
+the delete). Audit logs (who did what, when) are append-only and are not
+deleted by the app.
+
+### Cost & deployment
+
+The MVP runs as a single-server stack (one Docker host) — deliberately cheap and
+simple at this scale. The deployment is fully described in code (infrastructure
+as code), so it is reproducible and reviewable. A cluster-based deployment with
+automated rollouts is designed but not activated, and would only be switched on
+when traffic justifies it.
+
 ## License
 
 MIT

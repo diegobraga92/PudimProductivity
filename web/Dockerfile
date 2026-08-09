@@ -12,9 +12,9 @@ RUN npm run build
 
 # Stage 2: Serve with nginx
 # https://hub.docker.com/_/nginx/tags?name=alpine
-FROM nginx:1.27-alpine
+FROM nginx:1.29-alpine
 
-RUN apk add --no-cache ca-certificates tzdata
+RUN apk upgrade --no-cache && apk add --no-cache ca-certificates tzdata
 
 # Copy built frontend files
 COPY --from=builder /build/dist /usr/share/nginx/html

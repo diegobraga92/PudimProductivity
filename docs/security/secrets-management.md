@@ -21,6 +21,37 @@ All secrets are loaded from a `.env` file at the repository root. This file is:
 | PostgreSQL password | `POSTGRES_PASSWORD` | `.env` | N/A (local only) |
 | RabbitMQ password | `RABBITMQ_PASS` | `.env` | N/A (local only) |
 | Database URL | `DATABASE_URL` | Derived from POSTGRES_* vars | N/A (local only) |
+| Android release keystore | `KEYSTORE_FILE`/`KEYSTORE_PASSWORD`/`KEY_ALIAS`/`KEY_PASSWORD` | GitHub Secrets (CI) or `mobile/local.properties` (local) | New keystore + re-sign before Play rollout |
+
+### Android Release Signing Keystore
+
+The Android release build is signed with a **JKS keystore that is never
+committed**. Gradle reads it from environment variables (CI) or
+`mobile/local.properties` (local builds); with neither present, release builds
+are **unsigned** (dev-only).
+
+**Generate once:**
+
+```bash
+keytool -genkeypair -v \
+  -keystore release.keystore \
+  -alias pudim -keyalg RSA -keysize 4096 -validity 10000
+```
+
+**CI (GitHub Actions)** — store as repository secrets:
+
+| Secret | Value |
+|--------|-------|
+| `KEYSTORE_BASE64` | `base64 -w0 release.keystore` output |
+| `KEYSTORE_PASSWORD` | keystore password |
+| `KEY_ALIAS` | `pudim` (or your alias) |
+| `KEY_PASSWORD` | key password |
+
+The `release-sign` job in `.github/workflows/mobile-ci.yml` decodes the
+keystore, runs `bundleRelease assembleRelease`, and uploads the signed AAB+APK.
+
+**Rotation:** losing the keystore means **you cannot update an installed app** —
+store a backup offline and rotate (new keystore) before any public Play rollout.
 
 ### Local Security Notes
 

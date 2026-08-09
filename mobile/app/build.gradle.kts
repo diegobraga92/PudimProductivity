@@ -41,6 +41,25 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        // Release keystore. Supplied via env vars (CI secrets) or
+        // mobile/local.properties (local builds):
+        //   keystore.file=...            KEYSTORE_FILE
+        //   keystore.password=...        KEYSTORE_PASSWORD
+        //   keystore.key.alias=...       KEY_ALIAS
+        //   keystore.key.password=...    KEY_PASSWORD
+        // With no keystore configured the release build is unsigned (dev-only).
+        create("release") {
+            val storePath = System.getenv("KEYSTORE_FILE") ?: readLocalProperty("keystore.file")
+            if (storePath != null) {
+                storeFile = file(storePath)
+                storePassword = System.getenv("KEYSTORE_PASSWORD") ?: readLocalProperty("keystore.password") ?: ""
+                keyAlias = System.getenv("KEY_ALIAS") ?: readLocalProperty("keystore.key.alias") ?: ""
+                keyPassword = System.getenv("KEY_PASSWORD") ?: readLocalProperty("keystore.key.password") ?: ""
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -48,6 +67,12 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // Wire the keystore only when one is configured; otherwise the
+            // release build remains unsigned so `assembleRelease` still works
+            // for local dev without a keystore.
+            signingConfig = signingConfigs.getByName("release").takeIf {
+                System.getenv("KEYSTORE_FILE") != null || readLocalProperty("keystore.file") != null
+            }
         }
     }
 

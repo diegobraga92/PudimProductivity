@@ -20,6 +20,7 @@ type Metrics struct {
 	requestDuration  *prometheus.HistogramVec
 	requestsInFlight prometheus.Gauge
 	dbQueriesTotal   *prometheus.CounterVec
+	dbQueryDuration  *prometheus.HistogramVec
 }
 
 func NewMetrics() *Metrics {
@@ -52,6 +53,14 @@ func NewMetrics() *Metrics {
 			},
 			[]string{"operation"},
 		),
+		dbQueryDuration: promauto.NewHistogramVec(
+			prometheus.HistogramOpts{
+				Name:    "pg_query_duration_seconds",
+				Help:    "Duration of PostgreSQL queries in seconds",
+				Buckets: []float64{0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5},
+			},
+			[]string{"operation"},
+		),
 	}
 }
 
@@ -79,6 +88,12 @@ func MetricsHandler() http.HandlerFunc {
 
 func (m *Metrics) RecordDBQuery(operation string) {
 	m.dbQueriesTotal.WithLabelValues(operation).Inc()
+}
+
+// RecordDBQueryDuration observes the duration of a database query, broken down
+// by operation label (e.g. "list_tasks", "create_task", "get_completions").
+func (m *Metrics) RecordDBQueryDuration(operation string, duration time.Duration) {
+	m.dbQueryDuration.WithLabelValues(operation).Observe(duration.Seconds())
 }
 
 type metricsResponseWriter struct {

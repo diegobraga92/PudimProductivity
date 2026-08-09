@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-config
+  namespace: pudimproductivity
+  labels:
+    app.kubernetes.io/name: backend
+    app.kubernetes.io/part-of: pudimproductivity
+data:
+  # Non-secret configuration only. Overlay-specific values (env names) live in
+  # the overlay ConfigMap patches.
+  LOG_LEVEL: "info"
+  PORT: "8080"
+  DATABASE_MAX_CONNS: "20"
+  DATABASE_MIN_CONNS: "2"
