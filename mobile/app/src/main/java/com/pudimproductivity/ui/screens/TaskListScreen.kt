@@ -41,6 +41,8 @@ private fun getDayName(dateStr: String): String {
 @Composable
 fun TaskListScreen(
     onCreateTask: () -> Unit,
+    onFocusTimer: () -> Unit,
+    onHabits: () -> Unit,
     onTaskClick: (String) -> Unit,
     onListClick: (String) -> Unit
 ) {
@@ -134,6 +136,14 @@ fun TaskListScreen(
             TopAppBar(
                 title = { Text("Tasks") },
                 actions = {
+                    Button(onClick = onHabits) {
+                        Text("📊 Habits")
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(onClick = onFocusTimer) {
+                        Text("⏱ Focus")
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
                     Button(onClick = onCreateTask) {
                         Text("+ New Task")
                     }

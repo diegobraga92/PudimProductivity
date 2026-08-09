@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/diegobraga92/pudimproductivity/backend/internal/audit"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/shared"
 	"github.com/rs/zerolog/log"
 )
@@ -21,12 +22,17 @@ type PomodoroService struct {
 	mu      sync.Mutex
 	current *PomodoroSession
 	noise   NoiseProvider      // optional, may be nil
+	audit   audit.Logger
 	cancel  context.CancelFunc // cancels the current timer goroutine
 }
 
-func NewPomodoroService(noise NoiseProvider) *PomodoroService {
+func NewPomodoroService(noise NoiseProvider, auditLogger audit.Logger) *PomodoroService {
+	if auditLogger == nil {
+		auditLogger = audit.NoopLogger{}
+	}
 	return &PomodoroService{
 		noise: noise,
+		audit: auditLogger,
 	}
 }
 
@@ -60,6 +66,12 @@ func (s *PomodoroService) StartSession(ctx context.Context, focusMinutes, breakM
 	}
 
 	log.Info().Str("session_id", id).Int("focus_minutes", focusMinutes).Msg("pomodoro session started")
+
+	s.audit.Log(ctx, audit.ActionFocusStarted, audit.ResourcePomodoro, id, nil, map[string]any{
+		"focus_minutes": focusMinutes,
+		"break_minutes": breakMinutes,
+	})
+
 	return session, nil
 }
 
@@ -144,6 +156,12 @@ func (s *PomodoroService) Stop(ctx context.Context) (*PomodoroSession, error) {
 	}
 
 	log.Info().Str("session_id", s.current.ID).Str("status", string(s.current.Status)).Msg("pomodoro session stopped")
+
+	s.audit.Log(ctx, audit.ActionFocusCompleted, audit.ResourcePomodoro, s.current.ID, nil, map[string]any{
+		"status":    string(s.current.Status),
+		"elapsed_s": int(s.current.Elapsed().Seconds()),
+	})
+
 	session := *s.current
 	return &session, nil
 }
@@ -172,6 +190,11 @@ func (s *PomodoroService) startTimer() {
 					if s.current.Remaining() <= 0 {
 						_ = s.current.Complete()
 						log.Info().Str("session_id", sessionID).Msg("pomodoro session auto-completed")
+						s.audit.Log(context.Background(), audit.ActionFocusCompleted, audit.ResourcePomodoro, sessionID, nil, map[string]any{
+							"status":    "completed",
+							"auto":      true,
+							"elapsed_s": int(s.current.Elapsed().Seconds()),
+						})
 						s.mu.Unlock()
 						return
 					}

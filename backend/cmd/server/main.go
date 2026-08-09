@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
@@ -105,6 +106,7 @@ func main() {
 	r.Use(middleware.Timeout(cfg.Server.RequestTimeout))
 
 	r.Get("/api/v1/health", healthHandler(pool, cfg.Version))
+	r.Post("/api/v1/errors", clientErrorHandler)
 
 	// Event bus + real-time sync hub (Phase 2). The hub subscribes to the bus
 	// and fans events out to connected WebSocket clients.
@@ -181,10 +183,10 @@ func main() {
 	}
 
 	if pool != nil {
-		featureflag.RegisterFeatureFlagRoutes(r, pool)
+		featureflag.RegisterFeatureFlagRoutes(r, pool, auditService)
 	}
 
-	pomodoro.RegisterPomodoroRoutes(r, nil)
+	pomodoro.RegisterPomodoroRoutes(r, nil, auditService)
 
 	// Setup server
 	addr := fmt.Sprintf(":%d", cfg.Server.Port)
@@ -336,4 +338,41 @@ func healthHandler(pool *pgxpool.Pool, version string) http.HandlerFunc {
 			DB:      dbStatus,
 		})
 	}
+}
+
+// clientErrorRequest is the payload sent by web/mobile error reporters
+// (POST /api/v1/errors).
+type clientErrorRequest struct {
+	Message string `json:"message"`
+	Stack   string `json:"stack,omitempty"`
+	Context string `json:"context,omitempty"`
+}
+
+// clientErrorHandler ingests client-side errors (web window.onerror +
+// unhandledrejection, mobile uncaught exceptions) and logs them with the
+// request's trace context. Returns 202 — the client needs no feedback.
+func clientErrorHandler(w http.ResponseWriter, r *http.Request) {
+	defer func() { _ = r.Body.Close() }()
+
+	var req clientErrorRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Message == "" {
+		shared.WriteError(w, http.StatusBadRequest, "invalid error payload")
+		return
+	}
+
+	source := r.Header.Get("X-Error-Source")
+	if source == "" {
+		source = "unknown"
+	}
+
+	ev := log.Error().
+		Ctx(r.Context()).
+		Str("source", source).
+		Str("error_context", req.Context)
+	if req.Stack != "" {
+		ev = ev.Str("stack", req.Stack)
+	}
+	ev.Msg("client error reported: " + req.Message)
+
+	w.WriteHeader(http.StatusAccepted)
 }

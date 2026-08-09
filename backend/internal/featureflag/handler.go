@@ -7,15 +7,20 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
 
+	"github.com/diegobraga92/pudimproductivity/backend/internal/audit"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/shared"
 )
 
 type Handler struct {
 	service *Service
+	audit   audit.Logger
 }
 
-func NewHandler(service *Service) *Handler {
-	return &Handler{service: service}
+func NewHandler(service *Service, auditLogger audit.Logger) *Handler {
+	if auditLogger == nil {
+		auditLogger = audit.NoopLogger{}
+	}
+	return &Handler{service: service, audit: auditLogger}
 }
 
 type featureFlagResponse struct {
@@ -106,6 +111,12 @@ func (h *Handler) Toggle(w http.ResponseWriter, r *http.Request) {
 		shared.WriteError(w, http.StatusInternalServerError, "failed to toggle feature flag")
 		return
 	}
+
+	h.audit.Log(r.Context(), audit.ActionFeatureToggled, audit.ResourceFeatures, flag.ID, map[string]any{
+		"enabled": !req.Enabled,
+	}, map[string]any{
+		"enabled": req.Enabled,
+	})
 
 	shared.WriteJSON(w, http.StatusOK, featureFlagResponse{
 		ID:      flag.ID,

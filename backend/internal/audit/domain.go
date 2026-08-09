@@ -18,6 +18,9 @@ const (
 	ActionListDeleted = "list.deleted"
 
 	ActionFeatureToggled = "feature.toggled"
+
+	ActionFocusStarted   = "focus.started"
+	ActionFocusCompleted = "focus.completed"
 )
 
 // Resource constants.
@@ -25,6 +28,7 @@ const (
 	ResourceTasks     = "tasks"
 	ResourceTaskLists = "task_lists"
 	ResourceFeatures  = "feature_flags"
+	ResourcePomodoro  = "pomodoro"
 )
 
 // Entry represents a single audit log record.

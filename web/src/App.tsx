@@ -8,6 +8,7 @@ import { ToastProvider } from "./components/ToastProvider";
 import { ToastStack } from "./components/ToastStack";
 import { useAlarm } from "./components/useAlarm";
 import { useAlarmNotifier } from "./hooks/useAlarmNotifier";
+import { useErrorReporter } from "./hooks/useErrorReporter";
 import { useLiveUpdates } from "./hooks/useLiveUpdates";
 import { useTaskNotifier } from "./hooks/useTaskNotifier";
 import TaskList from "./pages/TaskList";
@@ -42,6 +43,9 @@ function AppInner() {
   // In-app toast notifications for task events (Phase 3 — the "push" channel
   // on the web, delivered over the same WebSocket stream).
   useTaskNotifier();
+
+  // Report client-side JS errors to the backend beacon (POST /api/v1/errors).
+  useErrorReporter();
 
   const { data: healthData } = useQuery<HealthResponse>({
     queryKey: ["health"],

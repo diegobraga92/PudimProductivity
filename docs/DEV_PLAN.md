@@ -128,9 +128,9 @@ These are centralised here to emphasise their importance. Each is introduced at 
 - [x] API contracts: `api/openapi/pomodoro-v1.yaml`
 - [x] Backend: `internal/pomodoro/` module with domain events (start/pause/resume/complete/cancel) — in-memory only, no database persistence
 - [x] Web: pomodoro timer page (start/stop/session log)
-- [ ] Mobile: habit screen (Material Design chips/cards), focus timer with countdown circle
-- [ ] Optional: Android foreground service for focus timer
-- [ ] Audit log: log habit completions and focus session starts/ends
+- [x] Mobile: habit screen (`HabitScreen.kt` — Material 3 day chips, streak badge, week heatmap, progress) and focus timer (`FocusTimerScreen.kt` — circular countdown + start/pause/resume/stop, `PomodoroApi.kt`)
+- [x] Optional: Android foreground service for focus timer (`FocusTimerService.kt` — persistent notification, keeps countdown alive when backgrounded)
+- [x] Audit log: `focus.started`/`focus.completed` (pomodoro) and `feature.toggled` (feature flags) written to the audit_log table
 - [x] Testing: verify zero changes to `internal/task/`; contract tests for new APIs
 - [x] ADR: "How new modules integrate without coupling" — covered by `docs/adr/002-modular-monolith.md`
 
@@ -176,10 +176,10 @@ These are centralised here to emphasise their importance. Each is introduced at 
 - [x] Prometheus: metrics server started in `main.go` on internal `:9090` (metrics middleware on public router); `infra/prometheus/alerts.yml` with SLO burn-rate rules exists
 - [x] Grafana: RED dashboard (`infra/grafana/red-dashboard.json`) + business KPI dashboard (`infra/grafana/business-kpi.json`) created — datasource uid must be `prometheus`
 - [X] Structured logging: JSON format, trace ID in every log line — zerolog with `RequestID` middleware and structured fields
-- [ ] Web: client‑side error monitoring (Sentry or custom beacon to backend)
-- [ ] Mobile: error reporting (Sentry or similar)
+- [x] Web: client‑side error monitoring — `useErrorReporter` hook posts `window.onerror` + `unhandledrejection` to `POST /api/v1/errors`
+- [x] Mobile: error reporting — `ErrorReporter` (default uncaught-exception handler) posts crashes to `POST /api/v1/errors`
 - [ ] CI guardrails: generate API clients in CI, fail if spec change breaks client build
-- [ ] Contract tests: notification service tests verify task service events match expected schemas
+- [x] Contract tests: `internal/sync/contract_test.go` validates WS events against `api/ws/events-v1.json` (caught real drift in the completed/uncompleted payloads — fixed the contract)
 
 ### Database Performance Deep‑Dive
 
@@ -256,8 +256,8 @@ These are centralised here to emphasise their importance. Each is introduced at 
 - [x] Health endpoint deployed (locally via Docker Compose), all clients connected
 - [x] Tasks CRUD works on web + mobile with full API and UI (one-off + recurring habits)
 - [x] Task lists grouping (named collections) across backend, web, mobile
-- [x] Pomodoro / Focus timer backend and web UI
-- [x] Habit completions with streak tracking, heatmap, progress bars
+- [x] Pomodoro / Focus timer backend, web UI, and mobile (countdown circle + foreground service)
+- [x] Habit completions with streak tracking, heatmap, progress bars (web + dedicated mobile HabitScreen)
 - [x] Weekly planner with time-blocked calendar grid (CRUD API + React UI)
 - [x] CI/CD pipelines per platform (lint, test, build)
 - [x] Notifications delivered via push + in‑app toasts (Phase 3 — RabbitMQ + worker + Mailpit email + FCM push wiring + web toasts)
@@ -270,7 +270,7 @@ These are centralised here to emphasise their importance. Each is introduced at 
 - [x] SLOs defined for health and task API (docs/slo.md)
 - [x] Prometheus alerting rules for SLO burn rate (infra/prometheus/alerts.yml)
 - [x] Full observability: Grafana RED dashboards (infra/grafana/), OpenTelemetry tracing wired (stdout + Jaeger), trace IDs in logs; RabbitMQ trace propagation still pending (Phase 3)
-- [ ] Contract tests prevent spec drift
+- [x] Contract tests prevent spec drift (WS events vs api/ws/events-v1.json)
 - [ ] Database performance review complete (EXPLAIN ANALYZE, indexing, pooling)
 - [x] Threat model written (docs/security/threat-model.md — STRIDE analysis)
 - [x] Dependency/container scanning in CI (govulncheck + npm audit + OWASP dependencyCheck; Trivy still pending)

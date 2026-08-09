@@ -3,10 +3,12 @@ package pomodoro
 import (
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
+
+	"github.com/diegobraga92/pudimproductivity/backend/internal/audit"
 )
 
-func RegisterPomodoroRoutes(r chi.Router, noise NoiseProvider) {
-	service := NewPomodoroService(noise)
+func RegisterPomodoroRoutes(r chi.Router, noise NoiseProvider, auditLogger audit.Logger) {
+	service := NewPomodoroService(noise, auditLogger)
 	handler := NewHandler(service)
 
 	r.Route("/api/v1/pomodoro", func(r chi.Router) {

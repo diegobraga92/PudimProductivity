@@ -7,15 +7,16 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog/log"
 
+	"github.com/diegobraga92/pudimproductivity/backend/internal/audit"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/shared"
 )
 
 const featureFlagCacheTTL = 30 * time.Second
 
-func RegisterFeatureFlagRoutes(r chi.Router, pool *pgxpool.Pool) *Service {
+func RegisterFeatureFlagRoutes(r chi.Router, pool *pgxpool.Pool, auditLogger audit.Logger) *Service {
 	repo := NewPostgresRepository(pool)
 	service := NewService(repo, featureFlagCacheTTL)
-	handler := NewHandler(service)
+	handler := NewHandler(service, auditLogger)
 
 	r.Route("/api/v1/features", func(r chi.Router) {
 		r.Get("/", handler.ListEnabled)

@@ -11,6 +11,10 @@ import androidx.compose.ui.unit.dp
 import com.pudimproductivity.api.ApiClient
 import com.pudimproductivity.api.HealthResponse
 import com.pudimproductivity.api.SyncClient
+import com.pudimproductivity.fcm.ErrorReporter
+import com.pudimproductivity.focus.FocusTimerManager
+import com.pudimproductivity.ui.screens.FocusTimerScreen
+import com.pudimproductivity.ui.screens.HabitScreen
 import com.pudimproductivity.ui.screens.TaskCreateScreen
 import com.pudimproductivity.ui.screens.TaskDetailScreen
 import com.pudimproductivity.ui.screens.TaskListDetailScreen
@@ -19,12 +23,18 @@ import com.pudimproductivity.ui.theme.PudimProductivityTheme
 import kotlinx.coroutines.launch
 
 enum class Screen {
-    Health, TaskList, TaskCreate, TaskDetail, TaskListDetail
+    Health, TaskList, TaskCreate, TaskDetail, TaskListDetail, FocusTimer, Habits
 }
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Report uncaught exceptions to the backend error beacon.
+        ErrorReporter.install(applicationContext)
+
+        // Focus timer state + foreground service lifecycle.
+        FocusTimerManager.init(applicationContext)
 
         // Real-time task sync (Phase 2): app-lifetime WebSocket connection.
         SyncClient.start(applicationContext)
@@ -57,6 +67,8 @@ fun AppNavigation() {
         Screen.TaskList -> {
             TaskListScreen(
                 onCreateTask = { currentScreen = Screen.TaskCreate },
+                onFocusTimer = { currentScreen = Screen.FocusTimer },
+                onHabits = { currentScreen = Screen.Habits },
                 onTaskClick = { taskId ->
                     selectedTaskId = taskId
                     currentScreen = Screen.TaskDetail
@@ -64,6 +76,20 @@ fun AppNavigation() {
                 onListClick = { listId ->
                     selectedListId = listId
                     currentScreen = Screen.TaskListDetail
+                }
+            )
+        }
+        Screen.FocusTimer -> {
+            FocusTimerScreen(
+                onBack = { currentScreen = Screen.TaskList }
+            )
+        }
+        Screen.Habits -> {
+            HabitScreen(
+                onBack = { currentScreen = Screen.TaskList },
+                onOpenTask = { taskId ->
+                    selectedTaskId = taskId
+                    currentScreen = Screen.TaskDetail
                 }
             )
         }
