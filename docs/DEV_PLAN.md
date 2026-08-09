@@ -172,7 +172,7 @@ These are centralised here to emphasise their importance. Each is introduced at 
 
 **Goal:** Make the entire cross‑stack system observable, prevent regressions, and demonstrate deep database engineering.
 
-- [ ] Backend: OpenTelemetry instrumentation (traces + metrics), trace IDs propagated (HTTP, RabbitMQ) — OTEL packages appear in go.mod as indirect deps from testcontainers but not wired
+- [x] Backend: OpenTelemetry instrumentation — `internal/observability/` (TracerProvider, W3C TraceContext propagator, HTTP span middleware, zerolog trace_id/span_id hook); trace context stamped onto event-bus events; spans exported to stdout + Jaeger (docker-compose `--profile tracing`) via OTLP/HTTP
 - [x] Prometheus: metrics server started in `main.go` on internal `:9090` (metrics middleware on public router); `infra/prometheus/alerts.yml` with SLO burn-rate rules exists
 - [x] Grafana: RED dashboard (`infra/grafana/red-dashboard.json`) + business KPI dashboard (`infra/grafana/business-kpi.json`) created — datasource uid must be `prometheus`
 - [X] Structured logging: JSON format, trace ID in every log line — zerolog with `RequestID` middleware and structured fields
@@ -269,7 +269,7 @@ These are centralised here to emphasise their importance. Each is introduced at 
 - [x] Prometheus metrics endpoint (wired in main.go — internal :9090 scrape endpoint)
 - [x] SLOs defined for health and task API (docs/slo.md)
 - [x] Prometheus alerting rules for SLO burn rate (infra/prometheus/alerts.yml)
-- [ ] Full observability: Grafana RED dashboards exist (infra/grafana/); OpenTelemetry tracing still pending
+- [x] Full observability: Grafana RED dashboards (infra/grafana/), OpenTelemetry tracing wired (stdout + Jaeger), trace IDs in logs; RabbitMQ trace propagation still pending (Phase 3)
 - [ ] Contract tests prevent spec drift
 - [ ] Database performance review complete (EXPLAIN ANALYZE, indexing, pooling)
 - [x] Threat model written (docs/security/threat-model.md — STRIDE analysis)

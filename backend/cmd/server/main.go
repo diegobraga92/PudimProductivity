@@ -21,6 +21,7 @@ import (
 	"github.com/diegobraga92/pudimproductivity/backend/internal/db"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/eventbus"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/featureflag"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/observability"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/pomodoro"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/shared"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/sync"
@@ -35,13 +36,28 @@ func main() {
 		With().
 		Timestamp().
 		Caller().
-		Logger()
+		Logger().
+		Hook(observability.TraceLogHook{})
 
 	level, err := zerolog.ParseLevel(cfg.LogLevel)
 	if err != nil {
 		level = zerolog.DebugLevel
 	}
 	zerolog.SetGlobalLevel(level)
+
+	// OpenTelemetry tracing (Phase 6): every HTTP request + event-bus dispatch
+	// gets a W3C trace ID, exported to stdout and (optionally) an OTLP collector.
+	tp, err := observability.InitTracing(context.Background(), observability.Config{
+		ServiceName:  "pudim-backend",
+		Version:      cfg.Version,
+		OTLPEndpoint: os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"),
+		Stdout:       true,
+	})
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to initialize OpenTelemetry tracing — continuing without spans")
+	} else {
+		defer func() { _ = tp.Shutdown(context.Background()) }()
+	}
 
 	log.Info().Str("version", cfg.Version).Msg("starting PudimProductivity backend")
 
@@ -66,6 +82,10 @@ func main() {
 
 	// Setup router
 	r := chi.NewRouter()
+
+	// OpenTelemetry tracing middleware — outermost, so spans are active across
+	// the whole chain (metrics, logging, handlers, WebSocket upgrades).
+	r.Use(observability.TracingMiddleware)
 
 	// Prometheus metrics: record request metrics on the main router. The scrape
 	// endpoint is served by the internal :9090 server (see below) so it is not
@@ -182,6 +202,7 @@ func requestLogger(next http.Handler) http.Handler {
 
 		defer func() {
 			log.Info().
+				Ctx(r.Context()).
 				Str("request_id", middleware.GetReqID(r.Context())).
 				Str("method", r.Method).
 				Str("path", r.URL.Path).

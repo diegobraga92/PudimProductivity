@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // InMemoryBus dispatches events to subscribed handlers within the same process.
@@ -51,6 +52,13 @@ func (b *InMemoryBus) Publish(ctx context.Context, typ EventType, payload interf
 		Seq:       b.seq.Add(1),
 		Timestamp: time.Now().UTC(),
 		Payload:   payload,
+	}
+
+	// Stamp the event with the producer's trace context so downstream
+	// consumers can continue the trace (e.g. the Phase 3 RabbitMQ adapter).
+	if sc := trace.SpanContextFromContext(ctx); sc.IsValid() {
+		event.TraceID = sc.TraceID().String()
+		event.SpanID = sc.SpanID().String()
 	}
 
 	b.mu.RLock()

@@ -33,11 +33,19 @@ const (
 // Seq is assigned by the Bus implementation and is guaranteed to be strictly
 // increasing within a single process, which lets clients resume after a
 // disconnect without missing updates (see docs/adr/004-websocket-consistency.md).
+//
+// TraceID/SpanID carry the OpenTelemetry trace context of the producer (e.g.
+// the HTTP request that created the task). They are not serialized to
+// WebSocket clients; the Phase 3 RabbitMQ adapter will read them to propagate
+// the trace through broker message headers.
 type Event struct {
 	Type      EventType   `json:"type"`
 	Seq       int64       `json:"seq"`
 	Timestamp time.Time   `json:"timestamp"`
 	Payload   interface{} `json:"payload,omitempty"`
+
+	TraceID string `json:"-"`
+	SpanID  string `json:"-"`
 }
 
 // ErrBusClosed is returned by Publish/Subscribe after Close has been called.

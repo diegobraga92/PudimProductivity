@@ -39,6 +39,22 @@ services:
       timeout: 5s
       retries: 5
 
+  # Jaeger for OpenTelemetry traces (Phase 6). Start with:
+  #   docker compose --profile tracing up -d
+  # then open http://localhost:16686 to view spans. The backend exports spans
+  # over OTLP/HTTP when OTEL_EXPORTER_OTLP_ENDPOINT is set (see .env.example).
+  jaeger:
+    profiles:
+      - tracing
+    image: jaegertracing/all-in-one:1.65.0
+    container_name: pudim-jaeger
+    restart: unless-stopped
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686" # Jaeger UI
+      - "4318:4318"   # OTLP HTTP receiver
+
   backend:
     build:
       context: ./backend
@@ -49,6 +65,10 @@ services:
       DATABASE_URL: "postgres://${POSTGRES_USER:-pudim}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-pudimproductivity}?sslmode=disable"
       REDIS_URL: "redis://redis:6379/0"
       LOG_LEVEL: "${LOG_LEVEL:-debug}"
+      # OpenTelemetry OTLP/HTTP endpoint. Empty by default (spans go to stdout
+      # only). Set to http://jaeger:4318 in .env and run `docker compose
+      # --profile tracing up` to view traces in Jaeger (http://localhost:16686).
+      OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-}"
     ports:
       - "${BACKEND_PORT:-8080}:8080"
     depends_on:

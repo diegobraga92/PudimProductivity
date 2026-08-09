@@ -66,7 +66,7 @@ func (s *TaskService) CreateTaskWithSchedule(ctx context.Context, title string, 
 		return nil, fmt.Errorf("persist task: %w", err)
 	}
 
-	log.Info().Str("task_id", task.ID).Str("title", task.Title).Msg("task created")
+	log.Info().Ctx(ctx).Str("task_id", task.ID).Str("title", task.Title).Msg("task created")
 
 	s.audit.Log(ctx, audit.ActionTaskCreated, audit.ResourceTasks, task.ID, nil, map[string]any{
 		"title":   task.Title,
@@ -115,7 +115,7 @@ func (s *TaskService) UpdateTask(ctx context.Context, id string, title *string, 
 		return nil, fmt.Errorf("persist task update: %w", err)
 	}
 
-	log.Info().Str("task_id", task.ID).Msg("task updated")
+	log.Info().Ctx(ctx).Str("task_id", task.ID).Msg("task updated")
 
 	s.audit.Log(ctx, audit.ActionTaskUpdated, audit.ResourceTasks, task.ID, nil, map[string]any{
 		"title":  task.Title,
@@ -132,7 +132,7 @@ func (s *TaskService) DeleteTask(ctx context.Context, id string) error {
 		return err
 	}
 
-	log.Info().Str("task_id", id).Msg("task deleted")
+	log.Info().Ctx(ctx).Str("task_id", id).Msg("task deleted")
 
 	s.audit.Log(ctx, audit.ActionTaskDeleted, audit.ResourceTasks, id, nil, nil)
 
@@ -168,7 +168,7 @@ func (s *TaskService) CompleteTask(ctx context.Context, taskID, dateStr string) 
 		return nil, fmt.Errorf("persist completion: %w", err)
 	}
 
-	log.Info().Str("task_id", taskID).Str("date", completionDate.Format("2006-01-02")).Msg("task completed")
+	log.Info().Ctx(ctx).Str("task_id", taskID).Str("date", completionDate.Format("2006-01-02")).Msg("task completed")
 
 	s.audit.Log(ctx, audit.ActionTaskCompleted, audit.ResourceTasks, taskID, nil, map[string]any{
 		"completed_date": completionDate.Format("2006-01-02"),
@@ -201,7 +201,7 @@ func (s *TaskService) UncompleteTask(ctx context.Context, taskID, dateStr string
 		return err
 	}
 
-	log.Info().Str("task_id", taskID).Str("date", completionDate.Format("2006-01-02")).Msg("task uncompleted")
+	log.Info().Ctx(ctx).Str("task_id", taskID).Str("date", completionDate.Format("2006-01-02")).Msg("task uncompleted")
 
 	s.audit.Log(ctx, audit.ActionTaskUncompleted, audit.ResourceTasks, taskID, nil, nil)
 

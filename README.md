@@ -76,6 +76,15 @@ Using API-first, `api/openapi/` should be the source of truth.
   When provisioning, set the Prometheus datasource `uid` to `prometheus`.
 - **Security:** a STRIDE threat model is maintained in `docs/security/threat-model.md`.
 
+## Tracing (OpenTelemetry)
+
+- Every HTTP request gets a W3C `trace_id`; the ID appears in JSON logs (`trace_id` /
+  `span_id`) and is stamped onto event-bus events for downstream consumers.
+- Spans export to stdout by default. To view them in Jaeger:
+  `docker compose --profile tracing up -d`, set `OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318`
+  in `.env`, restart the backend, then open http://localhost:16686.
+- Instrumentation lives in `backend/internal/observability/`.
+
 ## Real-Time Sync
 
 - Task changes push to all clients over WebSocket (`GET /api/v1/ws`), so updates
