@@ -174,7 +174,12 @@ func (s *TaskService) CompleteTask(ctx context.Context, taskID, dateStr string) 
 		"completed_date": completionDate.Format("2006-01-02"),
 	})
 
-	s.publish(ctx, eventbus.EventTaskCompleted, toCompletionResponse(completion))
+	s.publish(ctx, eventbus.EventTaskCompleted, map[string]any{
+		"id":             completion.ID,
+		"task_id":        taskID,
+		"title":          task.Title,
+		"completed_date": completionDate.Format("2006-01-02"),
+	})
 
 	return completion, nil
 }
@@ -206,8 +211,9 @@ func (s *TaskService) UncompleteTask(ctx context.Context, taskID, dateStr string
 	s.audit.Log(ctx, audit.ActionTaskUncompleted, audit.ResourceTasks, taskID, nil, nil)
 
 	s.publish(ctx, eventbus.EventTaskUncompleted, map[string]any{
-		"id":   taskID,
-		"date": completionDate.Format("2006-01-02"),
+		"id":             taskID,
+		"title":          task.Title,
+		"completed_date": completionDate.Format("2006-01-02"),
 	})
 
 	return nil

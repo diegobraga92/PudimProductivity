@@ -95,6 +95,26 @@ Using API-first, `api/openapi/` should be the source of truth.
 - Message schema: `api/ws/events-v1.json`. Both the Vite dev proxy and the
   nginx config are wired to forward WebSocket upgrades.
 
+## Notifications (Phase 3)
+
+- Task events fan out to **RabbitMQ** (`task.events` exchange) via a
+  `CompositeBus` alongside the in-memory WebSocket bus. A worker in
+  `internal/notification/` consumes them and sends email (via **Mailpit** in
+  dev) and push (Firebase Cloud Messaging).
+- **Idempotency:** the `notifications` table (`UNIQUE(event_id, channel)`)
+  dedupes at-least-once redeliveries.
+- **Retry + DLQ:** failed sends are dead-lettered and republished up to 5 times
+  (`x-retry-count`), then discarded.
+- **Tracing:** W3C `traceparent` travels in AMQP headers, so worker logs share
+  the producer's `trace_id`.
+- **Web:** in-app toasts (`useTaskNotifier`) surface task events from the
+  WebSocket stream.
+- **Mobile:** `PudimFirebaseMessagingService` handles FCM push — add
+  `mobile/app/google-services.json` + the Google Services Gradle plugin to use a
+  real Firebase project, and set `FCM_DEVICE_TOKEN` on the backend.
+- See `docs/adr/005-async-notifications.md` for the design and degradation
+  matrix.
+
 ## License
 
 MIT

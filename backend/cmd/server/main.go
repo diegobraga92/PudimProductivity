@@ -21,8 +21,10 @@ import (
 	"github.com/diegobraga92/pudimproductivity/backend/internal/db"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/eventbus"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/featureflag"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/notification"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/observability"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/pomodoro"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/rabbitmq"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/shared"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/sync"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/task"
@@ -106,12 +108,61 @@ func main() {
 
 	// Event bus + real-time sync hub (Phase 2). The hub subscribes to the bus
 	// and fans events out to connected WebSocket clients.
-	bus := eventbus.NewInMemoryBus()
-	syncHub := sync.NewHub(bus, sync.Config{ReplayBufferSize: 1000})
+	inMemoryBus := eventbus.NewInMemoryBus()
+	syncHub := sync.NewHub(inMemoryBus, sync.Config{ReplayBufferSize: 1000})
 	if err := syncHub.Start(context.Background()); err != nil {
 		log.Fatal().Err(err).Msg("failed to start sync hub")
 	}
 	sync.RegisterSyncRoutes(r, syncHub)
+
+	// Phase 3: RabbitMQ becomes the durable backbone for async consumers. If
+	// RabbitMQ is unavailable we degrade gracefully: events still fan out to
+	// WebSocket clients via the in-memory bus, but the notifications worker
+	// stays off until the broker comes back.
+	composite := eventbus.NewCompositeBus(inMemoryBus)
+	var rabbitBus *rabbitmq.Bus
+	var notifWorker *notification.Worker
+	rabbitURL := os.Getenv("RABBITMQ_URL")
+	if rabbitURL == "" {
+		rabbitURL = "amqp://pudim:" + os.Getenv("RABBITMQ_PASS") + "@rabbitmq:5672/"
+	}
+	if rb, err := rabbitmq.New(context.Background(), rabbitmq.Config{URL: rabbitURL}); err != nil {
+		log.Warn().Err(err).Msg("rabbitmq unavailable — notifications worker disabled")
+	} else {
+		rabbitBus = rb
+		composite = eventbus.NewCompositeBus(inMemoryBus, rb)
+
+		emails := []notification.EmailDeliverer{
+			notification.NewEmailSender(notification.EmailConfig{
+				SMTPHost: os.Getenv("SMTP_HOST"),
+				SMTPPort: os.Getenv("SMTP_PORT"),
+				From:     os.Getenv("SMTP_FROM"),
+			}),
+		}
+
+		var pushes []notification.PushDeliverer
+		if fcm, err := notification.NewFCMSender(context.Background(), notification.FCMConfig{}); err != nil {
+			log.Warn().Err(err).Msg("fcm sender disabled")
+			pushes = append(pushes, notification.NoopSender{})
+		} else {
+			pushes = append(pushes, fcm)
+		}
+
+		var notifRepo notification.Repo = notification.NewMemoryRepo()
+		if pool != nil {
+			notifRepo = notification.NewPostgresRepo(pool)
+		}
+
+		notifWorker = notification.NewWorker(rb, emails, pushes, notifRepo, notification.Recipients{
+			Email:     os.Getenv("NOTIFY_EMAIL"),
+			PushToken: os.Getenv("FCM_DEVICE_TOKEN"),
+		})
+		go func() {
+			if err := notifWorker.Run(context.Background()); err != nil {
+				log.Error().Err(err).Msg("notification worker stopped with error")
+			}
+		}()
+	}
 
 	var auditService *audit.Service
 	if pool != nil {
@@ -122,7 +173,7 @@ func main() {
 	// Setup routes
 	var taskService *task.TaskService
 	if pool != nil {
-		taskService = task.RegisterTaskRoutes(r, pool, auditService, bus)
+		taskService = task.RegisterTaskRoutes(r, pool, auditService, composite)
 	}
 
 	if pool != nil {
@@ -183,7 +234,15 @@ func main() {
 	}
 
 	syncHub.Close()
-	if err := bus.Close(); err != nil {
+	if notifWorker != nil {
+		notifWorker.Close()
+	}
+	if rabbitBus != nil {
+		if err := rabbitBus.Close(); err != nil {
+			log.Warn().Err(err).Msg("rabbitmq bus close error")
+		}
+	}
+	if err := inMemoryBus.Close(); err != nil {
 		log.Warn().Err(err).Msg("event bus close error")
 	}
 

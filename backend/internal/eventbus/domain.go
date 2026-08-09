@@ -39,6 +39,10 @@ const (
 // WebSocket clients; the Phase 3 RabbitMQ adapter will read them to propagate
 // the trace through broker message headers.
 type Event struct {
+	// ID uniquely identifies the event instance. The in-memory bus leaves it
+	// empty; the RabbitMQ adapter sets it to the AMQP message ID so consumers
+	// can deduplicate at-least-once redeliveries.
+	ID        string      `json:"id,omitempty"`
 	Type      EventType   `json:"type"`
 	Seq       int64       `json:"seq"`
 	Timestamp time.Time   `json:"timestamp"`

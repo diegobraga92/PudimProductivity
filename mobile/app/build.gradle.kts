@@ -84,6 +84,12 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 
+    // Push notifications (Firebase Cloud Messaging) — Phase 3.
+    // Requires google-services.json + the google-services Gradle plugin for a
+    // real Firebase project (see README); the code below is guarded so the app
+    // runs without it.
+    implementation("com.google.firebase:firebase-messaging:24.1.0")
+
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 

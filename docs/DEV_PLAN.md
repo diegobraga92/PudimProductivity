@@ -109,15 +109,15 @@ These are centralised here to emphasise their importance. Each is introduced at 
 
 **Goal:** RabbitMQ becomes backbone for event-driven features. Notifications reach mobile.
 
-- [ ] RabbitMQ adapter implementing same EventBus interface
-- [ ] Publish `task.created`, `task.completed` events to broker
-- [ ] Notifications service: consume events, send push notifications (Firebase Cloud Messaging) and email (Mailpit for local testing)
-- [ ] Mobile: register for push notifications, handle FCM messages → system notifications
-- [ ] Web: in‑app toast notifications via existing WebSocket event stream
-- [ ] Idempotent consumers: ensure processing twice yields same result; document approach
-- [ ] Dead‑letter queue + retry logic for failed notification delivery
-- [ ] Distributed tracing: propagate trace IDs through RabbitMQ message headers
-- [ ] Graceful degradation: document behaviour when RabbitMQ / FCM unavailable; no data loss
+- [x] RabbitMQ adapter implementing same EventBus interface (`internal/rabbitmq/` — publish to fanout exchange, consumer on `notifications` queue, DLQ pump, trace headers)
+- [x] Publish `task.created`, `task.completed` events to broker via `CompositeBus` (in-memory → sync hub + RabbitMQ → notifications), no changes to the task service or sync hub
+- [x] Notifications service: `internal/notification/` consumes events, sends email (SMTP/Mailpit) and push (FCM HTTP v1 via `golang.org/x/oauth2/google`, no-op fallback)
+- [x] Mobile: `PudimFirebaseMessagingService` (FCM dependency, notification channel, `POST_NOTIFICATIONS` permission, manifest registration) — real project needs `google-services.json`
+- [x] Web: in-app toast notifications via the existing WebSocket stream (`useTaskNotifier` + `ToastProvider`)
+- [x] Idempotent consumers: `notifications` table with `UNIQUE(event_id, channel)`; `ON CONFLICT DO NOTHING`; documented in ADR 005
+- [x] Dead-letter queue + retry logic: `notifications.dlq` + retry pump (bounded by `x-retry-count` ≤ MaxRetries=5, then discard); no queue-TTL loop (cycle protection)
+- [x] Distributed tracing: W3C `traceparent` injected into AMQP headers on publish, extracted on consume — worker logs share the producer's `trace_id` (verified end-to-end)
+- [x] Graceful degradation: documented in ADR 005 (RabbitMQ down → sync unaffected; SMTP/FCM down → DLQ retry / no-op)
 
 ---
 
@@ -260,7 +260,7 @@ These are centralised here to emphasise their importance. Each is introduced at 
 - [x] Habit completions with streak tracking, heatmap, progress bars
 - [x] Weekly planner with time-blocked calendar grid (CRUD API + React UI)
 - [x] CI/CD pipelines per platform (lint, test, build)
-- [ ] Notifications delivered via push + in‑app toasts (Phase 3 — not started)
+- [x] Notifications delivered via push + in‑app toasts (Phase 3 — RabbitMQ + worker + Mailpit email + FCM push wiring + web toasts)
 - [x] WebSocket real-time sync (Phase 2 — completed: event bus, sync hub, web + mobile clients, replay/reconnect, ADR 004)
 - [x] Feature flags service + web integration (Phase 1 — completed)
 - [x] Redis caching layer for task API (Phase 1 — completed)

@@ -4,9 +4,12 @@ import { getHealth, type HealthResponse } from "./api/client";
 import { AlarmProvider } from "./components/AlarmProvider";
 import { AlarmToast } from "./components/AlarmToast";
 import { ConfirmProvider } from "./components/ConfirmProvider";
+import { ToastProvider } from "./components/ToastProvider";
+import { ToastStack } from "./components/ToastStack";
 import { useAlarm } from "./components/useAlarm";
 import { useAlarmNotifier } from "./hooks/useAlarmNotifier";
 import { useLiveUpdates } from "./hooks/useLiveUpdates";
+import { useTaskNotifier } from "./hooks/useTaskNotifier";
 import TaskList from "./pages/TaskList";
 import Dashboard from "./pages/Dashboard";
 import Planner from "./pages/Planner";
@@ -35,6 +38,10 @@ function AppInner() {
   // Real-time task updates from the backend WebSocket stream (Phase 2). This
   // replaces polling: task changes made on any client appear here immediately.
   useLiveUpdates();
+
+  // In-app toast notifications for task events (Phase 3 — the "push" channel
+  // on the web, delivered over the same WebSocket stream).
+  useTaskNotifier();
 
   const { data: healthData } = useQuery<HealthResponse>({
     queryKey: ["health"],
@@ -238,8 +245,9 @@ function AppInner() {
         </div>
       </main>
 
-      {/* ===== Alarm Toast Stack ===== */}
+      {/* ===== Alarm + Notification Toast Stacks ===== */}
       <AlarmToast />
+      <ToastStack />
     </div>
   );
 }
@@ -247,9 +255,11 @@ function AppInner() {
 function App() {
   return (
     <AlarmProvider>
-      <ConfirmProvider>
-        <AppInner />
-      </ConfirmProvider>
+      <ToastProvider>
+        <ConfirmProvider>
+          <AppInner />
+        </ConfirmProvider>
+      </ToastProvider>
     </AlarmProvider>
   );
 }
