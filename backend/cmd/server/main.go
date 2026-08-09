@@ -73,7 +73,10 @@ func main() {
 	metrics := shared.NewMetrics()
 	r.Use(metrics.MetricsMiddleware)
 	r.Use(middleware.RequestID)
-	r.Use(middleware.RealIP)
+	// Note: middleware.RealIP is intentionally omitted — it is deprecated
+	// (GHSA-3fxj-6jh8-hvhx) because it blindly trusts X-Forwarded-For and other
+	// headers, letting clients spoof their IP. The request logger uses
+	// r.RemoteAddr, and production sits behind nginx which sets those headers.
 	r.Use(middleware.Recoverer)
 	r.Use(requestLogger)
 	r.Use(shared.AuthMiddleware)

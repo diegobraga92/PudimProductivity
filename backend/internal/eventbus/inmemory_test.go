@@ -9,7 +9,7 @@ import (
 
 func TestInMemoryBus_PublishesToSubscriberInOrder(t *testing.T) {
 	b := NewInMemoryBus()
-	defer b.Close()
+	t.Cleanup(func() { _ = b.Close() })
 
 	ctx := context.Background()
 	var received []Event
@@ -43,7 +43,7 @@ func TestInMemoryBus_PublishesToSubscriberInOrder(t *testing.T) {
 
 func TestInMemoryBus_MultiSubscriberFanout(t *testing.T) {
 	b := NewInMemoryBus()
-	defer b.Close()
+	t.Cleanup(func() { _ = b.Close() })
 
 	ctx := context.Background()
 	var mu1, mu2 []Event
@@ -62,7 +62,7 @@ func TestInMemoryBus_MultiSubscriberFanout(t *testing.T) {
 
 func TestInMemoryBus_UnsubscribeStopsDelivery(t *testing.T) {
 	b := NewInMemoryBus()
-	defer b.Close()
+	t.Cleanup(func() { _ = b.Close() })
 
 	ctx := context.Background()
 	var received []Event
@@ -82,7 +82,7 @@ func TestInMemoryBus_UnsubscribeStopsDelivery(t *testing.T) {
 
 func TestInMemoryBus_HandlerErrorDoesNotBlockOthers(t *testing.T) {
 	b := NewInMemoryBus()
-	defer b.Close()
+	t.Cleanup(func() { _ = b.Close() })
 
 	ctx := context.Background()
 	errHandler := func(_ context.Context, e Event) error { return errors.New("boom") }
@@ -114,7 +114,7 @@ func TestInMemoryBus_PublishAfterCloseFails(t *testing.T) {
 
 func TestInMemoryBus_SeqMonotonicAcrossPublishers(t *testing.T) {
 	b := NewInMemoryBus()
-	defer b.Close()
+	t.Cleanup(func() { _ = b.Close() })
 
 	ctx := context.Background()
 	var mu sync.Mutex

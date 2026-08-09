@@ -25,7 +25,7 @@ func startHub(t *testing.T, cfg Config) (*eventbus.InMemoryBus, *Hub, *httptest.
 	}
 	t.Cleanup(func() {
 		hub.Close()
-		bus.Close()
+		_ = bus.Close()
 	})
 
 	srv := httptest.NewServer(http.HandlerFunc(hub.ServeHTTP))
@@ -52,7 +52,7 @@ func TestHub_FanoutToConnectedClient(t *testing.T) {
 	if err != nil {
 		t.Fatalf("dial: %v", err)
 	}
-	defer conn.Close(websocket.StatusNormalClosure, "test done")
+	defer func() { _ = conn.Close(websocket.StatusNormalClosure, "test done") }()
 
 	// Publish three events; the connected client should receive all of them in order.
 	if err := bus.Publish(ctx, eventbus.EventTaskCreated, map[string]any{"id": "t1"}); err != nil {
@@ -110,7 +110,7 @@ func TestHub_ReplayOnReconnect(t *testing.T) {
 	if err != nil {
 		t.Fatalf("dial: %v", err)
 	}
-	defer conn.Close(websocket.StatusNormalClosure, "done")
+	defer func() { _ = conn.Close(websocket.StatusNormalClosure, "done") }()
 
 	for i := 1; i <= 5; i++ {
 		_, data, err := conn.Read(ctx)
@@ -136,7 +136,7 @@ func TestHub_ReplayOnReconnect(t *testing.T) {
 	if err != nil {
 		t.Fatalf("re-dial: %v", err)
 	}
-	defer conn2.Close(websocket.StatusNormalClosure, "done")
+	defer func() { _ = conn2.Close(websocket.StatusNormalClosure, "done") }()
 
 	_, data, err := conn2.Read(ctx)
 	if err != nil {
@@ -167,7 +167,7 @@ func TestHub_StaleSignalWhenTooFarBehind(t *testing.T) {
 	if err != nil {
 		t.Fatalf("dial: %v", err)
 	}
-	defer conn.Close(websocket.StatusNormalClosure, "done")
+	defer func() { _ = conn.Close(websocket.StatusNormalClosure, "done") }()
 
 	_, data, err := conn.Read(ctx)
 	if err != nil {
