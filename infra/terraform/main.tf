@@ -1,260 +1,168 @@
-# =============================================================================
 # PudimProductivity — Infrastructure (Terraform)
 # =============================================================================
-# NOTE: This file is a skeleton for future AWS EKS + RDS deployment.
-# It is NOT active yet. Uncomment and configure when ready to deploy.
+# Minimal single-host deployment: EC2 runs docker-compose (per ADR 006), S3
+# holds media uploads, RDS hosts Postgres. `terraform validate` passes without
+# credentials; `terraform apply` requires the AWS CLI configured.
 #
-# Prerequisites:
-#   - AWS CLI configured with appropriate credentials
-#   - Terraform >= 1.6
-#   - S3 bucket for remote state (update backend config below)
+#   cd infra/terraform
+#   terraform init
+#   terraform validate
+#   terraform plan    # review
+#   terraform apply   # provision
 # =============================================================================
 
-# ---------------------------------------------------------------------------
-# Remote State (uncomment when ready)
-# ---------------------------------------------------------------------------
-# terraform {
-#   backend "s3" {
-#     bucket = "pudimproductivity-terraform-state"
-#     key    = "infra/terraform.tfstate"
-#     region = "us-east-1"
-#   }
-# }
+terraform {
+  required_version = ">= 1.6"
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+  # Uncomment for remote state (create the S3 bucket first):
+  # backend "s3" {
+  #   bucket = "pudimproductivity-terraform-state"
+  #   key    = "infra/terraform.tfstate"
+  #   region = "us-east-1"
+  # }
+}
 
-# ---------------------------------------------------------------------------
-# Providers
-# ---------------------------------------------------------------------------
-# provider "aws" {
-#   region = var.aws_region
-# }
+# Use the default VPC + subnets to keep the skeleton small. A full network
+# design (dedicated VPC, NAT, private subnets) is a documented follow-up.
+data "aws_vpc" "default" {
+  default = true
+}
 
-# ---------------------------------------------------------------------------
-# Variables
-# ---------------------------------------------------------------------------
-# variable "aws_region" {
-#   description = "AWS region for all resources"
-#   type        = string
-#   default     = "us-east-1"
-# }
+data "aws_subnets" "default" {
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.default.id]
+  }
+}
 
-# variable "environment" {
-#   description = "Deployment environment (dev, staging, prod)"
-#   type        = string
-#   default     = "dev"
-# }
+# --- Security groups ---------------------------------------------------------
 
-# variable "app_name" {
-#   description = "Application name used for resource naming"
-#   type        = string
-#   default     = "pudimproductivity"
-# }
+resource "aws_security_group" "app" {
+  name        = "pudim-app"
+  description = "HTTP/HTTPS + SSH for the PudimProductivity host"
+  vpc_id      = data.aws_vpc.default.id
 
-# ---------------------------------------------------------------------------
-# Networking — VPC
-# ---------------------------------------------------------------------------
-# resource "aws_vpc" "main" {
-#   cidr_block           = "10.0.0.0/16"
-#   enable_dns_hostnames = true
-#   enable_dns_support   = true
-#
-#   tags = {
-#     Name        = "${var.app_name}-${var.environment}-vpc"
-#     Environment = var.environment
-#   }
-# }
+  ingress {
+    description = "HTTPS"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  ingress {
+    description = "HTTP"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  ingress {
+    description = "Backend API (docker-compose)"
+    from_port   = 8080
+    to_port     = 8080
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  ingress {
+    description = "SSH"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
 
-# resource "aws_subnet" "public" {
-#   count             = 2
-#   vpc_id            = aws_vpc.main.id
-#   cidr_block        = cidrsubnet(aws_vpc.main.cidr_block, 8, count.index)
-#   availability_zone = data.aws_availability_zones.available.names[count.index]
-#   map_public_ip_on_launch = true
-#
-#   tags = {
-#     Name        = "${var.app_name}-${var.environment}-public-${count.index}"
-#     Environment = var.environment
-#   }
-# }
+resource "aws_security_group" "db" {
+  name        = "pudim-db"
+  description = "Postgres access from the app host only"
+  vpc_id      = data.aws_vpc.default.id
 
-# resource "aws_subnet" "private" {
-#   count             = 2
-#   vpc_id            = aws_vpc.main.id
-#   cidr_block        = cidrsubnet(aws_vpc.main.cidr_block, 8, count.index + 2)
-#   availability_zone = data.aws_availability_zones.available.names[count.index]
-#
-#   tags = {
-#     Name        = "${var.app_name}-${var.environment}-private-${count.index}"
-#     Environment = var.environment
-#   }
-# }
+  ingress {
+    description     = "Postgres from app host"
+    from_port       = 5432
+    to_port         = 5432
+    protocol        = "tcp"
+    security_groups = [aws_security_group.app.id]
+  }
+}
 
-# data "aws_availability_zones" "available" {
-#   state = "available"
-# }
+# --- Compute (single host, docker-compose per ADR 006) -----------------------
 
-# ---------------------------------------------------------------------------
-# RDS — PostgreSQL
-# ---------------------------------------------------------------------------
-# resource "aws_db_subnet_group" "main" {
-#   name       = "${var.app_name}-${var.environment}-db-subnet-group"
-#   subnet_ids = aws_subnet.private[*].id
-#
-#   tags = {
-#     Name        = "${var.app_name}-${var.environment}-db-subnet-group"
-#     Environment = var.environment
-#   }
-# }
+resource "aws_instance" "app" {
+  ami                         = data.aws_ami.amazon_linux_2023.id
+  instance_type               = var.instance_type
+  vpc_security_group_ids      = [aws_security_group.app.id]
+  associate_public_ip_address = true
+  key_name                    = var.key_name
+  user_data                   = <<-EOT
+    #!/bin/bash
+    set -euxo pipefail
+    dnf install -y docker git
+    systemctl enable --now docker
+    curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+    chmod +x /usr/local/bin/docker-compose
+    git clone https://github.com/diegobraga92/PudimProductivity.git /opt/pudim || true
+    cd /opt/pudim
+    DATABASE_URL="postgres://pudim:${var.db_password}@${aws_db_instance.postgres.address}:5432/pudimproductivity?sslmode=disable" \
+      docker-compose up -d
+  EOT
 
-# resource "aws_db_instance" "postgres" {
-#   identifier             = "${var.app_name}-${var.environment}-db"
-#   engine                 = "postgres"
-#   engine_version         = "16.3"
-#   instance_class         = "db.t3.medium"
-#   allocated_storage      = 20
-#   storage_type           = "gp3"
-#   db_name                = "pudimproductivity"
-#   username               = "pudim"
-#   password               = var.db_password
-#   db_subnet_group_name   = aws_db_subnet_group.main.name
-#   vpc_security_group_ids = [aws_security_group.rds.id]
-#   skip_final_snapshot    = true
-#   backup_retention_period = 7
-#   backup_window          = "03:00-04:00"
-#   maintenance_window     = "sun:04:00-sun:05:00"
-#
-#   tags = {
-#     Name        = "${var.app_name}-${var.environment}-db"
-#     Environment = var.environment
-#   }
-# }
+  tags = { Name = "pudim-app" }
+}
 
-# variable "db_password" {
-#   description = "PostgreSQL master password"
-#   type        = string
-#   sensitive   = true
-# }
+data "aws_ami" "amazon_linux_2023" {
+  most_recent = true
+  owners      = ["amazon"]
+  filter {
+    name   = "name"
+    values = ["al2023-ami-2023.*-x86_64"]
+  }
+}
 
-# ---------------------------------------------------------------------------
-# EKS — Kubernetes Cluster
-# ---------------------------------------------------------------------------
-# resource "aws_eks_cluster" "main" {
-#   name     = "${var.app_name}-${var.environment}-cluster"
-#   role_arn = aws_iam_role.eks_cluster.arn
-#   version  = "1.30"
-#
-#   vpc_config {
-#     subnet_ids = aws_subnet.public[*].id
-#   }
-#
-#   tags = {
-#     Name        = "${var.app_name}-${var.environment}-cluster"
-#     Environment = var.environment
-#   }
-# }
+# --- Storage (media uploads) -------------------------------------------------
 
-# resource "aws_iam_role" "eks_cluster" {
-#   name = "${var.app_name}-${var.environment}-eks-cluster-role"
-#
-#   assume_role_policy = jsonencode({
-#     Version = "2012-10-17"
-#     Statement = [{
-#       Effect = "Allow"
-#       Principal = {
-#         Service = "eks.amazonaws.com"
-#       }
-#       Action = "sts:AssumeRole"
-#     }]
-#   })
-# }
+resource "aws_s3_bucket" "media" {
+  bucket        = var.media_bucket_name
+  force_destroy = true
+}
 
-# resource "aws_iam_role_policy_attachment" "eks_cluster_policy" {
-#   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
-#   role       = aws_iam_role.eks_cluster.name
-# }
+resource "aws_s3_bucket_versioning" "media" {
+  bucket = aws_s3_bucket.media.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
 
-# resource "aws_iam_role_policy_attachment" "eks_service_policy" {
-#   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSServicePolicy"
-#   role       = aws_iam_role.eks_cluster.name
-# }
+# --- Database (Postgres) -----------------------------------------------------
 
-# resource "aws_eks_node_group" "main" {
-#   cluster_name    = aws_eks_cluster.main.name
-#   node_group_name = "${var.app_name}-${var.environment}-nodes"
-#   node_role_arn   = aws_iam_role.eks_nodes.arn
-#   subnet_ids      = aws_subnet.private[*].id
-#
-#   scaling_config {
-#     desired_size = 2
-#     min_size     = 1
-#     max_size     = 5
-#   }
-#
-#   instance_types = ["t3.medium"]
-#
-#   tags = {
-#     Name        = "${var.app_name}-${var.environment}-nodes"
-#     Environment = var.environment
-#   }
-# }
+resource "aws_db_instance" "postgres" {
+  identifier             = "pudim-postgres"
+  engine                 = "postgres"
+  engine_version         = "16.4"
+  instance_class         = var.db_instance_class
+  allocated_storage      = 20
+  db_name                = "pudimproductivity"
+  username               = "pudim"
+  password               = var.db_password
+  vpc_security_group_ids = [aws_security_group.db.id]
+  db_subnet_group_name   = aws_db_subnet_group.main.name
+  skip_final_snapshot    = true
+  multi_az               = false
+}
 
-# resource "aws_iam_role" "eks_nodes" {
-#   name = "${var.app_name}-${var.environment}-eks-node-role"
-#
-#   assume_role_policy = jsonencode({
-#     Version = "2012-10-17"
-#     Statement = [{
-#       Effect = "Allow"
-#       Principal = {
-#         Service = "ec2.amazonaws.com"
-#       }
-#       Action = "sts:AssumeRole"
-#     }]
-#   })
-# }
+resource "aws_db_subnet_group" "main" {
+  name       = "pudim-main"
+  subnet_ids = data.aws_subnets.default.ids
+}
 
-# resource "aws_iam_role_policy_attachment" "eks_worker_node" {
-#   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
-#   role       = aws_iam_role.eks_nodes.name
-# }
-
-# resource "aws_iam_role_policy_attachment" "eks_cni_policy" {
-#   policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
-#   role       = aws_iam_role.eks_nodes.name
-# }
-
-# resource "aws_iam_role_policy_attachment" "ecr_read_only" {
-#   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
-#   role       = aws_iam_role.eks_nodes.name
-# }
-
-# ---------------------------------------------------------------------------
-# Security Groups
-# ---------------------------------------------------------------------------
-# resource "aws_security_group" "rds" {
-#   name        = "${var.app_name}-${var.environment}-rds-sg"
-#   description = "Allow PostgreSQL access from EKS nodes"
-#   vpc_id      = aws_vpc.main.id
-#
-#   ingress {
-#     from_port       = 5432
-#     to_port         = 5432
-#     protocol        = "tcp"
-#     security_groups = [aws_eks_cluster.main.vpc_config[0].cluster_security_group_id]
-#   }
-#
-#   tags = {
-#     Name        = "${var.app_name}-${var.environment}-rds-sg"
-#     Environment = var.environment
-#   }
-# }
-
-# ---------------------------------------------------------------------------
-# Outputs
-# ---------------------------------------------------------------------------
-# output "eks_cluster_endpoint" {
-#   value = aws_eks_cluster.main.endpoint
-# }
-
-# output "rds_endpoint" {
-#   value = aws_db_instance.postgres.endpoint
-# }
