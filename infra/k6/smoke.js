@@ -67,8 +67,12 @@ export default function (data) {
   const update = http.put(`${BASE}/tasks/${id}`, JSON.stringify({ status: "done" }), { headers: HEADERS });
   check(update, { "update 200": (r) => r.status === 200 });
 
-  // WRITE: habit completion toggle (VU-specific date avoids 409 conflicts)
-  const date = new Date(Date.now() - __VU * 86400000).toISOString().slice(0, 10);
+  // WRITE: habit completion toggle (iteration-unique date avoids 409 conflicts).
+  // Each (VU, iteration) pair maps to a unique day index via the bijection
+  // ITER*5 + (VU-1): 5 VUs → no two requests ever touch the same date, so a
+  // per-VU date (as in habits-load.js) would collide across iterations.
+  const iterOffset = (__ITER * 5) + (__VU - 1);
+  const date = new Date(Date.now() - iterOffset * 86400000).toISOString().slice(0, 10);
   const complete = http.post(`${BASE}/tasks/${habitId}/complete?date=${date}`, null, { headers: HEADERS });
   check(complete, { "complete 201": (r) => r.status === 201 });
 
