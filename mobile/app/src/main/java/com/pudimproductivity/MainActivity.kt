@@ -11,12 +11,16 @@ import androidx.compose.ui.unit.dp
 import com.pudimproductivity.api.ApiClient
 import com.pudimproductivity.api.HealthResponse
 import com.pudimproductivity.api.SyncClient
+import com.pudimproductivity.data.TaskRepository
 import com.pudimproductivity.fcm.ErrorReporter
 import com.pudimproductivity.focus.FocusTimerManager
+import com.pudimproductivity.notifications.HabitReminderScheduler
+import com.pudimproductivity.sync.SyncScheduler
 import com.pudimproductivity.ui.screens.BookListScreen
 import com.pudimproductivity.ui.screens.DailyPlanScreen
 import com.pudimproductivity.ui.screens.FocusTimerScreen
 import com.pudimproductivity.ui.screens.HabitScreen
+import com.pudimproductivity.ui.screens.InsightsScreen
 import com.pudimproductivity.ui.screens.MealPlanScreen
 import com.pudimproductivity.ui.screens.RecipeCreateScreen
 import com.pudimproductivity.ui.screens.RecipeListScreen
@@ -25,13 +29,20 @@ import com.pudimproductivity.ui.screens.TaskDetailScreen
 import com.pudimproductivity.ui.screens.TaskListDetailScreen
 import com.pudimproductivity.ui.screens.TaskListScreen
 import com.pudimproductivity.ui.theme.PudimProductivityTheme
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 enum class Screen {
-    Health, TaskList, TaskCreate, TaskDetail, TaskListDetail, FocusTimer, Habits, Recipes, RecipeCreate, Books, MealPlans, DailyPlan
+    Health, TaskList, TaskCreate, TaskDetail, TaskListDetail, FocusTimer, Habits, Recipes, RecipeCreate, Books, MealPlans, DailyPlan, Insights
 }
 
 class MainActivity : ComponentActivity() {
+
+    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private lateinit var repository: TaskRepository
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -44,13 +55,19 @@ class MainActivity : ComponentActivity() {
         // Real-time task sync (Phase 2): app-lifetime WebSocket connection.
         SyncClient.start(applicationContext)
 
+        // Phase 9c offline-first: local repository + background sync workers.
+        repository = TaskRepository(applicationContext, appScope)
+        repository.start()
+        SyncScheduler.schedule(applicationContext)
+        HabitReminderScheduler.schedule(applicationContext)
+
         setContent {
             PudimProductivityTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    AppNavigation()
+                    AppNavigation(repository)
                 }
             }
         }
@@ -58,7 +75,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun AppNavigation() {
+fun AppNavigation(repository: TaskRepository) {
     var currentScreen by remember { mutableStateOf(Screen.TaskList) }
     var selectedTaskId by remember { mutableStateOf<String?>(null) }
     var selectedListId by remember { mutableStateOf<String?>(null) }
@@ -71,6 +88,7 @@ fun AppNavigation() {
         }
         Screen.TaskList -> {
             TaskListScreen(
+                repository = repository,
                 onCreateTask = { currentScreen = Screen.TaskCreate },
                 onFocusTimer = { currentScreen = Screen.FocusTimer },
                 onHabits = { currentScreen = Screen.Habits },
@@ -85,7 +103,8 @@ fun AppNavigation() {
                 onRecipes = { currentScreen = Screen.Recipes },
                 onBooks = { currentScreen = Screen.Books },
                 onMealPlans = { currentScreen = Screen.MealPlans },
-                onDailyPlan = { currentScreen = Screen.DailyPlan }
+                onDailyPlan = { currentScreen = Screen.DailyPlan },
+                onInsights = { currentScreen = Screen.Insights }
             )
         }
         Screen.FocusTimer -> {
@@ -144,6 +163,9 @@ fun AppNavigation() {
         }
         Screen.DailyPlan -> {
             DailyPlanScreen()
+        }
+        Screen.Insights -> {
+            InsightsScreen(onBack = { currentScreen = Screen.TaskList })
         }
     }
 }

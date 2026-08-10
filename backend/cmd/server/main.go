@@ -25,6 +25,7 @@ import (
 	"github.com/diegobraga92/pudimproductivity/backend/internal/db"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/eventbus"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/featureflag"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/insights"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/media"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/mealplan"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/notification"
@@ -35,6 +36,7 @@ import (
 	"github.com/diegobraga92/pudimproductivity/backend/internal/scheduler"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/shared"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/sync"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/syncstore"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/task"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/tasklist"
 )
@@ -206,11 +208,23 @@ func main() {
 		tasklist.RegisterTaskListRoutes(r, pool, composite, taskService)
 	}
 
+	var flagService *featureflag.Service
 	if pool != nil {
-		featureflag.RegisterFeatureFlagRoutes(r, pool, auditService)
+		flagService = featureflag.RegisterFeatureFlagRoutes(r, pool, auditService)
 	}
 
-	pomodoro.RegisterPomodoroRoutes(r, nil, auditService)
+	pomodoro.RegisterPomodoroRoutes(r, nil, auditService, composite)
+
+	// Phase 9a: AI coach — weekly insight reports. Consumes pomodoro events to
+	// persist focus history and serves GET /api/v1/insights/weekly. The
+	// subscription targets the in-memory bus (CompositeBus.Subscribe is a
+	// no-op by design — see eventbus/composite.go); pomodoro events reach it
+	// because the composite fans out to every child.
+	insights.RegisterInsightsRoutes(r, pool, inMemoryBus, flagService)
+
+	// Phase 9c: offline-first sync — GET /api/v1/sync?since=... returns the
+	// incremental changes (active + soft-deleted rows) for mobile Room DBs.
+	syncstore.RegisterSyncStoreRoutes(r, pool)
 
 	// Phase 5a: Recipes. Media uploads are optional — when S3_MEDIA_BUCKET is
 	// unset the module runs in degraded mode and upload-URL endpoints return 503.
@@ -229,6 +243,11 @@ func main() {
 	} else {
 		log.Info().Msg("S3_MEDIA_BUCKET unset — recipe media uploads disabled")
 	}
+
+	// Phase 9b: barcode → ISBN scan (pure-Go gozxing; no external service).
+	// POST /api/v1/media/scan-isbn accepts a multipart image and returns the
+	// decoded ISBN for the client to feed into /books/by-isbn.
+	r.Post("/api/v1/media/scan-isbn", media.ScanISBNHandler)
 	var recipeService *recipe.RecipeService
 	if pool != nil {
 		recipeService = recipe.RegisterRecipeRoutes(r, pool, auditService, composite, uploads)

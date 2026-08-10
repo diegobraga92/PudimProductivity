@@ -38,6 +38,18 @@
             </intent-filter>
         </service>
 
+        <!-- Phase 9b: FileProvider so the camera intent can write the photo
+             to app-private storage (androidx.core FileProvider). -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="com.pudimproductivity.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
         <!-- Focus timer foreground service (Phase 4): keeps the countdown
              running and shows a persistent notification when backgrounded. -->
         <service

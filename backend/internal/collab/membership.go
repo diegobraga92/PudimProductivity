@@ -30,13 +30,13 @@ func (r *PostgresMembershipResolver) ListIDsForUser(ctx context.Context, userID,
 
 	var query string
 	if role == "admin" {
-		query = `SELECT id FROM task_lists`
+		query = `SELECT id FROM task_lists WHERE deleted_at IS NULL`
 	} else {
 		query = `
 			SELECT DISTINCT list_id FROM (
-				SELECT id AS list_id FROM task_lists WHERE owner_id = $1
+				SELECT id AS list_id FROM task_lists WHERE owner_id = $1 AND deleted_at IS NULL
 				UNION
-				SELECT list_id FROM task_list_shares WHERE shared_with = $1
+				SELECT list_id FROM task_list_shares WHERE shared_with = $1 AND deleted_at IS NULL
 			) t
 		`
 	}

@@ -74,7 +74,7 @@ func (h *Handler) StartSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session, err := h.service.StartSession(r.Context(), req.FocusDuration, req.BreakDuration, req.NoiseConfig)
+	session, err := h.service.StartSession(r.Context(), shared.GetUserID(r.Context()), req.FocusDuration, req.BreakDuration, req.NoiseConfig)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to start pomodoro session")
 		shared.WriteError(w, http.StatusInternalServerError, "failed to start session")

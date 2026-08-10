@@ -30,6 +30,7 @@ type NoiseConfig struct {
 
 type PomodoroSession struct {
 	ID                 string
+	UserID             string // Phase 9a: who owns the session (for insights)
 	Status             SessionStatus
 	FocusDuration      time.Duration
 	BreakDuration      time.Duration

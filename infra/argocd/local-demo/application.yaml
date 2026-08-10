@@ -1,0 +1,25 @@
+# Local Kind demo — ArgoCD Application syncing the dev overlay from the local
+# git daemon (see repository.yaml + README.md). Auto-sync + prune + selfHeal are
+# on so a git push to the local mirror triggers a rollout.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: pudimproductivity-dev
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: pudimproductivity
+spec:
+  project: default
+  source:
+    repoURL: "git://172.19.0.1/pudim.git"
+    targetRevision: HEAD
+    path: infra/kustomize/overlays/dev
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: pudimproductivity
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=false

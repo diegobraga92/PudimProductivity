@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import config from "../config";
 import {
   createMealPlan,
   generateShoppingList,
@@ -97,9 +98,22 @@ export default function MealPlanDetail({ planId, onBack }: { planId: string | nu
       <button className="btn btn-ghost btn-sm" onClick={onBack} style={{ marginBottom: "var(--space-md)" }}>← Back</button>
       <div className="flex-center" style={{ justifyContent: "space-between", marginBottom: "var(--space-md)" }}>
         <h2 style={{ fontSize: "var(--font-size-xl)", fontWeight: 700 }}>{plan?.name || "Meal plan"}</h2>
-        <button className="btn btn-sm" disabled={publish.isPending} onClick={() => publish.mutate()}>
-          {plan?.is_published ? "✓ Published" : "Publish"}
-        </button>
+        <div className="flex-center" style={{ gap: "0.5rem" }}>
+          {/* Phase 9b: printable PDF download */}
+          {plan && (
+            <a
+              className="btn btn-sm"
+              href={`${config.apiBaseUrl}/mealplans/${plan.id}/pdf`}
+              download
+              title="Download the weekly grid + shopping list as a PDF"
+            >
+              📄 PDF
+            </a>
+          )}
+          <button className="btn btn-sm" disabled={publish.isPending} onClick={() => publish.mutate()}>
+            {plan?.is_published ? "✓ Published" : "Publish"}
+          </button>
+        </div>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "var(--space-sm)", marginBottom: "var(--space-lg)" }}>

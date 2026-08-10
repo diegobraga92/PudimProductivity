@@ -93,7 +93,7 @@ func (r *PostgresTaskRepository) Create(ctx context.Context, task *Task) error {
 }
 
 func (r *PostgresTaskRepository) GetByID(ctx context.Context, id string) (*Task, error) {
-	query := `SELECT ` + taskColumns + ` FROM tasks WHERE id = $1`
+	query := `SELECT ` + taskColumns + ` FROM tasks WHERE id = $1 AND deleted_at IS NULL`
 
 	task, err := r.scanTask(r.pool.QueryRow(ctx, query, id))
 	if err != nil {
@@ -107,7 +107,7 @@ func (r *PostgresTaskRepository) GetByID(ctx context.Context, id string) (*Task,
 }
 
 func (r *PostgresTaskRepository) List(ctx context.Context, statusFilter, typeFilter string) ([]*Task, error) {
-	query := `SELECT ` + taskColumns + ` FROM tasks WHERE list_id IS NULL`
+	query := `SELECT ` + taskColumns + ` FROM tasks WHERE list_id IS NULL AND deleted_at IS NULL`
 	args := make([]any, 0)
 
 	if statusFilter != "" {
@@ -153,7 +153,7 @@ func (r *PostgresTaskRepository) List(ctx context.Context, statusFilter, typeFil
 }
 
 func (r *PostgresTaskRepository) ListScheduled(ctx context.Context) ([]*Task, error) {
-	query := `SELECT ` + taskColumns + ` FROM tasks WHERE start_time IS NOT NULL ORDER BY start_time ASC`
+	query := `SELECT ` + taskColumns + ` FROM tasks WHERE start_time IS NOT NULL AND deleted_at IS NULL ORDER BY start_time ASC`
 
 	rows, err := r.pool.Query(ctx, query)
 	if err != nil {
@@ -182,7 +182,7 @@ func (r *PostgresTaskRepository) ListScheduled(ctx context.Context) ([]*Task, er
 }
 
 func (r *PostgresTaskRepository) ListByListID(ctx context.Context, listID, typeFilter string) ([]*Task, error) {
-	query := `SELECT ` + taskColumns + ` FROM tasks WHERE list_id = $1`
+	query := `SELECT ` + taskColumns + ` FROM tasks WHERE list_id = $1 AND deleted_at IS NULL`
 	args := []any{listID}
 
 	if typeFilter != "" {
@@ -257,7 +257,9 @@ func (r *PostgresTaskRepository) Update(ctx context.Context, task *Task) error {
 }
 
 func (r *PostgresTaskRepository) Delete(ctx context.Context, id string) error {
-	query := `DELETE FROM tasks WHERE id = $1`
+	// Phase 9c: soft delete so offline clients can learn about the deletion
+	// through the incremental sync endpoint.
+	query := `UPDATE tasks SET deleted_at = NOW() WHERE id = $1 AND deleted_at IS NULL`
 
 	result, err := r.pool.Exec(ctx, query, id)
 	if err != nil {
@@ -296,7 +298,8 @@ func (r *PostgresTaskRepository) CreateCompletion(ctx context.Context, completio
 }
 
 func (r *PostgresTaskRepository) DeleteCompletion(ctx context.Context, taskID string, date time.Time) error {
-	query := `DELETE FROM task_completions WHERE task_id = $1 AND completed_date = $2`
+	// Phase 9c: soft delete so offline clients can learn about the removal.
+	query := `UPDATE task_completions SET deleted_at = NOW() WHERE task_id = $1 AND completed_date = $2 AND deleted_at IS NULL`
 
 	result, err := r.pool.Exec(ctx, query, taskID, date)
 	if err != nil {
@@ -314,7 +317,7 @@ func (r *PostgresTaskRepository) GetCompletion(ctx context.Context, taskID strin
 	query := `
 		SELECT id, task_id, completed_date, created_at
 		FROM task_completions
-		WHERE task_id = $1 AND completed_date = $2
+		WHERE task_id = $1 AND completed_date = $2 AND deleted_at IS NULL
 	`
 
 	completion := &TaskCompletion{}
@@ -339,7 +342,7 @@ func (r *PostgresTaskRepository) ListAllCompletions(ctx context.Context, from, t
 	query := `
 		SELECT id, task_id, completed_date, created_at
 		FROM task_completions
-		WHERE completed_date >= $1 AND completed_date <= $2
+		WHERE completed_date >= $1 AND completed_date <= $2 AND deleted_at IS NULL
 		ORDER BY task_id, completed_date ASC
 	`
 
@@ -381,7 +384,7 @@ func (r *PostgresTaskRepository) ListCompletions(ctx context.Context, taskID str
 	query := `
 		SELECT id, task_id, completed_date, created_at
 		FROM task_completions
-		WHERE task_id = $1 AND completed_date >= $2 AND completed_date <= $3
+		WHERE task_id = $1 AND completed_date >= $2 AND completed_date <= $3 AND deleted_at IS NULL
 		ORDER BY completed_date ASC
 	`
 

@@ -1,0 +1,139 @@
+# Check latest: https://github.com/OAI/OpenAPI-Specification/releases
+openapi: "3.2.0"
+info:
+  title: PudimProductivity Offline Sync API
+  description: |
+    Phase 9c — incremental sync for offline-first mobile clients. The client
+    persists the `timestamp` returned in each response and sends it back as
+    `since` on the next pull. Soft-deleted rows appear in the `deleted_*`
+    arrays so clients can apply tombstones (migration 019).
+  version: "0.1.0"
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+
+paths:
+  /api/v1/sync:
+    get:
+      operationId: getSyncChanges
+      summary: Fetch incremental changes since a timestamp
+      description: |
+        Returns tasks, completions, task lists and shares created/updated after
+        `since`, plus the IDs of rows soft-deleted after `since`. Omit `since`
+        for a full snapshot.
+      security: []
+      tags:
+        - Sync
+      parameters:
+        - name: since
+          in: query
+          required: false
+          description: RFC3339 timestamp of the client's last sync. Defaults to the epoch.
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: Incremental changes.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SyncBundle"
+        "400":
+          description: Invalid since timestamp.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+
+    SyncTask:
+      type: object
+      required: [id, title, status, created_at, updated_at]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        status: { type: string, enum: [todo, done] }
+        recurrence_days:
+          type: array
+          items: { type: string, enum: [mon, tue, wed, thu, fri, sat, sun] }
+        list_id: { type: [string, "null"] }
+        start_time: { type: [string, "null"] }
+        end_time: { type: [string, "null"] }
+        color: { type: [string, "null"] }
+        scheduled_date: { type: [string, "null"] }
+        alarm_minutes: { type: [integer, "null"] }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    SyncCompletion:
+      type: object
+      required: [id, task_id, completed_date, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        task_id: { type: string, format: uuid }
+        completed_date: { type: string, format: date }
+        created_at: { type: string, format: date-time }
+
+    SyncTaskList:
+      type: object
+      required: [id, name, owner_id, created_at, updated_at]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: string }
+        owner_id: { type: string }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    SyncShare:
+      type: object
+      required: [list_id, shared_with, role, created_at]
+      properties:
+        list_id: { type: string, format: uuid }
+        shared_with: { type: string }
+        role: { type: string, enum: [editor, viewer] }
+        created_at: { type: string, format: date-time }
+
+    SyncBundle:
+      type: object
+      required: [timestamp]
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          description: Server timestamp the client should persist and send back as `since`.
+        tasks:
+          type: array
+          items: { $ref: "#/components/schemas/SyncTask" }
+        deleted_task_ids:
+          type: array
+          items: { type: string, format: uuid }
+        completions:
+          type: array
+          items: { $ref: "#/components/schemas/SyncCompletion" }
+        deleted_completion_ids:
+          type: array
+          items: { type: string, format: uuid }
+        task_lists:
+          type: array
+          items: { $ref: "#/components/schemas/SyncTaskList" }
+        deleted_task_list_ids:
+          type: array
+          items: { type: string, format: uuid }
+        shares:
+          type: array
+          items: { $ref: "#/components/schemas/SyncShare" }
+        deleted_share_keys:
+          type: array
+          items: { type: string }
+          description: Composite "list_id:shared_with" keys of revoked shares.

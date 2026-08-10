@@ -41,11 +41,11 @@ type MealSlot struct {
 
 // ShoppingItem is one line of the generated shopping list.
 type ShoppingItem struct {
-	ID              string
-	IngredientName  string
-	QuantityAgg     string
-	Unit            string
-	IsChecked       bool
+	ID             string
+	IngredientName string
+	QuantityAgg    string
+	Unit           string
+	IsChecked      bool
 }
 
 // MealPlan is the aggregate root. Slots are loaded together with the plan.

@@ -1,0 +1,20 @@
+# Local Kind demo — ArgoCD repository pointing at a local git daemon.
+#
+# The ApplicationSet in application-set.yaml targets the public GitHub repo and
+# is the "real" GitOps config. For the local cluster demo we register a
+# `git://` repo served by a host-side git daemon (see README.md) so ArgoCD can
+# sync without pushing to GitHub.
+#
+#   git clone --mirror /path/to/PudimProductivity ~/git-server/pudim.git
+#   git daemon --base-path=$HOME/git-server --export-all --reuseaddr --detach
+apiVersion: v1
+kind: Secret
+metadata:
+  name: pudim-local-repo
+  namespace: argocd
+  labels:
+    argocd.argoproj.io/secret-type: repository
+stringData:
+  type: git
+  url: "git://172.19.0.1/pudim.git"
+  name: pudim-local

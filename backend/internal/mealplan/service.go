@@ -57,6 +57,39 @@ func (s *MealPlanService) Get(ctx context.Context, id string) (*MealPlan, error)
 	return s.repo.GetByID(ctx, id)
 }
 
+// RenderPDF generates the printable PDF for a meal plan: the weekly grid and
+// (if generated) the shopping list. Recipe titles are resolved through the
+// recipes reader when available.
+func (s *MealPlanService) RenderPDF(ctx context.Context, id string) ([]byte, error) {
+	plan, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	titles := make(map[string]string)
+	if s.recipes != nil {
+		for _, slot := range plan.Slots {
+			if slot.RecipeID == nil {
+				continue
+			}
+			if _, ok := titles[*slot.RecipeID]; ok {
+				continue
+			}
+			if r, err := s.recipes.Get(ctx, *slot.RecipeID); err == nil && r != nil {
+				titles[*slot.RecipeID] = r.Title
+			}
+		}
+	}
+
+	shopping, err := s.repo.GetShoppingList(ctx, id)
+	if err != nil {
+		// Shopping list is optional; degrade to an empty list.
+		shopping = []ShoppingItem{}
+	}
+
+	return RenderPlanPDF(plan, shopping, titles)
+}
+
 func (s *MealPlanService) List(ctx context.Context) ([]*MealPlan, error) {
 	return s.repo.List(ctx)
 }
@@ -99,9 +132,9 @@ func (s *MealPlanService) GenerateShoppingList(ctx context.Context, planID strin
 
 	// Load each distinct recipe once.
 	type recipeIngredients struct {
-		name   string
-		qty    string
-		unit   string
+		name string
+		qty  string
+		unit string
 	}
 	var all []recipeIngredients
 	seen := map[string]struct{}{}

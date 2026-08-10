@@ -41,7 +41,7 @@ func (r *PostgresTaskListRepository) GetByID(ctx context.Context, id string) (*T
 	query := `
 		SELECT id, name, description, owner_id, created_at, updated_at
 		FROM task_lists
-		WHERE id = $1
+		WHERE id = $1 AND deleted_at IS NULL
 	`
 
 	list := &TaskList{}
@@ -68,6 +68,7 @@ func (r *PostgresTaskListRepository) List(ctx context.Context) ([]*TaskList, err
 	query := `
 		SELECT id, name, description, owner_id, created_at, updated_at
 		FROM task_lists
+		WHERE deleted_at IS NULL
 		ORDER BY created_at DESC
 	`
 
@@ -132,7 +133,8 @@ func (r *PostgresTaskListRepository) Update(ctx context.Context, list *TaskList)
 }
 
 func (r *PostgresTaskListRepository) Delete(ctx context.Context, id string) error {
-	query := `DELETE FROM task_lists WHERE id = $1`
+	// Phase 9c: soft delete so offline clients can learn about the deletion.
+	query := `UPDATE task_lists SET deleted_at = NOW() WHERE id = $1 AND deleted_at IS NULL`
 
 	result, err := r.pool.Exec(ctx, query, id)
 	if err != nil {
@@ -167,7 +169,7 @@ func (r *PostgresTaskListRepository) GetMemberRole(ctx context.Context, listID, 
 	// Share check.
 	var role string
 	err = r.pool.QueryRow(ctx,
-		`SELECT role FROM task_list_shares WHERE list_id = $1 AND shared_with = $2`,
+		`SELECT role FROM task_list_shares WHERE list_id = $1 AND shared_with = $2 AND deleted_at IS NULL`,
 		listID, userID,
 	).Scan(&role)
 	if err != nil {
@@ -181,12 +183,13 @@ func (r *PostgresTaskListRepository) GetMemberRole(ctx context.Context, listID, 
 
 func (r *PostgresTaskListRepository) CreateShare(ctx context.Context, share *Share) error {
 	query := `
-		INSERT INTO task_list_shares (list_id, shared_with, role, created_at)
-		VALUES ($1, $2, $3, $4)
-		ON CONFLICT (list_id, shared_with) DO NOTHING
+		INSERT INTO task_list_shares (list_id, shared_with, role, created_at, deleted_at)
+		VALUES ($1, $2, $3, $4, NULL)
+		ON CONFLICT (list_id, shared_with) DO UPDATE
+		SET role = EXCLUDED.role, created_at = EXCLUDED.created_at, deleted_at = NULL
 	`
 
-	result, err := r.pool.Exec(ctx, query,
+	_, err := r.pool.Exec(ctx, query,
 		share.ListID,
 		share.SharedWith,
 		string(share.Role),
@@ -195,15 +198,13 @@ func (r *PostgresTaskListRepository) CreateShare(ctx context.Context, share *Sha
 	if err != nil {
 		return fmt.Errorf("insert task list share: %w", err)
 	}
-	if result.RowsAffected() == 0 {
-		return ErrShareExists
-	}
 	return nil
 }
 
 func (r *PostgresTaskListRepository) DeleteShare(ctx context.Context, listID, userID string) error {
+	// Phase 9c: soft delete so offline clients can learn about the removal.
 	result, err := r.pool.Exec(ctx,
-		`DELETE FROM task_list_shares WHERE list_id = $1 AND shared_with = $2`,
+		`UPDATE task_list_shares SET deleted_at = NOW() WHERE list_id = $1 AND shared_with = $2 AND deleted_at IS NULL`,
 		listID, userID,
 	)
 	if err != nil {
@@ -219,7 +220,7 @@ func (r *PostgresTaskListRepository) ListShares(ctx context.Context, listID stri
 	rows, err := r.pool.Query(ctx,
 		`SELECT list_id, shared_with, role, created_at
 		 FROM task_list_shares
-		 WHERE list_id = $1
+		 WHERE list_id = $1 AND deleted_at IS NULL
 		 ORDER BY created_at ASC`, listID,
 	)
 	if err != nil {
@@ -249,7 +250,9 @@ func (r *PostgresTaskListRepository) ListListsForUser(ctx context.Context, userI
 		SELECT DISTINCT l.id, l.name, l.description, l.owner_id, l.created_at, l.updated_at
 		FROM task_lists l
 		LEFT JOIN task_list_shares s ON s.list_id = l.id
-		WHERE l.owner_id = $1 OR s.shared_with = $1
+		WHERE (l.owner_id = $1 OR s.shared_with = $1)
+		  AND l.deleted_at IS NULL
+		  AND (s.deleted_at IS NULL OR s.list_id IS NULL)
 		ORDER BY l.created_at DESC
 	`
 
@@ -282,9 +285,9 @@ func (r *PostgresTaskListRepository) ListListsForUser(ctx context.Context, userI
 func (r *PostgresTaskListRepository) ListListIDsForUser(ctx context.Context, userID string) ([]string, error) {
 	query := `
 		SELECT DISTINCT list_id FROM (
-			SELECT id AS list_id FROM task_lists WHERE owner_id = $1
+			SELECT id AS list_id FROM task_lists WHERE owner_id = $1 AND deleted_at IS NULL
 			UNION
-			SELECT list_id FROM task_list_shares WHERE shared_with = $1
+			SELECT list_id FROM task_list_shares WHERE shared_with = $1 AND deleted_at IS NULL
 		) t
 	`
 
@@ -311,9 +314,9 @@ func (r *PostgresTaskListRepository) ListListIDsForUser(ctx context.Context, use
 func (r *PostgresTaskListRepository) ListMemberUserIDs(ctx context.Context, listID string) ([]string, error) {
 	query := `
 		SELECT DISTINCT user_id FROM (
-			SELECT owner_id AS user_id FROM task_lists WHERE id = $1
+			SELECT owner_id AS user_id FROM task_lists WHERE id = $1 AND deleted_at IS NULL
 			UNION
-			SELECT shared_with AS user_id FROM task_list_shares WHERE list_id = $1
+			SELECT shared_with AS user_id FROM task_list_shares WHERE list_id = $1 AND deleted_at IS NULL
 		) t
 	`
 

@@ -10,13 +10,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
-import com.pudimproductivity.api.ApiClient
-import com.pudimproductivity.api.CreateTaskRequest
 import com.pudimproductivity.api.SyncClient
-import com.pudimproductivity.api.Task
 import com.pudimproductivity.api.TaskList
-import com.pudimproductivity.api.UpdateTaskRequest
-import com.pudimproductivity.api.taskService
 import com.pudimproductivity.ui.components.ProgressBar
 import com.pudimproductivity.ui.components.ProgressVariant
 import com.pudimproductivity.ui.components.StreakBadge
@@ -26,7 +21,6 @@ import com.pudimproductivity.utils.getToday
 import com.pudimproductivity.utils.getWeekDates
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.launch
 import java.time.LocalDate
 
 private val DAY_ORDER = listOf("mon", "tue", "wed", "thu", "fri", "sat", "sun")
@@ -40,6 +34,7 @@ private fun getDayName(dateStr: String): String {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TaskListScreen(
+    repository: com.pudimproductivity.data.TaskRepository,
     onCreateTask: () -> Unit,
     onFocusTimer: () -> Unit,
     onHabits: () -> Unit,
@@ -48,14 +43,17 @@ fun TaskListScreen(
     onRecipes: () -> Unit,
     onBooks: () -> Unit,
     onMealPlans: () -> Unit,
-    onDailyPlan: () -> Unit
+    onDailyPlan: () -> Unit,
+    onInsights: () -> Unit
 ) {
-    val scope = rememberCoroutineScope()
-    var tasks by remember { mutableStateOf<List<Task>>(emptyList()) }
-    var taskLists by remember { mutableStateOf<List<TaskList>>(emptyList()) }
-    var completionsMap by remember { mutableStateOf<Map<String, List<String>>>(emptyMap()) }
-    var isLoading by remember { mutableStateOf(true) }
-    var error by remember { mutableStateOf<String?>(null) }
+    // Phase 9c: local-first — read straight from the local database via the
+    // repository's flows (instant + offline); writes go through the repository
+    // (optimistic + dirty flag) and are flushed to the server on sync.
+    val tasks by repository.tasks.collectAsState()
+    val taskLists by repository.taskLists.collectAsState()
+    val completions by repository.completions.collectAsState()
+    val isOnline by repository.online.collectAsState()
+
     var selectedTab by remember { mutableStateOf(0) }
     var newTodoTitle by remember { mutableStateOf("") }
     var newHabitTitle by remember { mutableStateOf("") }
@@ -66,61 +64,19 @@ fun TaskListScreen(
     // Week offset for habits (shared across all habits)
     var habitWeekOffset by remember { mutableStateOf(0) }
 
-    fun loadData() {
-        scope.launch {
-            isLoading = true
-            error = null
-            try {
-                val todoResult = ApiClient.taskService.listTasks("one-off")
-                val habitResult = ApiClient.taskService.listTasks("habit")
-                tasks = todoResult + habitResult
-                taskLists = ApiClient.taskService.listTaskLists()
-
-                // Load completions for all habits in one batch call
-                val weekDates = getWeekDates(habitWeekOffset)
-                val from = weekDates.first()
-                val to = weekDates.last()
-                val allCompletions = try {
-                    ApiClient.taskService.getAllTaskCompletions(from, to)
-                } catch (_: Exception) {
-                    emptyList()
-                }
-
-                val map = mutableMapOf<String, List<String>>()
-                for (task in habitResult) {
-                    map[task.id] = allCompletions
-                        .filter { it.task_id == task.id }
-                        .map { it.completed_date }
-                }
-                completionsMap = map
-            } catch (e: Exception) {
-                error = e.message ?: "Failed to load tasks"
-            } finally {
-                isLoading = false
-            }
-        }
+    val completionsMap = remember(completions) {
+        completions.groupBy({ it.task_id }, { it.completed_date })
     }
 
-    LaunchedEffect(Unit) {
-        loadData()
-    }
-
-    // Reload data in response to real-time task events from any client.
-    // Debounced to coalesce bursts of events into a single refresh.
+    // Phase 9c: WS events still arrive (Phase 2) — refresh local state so a
+    // change made on another client is reflected immediately.
     @OptIn(FlowPreview::class)
     LaunchedEffect(Unit) {
         SyncClient.events
             .debounce(300)
             .collect {
-                loadData()
+                repository.refreshFromLocal()
             }
-    }
-
-    // Reload completions when week changes
-    LaunchedEffect(habitWeekOffset) {
-        if (selectedTab == 1) {
-            loadData()
-        }
     }
 
     val todoTasks = tasks.filter { it.recurrence_days == null || it.recurrence_days.isEmpty() }
@@ -164,6 +120,10 @@ fun TaskListScreen(
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(onClick = onDailyPlan) {
                         Text("🤖")
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(onClick = onInsights) {
+                        Text("🧠")
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(onClick = onCreateTask) {
@@ -262,23 +222,26 @@ fun TaskListScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            when {
-                isLoading -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
-                    }
+            // Phase 9c: offline banner — data is local-first, so the app stays
+            // usable; this just informs the user that sync is pending.
+            if (!isOnline) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.errorContainer,
+                    shape = MaterialTheme.shapes.small
+                ) {
+                    Text(
+                        text = "📡 Offline — changes will sync when you reconnect",
+                        modifier = Modifier.padding(10.dp),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
                 }
-                error != null -> {
-                    Text("Error: $error", color = MaterialTheme.colorScheme.error)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Button(onClick = { loadData() }) {
-                        Text("Retry")
-                    }
-                }
-                selectedTab == 0 -> {
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
+            when (selectedTab) {
+                0 -> {
                     // TODO TAB
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -294,13 +257,8 @@ fun TaskListScreen(
                         )
                         Button(
                             onClick = {
-                                scope.launch {
-                                    try {
-                                        ApiClient.taskService.createTask(CreateTaskRequest(title = newTodoTitle))
-                                        newTodoTitle = ""
-                                        loadData()
-                                    } catch (_: Exception) { }
-                                }
+                                repository.createTask(title = newTodoTitle)
+                                newTodoTitle = ""
                             },
                             enabled = newTodoTitle.isNotBlank()
                         ) {
@@ -346,16 +304,8 @@ fun TaskListScreen(
                                         Checkbox(
                                             checked = task.status == "done",
                                             onCheckedChange = {
-                                                scope.launch {
-                                                    try {
-                                                        val newStatus = if (task.status == "done") "todo" else "done"
-                                                        ApiClient.taskService.updateTask(
-                                                            task.id,
-                                                            UpdateTaskRequest(status = newStatus)
-                                                        )
-                                                        loadData()
-                                                    } catch (_: Exception) { }
-                                                }
+                                                val newStatus = if (task.status == "done") "todo" else "done"
+                                                repository.updateTask(task.id, status = newStatus)
                                             }
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
@@ -378,7 +328,7 @@ fun TaskListScreen(
                         }
                     }
                 }
-                selectedTab == 1 -> {
+                1 -> {
                     // HABITS TAB
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -394,18 +344,11 @@ fun TaskListScreen(
                         )
                         Button(
                             onClick = {
-                                scope.launch {
-                                    try {
-                                        ApiClient.taskService.createTask(
-                                            CreateTaskRequest(
-                                                title = newHabitTitle,
-                                                recurrence_days = listOf("mon", "tue", "wed", "thu", "fri")
-                                            )
-                                        )
-                                        newHabitTitle = ""
-                                        loadData()
-                                    } catch (_: Exception) { }
-                                }
+                                repository.createTask(
+                                    title = newHabitTitle,
+                                    recurrenceDays = listOf("mon", "tue", "wed", "thu", "fri")
+                                )
+                                newHabitTitle = ""
                             },
                             enabled = newHabitTitle.isNotBlank()
                         ) {
@@ -474,12 +417,7 @@ fun TaskListScreen(
                                             Spacer(modifier = Modifier.width(8.dp))
                                             TextButton(
                                                 onClick = {
-                                                    scope.launch {
-                                                        try {
-                                                            ApiClient.taskService.deleteTask(task.id)
-                                                            loadData()
-                                                        } catch (_: Exception) { }
-                                                    }
+                                                    repository.deleteTask(task.id)
                                                 }
                                             ) {
                                                 Text(
@@ -497,15 +435,10 @@ fun TaskListScreen(
                                             recurrenceDays = task.recurrence_days ?: emptyList(),
                                             completions = taskCompletions,
                                             onToggleDay = { date, isCompleted ->
-                                                scope.launch {
-                                                    try {
-                                                        if (isCompleted) {
-                                                            ApiClient.taskService.uncompleteTask(task.id, date)
-                                                        } else {
-                                                            ApiClient.taskService.completeTask(task.id, date)
-                                                        }
-                                                        loadData()
-                                                    } catch (_: Exception) { }
+                                                if (isCompleted) {
+                                                    repository.uncompleteHabit(task.id, date)
+                                                } else {
+                                                    repository.completeHabit(task.id, date)
                                                 }
                                             },
                                             weekOffset = habitWeekOffset,
@@ -544,7 +477,7 @@ fun TaskListScreen(
                         }
                     }
                 }
-                selectedTab == 2 -> {
+                2 -> {
                     // LISTS TAB
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -560,15 +493,8 @@ fun TaskListScreen(
                         )
                         Button(
                             onClick = {
-                                scope.launch {
-                                    try {
-                                        ApiClient.taskService.createTaskList(
-                                            com.pudimproductivity.api.CreateTaskListRequest(name = newListName)
-                                        )
-                                        newListName = ""
-                                        loadData()
-                                    } catch (_: Exception) { }
-                                }
+                                repository.createTaskList(newListName)
+                                newListName = ""
                             },
                             enabled = newListName.isNotBlank()
                         ) {

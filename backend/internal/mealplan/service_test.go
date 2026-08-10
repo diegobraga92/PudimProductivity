@@ -54,7 +54,7 @@ func (f *fakeRepo) GetShoppingList(ctx context.Context, planID string) ([]Shoppi
 	return f.savedShopping, nil
 }
 func (f *fakeRepo) ToggleShoppingItem(ctx context.Context, planID, itemID string) error { return nil }
-func (f *fakeRepo) SetPublished(ctx context.Context, id string) error                  { return nil }
+func (f *fakeRepo) SetPublished(ctx context.Context, id string) error                   { return nil }
 
 type fakeRecipeReader struct{ recipes map[string]*recipe.Recipe }
 
@@ -78,8 +78,10 @@ func (b *busSpy) Publish(_ context.Context, typ eventbus.EventType, _ any) error
 	b.types = append(b.types, typ)
 	return nil
 }
-func (b *busSpy) Subscribe(_ context.Context, _ eventbus.Handler) (func(), error) { return func() {}, nil }
-func (b *busSpy) Close() error                                                   { return nil }
+func (b *busSpy) Subscribe(_ context.Context, _ eventbus.Handler) (func(), error) {
+	return func() {}, nil
+}
+func (b *busSpy) Close() error { return nil }
 
 // --- tests ---
 

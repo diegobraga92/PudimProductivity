@@ -37,6 +37,30 @@ export interface paths {
         };
         /** Get a meal plan (with slots) */
         get: operations["getMealPlan"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mealplans/{planId}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The meal plan UUID. */
+                planId: components["parameters"]["planId"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Download the meal plan as a PDF
+         * @description Phase 9b — renders the weekly meal grid (days × meal types, with recipe
+         *     titles and notes) and the shopping list into a printable PDF.
+         */
+        get: operations["downloadMealPlanPdf"];
         /** Update a meal plan (full replacement of slots) */
         put: operations["updateMealPlan"];
         post?: never;
@@ -290,6 +314,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MealPlan"];
+                };
+            };
+            /** @description Meal plan not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    downloadMealPlanPdf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The meal plan UUID. */
+                planId: components["parameters"]["planId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The PDF document. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
                 };
             };
             /** @description Meal plan not found. */

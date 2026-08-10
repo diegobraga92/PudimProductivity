@@ -81,6 +81,34 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/mealplans/{planId}/pdf:
+    parameters:
+      - $ref: "#/components/parameters/planId"
+    get:
+      operationId: downloadMealPlanPdf
+      summary: Download the meal plan as a PDF
+      description: |
+        Phase 9b — renders the weekly meal grid (days × meal types, with recipe
+        titles and notes) and the shopping list into a printable PDF.
+      security: []
+      tags:
+        - MealPlans
+      responses:
+        "200":
+          description: The PDF document.
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: Meal plan not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
     put:
       operationId: updateMealPlan
       summary: Update a meal plan (full replacement of slots)

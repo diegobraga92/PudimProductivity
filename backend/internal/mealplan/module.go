@@ -21,6 +21,8 @@ func RegisterMealPlanRoutes(r chi.Router, pool *pgxpool.Pool, recipes RecipeRead
 	r.Route("/api/v1/mealplans", func(r chi.Router) {
 		r.Get("/", handler.List)
 		r.Get("/{planId}", handler.Get)
+		// Phase 9b: printable PDF of the weekly grid + shopping list.
+		r.Get("/{planId}/pdf", handler.DownloadPDF)
 
 		r.Group(func(r chi.Router) {
 			r.Use(shared.RequireRole("admin", "user"))

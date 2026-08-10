@@ -3,6 +3,7 @@ package mealplan
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -147,6 +148,30 @@ func (h *Handler) GetShoppingList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	shared.WriteJSON(w, http.StatusOK, toShoppingResponses(items))
+}
+
+// DownloadPDF streams a printable PDF of the meal plan (Phase 9b media
+// processing). Used by the web "Download" button.
+func (h *Handler) DownloadPDF(w http.ResponseWriter, r *http.Request) {
+	planID := chi.URLParam(r, "planId")
+	data, err := h.service.RenderPDF(r.Context(), planID)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			shared.WriteError(w, http.StatusNotFound, "meal plan not found")
+			return
+		}
+		log.Error().Err(err).Str("plan_id", planID).Msg("render meal plan pdf failed")
+		shared.WriteError(w, http.StatusInternalServerError, "failed to render PDF")
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/pdf")
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="mealplan-%s.pdf"`, planID))
+	w.Header().Set("Content-Length", fmt.Sprintf("%d", len(data)))
+	w.WriteHeader(http.StatusOK)
+	if _, err := w.Write(data); err != nil {
+		log.Warn().Err(err).Str("plan_id", planID).Msg("stream meal plan pdf failed")
+	}
 }
 
 func (h *Handler) ToggleShoppingItem(w http.ResponseWriter, r *http.Request) {

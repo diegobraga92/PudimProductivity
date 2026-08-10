@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/diegobraga92/pudimproductivity/backend/internal/audit"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/eventbus"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/shared"
 	"github.com/rs/zerolog/log"
 )
@@ -21,22 +22,35 @@ type NoiseProvider interface {
 type PomodoroService struct {
 	mu      sync.Mutex
 	current *PomodoroSession
-	noise   NoiseProvider      // optional, may be nil
+	noise   NoiseProvider // optional, may be nil
 	audit   audit.Logger
+	bus     eventbus.Bus       // Phase 9a: publishes session lifecycle events
 	cancel  context.CancelFunc // cancels the current timer goroutine
 }
 
-func NewPomodoroService(noise NoiseProvider, auditLogger audit.Logger) *PomodoroService {
+func NewPomodoroService(noise NoiseProvider, auditLogger audit.Logger, bus eventbus.Bus) *PomodoroService {
 	if auditLogger == nil {
 		auditLogger = audit.NoopLogger{}
 	}
 	return &PomodoroService{
 		noise: noise,
 		audit: auditLogger,
+		bus:   bus,
 	}
 }
 
-func (s *PomodoroService) StartSession(ctx context.Context, focusMinutes, breakMinutes int, noise *NoiseConfig) (*PomodoroSession, error) {
+// publish emits a session lifecycle event. A nil bus is a no-op; failures are
+// logged, never propagated (the session lifecycle is the source of truth).
+func (s *PomodoroService) publish(ctx context.Context, typ eventbus.EventType, payload any) {
+	if s.bus == nil {
+		return
+	}
+	if err := s.bus.Publish(ctx, typ, payload); err != nil {
+		log.Warn().Err(err).Str("event_type", string(typ)).Msg("failed to publish pomodoro event")
+	}
+}
+
+func (s *PomodoroService) StartSession(ctx context.Context, userID string, focusMinutes, breakMinutes int, noise *NoiseConfig) (*PomodoroSession, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -55,6 +69,7 @@ func (s *PomodoroService) StartSession(ctx context.Context, focusMinutes, breakM
 	if err != nil {
 		return nil, fmt.Errorf("create session: %w", err)
 	}
+	session.UserID = userID
 
 	s.current = session
 	s.startTimer()
@@ -70,6 +85,13 @@ func (s *PomodoroService) StartSession(ctx context.Context, focusMinutes, breakM
 	s.audit.Log(ctx, audit.ActionFocusStarted, audit.ResourcePomodoro, id, nil, map[string]any{
 		"focus_minutes": focusMinutes,
 		"break_minutes": breakMinutes,
+	})
+
+	s.publish(ctx, eventbus.EventPomodoroSessionStarted, map[string]any{
+		"session_id":    id,
+		"user_id":       userID,
+		"focus_minutes": focusMinutes,
+		"started_at":    session.StartedAt.Format(time.RFC3339),
 	})
 
 	return session, nil
@@ -162,7 +184,25 @@ func (s *PomodoroService) Stop(ctx context.Context) (*PomodoroSession, error) {
 		"elapsed_s": int(s.current.Elapsed().Seconds()),
 	})
 
+	// Phase 9a: publish the lifecycle event so consumers (e.g. insights) can
+	// record focus history.
 	session := *s.current
+	if session.Status == SessionCompleted {
+		s.publish(ctx, eventbus.EventPomodoroSessionCompleted, map[string]any{
+			"session_id":    session.ID,
+			"user_id":       session.UserID,
+			"focus_minutes": int(session.FocusDuration.Minutes()),
+			"elapsed_s":     int(session.Elapsed().Seconds()),
+			"started_at":    session.StartedAt.Format(time.RFC3339),
+			"completed_at":  time.Now().UTC().Format(time.RFC3339),
+		})
+	} else {
+		s.publish(ctx, eventbus.EventPomodoroSessionCancelled, map[string]any{
+			"session_id": session.ID,
+			"user_id":    session.UserID,
+		})
+	}
+
 	return &session, nil
 }
 
@@ -194,6 +234,15 @@ func (s *PomodoroService) startTimer() {
 							"status":    "completed",
 							"auto":      true,
 							"elapsed_s": int(s.current.Elapsed().Seconds()),
+						})
+						// Phase 9a: notify consumers of the completed session.
+						s.publish(context.Background(), eventbus.EventPomodoroSessionCompleted, map[string]any{
+							"session_id":    sessionID,
+							"user_id":       s.current.UserID,
+							"focus_minutes": int(s.current.FocusDuration.Minutes()),
+							"elapsed_s":     int(s.current.Elapsed().Seconds()),
+							"started_at":    s.current.StartedAt.Format(time.RFC3339),
+							"completed_at":  time.Now().UTC().Format(time.RFC3339),
 						})
 						s.mu.Unlock()
 						return

@@ -1,20 +1,40 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-# Dev overlay — cheapest possible shape: 1 replica each, dev image tags.
+# Dev overlay — cheapest possible shape: 1 replica each, dev image tags, plus an
+# in-cluster ephemeral PostgreSQL so the GitOps demo runs end-to-end locally.
 resources:
   - ../../base
+  - postgres.yaml
+  - secrets.yaml
 
-# Dev images come from a dev build of the repository (CI pushes :dev on main).
+# Local image tags built + loaded into the Kind cluster (see infra/argocd/README.md).
 images:
   - name: ghcr.io/pudimproductivity/backend
+    newName: pudim/backend
     newTag: dev
   - name: ghcr.io/pudimproductivity/web
+    newName: pudim/web
     newTag: dev
 
 patches:
-  # Point the backend at the dev PostgreSQL (managed outside this repo, e.g.
-  # a dev RDS or an in-cluster ephemeral postgres).
+  # Use locally-loaded images (no registry pull in the demo cluster).
+  - target:
+      kind: Deployment
+      name: backend
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: IfNotPresent
+  - target:
+      kind: Deployment
+      name: web
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: IfNotPresent
+  # Point the backend at the in-cluster PostgreSQL and disable the async
+  # infrastructure (RabbitMQ/Redis) so the pod starts standalone.
   - target:
       kind: ConfigMap
       name: backend-config
@@ -22,3 +42,13 @@ patches:
       - op: add
         path: /data/LOG_LEVEL
         value: "debug"
+      - op: add
+        path: /data/DATABASE_URL
+        value: "postgres://pudim:pudim@postgres:5432/pudimproductivity?sslmode=disable"
+      - op: add
+        path: /data/RABBITMQ_URL
+        value: ""
+      - op: add
+        path: /data/REDIS_URL
+        value: ""
+

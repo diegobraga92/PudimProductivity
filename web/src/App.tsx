@@ -28,8 +28,9 @@ const BookList = lazy(() => import("./pages/BookList"));
 const MealPlanList = lazy(() => import("./pages/MealPlanList"));
 const MealPlanDetail = lazy(() => import("./pages/MealPlanDetail"));
 const DailyPlan = lazy(() => import("./pages/DailyPlan"));
+const Insights = lazy(() => import("./pages/Insights"));
 
-type Page = "dashboard" | "tasks" | "planner" | "pomodoro" | "soundscape" | "recipes" | "booktrack" | "mealplan" | "plan" | "health";
+type Page = "dashboard" | "tasks" | "planner" | "pomodoro" | "soundscape" | "recipes" | "booktrack" | "mealplan" | "plan" | "insights" | "health";
 
 const pageFallback = (
   <div className="container" style={{ paddingTop: "var(--space-xl)", textAlign: "center", color: "var(--color-text-secondary)" }}>
@@ -133,6 +134,7 @@ function AppInner() {
               { id: "booktrack" as Page, label: "Books", icon: "📚" },
               { id: "mealplan" as Page, label: "Meals", icon: "🗓" },
               { id: "plan" as Page, label: "Daily Plan", icon: "🤖" },
+              { id: "insights" as Page, label: "Insights", icon: "🧠" },
               { id: "health" as Page, label: "Status", icon: "💚" },
             ].map((tab) => (
               <button
@@ -218,6 +220,8 @@ function AppInner() {
               ))}
 
             {page === "plan" && <DailyPlan />}
+
+            {page === "insights" && <Insights />}
           </Suspense>
 
           {page === "health" && (

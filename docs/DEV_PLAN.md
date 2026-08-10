@@ -11,7 +11,7 @@
 
 These are not tied to a single phase – they must be evident across the entire project and align with the broader portfolio requirements.
 
-- [X] **Architecture Decision Records (ADRs):** One per major decision, stored in `docs/adr/` (001–010 + index `docs/adr/README.md`)
+- [X] **Architecture Decision Records (ADRs):** One per major decision, stored in `docs/adr/` (001–012 + index `docs/adr/README.md`)
 - [X] ADR 001: Database migration strategy (embedded SQL via `embed.FS`)
 - [X] ADR 002: Modular monolith architecture
 - [ ] **Design documents (RFCs):** Pre‑implementation for any phase >1 week effort — not written; ADRs carry the architectural decisions instead
@@ -278,11 +278,40 @@ integration + adapter tests, events + audit, ADR 007. Verified live end-to-end
 
 **Goal:** Polish that makes the portfolio stand out; mobile offline‑first fully realised.
 
-- [ ] AI coach service: consume all events, build user profile, generate weekly report (template + optional LLM)
-- [ ] Image processing worker: barcode reading from uploaded images, meal plan PDF/PNG generation
-- [ ] Web: insights dashboard, download meal plans
-- [ ] Mobile: offline‑first with Room DB for tasks/habits, sync protocol with server‑side sequence numbers; local notifications for reminders
-- [ ] Offline sync protocol documented in ADR, conflict handling explained
+**Progress (2026-08-10):**
+
+### 9a — AI Coach (done)
+
+- [x] Backend `internal/insights/`: consumes `pomodoro.session.completed` events
+      to persist focus history; generates template-rendered weekly reports
+      (`GET /api/v1/insights/weekly`); optional LLM summary gated by the
+      `insights.llm_enabled` feature flag. Migration 018 (`pomodoro_sessions` +
+      `insight_reports`). ADR 011.
+- [x] Web: **Insights** page (stat cards + template report + optional AI Coach
+      summary), wired into App.tsx nav (🧠).
+- [x] Mobile: `InsightsScreen.kt` (same cards + report), 🧠 button on the tasks
+      top bar, `InsightsApi.kt` Retrofit client.
+- [x] Spec: `api/openapi/insights-v1.yaml`, web types regenerated.
+
+### 9b & 9c (remaining)
+
+- [x] Image processing worker: barcode → ISBN decoding (`internal/media`,
+      pure-Go gozxing; `POST /api/v1/media/scan-isbn`, no external service);
+      meal-plan PDF generation (`internal/mealplan/pdf.go` via go-pdf/fpdf;
+      `GET /api/v1/mealplans/{planId}/pdf`).
+- [x] Web: "📄 PDF" download button on the Meal Plan detail page.
+- [x] Mobile: camera intent → FileProvider photo → `/media/scan-isbn` →
+      auto-fill + add book by ISBN (📷 on BookListScreen).
+- [x] Mobile: offline‑first — local SQLite (`local/LocalDatabase.kt`, Room-style
+      DAO API) with optimistic writes + `dirty`/`deleted` flags; incremental
+      sync via `GET /api/v1/sync?since=...` (backend `internal/syncstore`,
+      migration 019 soft-delete) pushed by WorkManager; conflicts resolved by
+      the Phase 8 LWW merge; local habit-reminder notifications (no FCM).
+      ADR 012 documents the protocol and the Room-deferred trade-off.
+- [x] Offline sync protocol documented in ADR 012 (timestamp-based pull,
+      optimistic push, soft-delete tombstones, conflict handling).
+
+**Phase 9 is now fully implemented.**
 
 ---
 

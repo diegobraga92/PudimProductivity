@@ -16,6 +16,8 @@
 | [008](008-nlp-parser.md) | Rule-Based NLP Parser | Accepted | 2026-08-09 | Deterministic regex parser for task input; partial-result semantics; LLM fallback behind the same endpoint |
 | [009](009-scheduler.md) | Auto-Scheduler with Derived Profile | Accepted | 2026-08-09 | Stateless scheduler; profile derived from 14-day history; read-only suggestions fitted into free blocks |
 | [010](010-crdt-collaboration.md) | CRDT-Based Collaboration | Accepted | 2026-08-10 | Document-level LWW register for task merges; owner/editor/viewer shares; WS presence + membership scoping |
+| [011](011-ai-coach-insights.md) | AI Coach — Template-First Reports | Accepted | 2026-08-10 | Go-template weekly reports from domain events; optional LLM summary behind a feature flag |
+| [012](012-offline-sync.md) | Offline-First Sync Protocol | Accepted | 2026-08-10 | Timestamp-based incremental pull; optimistic push + Phase 8 LWW merge; soft-delete tombstones; SQLite local layer (Room deferred) |
 
 ## Cross-Links
 

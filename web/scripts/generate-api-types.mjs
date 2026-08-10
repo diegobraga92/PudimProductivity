@@ -28,6 +28,9 @@ const SPECS = [
   ["booktrack-v1.yaml", "booktrack-v1.ts"],
   ["mealplan-v1.yaml", "mealplan-v1.ts"],
   ["scheduler-v1.yaml", "scheduler-v1.ts"],
+  ["insights-v1.yaml", "insights-v1.ts"],
+  ["sync-v1.yaml", "sync-v1.ts"],
+  ["media-v1.yaml", "media-v1.ts"],
 ];
 
 // Same banner the openapi-typescript CLI emits; marks the file as generated.

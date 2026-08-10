@@ -1,0 +1,22 @@
+# Kind cluster for the PudimProductivity GitOps demo (Phase 10 / Block A).
+#
+# Single control-plane node with NodePort mappings so the deployed backend and
+# web services are reachable from the host without an Ingress controller:
+#   30080 -> backend API
+#   30081 -> web app
+#   30090 -> ArgoCD server UI (NodePort)
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: pudim
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      - containerPort: 30080
+        hostPort: 30080
+        protocol: TCP
+      - containerPort: 30081
+        hostPort: 30081
+        protocol: TCP
+      - containerPort: 30090
+        hostPort: 30090
+        protocol: TCP

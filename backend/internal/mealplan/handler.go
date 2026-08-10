@@ -54,11 +54,11 @@ type AssignSlotRequest struct {
 // --- Responses ---
 
 type SlotResponse struct {
-	ID       string `json:"id"`
-	Date     string `json:"date"`
-	MealType string `json:"meal_type"`
+	ID       string  `json:"id"`
+	Date     string  `json:"date"`
+	MealType string  `json:"meal_type"`
 	RecipeID *string `json:"recipe_id"`
-	Notes    string `json:"notes,omitempty"`
+	Notes    string  `json:"notes,omitempty"`
 }
 
 type MealPlanResponse struct {
@@ -131,4 +131,6 @@ type Service interface {
 	GetShoppingList(ctx context.Context, planID string) ([]ShoppingItem, error)
 	ToggleShoppingItem(ctx context.Context, planID, itemID string) error
 	Publish(ctx context.Context, planID string) error
+	// RenderPDF generates the printable meal-plan PDF (Phase 9b).
+	RenderPDF(ctx context.Context, id string) ([]byte, error)
 }

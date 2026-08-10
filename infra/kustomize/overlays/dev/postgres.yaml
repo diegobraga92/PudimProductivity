@@ -1,0 +1,57 @@
+# Local dev PostgreSQL for the in-cluster GitOps demo. Ephemeral (emptyDir) —
+# enough to exercise the full backend (migrations, health, CRUD) in the demo
+# cluster; real deployments use a managed RDS (see infra/terraform).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: pudimproductivity
+  labels:
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/part-of: pudimproductivity
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: postgres
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: pg
+              containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: pudim
+            - name: POSTGRES_PASSWORD
+              value: pudim
+            - name: POSTGRES_DB
+              value: pudimproductivity
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+              subPath: pgdata
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: pudimproductivity
+  labels:
+    app.kubernetes.io/name: postgres
+spec:
+  selector:
+    app.kubernetes.io/name: postgres
+  ports:
+    - name: pg
+      port: 5432
+      targetPort: pg
