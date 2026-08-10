@@ -89,8 +89,10 @@ func (b *busSpy) Publish(_ context.Context, typ eventbus.EventType, _ any) error
 	b.types = append(b.types, typ)
 	return nil
 }
-func (b *busSpy) Subscribe(_ context.Context, _ eventbus.Handler) (func(), error) { return func() {}, nil }
-func (b *busSpy) Close() error                                                   { return nil }
+func (b *busSpy) Subscribe(_ context.Context, _ eventbus.Handler) (func(), error) {
+	return func() {}, nil
+}
+func (b *busSpy) Close() error { return nil }
 
 // --- tests ---
 

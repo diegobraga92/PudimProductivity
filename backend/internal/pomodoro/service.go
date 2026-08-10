@@ -6,10 +6,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/diegobraga92/pudimproductivity/backend/internal/audit"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/eventbus"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/shared"
-	"github.com/rs/zerolog/log"
 )
 
 const timerTickInterval = 1 * time.Second

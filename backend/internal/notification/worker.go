@@ -22,12 +22,12 @@ type Recipients struct {
 // the configured senders. A failed send returns an error so the RabbitMQ
 // adapter rejects the message into the dead-letter queue for retry.
 type Worker struct {
-	bus     eventbus.Bus
-	emails  []EmailDeliverer
-	pushes  []PushDeliverer
-	repo    Repo
-	recip   Recipients
-	unsub   func()
+	bus    eventbus.Bus
+	emails []EmailDeliverer
+	pushes []PushDeliverer
+	repo   Repo
+	recip  Recipients
+	unsub  func()
 }
 
 // NewWorker creates a notifications worker.

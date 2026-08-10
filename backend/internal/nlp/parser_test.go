@@ -12,10 +12,10 @@ var now = time.Date(2026, 8, 10, 12, 0, 0, 0, time.UTC)
 
 func TestParse(t *testing.T) {
 	tests := []struct {
-		name   string
-		input  string
-		want   ParsedTask
-		err    bool
+		name  string
+		input string
+		want  ParsedTask
+		err   bool
 	}{
 		{
 			name:  "basic with tomorrow and time",

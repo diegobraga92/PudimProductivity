@@ -6,9 +6,10 @@ import (
 	"strconv"
 
 	"github.com/coder/websocket"
+	"github.com/rs/zerolog/log"
+
 	"github.com/diegobraga92/pudimproductivity/backend/internal/eventbus"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/shared"
-	"github.com/rs/zerolog/log"
 )
 
 // ServeHTTP upgrades the request to a WebSocket connection and streams events.

@@ -9,10 +9,11 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/diegobraga92/pudimproductivity/backend/internal/eventbus"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/featureflag"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/shared"
-	"github.com/rs/zerolog/log"
 )
 
 // Feature flag gating the optional LLM summary (off by default).
@@ -146,8 +147,8 @@ func sessionRecordFromEvent(event eventbus.Event) *PomodoroSessionRecord {
 	return &PomodoroSessionRecord{
 		ID:           id,
 		UserID:       userID,
-		FocusMinutes: int(focusMinutes),
-		ElapsedS:     int(elapsedS),
+		FocusMinutes: focusMinutes,
+		ElapsedS:     elapsedS,
 		StartedAt:    start,
 		CompletedAt:  complete,
 	}

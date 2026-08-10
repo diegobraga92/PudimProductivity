@@ -24,4 +24,3 @@ type NoopSender struct{}
 
 func (NoopSender) SendEmail(context.Context, string, string, string) error { return nil }
 func (NoopSender) SendPush(context.Context, string, string, string) error  { return nil }
-

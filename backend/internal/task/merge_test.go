@@ -60,9 +60,9 @@ func (r *fakeRepo) ListAllCompletions(_ context.Context, _, _ time.Time) ([]*Tas
 	return nil, nil
 }
 
-func testTaskWithUpdatedAt(t *testing.T, id, title string, updatedAt time.Time) *Task {
+func testTaskWithUpdatedAt(t *testing.T, title string, updatedAt time.Time) *Task {
 	t.Helper()
-	task, err := NewTask(id, title, nil)
+	task, err := NewTask("t1", title, nil)
 	if err != nil {
 		t.Fatalf("NewTask: %v", err)
 	}
@@ -72,7 +72,7 @@ func testTaskWithUpdatedAt(t *testing.T, id, title string, updatedAt time.Time) 
 
 // MergeTask with a newer client timestamp must win and persist.
 func TestMergeTask_NewerWins(t *testing.T) {
-	base := testTaskWithUpdatedAt(t, "t1", "old", time.Date(2026, 8, 10, 10, 0, 0, 0, time.UTC))
+	base := testTaskWithUpdatedAt(t, "old", time.Date(2026, 8, 10, 10, 0, 0, 0, time.UTC))
 	svc := NewTaskService(newFakeRepo(base), nil, nil)
 
 	newTitle := "new title"
@@ -98,7 +98,7 @@ func TestMergeTask_NewerWins(t *testing.T) {
 
 // MergeTask with an older timestamp must lose and return the winning state.
 func TestMergeTask_OlderLoses(t *testing.T) {
-	base := testTaskWithUpdatedAt(t, "t1", "winner", time.Date(2026, 8, 10, 12, 0, 0, 0, time.UTC))
+	base := testTaskWithUpdatedAt(t, "winner", time.Date(2026, 8, 10, 12, 0, 0, 0, time.UTC))
 	svc := NewTaskService(newFakeRepo(base), nil, nil)
 
 	staleTitle := "stale write"
@@ -119,7 +119,7 @@ func TestMergeTask_OlderLoses(t *testing.T) {
 // Equal timestamps break ties by the lexicographically greater updated_by.
 func TestMergeTask_EqualTimestampTieBreaksByUserID(t *testing.T) {
 	ts := time.Date(2026, 8, 10, 12, 0, 0, 0, time.UTC)
-	base := testTaskWithUpdatedAt(t, "t1", "from-b", ts)
+	base := testTaskWithUpdatedAt(t, "from-b", ts)
 	base.UpdatedBy = "user-b"
 	svc := NewTaskService(newFakeRepo(base), nil, nil)
 
@@ -155,7 +155,7 @@ func TestMergeTask_EqualTimestampTieBreaksByUserID(t *testing.T) {
 // A zero client timestamp is stamped with the server clock and wins over any
 // stored (past) state.
 func TestMergeTask_ZeroTimestampAlwaysWins(t *testing.T) {
-	base := testTaskWithUpdatedAt(t, "t1", "current",
+	base := testTaskWithUpdatedAt(t, "current",
 		time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC))
 	svc := NewTaskService(newFakeRepo(base), nil, nil)
 

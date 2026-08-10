@@ -142,10 +142,10 @@ func TestTaskStatus_Valid(t *testing.T) {
 
 // ── Task.Update ───────────────────────────────────────────────────────────────
 
-func mustNewTask(t *testing.T, id, title string, recurrenceDays []string) *Task {
+func mustNewTask(t *testing.T, title string, recurrenceDays []string) *Task {
 	t.Helper()
 
-	task, err := NewTask(id, title, recurrenceDays)
+	task, err := NewTask("id-1", title, recurrenceDays)
 	if err != nil {
 		t.Fatalf("NewTask: %v", err)
 	}
@@ -154,7 +154,7 @@ func mustNewTask(t *testing.T, id, title string, recurrenceDays []string) *Task 
 }
 
 func TestTask_Update_Title(t *testing.T) {
-	task := mustNewTask(t, "id-1", "Old title", nil)
+	task := mustNewTask(t, "Old title", nil)
 
 	before := task.UpdatedAt
 
@@ -174,7 +174,7 @@ func TestTask_Update_Title(t *testing.T) {
 }
 
 func TestTask_Update_EmptyTitleIsRejected(t *testing.T) {
-	task := mustNewTask(t, "id-1", "Original", nil)
+	task := mustNewTask(t, "Original", nil)
 
 	empty := ""
 
@@ -188,7 +188,7 @@ func TestTask_Update_EmptyTitleIsRejected(t *testing.T) {
 }
 
 func TestTask_Update_Status(t *testing.T) {
-	task := mustNewTask(t, "id-1", "Do laundry", nil)
+	task := mustNewTask(t, "Do laundry", nil)
 
 	done := TaskStatusDone
 
@@ -202,7 +202,7 @@ func TestTask_Update_Status(t *testing.T) {
 }
 
 func TestTask_Update_InvalidStatusIsRejected(t *testing.T) {
-	task := mustNewTask(t, "id-1", "Do laundry", nil)
+	task := mustNewTask(t, "Do laundry", nil)
 
 	bad := TaskStatus("invalid")
 
@@ -212,7 +212,7 @@ func TestTask_Update_InvalidStatusIsRejected(t *testing.T) {
 }
 
 func TestTask_Update_RecurrenceDays(t *testing.T) {
-	task := mustNewTask(t, "id-1", "Exercise", nil)
+	task := mustNewTask(t, "Exercise", nil)
 
 	days := []string{"mon", "fri"}
 
@@ -230,7 +230,7 @@ func TestTask_Update_RecurrenceDays(t *testing.T) {
 }
 
 func TestTask_Update_ClonesRecurrenceDays(t *testing.T) {
-	task := mustNewTask(t, "id-1", "Exercise", nil)
+	task := mustNewTask(t, "Exercise", nil)
 
 	days := []string{"mon", "wed"}
 
@@ -246,7 +246,7 @@ func TestTask_Update_ClonesRecurrenceDays(t *testing.T) {
 }
 
 func TestTask_Update_EmptyRecurrenceDaysRejected(t *testing.T) {
-	task := mustNewTask(t, "id-1", "Exercise", []string{"mon"})
+	task := mustNewTask(t, "Exercise", []string{"mon"})
 
 	empty := []string{}
 
@@ -261,7 +261,7 @@ func TestTask_Update_EmptyRecurrenceDaysRejected(t *testing.T) {
 }
 
 func TestTask_Update_InvalidRecurrenceDayIsRejected(t *testing.T) {
-	task := mustNewTask(t, "id-1", "Exercise", nil)
+	task := mustNewTask(t, "Exercise", nil)
 
 	bad := []string{"mon", "xyz"}
 
@@ -271,7 +271,7 @@ func TestTask_Update_InvalidRecurrenceDayIsRejected(t *testing.T) {
 }
 
 func TestTask_Update_DuplicateRecurrenceDayIsRejected(t *testing.T) {
-	task := mustNewTask(t, "id-1", "Exercise", nil)
+	task := mustNewTask(t, "Exercise", nil)
 
 	bad := []string{"mon", "mon"}
 
@@ -281,7 +281,7 @@ func TestTask_Update_DuplicateRecurrenceDayIsRejected(t *testing.T) {
 }
 
 func TestTask_Update_ListIDAssignAndUnassign(t *testing.T) {
-	task := mustNewTask(t, "id-1", "Do laundry", nil)
+	task := mustNewTask(t, "Do laundry", nil)
 
 	// Assign
 	listIDStr := "list-uuid"
@@ -308,7 +308,7 @@ func TestTask_Update_ListIDAssignAndUnassign(t *testing.T) {
 }
 
 func TestTask_Update_ListIDAbsentDoesNotChange(t *testing.T) {
-	task := mustNewTask(t, "id-1", "Do laundry", nil)
+	task := mustNewTask(t, "Do laundry", nil)
 
 	listIDStr := "list-uuid"
 	task.ListID = &listIDStr
@@ -325,7 +325,7 @@ func TestTask_Update_ListIDAbsentDoesNotChange(t *testing.T) {
 }
 
 func TestTask_Update_AlarmMinutes(t *testing.T) {
-	task := mustNewTask(t, "id-1", "Stand up", nil)
+	task := mustNewTask(t, "Stand up", nil)
 
 	alarm := 5
 	alarmPtr := &alarm
@@ -340,7 +340,7 @@ func TestTask_Update_AlarmMinutes(t *testing.T) {
 }
 
 func TestTask_Update_NegativeAlarmMinutesRejected(t *testing.T) {
-	task := mustNewTask(t, "id-1", "Stand up", nil)
+	task := mustNewTask(t, "Stand up", nil)
 
 	bad := -5
 	badPtr := &bad

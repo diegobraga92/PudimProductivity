@@ -16,7 +16,7 @@ import (
 )
 
 // startHub wires an InMemoryBus + Hub and exposes ServeHTTP via httptest.
-func startHub(t *testing.T, cfg Config) (*eventbus.InMemoryBus, *Hub, *httptest.Server) {
+func startHub(t *testing.T, cfg Config) (*eventbus.InMemoryBus, *httptest.Server) {
 	t.Helper()
 	bus := eventbus.NewInMemoryBus()
 	hub := NewHub(bus, cfg)
@@ -30,7 +30,7 @@ func startHub(t *testing.T, cfg Config) (*eventbus.InMemoryBus, *Hub, *httptest.
 
 	srv := httptest.NewServer(http.HandlerFunc(hub.ServeHTTP))
 	t.Cleanup(srv.Close)
-	return bus, hub, srv
+	return bus, srv
 }
 
 func wsURL(server *httptest.Server, lastSeq int64) string {
@@ -43,7 +43,7 @@ func wsURL(server *httptest.Server, lastSeq int64) string {
 }
 
 func TestHub_FanoutToConnectedClient(t *testing.T) {
-	bus, _, srv := startHub(t, Config{ReplayBufferSize: 100})
+	bus, srv := startHub(t, Config{ReplayBufferSize: 100})
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -93,7 +93,7 @@ func TestHub_FanoutToConnectedClient(t *testing.T) {
 }
 
 func TestHub_ReplayOnReconnect(t *testing.T) {
-	bus, _, srv := startHub(t, Config{ReplayBufferSize: 100})
+	bus, srv := startHub(t, Config{ReplayBufferSize: 100})
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -152,7 +152,7 @@ func TestHub_ReplayOnReconnect(t *testing.T) {
 }
 
 func TestHub_StaleSignalWhenTooFarBehind(t *testing.T) {
-	bus, _, srv := startHub(t, Config{ReplayBufferSize: 3})
+	bus, srv := startHub(t, Config{ReplayBufferSize: 3})
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

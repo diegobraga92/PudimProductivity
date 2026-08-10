@@ -1,0 +1,36 @@
+# golangci-lint configuration — v2 format (golangci-lint-action@v9 pins v2.12.2).
+# Lint pipeline: https://github.com/golangci/golangci-lint/releases
+#
+# `default: standard` is the golangci-lint v2 standard set (errcheck, gosimple,
+# govet, ineffassign, staticcheck, unused). Extra linters + formatters below
+# match what the project has always been clean under, so CI behavior is
+# reproducible.
+
+version: "2"
+
+linters:
+  default: standard
+  enable:
+    - misspell
+    - revive
+    - unconvert
+    - unparam
+  settings:
+    revive:
+      rules:
+        # Public API types/functions are documented informally; do not force
+        # golint-style "exported X should have comment" noise.
+        - name: exported
+          disabled: true
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/diegobraga92/pudimproductivity
+
+run:
+  timeout: 3m

@@ -23,9 +23,9 @@ type EmailConfig struct {
 // EmailSender delivers emails over SMTP. Empty Host means the sender is
 // disabled and returns nil (no-op) — used for local runs without Mailpit.
 type EmailSender struct {
-	host   string
-	port   string
-	from   string
+	host    string
+	port    string
+	from    string
 	enabled bool
 }
 

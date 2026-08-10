@@ -4,8 +4,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/diegobraga92/pudimproductivity/backend/internal/shared"
 	"github.com/rs/zerolog/log"
+
+	"github.com/diegobraga92/pudimproductivity/backend/internal/shared"
 )
 
 // TODO: Add wiring

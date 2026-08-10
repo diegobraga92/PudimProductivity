@@ -7,8 +7,9 @@ import (
 	"time"
 
 	"github.com/coder/websocket"
-	"github.com/diegobraga92/pudimproductivity/backend/internal/eventbus"
 	"github.com/rs/zerolog/log"
+
+	"github.com/diegobraga92/pudimproductivity/backend/internal/eventbus"
 )
 
 // staleEventType tells a reconnecting client that it fell too far behind the

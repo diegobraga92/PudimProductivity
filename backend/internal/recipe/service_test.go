@@ -79,7 +79,7 @@ func TestService_CreatePublishesEventAndAudits(t *testing.T) {
 
 	in := CreateInput{
 		Title: "Pasta", Difficulty: DifficultyEasy, Servings: 2,
-		Tags: []string{"Italian"},
+		Tags:        []string{"Italian"},
 		Ingredients: []Ingredient{{Name: "Pasta"}},
 		Steps:       []Step{{Instruction: "Boil"}},
 	}

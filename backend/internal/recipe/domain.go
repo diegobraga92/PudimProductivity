@@ -41,28 +41,28 @@ type Ingredient struct {
 
 // Step is one numbered instruction.
 type Step struct {
-	ID         string
-	StepNumber int
+	ID          string
+	StepNumber  int
 	Instruction string
 }
 
 // Recipe is the aggregate root. Children (tags, ingredients, steps) are always
 // loaded together for a single recipe and replaced wholesale on update.
 type Recipe struct {
-	ID           string
-	Title        string
-	Description  string
-	Difficulty   Difficulty
-	PrepMinutes  int
-	CookMinutes  int
-	Servings     int
-	ImageURL     *string
-	SourceURL    *string
-	Tags         []string
-	Ingredients  []Ingredient
-	Steps        []Step
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID          string
+	Title       string
+	Description string
+	Difficulty  Difficulty
+	PrepMinutes int
+	CookMinutes int
+	Servings    int
+	ImageURL    *string
+	SourceURL   *string
+	Tags        []string
+	Ingredients []Ingredient
+	Steps       []Step
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }
 
 // NewRecipe validates and builds a recipe with the given children.

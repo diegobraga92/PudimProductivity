@@ -72,7 +72,7 @@ func New(ctx context.Context, cfg Config) (*Bus, error) {
 		done:     make(chan struct{}),
 		handlers: make(map[uint64]func(context.Context, eventbus.Event) error),
 	}
-	if err := b.connect(ctx); err != nil {
+	if err := b.connect(); err != nil {
 		return nil, err
 	}
 	b.startRetryPump(ctx)
@@ -80,7 +80,7 @@ func New(ctx context.Context, cfg Config) (*Bus, error) {
 }
 
 // connect establishes the connection and channel and declares the topology.
-func (b *Bus) connect(ctx context.Context) error {
+func (b *Bus) connect() error {
 	conn, err := amqp.Dial(b.cfg.URL)
 	if err != nil {
 		return err
@@ -120,7 +120,6 @@ func (b *Bus) connect(ctx context.Context) error {
 
 	return nil
 }
-
 
 // declareTopology creates the fanout exchange and the notifications queue
 // (which dead-letters failed messages). Retries are handled by the adapter's
@@ -200,7 +199,7 @@ func (b *Bus) Subscribe(ctx context.Context, handler eventbus.Handler) (func(), 
 	b.handlers[subID] = handler
 	b.mu.Unlock()
 
-	deliveries, err := b.consume(ctx, QueueNotifications)
+	deliveries, err := b.consume(QueueNotifications)
 	if err != nil {
 		return func() {}, err
 	}
@@ -215,7 +214,7 @@ func (b *Bus) Subscribe(ctx context.Context, handler eventbus.Handler) (func(), 
 }
 
 // consume opens a consumer on the queue, returning the delivery channel.
-func (b *Bus) consume(ctx context.Context, queue string) (<-chan amqp.Delivery, error) {
+func (b *Bus) consume(queue string) (<-chan amqp.Delivery, error) {
 	b.mu.Lock()
 	conn := b.conn
 	b.mu.Unlock()
@@ -231,7 +230,6 @@ func (b *Bus) consume(ctx context.Context, queue string) (<-chan amqp.Delivery, 
 	}
 	return ch.Consume(queue, "", false, false, false, false, nil)
 }
-
 
 // dispatchLoop reads deliveries and hands them to the handler, acking on
 // success and rejecting (→ dead-letter queue) on failure.
@@ -337,7 +335,7 @@ func retryCount(headers amqp.Table) int {
 // it avoids queue-level TTL loops that RabbitMQ's dead-letter cycle protection
 // can silently drop.
 func (b *Bus) startRetryPump(ctx context.Context) {
-	deliveries, err := b.consume(ctx, QueueDLQ)
+	deliveries, err := b.consume(QueueDLQ)
 	if err != nil {
 		log.Warn().Err(err).Msg("rabbitmq: failed to start DLQ retry pump")
 		return

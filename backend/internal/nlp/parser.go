@@ -56,17 +56,17 @@ func weekDayKey(d time.Weekday) string {
 }
 
 var (
-	reEvery        = regexp.MustCompile(`(?i)\b(?:every|repeat)\s+([a-z,\s]+)`)
-	reDurationH    = regexp.MustCompile(`(?i)\b(?:for\s+)?(\d+)\s*(?:hours?|hrs?|h)\b(?:\s*(?:and\s+)?(\d+)\s*(?:minutes?|mins?|m)\b)?`)
-	reDurationMin  = regexp.MustCompile(`(?i)\b(?:for\s+)?(\d+)\s*(?:minutes?|mins?|m)\b`)
-	reTimeColon    = regexp.MustCompile(`(?i)\b(?:at\s+)?(\d{1,2}):(\d{2})\s*(am|pm)?\b`)
-	reTimeClock    = regexp.MustCompile(`(?i)\b(?:at\s+)?(\d{1,2})\s*(am|pm)\b`)
-	reToday        = regexp.MustCompile(`(?i)\btoday\b`)
-	reTomorrow     = regexp.MustCompile(`(?i)\btomorrow\b`)
-	reInDays       = regexp.MustCompile(`(?i)\bin\s+(\d+)\s+days?\b`)
-	reNextWeekday  = regexp.MustCompile(`(?i)\b(?:next\s+|on\s+)?(mon|monday|tue|tues|tuesday|wed|wednesday|thu|thur|thurs|thursday|fri|friday|sat|saturday|sun|sunday)\b`)
-	reMonthDay     = regexp.MustCompile(`(?i)\b(?:on\s+)?(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{1,2})(?:st|nd|rd|th)?\b`)
-	reISODate      = regexp.MustCompile(`\b(\d{4})-(\d{2})-(\d{2})\b`)
+	reEvery       = regexp.MustCompile(`(?i)\b(?:every|repeat)\s+([a-z,\s]+)`)
+	reDurationH   = regexp.MustCompile(`(?i)\b(?:for\s+)?(\d+)\s*(?:hours?|hrs?|h)\b(?:\s*(?:and\s+)?(\d+)\s*(?:minutes?|mins?|m)\b)?`)
+	reDurationMin = regexp.MustCompile(`(?i)\b(?:for\s+)?(\d+)\s*(?:minutes?|mins?|m)\b`)
+	reTimeColon   = regexp.MustCompile(`(?i)\b(?:at\s+)?(\d{1,2}):(\d{2})\s*(am|pm)?\b`)
+	reTimeClock   = regexp.MustCompile(`(?i)\b(?:at\s+)?(\d{1,2})\s*(am|pm)\b`)
+	reToday       = regexp.MustCompile(`(?i)\btoday\b`)
+	reTomorrow    = regexp.MustCompile(`(?i)\btomorrow\b`)
+	reInDays      = regexp.MustCompile(`(?i)\bin\s+(\d+)\s+days?\b`)
+	reNextWeekday = regexp.MustCompile(`(?i)\b(?:next\s+|on\s+)?(mon|monday|tue|tues|tuesday|wed|wednesday|thu|thur|thurs|thursday|fri|friday|sat|saturday|sun|sunday)\b`)
+	reMonthDay    = regexp.MustCompile(`(?i)\b(?:on\s+)?(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{1,2})(?:st|nd|rd|th)?\b`)
+	reISODate     = regexp.MustCompile(`\b(\d{4})-(\d{2})-(\d{2})\b`)
 )
 
 // Parse extracts structured fields from a natural-language task input.
@@ -281,4 +281,3 @@ func addMinutes(hhmm string, minutes int) string {
 }
 
 func ptr(s string) *string { return &s }
-

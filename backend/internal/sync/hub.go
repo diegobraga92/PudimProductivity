@@ -4,8 +4,9 @@ import (
 	"context"
 	"sync"
 
-	"github.com/diegobraga92/pudimproductivity/backend/internal/eventbus"
 	"github.com/rs/zerolog/log"
+
+	"github.com/diegobraga92/pudimproductivity/backend/internal/eventbus"
 )
 
 // Config tunes the sync hub.

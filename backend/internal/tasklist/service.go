@@ -5,9 +5,10 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/diegobraga92/pudimproductivity/backend/internal/eventbus"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/shared"
-	"github.com/rs/zerolog/log"
 )
 
 type TaskListService struct {

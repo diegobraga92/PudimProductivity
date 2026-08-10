@@ -5,7 +5,7 @@ import (
 )
 
 func mustIngredient(name string) Ingredient { return Ingredient{Name: name} }
-func mustStep(text string) Step              { return Step{Instruction: text} }
+func mustStep(text string) Step             { return Step{Instruction: text} }
 
 func TestNewRecipe_Valid(t *testing.T) {
 	r, err := NewRecipe(
@@ -32,15 +32,15 @@ func TestNewRecipe_Valid(t *testing.T) {
 
 func TestNewRecipe_Validation(t *testing.T) {
 	cases := []struct {
-		name    string
-		id      string
-		title   string
-		diff    Difficulty
-		prep    int
-		cook    int
-		serv    int
-		ing     []Ingredient
-		step    []Step
+		name  string
+		id    string
+		title string
+		diff  Difficulty
+		prep  int
+		cook  int
+		serv  int
+		ing   []Ingredient
+		step  []Step
 	}{
 		{"empty id", "", "X", DifficultyEasy, 0, 0, 1, nil, nil},
 		{"empty title", "id", "", DifficultyEasy, 0, 0, 1, nil, nil},
