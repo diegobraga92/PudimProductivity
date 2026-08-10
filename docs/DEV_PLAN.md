@@ -70,7 +70,7 @@ These are centralised here to emphasise their importance. Each is introduced at 
 - [x] Web (React + TypeScript + Vite): scaffold, fetch `/health`, display result
 - [x] Mobile (Kotlin + Jetpack Compose): empty project, single screen calling `/health`
 - [x] API contracts: write `api/openapi/health.yaml` (practice contract-first flow)
-- [x] Infrastructure: Terraform for EKS cluster, RDS Postgres — skeleton exists in `infra/terraform/main.tf` but entirely commented-out
+- [x] Infrastructure: Terraform for EKS cluster, RDS Postgres — originally a commented-out skeleton (see Phase 10: replaced by working single-host IaC in `infra/terraform/`)
 - [x] CI/CD: GitHub Actions workflows per platform (lint, test, build) with quality gates
 - [x] Docker Compose: backend + Postgres + RabbitMQ (profile-gated); local dev with `npm run dev`
 - [x] Observability seed: structured logging format, request logging middleware with trace IDs
@@ -96,7 +96,7 @@ These are centralised here to emphasise their importance. Each is introduced at 
 - [x] Testing: unit + integration (Testcontainers for DB); `domain_test.go` exists
 - [x] RBAC seed: `RequireRole()` enforced on task/task-list mutations and feature-flag toggles (see Security section); task handlers do not yet filter by user ID
 - [x] Audit log seed: Full audit module, migration 008, wired into `task.NewTaskService(repo, auditLogger)`
-- [x] Deploy full stack (backend, web static site on S3/CloudFront, mobile APK internal test) — no cloud deployment; Terraform is skeleton
+- [x] Deploy full stack (backend, web static site on S3/CloudFront, mobile APK internal test) — no cloud deployment; Terraform was a skeleton at this phase (real IaC delivered in Phase 10)
 - [x] Document: ADR for modular monolith choice (`docs/adr/002-modular-monolith.md`)
 
 ---
@@ -152,8 +152,9 @@ These are centralised here to emphasise their importance. Each is introduced at 
 ## Phase 5 – Meal Planning & Book Tracking (2–3 weeks)
 
 > **Status: IMPLEMENTED (2026-08-09).** Both modules are delivered end-to-end
-> (backend + web UI + mobile UI + contracts + tests + ADR 007). One optional
-> item remains: the CameraX/ML Kit barcode scanner on mobile.
+> (backend + web UI + mobile UI + contracts + tests + ADR 007). The previously
+> deferred barcode scanner was delivered in Phase 9b: camera intent →
+> gozxing ISBN decode → auto-add book.
 
 **Goal:** Introduce external API integrations and file uploads; mobile‑first features.
 
@@ -161,7 +162,7 @@ These are centralised here to emphasise their importance. Each is introduced at 
 - [x] API contracts: `mealplan-v1.yaml`, `booktrack-v1.yaml` (+ `recipes-v1.yaml` in 5a) — all valid, codegen wired
 - [x] Events: `book.added`, `mealplan.created`, `mealplan.published` published to bus + WS contract (`api/ws/events-v1.json`) + contract test extended
 - [x] Web: meal planner pages (`MealPlanList.tsx`, `MealPlanDetail.tsx` — weekly grid + shopping list + publish), book collection (`BookList.tsx` — ISBN add / manual / status filter), wired into App.tsx nav
-- [x] Mobile: meal planning UI (`MealPlanScreen.kt` — list/create/details/generate shopping list) and books UI (`BookListScreen.kt` — ISBN add + list); **barcode scanner (CameraX + ML Kit) → ISBN** remains optional/deferred
+- [x] Mobile: meal planning UI (`MealPlanScreen.kt` — list/create/details/generate shopping list) and books UI (`BookListScreen.kt` — ISBN add + list + **📷 barcode scan** → auto-add by ISBN, delivered in Phase 9b)
 - [x] S3 presigned URL flow documented + IAM policy reviewed (`docs/security/s3-media-iam.md`); ADR 007 documents the external-API pattern
 
 **Delivered (2026-08-09):** `internal/booktrack/` + `googlebooks` adapter,
@@ -303,7 +304,7 @@ integration + adapter tests, events + audit, ADR 007. Verified live end-to-end
       top bar, `InsightsApi.kt` Retrofit client.
 - [x] Spec: `api/openapi/insights-v1.yaml`, web types regenerated.
 
-### 9b & 9c (remaining)
+### 9b & 9c (done)
 
 - [x] Image processing worker: barcode → ISBN decoding (`internal/media`,
       pure-Go gozxing; `POST /api/v1/media/scan-isbn`, no external service);
@@ -373,7 +374,7 @@ deployment (`docs/slo-validation.md`).
 - [x] Runbooks exist for common failures (docs/runbooks/ — rabbitmq-unavailable, db-pool-exhaustion, ws-disconnect-storm)
 - [x] ADRs written and linked (001–012 — index in docs/adr/README.md)
 - [x] GitOps manifests prepared (infra/argocd/ + infra/kustomize/ overlays; activation gated on a cluster existing per ADR 006)
-- [x] Terraform‑managed infrastructure (commented-out skeleton — IaC story carried by Kustomize/ArgoCD manifests + docker-compose as code)
+- [x] Terraform IaC delivered — `infra/terraform/` provisions an EC2 docker-compose host, RDS Postgres and an S3 media bucket; `terraform validate` + `fmt` clean (2026-08-10)
 - [x] Secrets management documented (docs/security/secrets-management.md — includes Android keystore workflow)
 - [x] Cost estimate and scaling projection documented (docs/capacity-planning.md)
 - [x] Security validation walkthrough complete (docs/security/validation-report.md)
