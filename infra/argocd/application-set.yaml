@@ -19,11 +19,9 @@ spec:
           - name: dev
             path: overlays/dev
             cluster: in-cluster
-            autoSync: "false"
           - name: prod
             path: overlays/prod
             cluster: in-cluster
-            autoSync: "true"
   template:
     metadata:
       name: pudimproductivity-{{ .name }}
@@ -40,10 +38,10 @@ spec:
         namespace: pudimproductivity
       syncPolicy:
         automated:
-          # Prod auto-syncs on commit (GitOps); dev requires a manual "Sync" in
-          # the ArgoCD UI to avoid churn while iterating.
+          # Self-heal both environments: ArgoCD reverts any drift back to the
+          # committed manifests (GitOps).
           prune: true
-          selfHeal: {{ .autoSync }}
+          selfHeal: true
           allowEmpty: true
         syncOptions:
           - CreateNamespace=true
