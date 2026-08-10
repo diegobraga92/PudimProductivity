@@ -35,6 +35,17 @@ data class UpdateTaskRequest(
     val list_id: String? = null
 )
 
+data class ParseTaskRequest(val input: String)
+
+data class ParseTaskResponse(
+    val title: String? = null,
+    val due_date: String? = null,
+    val start_time: String? = null,
+    val end_time: String? = null,
+    val duration_minutes: Int = 0,
+    val recurrence_days: List<String>? = null
+)
+
 /**
  * Task list data class.
  */
@@ -61,6 +72,9 @@ data class UpdateTaskListRequest(
 interface TaskService {
     @GET("tasks")
     suspend fun listTasks(@Query("type") type: String? = null): List<Task>
+
+    @POST("tasks/parse")
+    suspend fun parseTask(@Body request: ParseTaskRequest): ParseTaskResponse
 
     @POST("tasks")
     suspend fun createTask(@Body request: CreateTaskRequest): Task

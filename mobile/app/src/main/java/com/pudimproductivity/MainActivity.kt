@@ -14,6 +14,7 @@ import com.pudimproductivity.api.SyncClient
 import com.pudimproductivity.fcm.ErrorReporter
 import com.pudimproductivity.focus.FocusTimerManager
 import com.pudimproductivity.ui.screens.BookListScreen
+import com.pudimproductivity.ui.screens.DailyPlanScreen
 import com.pudimproductivity.ui.screens.FocusTimerScreen
 import com.pudimproductivity.ui.screens.HabitScreen
 import com.pudimproductivity.ui.screens.MealPlanScreen
@@ -27,7 +28,7 @@ import com.pudimproductivity.ui.theme.PudimProductivityTheme
 import kotlinx.coroutines.launch
 
 enum class Screen {
-    Health, TaskList, TaskCreate, TaskDetail, TaskListDetail, FocusTimer, Habits, Recipes, RecipeCreate, Books, MealPlans
+    Health, TaskList, TaskCreate, TaskDetail, TaskListDetail, FocusTimer, Habits, Recipes, RecipeCreate, Books, MealPlans, DailyPlan
 }
 
 class MainActivity : ComponentActivity() {
@@ -83,7 +84,8 @@ fun AppNavigation() {
                 },
                 onRecipes = { currentScreen = Screen.Recipes },
                 onBooks = { currentScreen = Screen.Books },
-                onMealPlans = { currentScreen = Screen.MealPlans }
+                onMealPlans = { currentScreen = Screen.MealPlans },
+                onDailyPlan = { currentScreen = Screen.DailyPlan }
             )
         }
         Screen.FocusTimer -> {
@@ -139,6 +141,9 @@ fun AppNavigation() {
         }
         Screen.MealPlans -> {
             MealPlanScreen(onBack = { currentScreen = Screen.TaskList })
+        }
+        Screen.DailyPlan -> {
+            DailyPlanScreen()
         }
     }
 }

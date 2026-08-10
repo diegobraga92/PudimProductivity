@@ -1,0 +1,102 @@
+# Check latest: https://github.com/OAI/OpenAPI-Specification/releases
+openapi: "3.2.0"
+info:
+  title: PudimProductivity Scheduler API
+  description: |
+    Phase 7 auto-scheduler: derives a user profile from task/completion
+    history and suggests a daily plan that fits pending work into free time
+    blocks, respecting existing planner entries and recurring habits.
+  version: "0.1.0"
+  contact:
+    name: PudimProductivity Team
+    url: https://github.com/diegobraga92/PudimProductivity
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+
+paths:
+  /api/v1/schedule:
+    get:
+      operationId: getDailySchedule
+      summary: Get the suggested plan for a date
+      description: |
+        Returns the auto-scheduled plan for the given date (defaults to today):
+        suggested time blocks for habits (recurring commitments first) and
+        pending todos, plus derived productivity metrics.
+      security: []
+      tags:
+        - Scheduler
+      parameters:
+        - name: date
+          in: query
+          required: false
+          description: Date to plan (YYYY-MM-DD). Defaults to today.
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: The suggested daily plan.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Suggestion"
+        "400":
+          description: Invalid date format.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  schemas:
+    SlotKind:
+      type: string
+      enum: [habit, todo]
+
+    ScheduleSlot:
+      type: object
+      required: [task_id, title, start_time, end_time, kind]
+      properties:
+        task_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        start_time:
+          type: string
+          description: HH:MM 24-hour.
+        end_time:
+          type: string
+          description: HH:MM 24-hour.
+        kind:
+          $ref: "#/components/schemas/SlotKind"
+
+    Suggestion:
+      type: object
+      required: [date, slots, free_hours, avg_per_day, pending_count]
+      properties:
+        date:
+          type: string
+          format: date
+        slots:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScheduleSlot"
+        free_hours:
+          type: integer
+          description: Unused work hours remaining after suggestions.
+        avg_per_day:
+          type: number
+          description: Average completions/day over the last 14 days (profile).
+        pending_count:
+          type: integer
+          description: Number of pending one-off todos scheduled for this date.
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string

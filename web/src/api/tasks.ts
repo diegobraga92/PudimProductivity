@@ -183,6 +183,30 @@ export async function getAllTaskCompletions(
   return response.json() as Promise<TaskCompletion[]>;
 }
 
+/** Parse a natural-language task input into structured fields (Phase 7). */
+export async function parseTask(input: string): Promise<ParseTaskResult> {
+  const response = await fetch(`${config.apiBaseUrl}/tasks/parse`, {
+    method: "POST",
+    headers: apiHeaders(),
+    body: JSON.stringify({ input }),
+  });
+
+  if (!response.ok) {
+    await handleApiError(response, "parse task");
+  }
+
+  return response.json() as Promise<ParseTaskResult>;
+}
+
+export interface ParseTaskResult {
+  title?: string;
+  due_date?: string | null;
+  start_time?: string | null;
+  end_time?: string | null;
+  duration_minutes?: number;
+  recurrence_days?: RecurrenceDay[];
+}
+
 /**
  * Gets completions for a habit task within a date range.
  */

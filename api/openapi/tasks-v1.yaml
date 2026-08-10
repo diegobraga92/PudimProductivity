@@ -21,6 +21,38 @@ servers:
     description: Local development server
 
 paths:
+  /api/v1/tasks/parse:
+    post:
+      operationId: parseTask
+      summary: Parse a natural-language task input
+      description: |
+        Accepts free text such as "Buy milk tomorrow at 9am" and returns the
+        structured fields a client can pre-fill into its creation form.
+        Rule-based (Phase 7) — unsupported patterns return partial results.
+      security: []
+      tags:
+        - Tasks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ParseTaskRequest"
+      responses:
+        "200":
+          description: Successfully parsed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ParseTaskResponse"
+        "422":
+          description: Nothing recognizable in the input.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+
   /api/v1/tasks/scheduled:
     get:
       operationId: listScheduledTasks
@@ -787,6 +819,36 @@ components:
           type: string
           description: The new description for the task list.
           example: "Weekly groceries"
+
+    ParseTaskRequest:
+      type: object
+      required: [input]
+      properties:
+        input:
+          type: string
+          example: "Buy milk tomorrow at 9am for 30 minutes"
+
+    ParseTaskResponse:
+      type: object
+      properties:
+        title:
+          type: string
+          description: Remaining text after date/time/duration/recurrence were stripped.
+        due_date:
+          type: [string, "null"]
+          format: date
+        start_time:
+          type: [string, "null"]
+          description: HH:MM 24-hour.
+        end_time:
+          type: [string, "null"]
+          description: HH:MM 24-hour, computed from start_time + duration.
+        duration_minutes:
+          type: integer
+        recurrence_days:
+          type: array
+          items:
+            $ref: "#/components/schemas/RecurrenceDay"
 
     ErrorResponse:
       type: object

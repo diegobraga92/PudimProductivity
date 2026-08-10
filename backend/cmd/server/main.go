@@ -31,6 +31,7 @@ import (
 	"github.com/diegobraga92/pudimproductivity/backend/internal/pomodoro"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/rabbitmq"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/recipe"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/scheduler"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/shared"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/sync"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/task"
@@ -184,6 +185,12 @@ func main() {
 	var taskService *task.TaskService
 	if pool != nil {
 		taskService = task.RegisterTaskRoutes(r, pool, auditService, composite)
+	}
+
+	// Phase 7: auto-scheduler — derives a profile from task data and suggests a
+	// daily plan. Requires the task service.
+	if taskService != nil {
+		scheduler.RegisterSchedulerRoutes(r, taskService)
 	}
 
 	if pool != nil {

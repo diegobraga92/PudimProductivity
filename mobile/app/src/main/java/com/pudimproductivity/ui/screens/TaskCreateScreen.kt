@@ -8,6 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.pudimproductivity.api.ApiClient
 import com.pudimproductivity.api.CreateTaskRequest
+import com.pudimproductivity.api.ParseTaskRequest
 import com.pudimproductivity.api.TaskList
 import com.pudimproductivity.api.taskService
 import kotlinx.coroutines.launch
@@ -56,6 +57,39 @@ fun TaskCreateScreen(
         )
 
         Spacer(modifier = Modifier.height(16.dp))
+
+        // Smart Parse (Phase 7): quick natural-language entry with NLP preview.
+        var parseInput by remember { mutableStateOf("") }
+        var parseHint by remember { mutableStateOf<String?>(null) }
+        TextButton(onClick = {
+            scope.launch {
+                try {
+                    val result = ApiClient.taskService.parseTask(ParseTaskRequest(parseInput.trim()))
+                    result.title?.let { title = it }
+                    result.recurrence_days?.takeIf { it.isNotEmpty() }?.let {
+                        isHabit = true
+                        selectedDays = it.toSet()
+                    }
+                    parseHint = buildString {
+                        result.title?.let { append("Title: $it\n") }
+                        result.due_date?.let { append("Due: $it\n") }
+                        result.start_time?.let { append("At: $it") }
+                    }.trim().ifEmpty { null }
+                } catch (e: Exception) {
+                    parseHint = e.message ?: "Could not parse"
+                }
+            }
+        }, enabled = parseInput.isNotBlank()) { Text("✨ Smart add") }
+        OutlinedTextField(
+            value = parseInput,
+            onValueChange = { parseInput = it },
+            label = { Text("e.g. Buy milk tomorrow at 9am") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+        )
+        parseHint?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary) }
+
+        Spacer(modifier = Modifier.height(12.dp))
 
         OutlinedTextField(
             value = title,

@@ -19,6 +19,8 @@ func RegisterTaskRoutes(r chi.Router, pool *pgxpool.Pool, auditLogger audit.Logg
 	r.Route("/api/v1/tasks", func(r chi.Router) {
 		// Read-only endpoints — available to anonymous and authenticated users.
 		r.Get("/", handler.ListTasks)
+		// NLP parse endpoint (Phase 7) — pure transform, no user data.
+		r.Post("/parse", handler.ParseTask)
 		// Scheduled tasks endpoint for planner view — must be before /{taskId} to
 		// prevent chi from matching the literal "scheduled" as a taskId.
 		r.Get("/scheduled", handler.ListScheduledTasks)

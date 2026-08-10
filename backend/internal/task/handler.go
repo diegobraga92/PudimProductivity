@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
 
+	"github.com/diegobraga92/pudimproductivity/backend/internal/nlp"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/shared"
 )
 
@@ -395,3 +396,53 @@ func (h *Handler) GetTaskCompletions(w http.ResponseWriter, r *http.Request) {
 
 	shared.WriteJSON(w, http.StatusOK, responses)
 }
+
+// --- NLP parse endpoint (Phase 7) ---
+
+type ParseTaskRequest struct {
+	Input string `json:"input"`
+}
+
+type ParseTaskResponse struct {
+	Title           string   `json:"title,omitempty"`
+	DueDate         *string  `json:"due_date,omitempty"`
+	StartTime       *string  `json:"start_time,omitempty"`
+	EndTime         *string  `json:"end_time,omitempty"`
+	DurationMinutes int      `json:"duration_minutes,omitempty"`
+	RecurrenceDays  []string `json:"recurrence_days,omitempty"`
+}
+
+// ParseTask parses a natural-language task input and returns the extracted
+// fields so the client can pre-fill its creation form.
+func (h *Handler) ParseTask(w http.ResponseWriter, r *http.Request) {
+	var req ParseTaskRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		shared.WriteError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if req.Input == "" {
+		shared.WriteError(w, http.StatusBadRequest, "input is required")
+		return
+	}
+
+	parsed, err := nlp.Parse(req.Input, time.Now())
+	if errors.Is(err, nlp.ErrNoParse) {
+		shared.WriteError(w, http.StatusUnprocessableEntity, "could not parse input — try adding a date, time or duration")
+		return
+	}
+	if err != nil {
+		log.Error().Err(err).Msg("parse task input failed")
+		shared.WriteError(w, http.StatusInternalServerError, "failed to parse input")
+		return
+	}
+
+	shared.WriteJSON(w, http.StatusOK, ParseTaskResponse{
+		Title:           parsed.Title,
+		DueDate:         parsed.DueDate,
+		StartTime:       parsed.StartTime,
+		EndTime:         parsed.EndTime,
+		DurationMinutes: parsed.DurationMinutes,
+		RecurrenceDays:  parsed.RecurrenceDays,
+	})
+}
+

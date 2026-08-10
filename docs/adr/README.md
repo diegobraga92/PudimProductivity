@@ -13,6 +13,8 @@
 | [005](005-async-notifications.md) | Asynchronous Notifications via RabbitMQ | Accepted | 2026-08-09 | `CompositeBus` (in-memory + RabbitMQ), at-least-once with idempotent dedupe, DLQ retry pump |
 | [006](006-deployment-strategy.md) | Deployment Strategy — Single-Host Compose, GitOps Forward Path | Accepted | 2026-08-09 | docker-compose on one host for MVP; Kustomize/ArgoCD manifests prepared but not activated |
 | [007](007-external-api-integrations.md) | External API Integration Pattern | Accepted | 2026-08-09 | Shared `httpclient` (retry/rate-limit/circuit-breaker) + thin adapters + consumer-side interfaces; presigned-S3 media with degraded mode |
+| [008](008-nlp-parser.md) | Rule-Based NLP Parser | Accepted | 2026-08-09 | Deterministic regex parser for task input; partial-result semantics; LLM fallback behind the same endpoint |
+| [009](009-scheduler.md) | Auto-Scheduler with Derived Profile | Accepted | 2026-08-09 | Stateless scheduler; profile derived from 14-day history; read-only suggestions fitted into free blocks |
 
 ## Cross-Links
 

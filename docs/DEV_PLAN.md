@@ -206,16 +206,38 @@ integration + adapter tests, events + audit, ADR 007. Verified live end-to-end
 
 ---
 
-## Phase 7 (Optional) – Smart Features: NLP, Calendar Sync, Auto‑Scheduler (3–4 weeks)
+## Phase 7 (Optional) – Smart Features: NLP, Auto‑Scheduler (3–4 weeks)
 
 **Goal:** Intelligent capabilities leveraging existing events.
 
-- [ ] NLP parser (rule‑based) in task module: accept `nlp_input`, return parsed task suggestions
-- [ ] Calendar sync: Google OAuth2 flow, webhook receiver, two‑way sync with conflict resolution strategy
-- [ ] Scheduler module: consume task + calendar events, produce daily plan suggestions
-- [ ] Web: "smart parse" button, calendar feed view, daily plan overview
-- [ ] Mobile: quick add via voice/text with NLP preview, upcoming schedule on dashboard
-- [ ] Document conflict resolution strategy in ADR
+**Progress (implemented 2026-08-09, verified live):**
+
+- [x] **NLP parser** (`backend/internal/nlp/`): rule‑based parser for task input
+      (dates/times/durations/recurrence) with partial‑result semantics; exposed
+      as `POST /api/v1/tasks/parse`; fully unit‑tested (injectable clock).
+      ADR 008 documents the design (LLM fallback behind the same endpoint).
+- [x] **Scheduler module** (`backend/internal/scheduler/`): derives a user
+      profile from 14‑day completion history (work window + avg completions)
+      and returns read‑only daily suggestions (`GET /api/v1/schedule`) that fit
+      habits + pending todos into free blocks, respecting existing planner
+      entries. ADR 009 (derived, not persisted profile).
+- [x] **Web**: Smart Parse panel on the Task Create form (plain‑English input →
+      pre‑filled form) + new **Daily Plan** page (`DailyPlan.tsx`) with a
+      timeline of suggested slots and productivity stats, wired into App.tsx.
+- [x] **Mobile**: Smart Add NLP field on `TaskCreateScreen` (parse → pre‑fill
+      title/habit days) + `DailyPlanScreen` (timeline card list) wired into
+      `MainActivity`.
+- [x] OpenAPI specs: `api/openapi/scheduler-v1.yaml` + `parseTask` path in
+      `tasks-v1.yaml`; web types regenerated.
+
+**Deferred from the original scope:**
+
+- [ ] Calendar sync: Google OAuth2 flow, webhook receiver, two‑way sync with
+      conflict resolution strategy — intentionally deferred; the scheduler's
+      `plannedBlocks` is the integration point (calendar events would become
+      occupied intervals).
+- [ ] `nlp_input` acceptance on `POST /tasks` (client currently calls
+      `/tasks/parse` first, then submits the structured form).
 
 ---
 

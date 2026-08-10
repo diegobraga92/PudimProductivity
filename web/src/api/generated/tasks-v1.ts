@@ -4,6 +4,28 @@
  */
 
 export interface paths {
+    "/api/v1/tasks/parse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Parse a natural-language task input
+         * @description Accepts free text such as "Buy milk tomorrow at 9am" and returns the
+         *     structured fields a client can pre-fill into its creation form.
+         *     Rule-based (Phase 7) — unsupported patterns return partial results.
+         */
+        post: operations["parseTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tasks/scheduled": {
         parameters: {
             query?: never;
@@ -492,6 +514,22 @@ export interface components {
              */
             description?: string;
         };
+        ParseTaskRequest: {
+            /** @example Buy milk tomorrow at 9am for 30 minutes */
+            input: string;
+        };
+        ParseTaskResponse: {
+            /** @description Remaining text after date/time/duration/recurrence were stripped. */
+            title?: string;
+            /** Format: date */
+            due_date?: string | null;
+            /** @description HH:MM 24-hour. */
+            start_time?: string | null;
+            /** @description HH:MM 24-hour, computed from start_time + duration. */
+            end_time?: string | null;
+            duration_minutes?: number;
+            recurrence_days?: components["schemas"]["RecurrenceDay"][];
+        };
         ErrorResponse: {
             /**
              * @description A human-readable error message.
@@ -513,6 +551,39 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    parseTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ParseTaskRequest"];
+            };
+        };
+        responses: {
+            /** @description Successfully parsed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ParseTaskResponse"];
+                };
+            };
+            /** @description Nothing recognizable in the input. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     listScheduledTasks: {
         parameters: {
             query?: never;
