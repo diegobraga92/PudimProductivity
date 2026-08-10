@@ -121,7 +121,7 @@ Using API-first, `api/openapi/` should be the source of truth.
   [Container](docs/architecture/c4-container.md) diagrams (Mermaid).
 - **ADRs:** [Index of all architecture decision records](docs/adr/README.md) —
   migrations, modular monolith, caching, WebSocket consistency, async
-  notifications, deployment strategy.
+  notifications, deployment strategy, external API integrations.
 
 ## For Product & Compliance Stakeholders
 
@@ -131,8 +131,10 @@ non-engineering readers. Engineering detail lives in `docs/`.
 ### What the product is
 
 A personal productivity suite: **tasks & habits**, a **weekly planner**, a
-**focus timer (pomodoro)**, **real-time sync** between devices, and
-**notifications** (email + push). Web, Android, and a Go API backend.
+**focus timer (pomodoro)**, **real-time sync** between devices,
+**notifications** (email + push), a **recipe manager** with image upload,
+**book tracking** (add by ISBN via the Google Books API), and **meal planning**
+with an auto-generated shopping list. Web, Android, and a Go API backend.
 
 ### The data model: one source of truth
 

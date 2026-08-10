@@ -25,6 +25,16 @@ const (
 	EventTaskCompleted EventType = "task.completed"
 	// EventTaskUncompleted is published after a habit task completion is removed.
 	EventTaskUncompleted EventType = "task.uncompleted"
+
+	// Phase 5: book tracking + meal planning.
+	EventBookAdded         EventType = "book.added"
+	EventMealPlanCreated   EventType = "mealplan.created"
+	EventMealPlanPublished EventType = "mealplan.published"
+
+	// Phase 5a: recipes.
+	EventRecipeCreated EventType = "recipe.created"
+	EventRecipeUpdated EventType = "recipe.updated"
+	EventRecipeDeleted EventType = "recipe.deleted"
 )
 
 // Event is the wire envelope pushed to subscribers and, ultimately, over the

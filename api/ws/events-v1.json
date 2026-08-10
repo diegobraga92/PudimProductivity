@@ -16,6 +16,11 @@
             "task.deleted",
             "task.completed",
             "task.uncompleted",
+            "book.added",
+            "mealplan.published",
+            "recipe.created",
+            "recipe.updated",
+            "recipe.deleted",
             "stale"
           ],
           "description": "Event discriminator. 'stale' is a server signal: the client missed too many events and must refetch via REST."
@@ -79,6 +84,32 @@
         "title": { "type": "string" },
         "completed_date": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" }
       }
+    },
+    "recipe": {
+      "type": "object",
+      "required": ["id", "title"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "title": { "type": "string" },
+        "difficulty": { "type": "string", "enum": ["easy", "medium", "hard"] }
+      },
+      "description": "Recipe event payload (Phase 5a). Minimal shape — consumers needing the full recipe fetch it via REST."
+    },
+    "book": {
+      "type": "object",
+      "required": ["id", "isbn", "title"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "isbn": { "type": "string" },
+        "title": { "type": "string" }
+      },
+      "description": "Book event payload (Phase 5)."
+    },
+    "mealPlanRef": {
+      "type": "object",
+      "required": ["id"],
+      "properties": { "id": { "type": "string", "format": "uuid" } },
+      "description": "Meal-plan reference payload (Phase 5)."
     }
   },
   "allOf": [
@@ -113,6 +144,36 @@
           "properties": {
             "type": { "const": "task.uncompleted" },
             "payload": { "$ref": "#/definitions/uncompletion" }
+          }
+        },
+        {
+          "properties": {
+            "type": { "const": "book.added" },
+            "payload": { "$ref": "#/definitions/book" }
+          }
+        },
+        {
+          "properties": {
+            "type": { "const": "mealplan.published" },
+            "payload": { "$ref": "#/definitions/mealPlanRef" }
+          }
+        },
+        {
+          "properties": {
+            "type": { "const": "recipe.created" },
+            "payload": { "$ref": "#/definitions/recipe" }
+          }
+        },
+        {
+          "properties": {
+            "type": { "const": "recipe.updated" },
+            "payload": { "$ref": "#/definitions/recipe" }
+          }
+        },
+        {
+          "properties": {
+            "type": { "const": "recipe.deleted" },
+            "payload": { "$ref": "#/definitions/taskRef" }
           }
         },
         {

@@ -44,7 +44,10 @@ fun TaskListScreen(
     onFocusTimer: () -> Unit,
     onHabits: () -> Unit,
     onTaskClick: (String) -> Unit,
-    onListClick: (String) -> Unit
+    onListClick: (String) -> Unit,
+    onRecipes: () -> Unit,
+    onBooks: () -> Unit,
+    onMealPlans: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
     var tasks by remember { mutableStateOf<List<Task>>(emptyList()) }
@@ -142,6 +145,18 @@ fun TaskListScreen(
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(onClick = onFocusTimer) {
                         Text("⏱ Focus")
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(onClick = onRecipes) {
+                        Text("🍳")
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(onClick = onBooks) {
+                        Text("📚")
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(onClick = onMealPlans) {
+                        Text("🗓")
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(onClick = onCreateTask) {

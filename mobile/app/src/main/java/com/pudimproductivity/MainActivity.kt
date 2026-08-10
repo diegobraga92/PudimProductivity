@@ -13,8 +13,12 @@ import com.pudimproductivity.api.HealthResponse
 import com.pudimproductivity.api.SyncClient
 import com.pudimproductivity.fcm.ErrorReporter
 import com.pudimproductivity.focus.FocusTimerManager
+import com.pudimproductivity.ui.screens.BookListScreen
 import com.pudimproductivity.ui.screens.FocusTimerScreen
 import com.pudimproductivity.ui.screens.HabitScreen
+import com.pudimproductivity.ui.screens.MealPlanScreen
+import com.pudimproductivity.ui.screens.RecipeCreateScreen
+import com.pudimproductivity.ui.screens.RecipeListScreen
 import com.pudimproductivity.ui.screens.TaskCreateScreen
 import com.pudimproductivity.ui.screens.TaskDetailScreen
 import com.pudimproductivity.ui.screens.TaskListDetailScreen
@@ -23,7 +27,7 @@ import com.pudimproductivity.ui.theme.PudimProductivityTheme
 import kotlinx.coroutines.launch
 
 enum class Screen {
-    Health, TaskList, TaskCreate, TaskDetail, TaskListDetail, FocusTimer, Habits
+    Health, TaskList, TaskCreate, TaskDetail, TaskListDetail, FocusTimer, Habits, Recipes, RecipeCreate, Books, MealPlans
 }
 
 class MainActivity : ComponentActivity() {
@@ -76,7 +80,10 @@ fun AppNavigation() {
                 onListClick = { listId ->
                     selectedListId = listId
                     currentScreen = Screen.TaskListDetail
-                }
+                },
+                onRecipes = { currentScreen = Screen.Recipes },
+                onBooks = { currentScreen = Screen.Books },
+                onMealPlans = { currentScreen = Screen.MealPlans }
             )
         }
         Screen.FocusTimer -> {
@@ -117,6 +124,21 @@ fun AppNavigation() {
                     onDeleted = { currentScreen = Screen.TaskList }
                 )
             }
+        }
+        Screen.Recipes -> {
+            RecipeListScreen(
+                onNew = { currentScreen = Screen.RecipeCreate },
+                onBack = { currentScreen = Screen.TaskList }
+            )
+        }
+        Screen.RecipeCreate -> {
+            RecipeCreateScreen(onDone = { currentScreen = Screen.Recipes })
+        }
+        Screen.Books -> {
+            BookListScreen(onBack = { currentScreen = Screen.TaskList })
+        }
+        Screen.MealPlans -> {
+            MealPlanScreen(onBack = { currentScreen = Screen.TaskList })
         }
     }
 }

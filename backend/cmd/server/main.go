@@ -19,13 +19,18 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/diegobraga92/pudimproductivity/backend/internal/audit"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/booktrack"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/booktrack/googlebooks"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/db"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/eventbus"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/featureflag"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/media"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/mealplan"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/notification"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/observability"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/pomodoro"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/rabbitmq"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/recipe"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/shared"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/sync"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/task"
@@ -190,6 +195,44 @@ func main() {
 	}
 
 	pomodoro.RegisterPomodoroRoutes(r, nil, auditService)
+
+	// Phase 5a: Recipes. Media uploads are optional — when S3_MEDIA_BUCKET is
+	// unset the module runs in degraded mode and upload-URL endpoints return 503.
+	var uploads media.Generator
+	if bucket := os.Getenv("S3_MEDIA_BUCKET"); bucket != "" {
+		region := os.Getenv("S3_MEDIA_REGION")
+		if region == "" {
+			region = "us-east-1"
+		}
+		s3Uploader, err := media.NewS3Uploader(context.Background(), bucket, region)
+		if err != nil {
+			log.Warn().Err(err).Msg("media uploads disabled — S3 not configured")
+		} else {
+			uploads = s3Uploader
+		}
+	} else {
+		log.Info().Msg("S3_MEDIA_BUCKET unset — recipe media uploads disabled")
+	}
+	var recipeService *recipe.RecipeService
+	if pool != nil {
+		recipeService = recipe.RegisterRecipeRoutes(r, pool, auditService, composite, uploads)
+	}
+
+	// Phase 5: Book tracking. The Google Books adapter is always wired; with no
+	// GOOGLE_BOOKS_API_KEY it uses the anonymous (rate-limited) endpoint. A nil
+	// lookup would degrade by-ISBN entry to 502 while keeping manual entry.
+	if pool != nil {
+		gb := googlebooks.NewClient(googlebooks.Config{
+			APIKey: os.Getenv("GOOGLE_BOOKS_API_KEY"),
+		})
+		booktrack.RegisterBookRoutes(r, pool, gb, auditService, composite)
+	}
+
+	// Phase 5: Meal planning — depends on the recipes module for shopping-list
+	// generation (recipeService satisfies mealplan.RecipeReader).
+	if pool != nil {
+		mealplan.RegisterMealPlanRoutes(r, pool, recipeService, auditService, composite)
+	}
 
 	// Setup server
 	addr := fmt.Sprintf(":%d", cfg.Server.Port)

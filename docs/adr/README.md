@@ -12,6 +12,7 @@
 | [004](004-websocket-consistency.md) | WebSocket Real-Time Sync & Consistency Model | Accepted | 2026-08-09 | Server-authoritative LWW push, per-process `seq`, replay buffer, stale→refetch |
 | [005](005-async-notifications.md) | Asynchronous Notifications via RabbitMQ | Accepted | 2026-08-09 | `CompositeBus` (in-memory + RabbitMQ), at-least-once with idempotent dedupe, DLQ retry pump |
 | [006](006-deployment-strategy.md) | Deployment Strategy — Single-Host Compose, GitOps Forward Path | Accepted | 2026-08-09 | docker-compose on one host for MVP; Kustomize/ArgoCD manifests prepared but not activated |
+| [007](007-external-api-integrations.md) | External API Integration Pattern | Accepted | 2026-08-09 | Shared `httpclient` (retry/rate-limit/circuit-breaker) + thin adapters + consumer-side interfaces; presigned-S3 media with degraded mode |
 
 ## Cross-Links
 

@@ -87,6 +87,23 @@ func TestWsEventsConformToContract(t *testing.T) {
 		{eventbus.EventTaskUncompleted, map[string]interface{}{
 			"id": "00000000-0000-0000-0000-000000000001", "title": "Contract test", "completed_date": "2026-08-09",
 		}},
+		// Phase 5: book tracking + meal planning.
+		{eventbus.EventBookAdded, map[string]interface{}{
+			"id": "00000000-0000-0000-0000-000000000001", "isbn": "9780553386790", "title": "Permanent Record",
+		}},
+		{eventbus.EventMealPlanPublished, map[string]interface{}{
+			"id": "00000000-0000-0000-0000-000000000001",
+		}},
+		// Phase 5a: recipes.
+		{eventbus.EventRecipeCreated, map[string]interface{}{
+			"id": "00000000-0000-0000-0000-000000000001", "title": "Pancakes", "difficulty": "easy",
+		}},
+		{eventbus.EventRecipeUpdated, map[string]interface{}{
+			"id": "00000000-0000-0000-0000-000000000001", "title": "Pancakes v2", "difficulty": "medium",
+		}},
+		{eventbus.EventRecipeDeleted, map[string]interface{}{
+			"id": "00000000-0000-0000-0000-000000000001",
+		}},
 	}
 
 	for i, p := range payloads {

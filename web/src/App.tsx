@@ -22,8 +22,13 @@ const TaskList = lazy(() => import("./pages/TaskList"));
 const Planner = lazy(() => import("./pages/Planner"));
 const Pomodoro = lazy(() => import("./pages/Pomodoro"));
 const Soundscape = lazy(() => import("./pages/Soundscape"));
+const RecipeList = lazy(() => import("./pages/RecipeList"));
+const RecipeDetail = lazy(() => import("./pages/RecipeDetail"));
+const BookList = lazy(() => import("./pages/BookList"));
+const MealPlanList = lazy(() => import("./pages/MealPlanList"));
+const MealPlanDetail = lazy(() => import("./pages/MealPlanDetail"));
 
-type Page = "dashboard" | "tasks" | "planner" | "pomodoro" | "soundscape" | "health";
+type Page = "dashboard" | "tasks" | "planner" | "pomodoro" | "soundscape" | "recipes" | "booktrack" | "mealplan" | "health";
 
 const pageFallback = (
   <div className="container" style={{ paddingTop: "var(--space-xl)", textAlign: "center", color: "var(--color-text-secondary)" }}>
@@ -43,6 +48,8 @@ function HeaderBadge() {
 
 function AppInner() {
   const [page, setPage] = useState<Page>("dashboard");
+  const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(null);
+  const [mealPlanId, setMealPlanId] = useState<string | null>(null);
 
   // Polls scheduled habit tasks and fires sound + in-app toast alarms
   useAlarmNotifier();
@@ -121,6 +128,9 @@ function AppInner() {
               { id: "planner" as Page, label: "Planner", icon: "📅" },
               { id: "pomodoro" as Page, label: "Timer", icon: "🍅" },
               { id: "soundscape" as Page, label: "Sounds", icon: "🎵" },
+              { id: "recipes" as Page, label: "Recipes", icon: "🍳" },
+              { id: "booktrack" as Page, label: "Books", icon: "📚" },
+              { id: "mealplan" as Page, label: "Meals", icon: "🗓" },
               { id: "health" as Page, label: "Status", icon: "💚" },
             ].map((tab) => (
               <button
@@ -188,6 +198,22 @@ function AppInner() {
             {page === "pomodoro" && <Pomodoro />}
 
             {page === "soundscape" && <Soundscape />}
+
+            {page === "recipes" &&
+              (selectedRecipeId ? (
+                <RecipeDetail recipeId={selectedRecipeId} onBack={() => setSelectedRecipeId(null)} />
+              ) : (
+                <RecipeList onOpen={(r) => setSelectedRecipeId(r.id)} />
+              ))}
+
+            {page === "booktrack" && <BookList />}
+
+            {page === "mealplan" &&
+              (mealPlanId !== null ? (
+                <MealPlanDetail planId={mealPlanId} onBack={() => setMealPlanId(null)} />
+              ) : (
+                <MealPlanList onOpen={(id) => setMealPlanId(id)} />
+              ))}
           </Suspense>
 
           {page === "health" && (

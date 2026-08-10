@@ -1,0 +1,383 @@
+# Check latest: https://github.com/OAI/OpenAPI-Specification/releases
+openapi: "3.2.0"
+info:
+  title: PudimProductivity Recipes API
+  description: |
+    Recipe manager with ingredients, steps, tags, search, and optional image
+    upload via presigned S3 URLs. Recipes are the composable unit for the
+    meal-planning module (meal-plan slots reference a recipe).
+  version: "0.1.0"
+  contact:
+    name: PudimProductivity Team
+    url: https://github.com/diegobraga92/PudimProductivity
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+
+paths:
+  /api/v1/recipes:
+    get:
+      operationId: listRecipes
+      summary: List recipes
+      description: |
+        Returns recipes filtered by search text, tags and difficulty. Results
+        are ordered newest-first and paginated with an opaque keyset cursor.
+      security: []
+      tags:
+        - Recipes
+      parameters:
+        - name: search
+          in: query
+          required: false
+          description: Free-text search over title and description.
+          schema:
+            type: string
+        - name: tags
+          in: query
+          required: false
+          description: Comma-separated tags; recipes must have at least one of them.
+          schema:
+            type: string
+        - name: difficulty
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/Difficulty"
+        - name: cursor
+          in: query
+          required: false
+          description: Opaque keyset cursor returned in a previous page.
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+      responses:
+        "200":
+          description: A list of recipes (list view — no ingredients/steps).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Recipe"
+        "400":
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    post:
+      operationId: createRecipe
+      summary: Create a recipe
+      description: Creates a recipe with optional ingredients, steps and tags.
+      security: []
+      tags:
+        - Recipes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRecipeRequest"
+      responses:
+        "201":
+          description: Recipe created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Recipe"
+        "400":
+          description: Validation error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/recipes/{recipeId}:
+    parameters:
+      - $ref: "#/components/parameters/recipeId"
+    get:
+      operationId: getRecipe
+      summary: Get a recipe
+      description: Returns the full recipe including ingredients, steps and tags.
+      security: []
+      tags:
+        - Recipes
+      responses:
+        "200":
+          description: The full recipe.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Recipe"
+        "404":
+          description: Recipe not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: updateRecipe
+      summary: Update a recipe
+      description: Full replacement — all fields are required and children are replaced wholesale.
+      security: []
+      tags:
+        - Recipes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRecipeRequest"
+      responses:
+        "200":
+          description: The updated recipe.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Recipe"
+        "404":
+          description: Recipe not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteRecipe
+      summary: Delete a recipe
+      description: Deletes the recipe and its children.
+      security: []
+      tags:
+        - Recipes
+      responses:
+        "204":
+          description: Recipe deleted.
+        "404":
+          description: Recipe not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/recipes/{recipeId}/upload-url:
+    parameters:
+      - $ref: "#/components/parameters/recipeId"
+    post:
+      operationId: generateRecipeUploadURL
+      summary: Get a presigned image upload URL
+      description: |
+        Returns a short-lived presigned PUT URL the client uploads the image to
+        directly, plus the object key to store as the recipe's `image_url`.
+        Returns 503 when the storage backend is not configured.
+      security: []
+      tags:
+        - Recipes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadURLRequest"
+      responses:
+        "200":
+          description: Presigned upload URL.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadURL"
+        "404":
+          description: Recipe not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Media uploads not configured.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+
+components:
+  parameters:
+    recipeId:
+      name: recipeId
+      in: path
+      required: true
+      description: The recipe UUID.
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    Difficulty:
+      type: string
+      enum: [easy, medium, hard]
+      description: Recipe difficulty level.
+
+    Ingredient:
+      type: object
+      required: [id, name, sort_order]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        quantity:
+          type: string
+          description: e.g. "2" (free-text so fractions work).
+        unit:
+          type: string
+          description: e.g. "cups", "tbsp".
+        sort_order:
+          type: integer
+
+    Step:
+      type: object
+      required: [id, step_number, instruction]
+      properties:
+        id:
+          type: string
+          format: uuid
+        step_number:
+          type: integer
+        instruction:
+          type: string
+
+    Recipe:
+      type: object
+      required: [id, title, description, difficulty, prep_time_minutes, cook_time_minutes, servings, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        difficulty:
+          $ref: "#/components/schemas/Difficulty"
+        prep_time_minutes:
+          type: integer
+        cook_time_minutes:
+          type: integer
+        servings:
+          type: integer
+        image_url:
+          type: [string, "null"]
+          description: Public image URL or object key of a previously uploaded image.
+        source_url:
+          type: [string, "null"]
+          description: External source URL the recipe was ingested from.
+        tags:
+          type: array
+          items:
+            type: string
+        ingredients:
+          type: array
+          items:
+            $ref: "#/components/schemas/Ingredient"
+        steps:
+          type: array
+          items:
+            $ref: "#/components/schemas/Step"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    IngredientInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        quantity:
+          type: string
+        unit:
+          type: string
+
+    StepInput:
+      type: object
+      required: [instruction]
+      properties:
+        instruction:
+          type: string
+
+    CreateRecipeRequest:
+      type: object
+      required: [title, difficulty, servings]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        difficulty:
+          $ref: "#/components/schemas/Difficulty"
+        prep_time_minutes:
+          type: integer
+          default: 0
+        cook_time_minutes:
+          type: integer
+          default: 0
+        servings:
+          type: integer
+          minimum: 1
+        image_url:
+          type: [string, "null"]
+        source_url:
+          type: [string, "null"]
+        tags:
+          type: array
+          items:
+            type: string
+        ingredients:
+          type: array
+          items:
+            $ref: "#/components/schemas/IngredientInput"
+        steps:
+          type: array
+          items:
+            $ref: "#/components/schemas/StepInput"
+
+    UploadURLRequest:
+      type: object
+      required: [content_type]
+      properties:
+        content_type:
+          type: string
+          example: image/jpeg
+        filename:
+          type: string
+          example: pancakes.jpg
+
+    UploadURL:
+      type: object
+      required: [url, key]
+      properties:
+        url:
+          type: string
+          description: Presigned PUT URL (short-lived).
+        key:
+          type: string
+          description: Object key to store as the recipe's image_url.
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+
