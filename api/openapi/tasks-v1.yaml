@@ -219,6 +219,55 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /api/v1/tasks/{taskId}/merge:
+    patch:
+      operationId: mergeTask
+      summary: Merge a concurrent task update (CRDT LWW)
+      description: |
+        Phase 8 collaboration endpoint. Applies a client-authored update using
+        document-level last-writer-wins semantics: the write with the newest
+        `updated_at` wins; on exact timestamp ties the greater `updated_by`
+        wins. Clients send the timestamp of their edit so concurrent writers
+        converge on a single state (ADR 010).
+        Returns 200 with the merged task when this write won, or 409 with the
+        winning task state when it lost.
+      security: []
+      tags:
+        - Tasks
+      parameters:
+        - $ref: "#/components/parameters/taskId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTaskRequest"
+      responses:
+        "200":
+          description: This write won; the merged task state.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "409":
+          description: This write lost; the winning task state is returned so the client can reconcile.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "400":
+          description: Invalid request body.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Task not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /api/v1/tasks/completions:
     get:
       operationId: getAllTaskCompletions
@@ -530,6 +579,121 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /api/v1/task-lists/{listId}/share:
+    post:
+      operationId: shareTaskList
+      summary: Share a task list with another user
+      description: |
+        Phase 8 collaboration. Grants the target user editor or viewer access
+        to the list. Only the owner (or an admin) may share. Broadcasting a
+        tasklist.shared event to connected members.
+      security: []
+      tags:
+        - Task Lists
+      parameters:
+        - $ref: "#/components/parameters/listId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ShareTaskListRequest"
+      responses:
+        "204":
+          description: Share created.
+        "400":
+          description: Invalid request or role.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Only the owner can share this list.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Task list not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: User is already a member of this list.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/task-lists/{listId}/share/{userId}:
+    delete:
+      operationId: unshareTaskList
+      summary: Revoke a user's access to a task list
+      description: |
+        Phase 8 collaboration. Removes the target user's membership. Only the
+        owner (or an admin) may unshare.
+      security: []
+      tags:
+        - Task Lists
+      parameters:
+        - $ref: "#/components/parameters/listId"
+        - name: userId
+          in: path
+          required: true
+          description: The user ID to revoke.
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Share revoked.
+        "403":
+          description: Only the owner can unshare this list.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Task list or share not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/task-lists/{listId}/members:
+    get:
+      operationId: listTaskListMembers
+      summary: List the shared members of a task list
+      description: |
+        Phase 8 collaboration. Returns the non-owner members (editor/viewer)
+        of a list. Any member can read the member list.
+      security: []
+      tags:
+        - Task Lists
+      parameters:
+        - $ref: "#/components/parameters/listId"
+      responses:
+        "200":
+          description: A list of shared members.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TaskListMember"
+        "403":
+          description: Access denied to the list.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Task list not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   parameters:
     taskId:
@@ -709,6 +873,14 @@ components:
     UpdateTaskRequest:
       type: object
       properties:
+        updated_at:
+          type: string
+          format: date-time
+          description: |
+            Client-side timestamp of the edit (RFC3339). Used by the merge
+            endpoint for last-writer-wins comparison. Optional; when omitted
+            the server stamps the write with its own clock.
+          example: "2026-08-10T12:30:00Z"
         title:
           type: string
           description: The new task title.
@@ -787,6 +959,10 @@ components:
           type: string
           description: An optional description of the task list.
           example: "Items I need to buy"
+        owner_id:
+          type: string
+          description: The user who owns the list (Phase 8). Members are granted editor/viewer via shares.
+          example: "dev-user"
         created_at:
           type: string
           format: date-time
@@ -819,6 +995,44 @@ components:
           type: string
           description: The new description for the task list.
           example: "Weekly groceries"
+
+    ShareTaskListRequest:
+      type: object
+      required:
+        - shared_with
+        - role
+      properties:
+        shared_with:
+          type: string
+          description: The user ID to grant access to.
+          example: "alice"
+        role:
+          type: string
+          enum: [editor, viewer]
+          description: Permission level. Editors can mutate tasks in the list; viewers are read-only.
+          example: editor
+
+    TaskListMember:
+      type: object
+      required:
+        - list_id
+        - shared_with
+        - role
+      properties:
+        list_id:
+          type: string
+          format: uuid
+        shared_with:
+          type: string
+          description: The member user ID.
+        role:
+          type: string
+          enum: [editor, viewer]
+          description: The member's permission level.
+        created_at:
+          type: string
+          format: date-time
+          description: When the share was created.
 
     ParseTaskRequest:
       type: object

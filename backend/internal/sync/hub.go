@@ -31,10 +31,11 @@ type Config struct {
 // published before registration arrive via replay, events published after
 // arrive via the live dispatch.
 type Hub struct {
-	bus     eventbus.Bus
-	cfg     Config
-	replay  *replayBuffer
-	unsub   func()
+	bus      eventbus.Bus
+	cfg      Config
+	replay   *replayBuffer
+	unsub    func()
+	resolver MembershipResolver
 
 	mu      sync.Mutex
 	clients map[*client]struct{}
@@ -57,6 +58,13 @@ func NewHub(bus eventbus.Bus, cfg Config) *Hub {
 	}
 }
 
+// SetMembershipResolver configures task-list membership resolution (Phase 8).
+// Must be called before Start. When no resolver is set the hub broadcasts every
+// event to every client and presence endpoints report no users.
+func (h *Hub) SetMembershipResolver(resolver MembershipResolver) {
+	h.resolver = resolver
+}
+
 // Start subscribes the hub to the bus so it receives and replays events. Call
 // before serving WebSocket connections.
 func (h *Hub) Start(ctx context.Context) error {
@@ -69,7 +77,11 @@ func (h *Hub) Start(ctx context.Context) error {
 }
 
 // handleEvent is the bus subscriber: it records the event for replay and pushes
-// it to every connected client. Invoked synchronously by the bus in seq order.
+// it to connected clients. Invoked synchronously by the bus in seq order.
+//
+// Phase 8: events targeting a task list are dispatched only to connected
+// members of that list. Presence events and legacy (non-list) events are
+// broadcast to every client, preserving pre-Phase-8 behavior.
 func (h *Hub) handleEvent(ctx context.Context, event eventbus.Event) error {
 	h.mu.Lock()
 	h.replay.push(event)
@@ -79,10 +91,93 @@ func (h *Hub) handleEvent(ctx context.Context, event eventbus.Event) error {
 	}
 	h.mu.Unlock()
 
+	// When membership changes (a share is created/revoked) refresh the
+	// affected user's live connections so scoping stays correct mid-session.
+	switch event.Type {
+	case eventbus.EventTaskListShared, eventbus.EventTaskListUnshared:
+		if m, ok := event.Payload.(map[string]any); ok {
+			if uid, ok := m["shared_with"].(string); ok && uid != "" {
+				h.refreshMembership(ctx, uid)
+			}
+		}
+	}
+
+	targets, restricted := targetsFor(event)
 	for _, c := range clients {
+		if restricted && !c.hasAnyList(targets) {
+			continue
+		}
 		c.dispatch(event)
 	}
 	return nil
+}
+
+// refreshMembership re-resolves a user's task-list membership and applies it to
+// all their live connections. Connections whose user is not currently online
+// are ignored (a future connect resolves fresh membership anyway).
+func (h *Hub) refreshMembership(ctx context.Context, userID string) {
+	if h.resolver == nil {
+		return
+	}
+	h.mu.Lock()
+	var target []*client
+	for c := range h.clients {
+		if c.userID == userID {
+			target = append(target, c)
+		}
+	}
+	h.mu.Unlock()
+	if len(target) == 0 {
+		return
+	}
+
+	ids, err := h.resolver.ListIDsForUser(ctx, userID, target[0].role)
+	if err != nil {
+		log.Warn().Err(err).Str("user_id", userID).Msg("failed to refresh membership")
+		return
+	}
+	set := make(map[string]struct{}, len(ids))
+	for _, id := range ids {
+		set[id] = struct{}{}
+	}
+	for _, c := range target {
+		c.setListIDs(set)
+	}
+	log.Debug().Str("user_id", userID).Int("lists", len(set)).Msg("refreshed ws membership")
+}
+
+// OnlineUsersForList returns the distinct user IDs currently connected and able
+// to access the given task list. Used by the presence REST endpoint.
+func (h *Hub) OnlineUsersForList(listID string) []string {
+	h.mu.Lock()
+	clients := make([]*client, 0, len(h.clients))
+	for c := range h.clients {
+		clients = append(clients, c)
+	}
+	h.mu.Unlock()
+
+	seen := make(map[string]struct{})
+	var users []string
+	for _, c := range clients {
+		if c.userID == "" || c.userID == "anonymous" {
+			continue
+		}
+		if c.hasAnyList([]string{listID}) {
+			if _, ok := seen[c.userID]; !ok {
+				seen[c.userID] = struct{}{}
+				users = append(users, c.userID)
+			}
+		}
+	}
+	return users
+}
+
+// publishPresence emits a presence event through the bus so it is replayed to
+// clients that connect later (they can also snapshot via the REST endpoint).
+func (h *Hub) publishPresence(ctx context.Context, typ eventbus.EventType, payload any) {
+	if err := h.bus.Publish(ctx, typ, payload); err != nil {
+		log.Warn().Err(err).Str("event_type", string(typ)).Msg("failed to publish presence event")
+	}
 }
 
 // register atomically computes the client's replay window and adds it to the

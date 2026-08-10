@@ -25,6 +25,7 @@ type taskListResponse struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`
 	Description string `json:"description"`
+	OwnerID     string `json:"owner_id"`
 	CreatedAt   string `json:"created_at"`
 	UpdatedAt   string `json:"updated_at"`
 }
@@ -38,19 +39,43 @@ type updateTaskListRequest struct {
 	Description *string `json:"description"`
 }
 
+type shareTaskListRequest struct {
+	SharedWith string `json:"shared_with"`
+	Role       string `json:"role"`
+}
+
+type memberResponse struct {
+	ListID     string `json:"list_id"`
+	SharedWith string `json:"shared_with"`
+	Role       string `json:"role"`
+	CreatedAt  string `json:"created_at"`
+}
+
 func toTaskListResponse(l *TaskList) taskListResponse {
 	return taskListResponse{
 		ID:          l.ID,
 		Name:        l.Name,
 		Description: l.Description,
+		OwnerID:     l.OwnerID,
 		CreatedAt:   l.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		UpdatedAt:   l.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	}
 }
 
-// GET /api/v1/task-lists
+// isAdmin reports whether the request was made with the admin role.
+func isAdmin(r *http.Request) bool {
+	return shared.GetUserRole(r.Context()) == "admin"
+}
+
+// requester returns the authenticated user ID from the dev identity headers.
+func requester(r *http.Request) string {
+	return shared.GetUserID(r.Context())
+}
+
+// GET /api/v1/task-lists — returns the lists the requesting user can access
+// (owned + shared with them). Admins see all lists.
 func (h *Handler) ListTaskLists(w http.ResponseWriter, r *http.Request) {
-	lists, err := h.service.ListTaskLists(r.Context())
+	lists, err := h.service.ListTaskListsForUser(r.Context(), requester(r), isAdmin(r))
 	if err != nil {
 		log.Error().Err(err).Msg("failed to list task lists")
 		shared.WriteError(w, http.StatusInternalServerError, "failed to list task lists")
@@ -78,7 +103,7 @@ func (h *Handler) CreateTaskList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	list, err := h.service.CreateTaskList(r.Context(), req.Name)
+	list, err := h.service.CreateTaskList(r.Context(), req.Name, requester(r))
 	if err != nil {
 		log.Error().Err(err).Msg("failed to create task list")
 		shared.WriteError(w, http.StatusInternalServerError, "failed to create task list")
@@ -96,10 +121,14 @@ func (h *Handler) GetTaskList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	list, err := h.service.GetTaskList(r.Context(), id)
+	list, err := h.service.GetTaskListForUser(r.Context(), id, requester(r), isAdmin(r))
 	if err != nil {
 		if errors.Is(err, ErrTaskListNotFound) {
 			shared.WriteError(w, http.StatusNotFound, "task list not found")
+			return
+		}
+		if errors.Is(err, ErrTaskListAccessDenied) {
+			shared.WriteError(w, http.StatusForbidden, "access denied to task list")
 			return
 		}
 		log.Error().Err(err).Str("list_id", id).Msg("failed to get task list")
@@ -108,6 +137,110 @@ func (h *Handler) GetTaskList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	shared.WriteJSON(w, http.StatusOK, toTaskListResponse(list))
+}
+
+// POST /api/v1/task-lists/{listId}/share — invites a user to the list.
+func (h *Handler) ShareTaskList(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "listId")
+	if id == "" {
+		shared.WriteError(w, http.StatusBadRequest, "list ID is required")
+		return
+	}
+
+	var req shareTaskListRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		shared.WriteError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if req.SharedWith == "" {
+		shared.WriteError(w, http.StatusBadRequest, "shared_with is required")
+		return
+	}
+
+	role := Role(req.Role)
+	if role != RoleEditor && role != RoleViewer {
+		shared.WriteError(w, http.StatusBadRequest, "role must be 'editor' or 'viewer'")
+		return
+	}
+
+	if err := h.service.ShareList(r.Context(), id, requester(r), req.SharedWith, role, isAdmin(r)); err != nil {
+		switch {
+		case errors.Is(err, ErrTaskListNotFound):
+			shared.WriteError(w, http.StatusNotFound, "task list not found")
+		case errors.Is(err, ErrTaskListAccessDenied):
+			shared.WriteError(w, http.StatusForbidden, "only the owner can share this list")
+		case errors.Is(err, ErrShareExists):
+			shared.WriteError(w, http.StatusConflict, "user is already a member of this list")
+		default:
+			log.Error().Err(err).Str("list_id", id).Msg("failed to share task list")
+			shared.WriteError(w, http.StatusBadRequest, err.Error())
+		}
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// DELETE /api/v1/task-lists/{listId}/share/{userId} — revokes access.
+func (h *Handler) UnshareTaskList(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "listId")
+	userID := chi.URLParam(r, "userId")
+	if id == "" || userID == "" {
+		shared.WriteError(w, http.StatusBadRequest, "list ID and user ID are required")
+		return
+	}
+
+	if err := h.service.UnshareList(r.Context(), id, requester(r), userID, isAdmin(r)); err != nil {
+		switch {
+		case errors.Is(err, ErrTaskListNotFound):
+			shared.WriteError(w, http.StatusNotFound, "task list not found")
+		case errors.Is(err, ErrTaskListAccessDenied):
+			shared.WriteError(w, http.StatusForbidden, "only the owner can unshare this list")
+		case errors.Is(err, ErrShareNotFound):
+			shared.WriteError(w, http.StatusNotFound, "share not found")
+		default:
+			log.Error().Err(err).Str("list_id", id).Msg("failed to unshare task list")
+			shared.WriteError(w, http.StatusInternalServerError, "failed to unshare task list")
+		}
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// GET /api/v1/task-lists/{listId}/members — lists the shared members of a list.
+func (h *Handler) ListMembers(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "listId")
+	if id == "" {
+		shared.WriteError(w, http.StatusBadRequest, "list ID is required")
+		return
+	}
+
+	shares, err := h.service.ListMembers(r.Context(), id, requester(r), isAdmin(r))
+	if err != nil {
+		if errors.Is(err, ErrTaskListNotFound) {
+			shared.WriteError(w, http.StatusNotFound, "task list not found")
+			return
+		}
+		if errors.Is(err, ErrTaskListAccessDenied) {
+			shared.WriteError(w, http.StatusForbidden, "access denied to task list")
+			return
+		}
+		log.Error().Err(err).Str("list_id", id).Msg("failed to list members")
+		shared.WriteError(w, http.StatusInternalServerError, "failed to list members")
+		return
+	}
+
+	responses := make([]memberResponse, len(shares))
+	for i, s := range shares {
+		responses[i] = memberResponse{
+			ListID:     s.ListID,
+			SharedWith: s.SharedWith,
+			Role:       string(s.Role),
+			CreatedAt:  s.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		}
+	}
+	shared.WriteJSON(w, http.StatusOK, responses)
 }
 
 // PUT /api/v1/task-lists/{listId}
@@ -146,6 +279,21 @@ func (h *Handler) DeleteTaskList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Only the owner (or an admin) may delete a list (Phase 8).
+	if err := h.service.CheckAccess(r.Context(), id, requester(r), RoleOwner, isAdmin(r)); err != nil {
+		if errors.Is(err, ErrTaskListNotFound) {
+			shared.WriteError(w, http.StatusNotFound, "task list not found")
+			return
+		}
+		if errors.Is(err, ErrTaskListAccessDenied) {
+			shared.WriteError(w, http.StatusForbidden, "only the owner can delete this list")
+			return
+		}
+		log.Error().Err(err).Str("list_id", id).Msg("failed to check access to task list")
+		shared.WriteError(w, http.StatusInternalServerError, "failed to delete task list")
+		return
+	}
+
 	if err := h.service.DeleteTaskList(r.Context(), id); err != nil {
 		if errors.Is(err, ErrTaskListNotFound) {
 			shared.WriteError(w, http.StatusNotFound, "task list not found")
@@ -159,13 +307,28 @@ func (h *Handler) DeleteTaskList(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// GET /api/v1/{listId}/tasks
+// GET /api/v1/task-lists/{listId}/tasks
 // Returns a handler that lists tasks for a list. Uses task service to fetch tasks by list ID
 func (h *Handler) ListTasksByListID(taskService task.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "listId")
 		if id == "" {
 			shared.WriteError(w, http.StatusBadRequest, "list ID is required")
+			return
+		}
+
+		// Members (owner, editor, viewer) can read tasks (Phase 8).
+		if err := h.service.CheckAccess(r.Context(), id, requester(r), RoleViewer, isAdmin(r)); err != nil {
+			if errors.Is(err, ErrTaskListNotFound) {
+				shared.WriteError(w, http.StatusNotFound, "task list not found")
+				return
+			}
+			if errors.Is(err, ErrTaskListAccessDenied) {
+				shared.WriteError(w, http.StatusForbidden, "access denied to task list")
+				return
+			}
+			log.Error().Err(err).Str("list_id", id).Msg("failed to check access to task list")
+			shared.WriteError(w, http.StatusInternalServerError, "failed to list tasks")
 			return
 		}
 

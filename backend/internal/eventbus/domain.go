@@ -35,6 +35,23 @@ const (
 	EventRecipeCreated EventType = "recipe.created"
 	EventRecipeUpdated EventType = "recipe.updated"
 	EventRecipeDeleted EventType = "recipe.deleted"
+
+	// Phase 8: collaboration & multi-user.
+	// EventTaskListShared is published when a user shares a task list with
+	// another user. Payload: {list_id, shared_with, role, shared_by}.
+	EventTaskListShared EventType = "tasklist.shared"
+	// EventTaskListUnshared is published when a share is revoked.
+	// Payload: {list_id, shared_with, removed_by}.
+	EventTaskListUnshared EventType = "tasklist.unshared"
+	// EventTaskMerged is published when a CRDT merge resolves for a task. The
+	// payload is the winning TaskResponse so clients can reconcile.
+	EventTaskMerged EventType = "task.merged"
+	// EventPresenceOnline is published when a user connects to the sync hub.
+	// Payload: {user_id, list_ids[]}.
+	EventPresenceOnline EventType = "presence.online"
+	// EventPresenceOffline is published when a user disconnects.
+	// Payload: {user_id}.
+	EventPresenceOffline EventType = "presence.offline"
 )
 
 // Event is the wire envelope pushed to subscribers and, ultimately, over the

@@ -22,6 +22,13 @@ function fmt(event: WsEvent): { icon: string; title: string; body?: string } | n
       if (!task.title) return null;
       return { icon: "✏️", title: "Task updated", body: task.title };
     }
+    case "task.merged": {
+      // Phase 8: a CRDT merge resolved. The payload is the winning task; this
+      // is the "someone else changed it" signal for collaborative edits.
+      const task = payload as Task;
+      if (!task.title) return null;
+      return { icon: "🔄", title: "Concurrent edit merged", body: `"${task.title}" was updated by another editor.` };
+    }
     case "task.deleted":
       return { icon: "🗑️", title: "Task deleted", body: "A task was removed." };
     case "task.completed":
@@ -47,6 +54,7 @@ export function useTaskNotifier(): void {
     const notifiable: Array<Parameters<typeof syncClient.on>[0]> = [
       "task.created",
       "task.updated",
+      "task.merged",
       "task.deleted",
       "task.completed",
       "task.uncompleted",

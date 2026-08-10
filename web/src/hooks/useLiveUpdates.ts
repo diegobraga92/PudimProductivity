@@ -66,12 +66,37 @@ export function useLiveUpdates(): void {
       queryClient.invalidateQueries({ queryKey: TASK_LISTS_KEY });
     };
 
+    // Phase 8: a task merge resolved — the payload is the winning task, so the
+    // cache converges exactly like task.updated.
+    const handleMerge = (event: WsEvent) => {
+      handleUpsert(event);
+      queryClient.invalidateQueries({ queryKey: SCHEDULED_KEY });
+    };
+
+    // Phase 8: membership changed (list shared with me / unshared). Refresh the
+    // list picker and any tasks cached under that list.
+    const handleShareChanged = (event: WsEvent) => {
+      queryClient.invalidateQueries({ queryKey: TASK_LISTS_KEY });
+      const payload = (event.payload ?? {}) as { list_id?: string };
+      if (payload.list_id) {
+        queryClient.invalidateQueries({
+          queryKey: ["taskLists", payload.list_id],
+          predicate: (query) =>
+            query.queryKey[0] === "taskLists" &&
+            String(query.queryKey[1] ?? "") === payload.list_id,
+        });
+      }
+    };
+
     const offs = [
       syncClient.on("task.created", handleUpsert),
       syncClient.on("task.updated", handleUpsert),
       syncClient.on("task.deleted", handleDeleted),
       syncClient.on("task.completed", handleCompletionChanged),
       syncClient.on("task.uncompleted", handleCompletionChanged),
+      syncClient.on("task.merged", handleMerge),
+      syncClient.on("tasklist.shared", handleShareChanged),
+      syncClient.on("tasklist.unshared", handleShareChanged),
       syncClient.on("stale", handleStale),
     ];
 

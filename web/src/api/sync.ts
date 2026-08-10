@@ -9,6 +9,11 @@ export type WsEventType =
   | "task.deleted"
   | "task.completed"
   | "task.uncompleted"
+  | "task.merged"
+  | "tasklist.shared"
+  | "tasklist.unshared"
+  | "presence.online"
+  | "presence.offline"
   | "stale";
 
 export interface WsEvent {

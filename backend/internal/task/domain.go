@@ -43,6 +43,7 @@ type Task struct {
 	Color          *string  // nil = default (#3B82F6)
 	ScheduledDate  *string  // nil for habits, "2026-07-20" for one-off tasks
 	AlarmMinutes   *int     // nil = no alarm, e.g. 5 = notify 5 min before start_time
+	UpdatedBy      string   // Phase 8: last writer, used to break LWW merge ties
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 }

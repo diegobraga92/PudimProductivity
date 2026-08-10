@@ -36,6 +36,8 @@ func RegisterTaskRoutes(r chi.Router, pool *pgxpool.Pool, auditLogger audit.Logg
 			r.Use(shared.RequireRole("admin", "user"))
 			r.Post("/", handler.CreateTask)
 			r.Put("/{taskId}", handler.UpdateTask)
+			// Phase 8: CRDT merge endpoint (LWW register, ADR 010).
+			r.Patch("/{taskId}/merge", handler.MergeTask)
 			r.Delete("/{taskId}", handler.DeleteTask)
 			r.Post("/{taskId}/complete", handler.CompleteTask)
 			r.Delete("/{taskId}/complete", handler.UncompleteTask)

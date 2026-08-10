@@ -53,6 +53,7 @@ data class TaskList(
     val id: String,
     val name: String,
     val description: String? = null,
+    val owner_id: String? = null,
     val created_at: String,
     val updated_at: String
 )
@@ -64,6 +65,24 @@ data class CreateTaskListRequest(
 data class UpdateTaskListRequest(
     val name: String? = null,
     val description: String? = null
+)
+
+/** Phase 8: collaboration data classes. */
+data class ShareTaskListRequest(
+    val shared_with: String,
+    val role: String
+)
+
+data class TaskListMember(
+    val list_id: String,
+    val shared_with: String,
+    val role: String,
+    val created_at: String? = null
+)
+
+data class ListPresenceResponse(
+    val list_id: String,
+    val online: List<String>
 )
 
 /**
@@ -134,6 +153,33 @@ interface TaskService {
         @Path("listId") listId: String,
         @Query("type") type: String? = null
     ): List<Task>
+
+    // Phase 8: collaboration — sharing + presence.
+    @POST("task-lists/{listId}/share")
+    suspend fun shareTaskList(
+        @Path("listId") listId: String,
+        @Body request: ShareTaskListRequest
+    )
+
+    @DELETE("task-lists/{listId}/share/{userId}")
+    suspend fun unshareTaskList(
+        @Path("listId") listId: String,
+        @Path("userId") userId: String
+    )
+
+    @GET("task-lists/{listId}/members")
+    suspend fun listTaskListMembers(@Path("listId") listId: String): List<TaskListMember>
+
+    @GET("presence/{listId}")
+    suspend fun getListPresence(@Path("listId") listId: String): ListPresenceResponse
+
+    // Phase 8: CRDT merge (LWW). Throws HttpException with the winning task body
+    // on HTTP 409 — callers reconcile against the error body.
+    @PATCH("tasks/{taskId}/merge")
+    suspend fun mergeTask(
+        @Path("taskId") taskId: String,
+        @Body request: UpdateTaskRequest
+    ): Task
 
     // Batch completions
     @GET("tasks/completions")

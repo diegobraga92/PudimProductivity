@@ -98,6 +98,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tasks/{taskId}/merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Merge a concurrent task update (CRDT LWW)
+         * @description Phase 8 collaboration endpoint. Applies a client-authored update using
+         *     document-level last-writer-wins semantics: the write with the newest
+         *     `updated_at` wins; on exact timestamp ties the greater `updated_by`
+         *     wins. Clients send the timestamp of their edit so concurrent writers
+         *     converge on a single state (ADR 010).
+         *     Returns 200 with the merged task when this write won, or 409 with the
+         *     winning task state when it lost.
+         */
+        patch: operations["mergeTask"];
+        trace?: never;
+    };
     "/api/v1/tasks/completions": {
         parameters: {
             query?: never;
@@ -228,6 +254,70 @@ export interface paths {
          * @description Returns all tasks belonging to a specific task list.
          */
         get: operations["listTasksByListID"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/task-lists/{listId}/share": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Share a task list with another user
+         * @description Phase 8 collaboration. Grants the target user editor or viewer access
+         *     to the list. Only the owner (or an admin) may share. Broadcasting a
+         *     tasklist.shared event to connected members.
+         */
+        post: operations["shareTaskList"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/task-lists/{listId}/share/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Revoke a user's access to a task list
+         * @description Phase 8 collaboration. Removes the target user's membership. Only the
+         *     owner (or an admin) may unshare.
+         */
+        delete: operations["unshareTaskList"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/task-lists/{listId}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the shared members of a task list
+         * @description Phase 8 collaboration. Returns the non-owner members (editor/viewer)
+         *     of a list. Any member can read the member list.
+         */
+        get: operations["listTaskListMembers"];
         put?: never;
         post?: never;
         delete?: never;
@@ -405,6 +495,14 @@ export interface components {
         };
         UpdateTaskRequest: {
             /**
+             * Format: date-time
+             * @description Client-side timestamp of the edit (RFC3339). Used by the merge
+             *     endpoint for last-writer-wins comparison. Optional; when omitted
+             *     the server stamps the write with its own clock.
+             * @example 2026-08-10T12:30:00Z
+             */
+            updated_at?: string;
+            /**
              * @description The new task title.
              * @example Have hair cut and beard trim
              */
@@ -483,6 +581,11 @@ export interface components {
              */
             description?: string;
             /**
+             * @description The user who owns the list (Phase 8). Members are granted editor/viewer via shares.
+             * @example dev-user
+             */
+            owner_id?: string;
+            /**
              * Format: date-time
              * @description Timestamp when the task list was created.
              * @example 2026-05-07T10:00:00Z
@@ -513,6 +616,35 @@ export interface components {
              * @example Weekly groceries
              */
             description?: string;
+        };
+        ShareTaskListRequest: {
+            /**
+             * @description The user ID to grant access to.
+             * @example alice
+             */
+            shared_with: string;
+            /**
+             * @description Permission level. Editors can mutate tasks in the list; viewers are read-only.
+             * @example editor
+             * @enum {string}
+             */
+            role: "editor" | "viewer";
+        };
+        TaskListMember: {
+            /** Format: uuid */
+            list_id: string;
+            /** @description The member user ID. */
+            shared_with: string;
+            /**
+             * @description The member's permission level.
+             * @enum {string}
+             */
+            role: "editor" | "viewer";
+            /**
+             * Format: date-time
+             * @description When the share was created.
+             */
+            created_at?: string;
         };
         ParseTaskRequest: {
             /** @example Buy milk tomorrow at 9am for 30 minutes */
@@ -783,6 +915,60 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    mergeTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The UUID of the task */
+                taskId: components["parameters"]["taskId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateTaskRequest"];
+            };
+        };
+        responses: {
+            /** @description This write won; the merged task state. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Task"];
+                };
+            };
+            /** @description Invalid request body. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Task not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description This write lost; the winning task state is returned so the client can reconcile. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Task"];
                 };
             };
         };
@@ -1126,6 +1312,149 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Task"][];
+                };
+            };
+            /** @description Task list not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    shareTaskList: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The UUID of the task list */
+                listId: components["parameters"]["listId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShareTaskListRequest"];
+            };
+        };
+        responses: {
+            /** @description Share created. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid request or role. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Only the owner can share this list. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Task list not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description User is already a member of this list. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    unshareTaskList: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The UUID of the task list */
+                listId: components["parameters"]["listId"];
+                /** @description The user ID to revoke. */
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Share revoked. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Only the owner can unshare this list. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Task list or share not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    listTaskListMembers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The UUID of the task list */
+                listId: components["parameters"]["listId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A list of shared members. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskListMember"][];
+                };
+            };
+            /** @description Access denied to the list. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
             /** @description Task list not found. */

@@ -22,9 +22,20 @@ const writeTimeout = 10 * time.Second
 // client wraps a single WebSocket connection. All writes are serialized through
 // sendCh; dispatch never blocks the event bus.
 type client struct {
-	hub     *Hub
-	conn    *websocket.Conn
-	remote  string
+	hub    *Hub
+	conn   *websocket.Conn
+	remote string
+
+	// Phase 8: identity + membership. userID is the authenticated user from
+	// the dev identity headers; role their application role. listIDs is the
+	// set of task lists the user can access, resolved at connect time and
+	// refreshed when a tasklist.shared/unshared event arrives. It is guarded
+	// by mu (refreshed by the bus goroutine, read by the write pump).
+	userID  string
+	role    string
+	mu      sync.RWMutex
+	listIDs map[string]struct{}
+
 	lastSeq int64
 	sendCh  chan eventbus.Event
 
@@ -32,15 +43,52 @@ type client struct {
 	closed    chan struct{}
 }
 
-func newClient(hub *Hub, conn *websocket.Conn, remote string, lastSeq int64) *client {
+func newClient(hub *Hub, conn *websocket.Conn, remote string, lastSeq int64, userID, role string, listIDs map[string]struct{}) *client {
+	if listIDs == nil {
+		listIDs = make(map[string]struct{})
+	}
 	return &client{
 		hub:     hub,
 		conn:    conn,
 		remote:  remote,
+		userID:  userID,
+		role:    role,
+		listIDs: listIDs,
 		lastSeq: lastSeq,
 		sendCh:  make(chan eventbus.Event, hub.cfg.ClientSendBuffer),
 		closed:  make(chan struct{}),
 	}
+}
+
+// hasAnyList reports whether the client's membership includes any of the given
+// list IDs. Used to scope event dispatch to members of a list (Phase 8).
+func (c *client) hasAnyList(listIDs []string) bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	for _, id := range listIDs {
+		if _, ok := c.listIDs[id]; ok {
+			return true
+		}
+	}
+	return false
+}
+
+// setListIDs atomically replaces the client's membership set.
+func (c *client) setListIDs(listIDs map[string]struct{}) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.listIDs = listIDs
+}
+
+// listIDSlice returns a copy of the client's membership as a slice.
+func (c *client) listIDSlice() []string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	ids := make([]string, 0, len(c.listIDs))
+	for id := range c.listIDs {
+		ids = append(ids, id)
+	}
+	return ids
 }
 
 // dispatch queues an event for delivery without blocking. A client that cannot
@@ -94,6 +142,10 @@ func (c *client) writePump(ctx context.Context, replay []eventbus.Event, stale b
 	defer c.close()
 
 	for _, e := range replay {
+		targets, restricted := targetsFor(e)
+		if restricted && !c.hasAnyList(targets) {
+			continue
+		}
 		if !c.writeEvent(ctx, e) {
 			return
 		}

@@ -41,6 +41,14 @@ func contractSchema(t *testing.T) *jsonschema.Schema {
 	return schema
 }
 
+// stubResolver gives the contract-test connection membership of the lists used
+// in scoped event payloads, so Phase 8 list-scoped events are delivered.
+type stubResolver struct{ listIDs []string }
+
+func (s stubResolver) ListIDsForUser(_ context.Context, _, _ string) ([]string, error) {
+	return s.listIDs, nil
+}
+
 // TestWsEventsConformToContract publishes every task event type through the hub
 // and validates the received JSON against api/ws/events-v1.json. This is the
 // contract test that prevents spec drift between the Go event bus and the
@@ -50,6 +58,9 @@ func TestWsEventsConformToContract(t *testing.T) {
 	bus := eventbus.NewInMemoryBus()
 	t.Cleanup(func() { _ = bus.Close() })
 	hub := NewHub(bus, Config{ReplayBufferSize: 100})
+	hub.SetMembershipResolver(stubResolver{
+		listIDs: []string{"00000000-0000-0000-0000-00000000000a"},
+	})
 	if err := hub.Start(context.Background()); err != nil {
 		t.Fatalf("hub start: %v", err)
 	}
@@ -86,6 +97,27 @@ func TestWsEventsConformToContract(t *testing.T) {
 		}},
 		{eventbus.EventTaskUncompleted, map[string]interface{}{
 			"id": "00000000-0000-0000-0000-000000000001", "title": "Contract test", "completed_date": "2026-08-09",
+		}},
+		// Phase 8: collaboration events (list-scoped; the test connection is a
+		// member of the list via stubResolver).
+		{eventbus.EventTaskMerged, map[string]interface{}{
+			"id": "00000000-0000-0000-0000-000000000001", "title": "Merged title", "status": "todo",
+			"list_id":    "00000000-0000-0000-0000-00000000000a",
+			"created_at": "2026-08-09T12:00:00Z", "updated_at": "2026-08-09T12:02:00Z",
+		}},
+		{eventbus.EventTaskListShared, map[string]interface{}{
+			"list_id": "00000000-0000-0000-0000-00000000000a", "shared_with": "user-2",
+			"role": "editor", "shared_by": "user-1",
+		}},
+		{eventbus.EventTaskListUnshared, map[string]interface{}{
+			"list_id": "00000000-0000-0000-0000-00000000000a", "shared_with": "user-2",
+			"removed_by": "user-1",
+		}},
+		{eventbus.EventPresenceOnline, map[string]interface{}{
+			"user_id": "user-1", "list_ids": []string{"00000000-0000-0000-0000-00000000000a"},
+		}},
+		{eventbus.EventPresenceOffline, map[string]interface{}{
+			"user_id": "user-1",
 		}},
 		// Phase 5: book tracking + meal planning.
 		{eventbus.EventBookAdded, map[string]interface{}{

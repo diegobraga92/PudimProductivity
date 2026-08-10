@@ -5,10 +5,76 @@ import (
 	"time"
 )
 
+// Role is a member's permission level on a shared task list. The owner is the
+// user who created the list; shares grant editor or viewer access.
+type Role string
+
+const (
+	RoleOwner  Role = "owner"
+	RoleEditor Role = "editor"
+	RoleViewer Role = "viewer"
+)
+
+// Valid reports whether r is a known share role (owner included so a full
+// membership list can be validated uniformly).
+func (r Role) Valid() bool {
+	switch r {
+	case RoleOwner, RoleEditor, RoleViewer:
+		return true
+	default:
+		return false
+	}
+}
+
+// AtLeast reports whether r grants at least the permission level of min.
+// Ordering: viewer < editor < owner.
+func (r Role) AtLeast(min Role) bool {
+	rank := func(role Role) int {
+		switch role {
+		case RoleOwner:
+			return 3
+		case RoleEditor:
+			return 2
+		default:
+			return 1
+		}
+	}
+	return rank(r) >= rank(min)
+}
+
+// Share is a task-list membership granted to another user. The owner is stored
+// on TaskList.OwnerID rather than as a share row.
+type Share struct {
+	ListID     string
+	SharedWith string
+	Role       Role
+	CreatedAt  time.Time
+}
+
+// NewShare validates and builds a Share.
+func NewShare(listID, sharedWith string, role Role) (*Share, error) {
+	if listID == "" {
+		return nil, fmt.Errorf("list id cannot be empty")
+	}
+	if sharedWith == "" {
+		return nil, fmt.Errorf("shared_with cannot be empty")
+	}
+	if role != RoleEditor && role != RoleViewer {
+		return nil, fmt.Errorf("share role must be editor or viewer")
+	}
+	return &Share{
+		ListID:     listID,
+		SharedWith: sharedWith,
+		Role:       role,
+		CreatedAt:  time.Now().UTC(),
+	}, nil
+}
+
 type TaskList struct {
 	ID          string
 	Name        string
 	Description string
+	OwnerID     string
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }

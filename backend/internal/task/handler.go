@@ -25,6 +25,7 @@ type Service interface {
 	ListScheduledTasks(ctx context.Context) ([]*Task, error)
 	ListTasksByListID(ctx context.Context, listID, typeFilter string) ([]*Task, error)
 	UpdateTask(ctx context.Context, id string, title *string, status *TaskStatus, recurrenceDays *[]string, listID **string, startTime, endTime, color, scheduledDate **string, alarmMinutes **int) (*Task, error)
+	MergeTask(ctx context.Context, id, userID string, clientUpdatedAt time.Time, title *string, status *TaskStatus, recurrenceDays *[]string, listID **string, startTime, endTime, color, scheduledDate **string, alarmMinutes **int) (*Task, bool, error)
 	DeleteTask(ctx context.Context, id string) error
 	CompleteTask(ctx context.Context, taskID, dateStr string) (*TaskCompletion, error)
 	UncompleteTask(ctx context.Context, taskID, dateStr string) error
@@ -69,6 +70,7 @@ type createTaskRequest struct {
 }
 
 type updateTaskRequest struct {
+	UpdatedAt      time.Time               `json:"updated_at"`
 	Title          *string                 `json:"title"`
 	Status         *TaskStatus             `json:"status"`
 	RecurrenceDays *[]string               `json:"recurrence_days"`
@@ -217,6 +219,48 @@ func (h *Handler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 		}
 		log.Error().Err(err).Str("task_id", id).Msg("failed to update task")
 		shared.WriteError(w, http.StatusInternalServerError, "failed to update task")
+		return
+	}
+
+	shared.WriteJSON(w, http.StatusOK, ToTaskResponse(task))
+}
+
+// PATCH /api/v1/tasks/{taskId}/merge — CRDT merge (Phase 8, ADR 010).
+// Body is an updateTaskRequest plus an optional client `updated_at` timestamp.
+// Responses:
+//
+//	200 — this write won; body is the merged task.
+//	409 — this write lost (a newer writer exists); body is the winning task.
+func (h *Handler) MergeTask(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "taskId")
+	if id == "" {
+		shared.WriteError(w, http.StatusBadRequest, "task ID is required")
+		return
+	}
+
+	var req updateTaskRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		shared.WriteError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	userID := shared.GetUserID(r.Context())
+	task, applied, err := h.service.MergeTask(r.Context(), id, userID, req.UpdatedAt,
+		req.Title, req.Status, req.RecurrenceDays, req.ListID.Ptr(),
+		req.StartTime.Ptr(), req.EndTime.Ptr(), req.Color.Ptr(), req.ScheduledDate.Ptr(), req.AlarmMinutes.Ptr())
+	if err != nil {
+		if errors.Is(err, ErrTaskNotFound) {
+			shared.WriteError(w, http.StatusNotFound, "task not found")
+			return
+		}
+		log.Error().Err(err).Str("task_id", id).Msg("failed to merge task")
+		shared.WriteError(w, http.StatusInternalServerError, "failed to merge task")
+		return
+	}
+
+	if !applied {
+		// Lost the merge — return the winning state so the client reconciles.
+		shared.WriteJSON(w, http.StatusConflict, ToTaskResponse(task))
 		return
 	}
 
@@ -445,4 +489,3 @@ func (h *Handler) ParseTask(w http.ResponseWriter, r *http.Request) {
 		RecurrenceDays:  parsed.RecurrenceDays,
 	})
 }
-

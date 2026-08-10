@@ -60,6 +60,8 @@ fun TaskListScreen(
     var newTodoTitle by remember { mutableStateOf("") }
     var newHabitTitle by remember { mutableStateOf("") }
     var newListName by remember { mutableStateOf("") }
+    // Phase 8: list currently open in the share dialog.
+    var shareList by remember { mutableStateOf<TaskList?>(null) }
 
     // Week offset for habits (shared across all habits)
     var habitWeekOffset by remember { mutableStateOf(0) }
@@ -608,6 +610,10 @@ fun TaskListScreen(
                                             style = MaterialTheme.typography.titleMedium,
                                             modifier = Modifier.weight(1f)
                                         )
+                                        // Phase 8: share dialog.
+                                        TextButton(onClick = { shareList = list }) {
+                                            Text("👥")
+                                        }
                                         Text(
                                             text = ">",
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -620,5 +626,10 @@ fun TaskListScreen(
                 }
             }
         }
+    }
+
+    // Phase 8: share dialog.
+    shareList?.let { list ->
+        TaskListShareDialog(taskList = list, onClose = { shareList = null })
     }
 }

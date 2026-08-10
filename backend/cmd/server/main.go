@@ -21,6 +21,7 @@ import (
 	"github.com/diegobraga92/pudimproductivity/backend/internal/audit"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/booktrack"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/booktrack/googlebooks"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/collab"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/db"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/eventbus"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/featureflag"
@@ -126,6 +127,14 @@ func main() {
 	}
 	sync.RegisterSyncRoutes(r, syncHub)
 
+	// Phase 8: collaboration — membership resolver for event scoping + presence,
+	// and the presence snapshot endpoint. When the DB pool is unavailable the
+	// hub degrades to broadcast (legacy behavior).
+	if pool != nil {
+		syncHub.SetMembershipResolver(collab.NewPostgresMembershipResolver(pool))
+		collab.RegisterCollabRoutes(r, syncHub)
+	}
+
 	// Phase 3: RabbitMQ becomes the durable backbone for async consumers. If
 	// RabbitMQ is unavailable we degrade gracefully: events still fan out to
 	// WebSocket clients via the in-memory bus, but the notifications worker
@@ -194,7 +203,7 @@ func main() {
 	}
 
 	if pool != nil {
-		tasklist.RegisterTaskListRoutes(r, pool, taskService)
+		tasklist.RegisterTaskListRoutes(r, pool, composite, taskService)
 	}
 
 	if pool != nil {

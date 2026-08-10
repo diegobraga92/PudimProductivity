@@ -16,6 +16,11 @@
             "task.deleted",
             "task.completed",
             "task.uncompleted",
+            "task.merged",
+            "tasklist.shared",
+            "tasklist.unshared",
+            "presence.online",
+            "presence.offline",
             "book.added",
             "mealplan.published",
             "recipe.created",
@@ -110,6 +115,37 @@
       "required": ["id"],
       "properties": { "id": { "type": "string", "format": "uuid" } },
       "description": "Meal-plan reference payload (Phase 5)."
+    },
+    "taskListShare": {
+      "type": "object",
+      "required": ["list_id", "shared_with"],
+      "properties": {
+        "list_id": { "type": "string", "format": "uuid" },
+        "shared_with": { "type": "string", "description": "User ID the list was shared with or revoked from." },
+        "role": { "type": "string", "enum": ["editor", "viewer"] },
+        "shared_by": { "type": "string", "description": "User who created the share (present on tasklist.shared)." },
+        "removed_by": { "type": "string", "description": "User who revoked the share (present on tasklist.unshared)." }
+      },
+      "description": "Phase 8 task-list share/unshare payload."
+    },
+    "presenceOnline": {
+      "type": "object",
+      "required": ["user_id", "list_ids"],
+      "properties": {
+        "user_id": { "type": "string" },
+        "list_ids": {
+          "type": "array",
+          "items": { "type": "string", "format": "uuid" },
+          "description": "Task lists the user can access at connect time."
+        }
+      },
+      "description": "Phase 8 presence payload: a user came online."
+    },
+    "presenceOffline": {
+      "type": "object",
+      "required": ["user_id"],
+      "properties": { "user_id": { "type": "string" } },
+      "description": "Phase 8 presence payload: a user went offline."
     }
   },
   "allOf": [
@@ -144,6 +180,37 @@
           "properties": {
             "type": { "const": "task.uncompleted" },
             "payload": { "$ref": "#/definitions/uncompletion" }
+          }
+        },
+        {
+          "description": "A CRDT merge resolved (Phase 8). Payload is the winning task state so clients can reconcile.",
+          "properties": {
+            "type": { "const": "task.merged" },
+            "payload": { "$ref": "#/definitions/task" }
+          }
+        },
+        {
+          "properties": {
+            "type": { "const": "tasklist.shared" },
+            "payload": { "$ref": "#/definitions/taskListShare" }
+          }
+        },
+        {
+          "properties": {
+            "type": { "const": "tasklist.unshared" },
+            "payload": { "$ref": "#/definitions/taskListShare" }
+          }
+        },
+        {
+          "properties": {
+            "type": { "const": "presence.online" },
+            "payload": { "$ref": "#/definitions/presenceOnline" }
+          }
+        },
+        {
+          "properties": {
+            "type": { "const": "presence.offline" },
+            "payload": { "$ref": "#/definitions/presenceOffline" }
           }
         },
         {

@@ -15,6 +15,7 @@
 | [007](007-external-api-integrations.md) | External API Integration Pattern | Accepted | 2026-08-09 | Shared `httpclient` (retry/rate-limit/circuit-breaker) + thin adapters + consumer-side interfaces; presigned-S3 media with degraded mode |
 | [008](008-nlp-parser.md) | Rule-Based NLP Parser | Accepted | 2026-08-09 | Deterministic regex parser for task input; partial-result semantics; LLM fallback behind the same endpoint |
 | [009](009-scheduler.md) | Auto-Scheduler with Derived Profile | Accepted | 2026-08-09 | Stateless scheduler; profile derived from 14-day history; read-only suggestions fitted into free blocks |
+| [010](010-crdt-collaboration.md) | CRDT-Based Collaboration | Accepted | 2026-08-10 | Document-level LWW register for task merges; owner/editor/viewer shares; WS presence + membership scoping |
 
 ## Cross-Links
 
@@ -22,6 +23,8 @@
   `backend/internal/` follows the service+repository+handler seam it defines.
 - ADR 004 (WS consistency) and ADR 005 (async notifications) both extend ADR 002's
   event-bus seam; the `Bus` interface survived both without producer changes.
+- ADR 010 builds on ADR 004's server-authoritative LWW push model — the CRDT
+  merge reuses the same timestamp-wins semantics for concurrent *writers*.
 - ADR 006 (deployment) is informed by ADR 002 (single process → single container)
   and ADR 005 (RabbitMQ as an optional-at-startup dependency).
 

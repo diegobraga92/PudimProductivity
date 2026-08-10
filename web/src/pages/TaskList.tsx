@@ -22,12 +22,15 @@ import TaskDetail from "./TaskDetail";
 import QuickAddForm from "../components/QuickAddForm";
 import TaskCard from "../components/TaskCard";
 import ListDetailPanel from "../components/ListDetailPanel";
+import TaskListShare from "../components/TaskListShare";
 import WeekHeatmap from "../components/WeekHeatmap";
 import StreakBadge from "../components/StreakBadge";
 import ProgressBar from "../components/ProgressBar";
 import SortSelect from "../components/SortSelect";
 import { usePersistedSort } from "../hooks/usePersistedSort";
 import { useHabitCompletions } from "../hooks/useHabitCompletions";
+import { usePresence } from "../hooks/usePresence";
+import { DEV_USER_ID } from "../api/client";
 import { computeStreaks } from "../utils/streaks";
 import { getRollingWindowDates, formatWeekRange } from "../utils/dates";
 import { sortTasks } from "../utils/sort";
@@ -51,6 +54,8 @@ export default function TaskList() {
   const [weekOffset, setWeekOffset] = useState(0);
   const [todoSort, setTodoSort] = usePersistedSort("taskSort.todos", "created-desc");
   const [habitSort, setHabitSort] = usePersistedSort("taskSort.habits", "created-desc");
+  // Phase 8: which list's share dialog is open.
+  const [shareListId, setShareListId] = useState<string | null>(null);
   const handleWeekOffsetChange = useCallback((newOffset: number) => {
     setWeekOffset(newOffset);
   }, []);
@@ -72,6 +77,9 @@ export default function TaskList() {
     queryKey: ["taskLists"],
     queryFn: listTaskLists,
   });
+
+  // Phase 8: live presence — who is online per list.
+  const { online: onlineByList } = usePresence(taskLists.map((l) => l.id));
 
   const isLoading = todoLoading || habitLoading;
   const error = todoError || habitError;
@@ -476,44 +484,75 @@ export default function TaskList() {
             )}
 
             <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
-              {taskLists.map((list) => (
-                <div
-                  key={list.id}
-                  className={`list-picker-item ${selectedListForDetail === list.id ? "selected" : ""}`}
-                  onClick={() => setSelectedListForDetail(list.id)}
-                >
-                  <span style={{ fontSize: "1rem" }}>📁</span>
-                  <span
-                    className="flex-1"
-                    style={{
-                      fontWeight: selectedListForDetail === list.id ? 600 : 500,
-                      fontSize: "var(--font-size-sm)",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
+              {taskLists.map((list) => {
+                const ownerId = list.owner_id ?? "";
+                const isOwner = ownerId === DEV_USER_ID;
+                const ownerOnline = onlineByList.get(list.id)?.has(ownerId) ?? false;
+                return (
+                  <div
+                    key={list.id}
+                    className={`list-picker-item ${selectedListForDetail === list.id ? "selected" : ""}`}
+                    onClick={() => setSelectedListForDetail(list.id)}
                   >
-                    {list.name}
-                  </span>
-                  <button
-                    className="btn btn-danger btn-sm"
-                    style={{ padding: "0.15rem 0.4rem", fontSize: "0.65rem" }}
-                    onClick={async (e) => {
-                      e.stopPropagation();
-                      const ok = await confirm({
-                        title: `Delete list "${list.name}"?`,
-                        confirmLabel: "Delete",
-                        confirmVariant: "danger",
-                      });
-                      if (ok) {
-                        deleteListMutation.mutate(list.id);
-                      }
-                    }}
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))}
+                    <span style={{ fontSize: "1rem" }}>📁</span>
+                    {/* Phase 8: owner presence dot */}
+                    <span
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: "50%",
+                        background: ownerOnline ? "#00b894" : "#b2bec3",
+                        flexShrink: 0,
+                      }}
+                      title={`Owner ${list.owner_id} ${ownerOnline ? "online" : "offline"}`}
+                    />
+                    <span
+                      className="flex-1"
+                      style={{
+                        fontWeight: selectedListForDetail === list.id ? 600 : 500,
+                        fontSize: "var(--font-size-sm)",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {list.name}
+                    </span>
+                    {/* Phase 8: share dialog */}
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      style={{ padding: "0.15rem 0.4rem", fontSize: "0.7rem" }}
+                      title="Share list"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShareListId(list.id);
+                      }}
+                    >
+                      👥
+                    </button>
+                    {/* Only the owner can delete a list (Phase 8) */}
+                    {isOwner && (
+                      <button
+                        className="btn btn-danger btn-sm"
+                        style={{ padding: "0.15rem 0.4rem", fontSize: "0.65rem" }}
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          const ok = await confirm({
+                            title: `Delete list "${list.name}"?`,
+                            confirmLabel: "Delete",
+                            confirmVariant: "danger",
+                          });
+                          if (ok) {
+                            deleteListMutation.mutate(list.id);
+                          }
+                        }}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -536,6 +575,22 @@ export default function TaskList() {
           </div>
         </div>
       </div>
+
+      {/* Phase 8: share dialog */}
+      {shareListId &&
+        (() => {
+          const list = taskLists.find((l) => l.id === shareListId);
+          if (!list) return null;
+          return (
+            <TaskListShare
+              listId={list.id}
+              listName={list.name}
+              isOwner={list.owner_id === DEV_USER_ID}
+              onlineUsers={onlineByList.get(list.id)}
+              onClose={() => setShareListId(null)}
+            />
+          );
+        })()}
     </div>
   );
 }

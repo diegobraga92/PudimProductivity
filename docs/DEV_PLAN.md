@@ -11,7 +11,7 @@
 
 These are not tied to a single phase – they must be evident across the entire project and align with the broader portfolio requirements.
 
-- [X] **Architecture Decision Records (ADRs):** One per major decision, stored in `docs/adr/` (001–006 + index `docs/adr/README.md`)
+- [X] **Architecture Decision Records (ADRs):** One per major decision, stored in `docs/adr/` (001–010 + index `docs/adr/README.md`)
 - [X] ADR 001: Database migration strategy (embedded SQL via `embed.FS`)
 - [X] ADR 002: Modular monolith architecture
 - [ ] **Design documents (RFCs):** Pre‑implementation for any phase >1 week effort — not written; ADRs carry the architectural decisions instead
@@ -245,12 +245,32 @@ integration + adapter tests, events + audit, ADR 007. Verified live end-to-end
 
 **Goal:** Real‑time shared lists, presence, permissions.
 
-- [ ] Backend: `internal/collab/` with CRDT‑based shared task lists
-- [ ] WebSocket presence tracking, RBAC extended to shared resources (owner/editor/viewer)
-- [ ] DynamoDB for session/connection mapping if scaling beyond single instance
-- [ ] Web: collaborative list UI, avatars showing online users
-- [ ] Mobile: shared list screen, permission management dialog
-- [ ] Document CRDT choice and trade‑offs in ADR
+**Progress (implemented 2026-08-10, see ADR 010):**
+
+- [x] Backend: `internal/collab/` — Postgres membership resolver for WS event
+      scoping + presence; sharing in `internal/tasklist` (owner/editor/viewer).
+      CRDT merge via `PATCH /api/v1/tasks/{taskId}/merge` (document-level LWW
+      register; ties broken by `updated_by`; losers reconcile from 409 body).
+- [x] WebSocket presence tracking — connections carry user identity;
+      `presence.online/offline` events (replayed via the bus) +
+      `GET /api/v1/presence/{listId}` snapshot. List-scoped events are only
+      pushed to members.
+- [x] RBAC extended to shared resources — `CheckAccess` (owner/editor/viewer)
+      on task-list reads, list-task reads, and owner-only share/unshare/delete.
+- [x] Web: share dialog on the Lists panel (invite with role, member list with
+      live presence dots, revoke), merge-conflict toasts, real-time cache sync.
+- [x] Mobile: share dialog on list cards (invite editor/viewer, member list
+      with presence dots, revoke), collab endpoints in `TaskApi.kt`.
+- [x] Contract tests: 5 new WS event payloads validated against
+      `api/ws/events-v1.json`; OpenAPI endpoints for share/merge/presence.
+- [x] CRDT choice documented in ADR 010 (LWW-Register vs field-level vs RGA vs OT).
+
+**Deferred from the original scope:**
+
+- [ ] DynamoDB for session/connection mapping — only needed when scaling beyond
+      a single instance (ADR 002 modular monolith still holds).
+- [ ] Avatar/name resolution for shared members (dev identities are opaque user
+      IDs; a real users table lookup would replace them once JWT auth lands).
 
 ---
 

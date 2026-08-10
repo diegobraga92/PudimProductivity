@@ -127,6 +127,53 @@ func (s *TaskService) UpdateTask(ctx context.Context, id string, title *string, 
 	return task, nil
 }
 
+// MergeTask applies a client-authored update using document-level LWW
+// (last-writer-wins) semantics (Phase 8, ADR 010):
+//
+//   - If clientUpdatedAt is zero (client did not send a timestamp), the write
+//     is stamped with the server clock and always wins.
+//   - Otherwise the write wins when clientUpdatedAt is strictly newer than the
+//     stored updated_at, or when the timestamps are equal AND the client user
+//     ID sorts after the stored updated_by (deterministic tie-break).
+//
+// On a win the task is persisted, a task.merged event is published, and
+// applied=true is returned. On a loss the current winning state is returned
+// with applied=false so the client can reconcile and retry.
+func (s *TaskService) MergeTask(ctx context.Context, id, userID string, clientUpdatedAt time.Time, title *string, status *TaskStatus, recurrenceDays *[]string, listID **string, startTime, endTime, color, scheduledDate **string, alarmMinutes **int) (*Task, bool, error) {
+	current, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return nil, false, err
+	}
+
+	if clientUpdatedAt.IsZero() {
+		clientUpdatedAt = time.Now().UTC()
+	}
+
+	wins := clientUpdatedAt.After(current.UpdatedAt) ||
+		(clientUpdatedAt.Equal(current.UpdatedAt) && userID > current.UpdatedBy)
+	if !wins {
+		return current, false, nil
+	}
+
+	if err := current.Update(title, status, recurrenceDays, listID, startTime, endTime, color, scheduledDate, alarmMinutes); err != nil {
+		return nil, false, fmt.Errorf("merge task: %w", err)
+	}
+	// The merge carries the client timestamp (not the server clock) so
+	// concurrent writers can compare against a stable value.
+	current.UpdatedAt = clientUpdatedAt
+	current.UpdatedBy = userID
+
+	if err := s.repo.Update(ctx, current); err != nil {
+		return nil, false, fmt.Errorf("persist task merge: %w", err)
+	}
+
+	log.Info().Ctx(ctx).Str("task_id", current.ID).Str("by", userID).Msg("task merged")
+	s.audit.Log(ctx, audit.ActionTaskUpdated, audit.ResourceTasks, current.ID, nil, map[string]any{"merged": true})
+	s.publish(ctx, eventbus.EventTaskMerged, ToTaskResponse(current))
+
+	return current, true, nil
+}
+
 func (s *TaskService) DeleteTask(ctx context.Context, id string) error {
 	if err := s.repo.Delete(ctx, id); err != nil {
 		return err
