@@ -3,6 +3,8 @@ package com.pudimproductivity.ui.screens
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -33,7 +35,7 @@ fun RecipeListScreen(onNew: () -> Unit, onBack: () -> Unit) {
     }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("🍳 Recipes") }, navigationIcon = { IconButton(onClick = onBack) { Text("←") } }) },
+        topBar = { TopAppBar(title = { Text("🍳 Recipes") }, navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") } }) },
         floatingActionButton = { FloatingActionButton(onClick = onNew) { Text("+") } }
     ) { padding ->
         if (isLoading) {

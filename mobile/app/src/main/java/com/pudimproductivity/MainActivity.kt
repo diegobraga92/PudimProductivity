@@ -3,10 +3,25 @@ package com.pudimproductivity
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.EventNote
+import androidx.compose.material.icons.filled.Book
+import androidx.compose.material.icons.filled.Checklist
+import androidx.compose.material.icons.filled.HealthAndSafety
+import androidx.compose.material.icons.filled.Insights
+import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.RestaurantMenu
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.pudimproductivity.api.ApiClient
 import com.pudimproductivity.api.HealthResponse
@@ -74,13 +89,31 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+/** Bottom-navigation top-level destinations. */
+private enum class TopLevel { Tasks, Plan, Timer, Recipes, More }
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppNavigation(repository: TaskRepository) {
     var currentScreen by remember { mutableStateOf(Screen.TaskList) }
     var selectedTaskId by remember { mutableStateOf<String?>(null) }
     var selectedListId by remember { mutableStateOf<String?>(null) }
+    var moreSheetOpen by remember { mutableStateOf(false) }
 
-    when (currentScreen) {
+    // Map the current screen to the active bottom-nav item.
+    val currentTopLevel = when (currentScreen) {
+        Screen.TaskList, Screen.TaskCreate, Screen.TaskDetail,
+        Screen.TaskListDetail, Screen.Habits -> TopLevel.Tasks
+        Screen.DailyPlan -> TopLevel.Plan
+        Screen.FocusTimer -> TopLevel.Timer
+        Screen.Recipes, Screen.RecipeCreate -> TopLevel.Recipes
+        else -> TopLevel.More
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            Box(modifier = Modifier.weight(1f)) {
+                when (currentScreen) {
         Screen.Health -> {
             HealthScreen(
                 onBack = { currentScreen = Screen.TaskList }
@@ -167,6 +200,98 @@ fun AppNavigation(repository: TaskRepository) {
         Screen.Insights -> {
             InsightsScreen(onBack = { currentScreen = Screen.TaskList })
         }
+                }
+            }
+
+            // Persistent bottom navigation for the primary destinations.
+            NavigationBar {
+                NavigationBarItem(
+                    selected = currentTopLevel == TopLevel.Tasks,
+                    onClick = { currentScreen = Screen.TaskList },
+                    icon = { Icon(Icons.Filled.Checklist, contentDescription = "Tasks") },
+                    label = { Text("Tasks") }
+                )
+                NavigationBarItem(
+                    selected = currentTopLevel == TopLevel.Plan,
+                    onClick = { currentScreen = Screen.DailyPlan },
+                    icon = { Icon(Icons.AutoMirrored.Filled.EventNote, contentDescription = "Daily plan") },
+                    label = { Text("Plan") }
+                )
+                NavigationBarItem(
+                    selected = currentTopLevel == TopLevel.Timer,
+                    onClick = { currentScreen = Screen.FocusTimer },
+                    icon = { Icon(Icons.Filled.Timer, contentDescription = "Focus timer") },
+                    label = { Text("Timer") }
+                )
+                NavigationBarItem(
+                    selected = currentTopLevel == TopLevel.Recipes,
+                    onClick = { currentScreen = Screen.Recipes },
+                    icon = { Icon(Icons.Filled.Restaurant, contentDescription = "Recipes") },
+                    label = { Text("Recipes") }
+                )
+                NavigationBarItem(
+                    selected = currentTopLevel == TopLevel.More,
+                    onClick = { moreSheetOpen = true },
+                    icon = { Icon(Icons.Filled.MoreHoriz, contentDescription = "More") },
+                    label = { Text("More") }
+                )
+            }
+        }
+
+        // "More" bottom sheet — secondary destinations.
+        if (moreSheetOpen) {
+            ModalBottomSheet(onDismissRequest = { moreSheetOpen = false }) {
+                Column(modifier = Modifier.padding(bottom = 24.dp)) {
+                    Text(
+                        text = "More",
+                        style = MaterialTheme.typography.titleLarge,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                    )
+                    MoreSheetItem(Icons.Filled.Repeat, "Habits") {
+                        moreSheetOpen = false
+                        currentScreen = Screen.Habits
+                    }
+                    MoreSheetItem(Icons.Filled.Book, "Books") {
+                        moreSheetOpen = false
+                        currentScreen = Screen.Books
+                    }
+                    MoreSheetItem(Icons.Filled.RestaurantMenu, "Meal Plans") {
+                        moreSheetOpen = false
+                        currentScreen = Screen.MealPlans
+                    }
+                    MoreSheetItem(Icons.Filled.Insights, "Insights") {
+                        moreSheetOpen = false
+                        currentScreen = Screen.Insights
+                    }
+                    MoreSheetItem(Icons.Filled.HealthAndSafety, "Backend Health") {
+                        moreSheetOpen = false
+                        currentScreen = Screen.Health
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MoreSheetItem(icon: ImageVector, label: String, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary
+        )
+        Spacer(modifier = Modifier.width(16.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyLarge
+        )
     }
 }
 

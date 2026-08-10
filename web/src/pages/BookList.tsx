@@ -9,6 +9,24 @@ const STATUSES = [
   { id: "read", label: "Read" },
 ] as const;
 
+const COVER_GRADIENTS = [
+  "linear-gradient(135deg, #3B82F6, #8B5CF6)",
+  "linear-gradient(135deg, #10B981, #06B6D4)",
+  "linear-gradient(135deg, #F59E0B, #EF4444)",
+  "linear-gradient(135deg, #EC4899, #8B5CF6)",
+  "linear-gradient(135deg, #F97316, #F59E0B)",
+  "linear-gradient(135deg, #6366F1, #EC4899)",
+];
+
+/** Deterministic gradient + initial for a book without a cover image. */
+function coverGradient(title: string): string {
+  let hash = 0;
+  for (let i = 0; i < title.length; i++) {
+    hash = (hash * 31 + title.charCodeAt(i)) | 0;
+  }
+  return COVER_GRADIENTS[Math.abs(hash) % COVER_GRADIENTS.length];
+}
+
 export default function BookList() {
   const queryClient = useQueryClient();
   const [status, setStatus] = useState("");
@@ -32,7 +50,7 @@ export default function BookList() {
   return (
     <div className="animate-fade-in">
       <div className="flex-center" style={{ justifyContent: "space-between", marginBottom: "var(--space-md)" }}>
-        <h2 style={{ fontSize: "var(--font-size-xl)", fontWeight: 700 }}>📚 Books</h2>
+        <h2 className="page-heading" style={{ marginBottom: 0 }}>📚 Books</h2>
       </div>
 
       <div className="flex-center" style={{ gap: "var(--space-sm)", marginBottom: "var(--space-md)", flexWrap: "wrap" }}>
@@ -76,7 +94,10 @@ export default function BookList() {
             {b.thumbnail_url ? (
               <img src={b.thumbnail_url} alt={b.title} style={{ width: "100%", height: 180, objectFit: "cover", borderRadius: "var(--radius-md)" }} />
             ) : (
-              <div style={{ height: 180, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--color-bg-muted)", borderRadius: "var(--radius-md)" }}>📖</div>
+              <div className="book-thumb-placeholder" style={{ background: coverGradient(b.title) }} aria-hidden="true">
+                <span className="book-initial">{b.title.charAt(0).toUpperCase()}</span>
+                <span className="book-firstword">{b.title.split(" ")[0] || "Book"}</span>
+              </div>
             )}
             <p className="card-title" style={{ margin: "0.4rem 0 0.2rem", fontSize: "var(--font-size-sm)" }}>{b.title}</p>
             <p style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)" }}>

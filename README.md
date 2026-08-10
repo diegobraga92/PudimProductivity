@@ -39,8 +39,10 @@ cd ~/pudimproductivity
 
 # 2. Create and configure environment file
 cp .env.example .env
+# ⚠️ Edit .env now — change POSTGRES_PASSWORD and RABBITMQ_PASS (both default
+#    to "change_me_in_production"). All host ports are configurable there too.
 
-# 3. Start all services (PostgreSQL, Backend, Frontend)
+# 3. Start all services (PostgreSQL, Redis, RabbitMQ, Mailpit, Backend, Frontend)
 docker compose up -d
 
 # 4. Access the app from any device on your LAN
@@ -48,17 +50,28 @@ docker compose up -d
 # (default port is 3000, configurable via FRONTEND_PORT in .env)
 ```
 
-The frontend (nginx) serves the built React app and proxies `/api/` requests to the backend. All services are wired together via Docker Compose networking.
+The frontend (nginx) serves the built React app and proxies `/api/` requests to the backend. All services are wired together via Docker Compose networking. The first `docker compose up -d` builds the backend (Go) and frontend (React) images, so allow a few minutes before the app responds.
+
+> ⚠️ **LAN exposure note:** the RabbitMQ management UI (`http://<server-ip>:15672`)
+> and Mailpit web UI (`http://<server-ip>:8025`) are also reachable from any
+> device on your LAN. That's fine for a personal network; if you want them
+> private, remove their `ports:` entries from `docker-compose.yml` or block them
+> at the firewall.
 
 ### Services
 
 All host ports are **configurable via `.env`** — see `.env.example` for defaults.
 
-| Service    | Default port | Description              |
-|------------|-------------|--------------------------|
-| Frontend   | 3000       | React SPA (nginx)        |
-| Backend    | 8080       | Go API (chi)             |
-| PostgreSQL | 5433       | Database                  |
+| Service    | Default port | Description                        |
+|------------|-------------|------------------------------------|
+| Frontend   | 3000       | React SPA (nginx)                  |
+| Backend    | 8080       | Go API (chi)                       |
+| PostgreSQL | 5433       | Database                           |
+| Redis      | 6379       | Cache / real-time sync store       |
+| RabbitMQ   | 5672       | Async notification event bus       |
+|            | 15672      | RabbitMQ management UI (web)       |
+| Mailpit    | 1025       | Local SMTP (email capture)         |
+|            | 8025       | Mailpit web UI (sent-mail preview) |
 
 ## API
 

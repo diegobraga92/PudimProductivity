@@ -89,7 +89,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         }}
       >
         {/* Todos Overview */}
-        <div className="card card-todo" style={{ cursor: "pointer" }} onClick={() => onNavigate("tasks")}>
+        <div className="card card-todo card-clickable" onClick={() => onNavigate("tasks")}>
           <div className="section-card-header">
             <h3 className="card-title">
               📋 To-Dos
@@ -130,7 +130,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         </div>
 
         {/* Habits Overview */}
-        <div className="card card-habit" style={{ cursor: "pointer" }} onClick={() => onNavigate("tasks")}>
+        <div className="card card-habit card-clickable" onClick={() => onNavigate("tasks")}>
           <div className="section-card-header">
             <h3 className="card-title">
               🔄 Habits
@@ -181,7 +181,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
 
       {/* Lists Overview */}
       {taskLists.length > 0 && (
-        <div className="card card-list mt-lg" style={{ cursor: "pointer" }} onClick={() => onNavigate("tasks")}>
+        <div className="card card-list mt-lg card-clickable" onClick={() => onNavigate("tasks")}>
           <div className="section-card-header">
             <h3 className="card-title">
               📁 Task Lists

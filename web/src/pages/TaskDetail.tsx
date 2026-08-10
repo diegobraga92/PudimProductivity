@@ -284,9 +284,8 @@ export default function TaskDetail({
       {/* Task Title */}
       <div className="card" style={{ marginBottom: "var(--space-lg)" }}>
         <h2
+          className="page-heading"
           style={{
-            fontSize: "var(--font-size-xl)",
-            fontWeight: 700,
             marginBottom: "var(--space-sm)",
             textDecoration: task.status === "done" ? "line-through" : "none",
             color: task.status === "done" ? "var(--color-text-muted)" : "var(--color-text)",

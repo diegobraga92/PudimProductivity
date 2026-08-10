@@ -70,7 +70,7 @@ export default function RecipeDetail({ recipeId, onBack }: { recipeId: string; o
       <button className="btn btn-ghost btn-sm" onClick={onBack} style={{ marginBottom: "var(--space-md)" }}>
         ← Back
       </button>
-      <h2 style={{ fontSize: "var(--font-size-xl)", fontWeight: 700, marginBottom: "var(--space-md)" }}>
+      <h2 className="page-heading" style={{ marginBottom: "var(--space-md)" }}>
         {isNew ? "🍳 New recipe" : "✏️ Edit recipe"}
       </h2>
 

@@ -22,7 +22,7 @@ export default function Insights() {
   return (
     <div className="animate-fade-in">
       <div className="flex-center" style={{ justifyContent: "space-between", marginBottom: "var(--space-md)" }}>
-        <h2 style={{ fontSize: "var(--font-size-xl)", fontWeight: 700 }}>🧠 Insights</h2>
+        <h2 className="page-heading" style={{ marginBottom: 0 }}>🧠 Insights</h2>
         {report && (
           <span className="badge badge-habit">Week of {report.week_start}</span>
         )}

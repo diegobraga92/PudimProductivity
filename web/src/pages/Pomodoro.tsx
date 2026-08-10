@@ -11,6 +11,8 @@ import { getSoundscape, type SoundID } from "../utils/audio";
 
 const FOCUS_PRESETS = [15, 25, 30, 45, 60];
 const BREAK_PRESETS = [5, 10, 15];
+const RING_RADIUS = 96;
+const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -164,7 +166,7 @@ function Pomodoro() {
           marginBottom: "var(--space-lg)",
         }}
       >
-        <h2 style={{ fontSize: "var(--font-size-xl)", fontWeight: 700 }}>🍅 Pomodoro Timer</h2>
+        <h2 className="page-heading" style={{ marginBottom: 0 }}>🍅 Pomodoro Timer</h2>
       </div>
 
       <div
@@ -176,46 +178,74 @@ function Pomodoro() {
           padding: "var(--space-xl)",
         }}
       >
-        {/* Timer Display */}
+        {/* Circular Countdown Ring */}
         <div
           style={{
-            fontSize: "4rem",
-            fontWeight: 700,
-            fontVariantNumeric: "tabular-nums",
-            letterSpacing: "2px",
-            marginBottom: "var(--space-md)",
-            color: isRunning
-              ? "var(--color-primary)"
-              : isPaused
-              ? "var(--color-warning)"
-              : "var(--color-text-secondary)",
+            position: "relative",
+            width: 220,
+            height: 220,
+            margin: "0 auto var(--space-lg)",
           }}
         >
-          {formatTime(displayTime)}
-        </div>
-
-        {/* Progress Bar */}
-        <div
-          style={{
-            width: "100%",
-            height: "8px",
-            background: "var(--color-border-light)",
-            borderRadius: "4px",
-            overflow: "hidden",
-            marginBottom: "var(--space-lg)",
-          }}
-        >
+          <svg width="220" height="220" viewBox="0 0 220 220" role="img" aria-label={`${formatTime(displayTime)} remaining`}>
+            <circle
+              cx="110"
+              cy="110"
+              r="96"
+              fill="none"
+              stroke="var(--color-border-light)"
+              strokeWidth="14"
+            />
+            <circle
+              cx="110"
+              cy="110"
+              r="96"
+              fill="none"
+              stroke={
+                isRunning
+                  ? "var(--color-primary)"
+                  : isPaused
+                  ? "var(--color-warning)"
+                  : "var(--color-text-muted)"
+              }
+              strokeWidth="14"
+              strokeLinecap="round"
+              strokeDasharray={RING_CIRCUMFERENCE}
+              strokeDashoffset={RING_CIRCUMFERENCE * (1 - progress / 100)}
+              transform="rotate(-90 110 110)"
+              style={{ transition: "stroke-dashoffset 1s linear, stroke 250ms ease" }}
+            />
+          </svg>
           <div
             style={{
-              width: `${progress}%`,
-              height: "100%",
-              background: isRunning
-                ? "var(--color-primary)"
-                : "var(--color-text-secondary)",
-              borderRadius: "4px",
-              transition: "width 1s linear",
+              position: "absolute",
+              inset: 0,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
             }}
-          />
+          >
+            <span
+              style={{
+                fontSize: "3.25rem",
+                fontWeight: 700,
+                fontVariantNumeric: "tabular-nums",
+                letterSpacing: "2px",
+                lineHeight: 1.1,
+                color: isRunning
+                  ? "var(--color-primary)"
+                  : isPaused
+                  ? "var(--color-warning)"
+                  : "var(--color-text)",
+              }}
+            >
+              {formatTime(displayTime)}
+            </span>
+            <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)", letterSpacing: "1px" }}>
+              {isActive ? "FOCUS" : "READY"}
+            </span>
+          </div>
         </div>
 
         {/* Status */}

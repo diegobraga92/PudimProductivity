@@ -31,6 +31,15 @@ function hexToRgba(hex: string, alpha: number): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
+/** True when a hex color is light enough to need dark text on top. */
+function isLightColor(hex: string): boolean {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+  return luminance > 160;
+}
+
 interface PlannerProps {
   onNavigate: (view: string) => void;
 }
@@ -106,7 +115,7 @@ export default function Planner({ onNavigate }: PlannerProps) {
           marginBottom: "var(--space-md)",
         }}
       >
-        <h2 style={{ fontSize: "var(--font-size-xl)", fontWeight: 700 }}>
+        <h2 className="page-heading" style={{ marginBottom: 0 }}>
           📅 Weekly Planner
         </h2>
         <div
@@ -251,19 +260,17 @@ export default function Planner({ onNavigate }: PlannerProps) {
                 {HOURS.map((hour) => (
                   <div
                     key={hour.value}
+                    className="planner-cell"
                     onClick={() => handleCellClick(day, hour.value)}
-                    style={{
-                      height: "60px",
-                      borderBottom: "1px solid var(--color-border-light)",
-                      cursor: "pointer",
-                      transition: "background 0.15s ease",
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        handleCellClick(day, hour.value);
+                      }
                     }}
-                    onMouseEnter={(e) => {
-                      (e.currentTarget as HTMLElement).style.background = "var(--color-border-light)";
-                    }}
-                    onMouseLeave={(e) => {
-                      (e.currentTarget as HTMLElement).style.background = "";
-                    }}
+                    aria-label={`Add task ${day} at ${hour.label}`}
                   />
                 ))}
 
@@ -274,6 +281,7 @@ export default function Planner({ onNavigate }: PlannerProps) {
                   const startMinutes = task.start_time ? parseTimeToMinutes(task.start_time) - 360 : 0;
                   const endMinutes = task.end_time ? parseTimeToMinutes(task.end_time) - 360 : 60;
                   const height = Math.max(endMinutes - startMinutes, 30);
+                  const blockTextColor = isLightColor(color) ? "#1F2937" : "#fff";
 
                   // Check if this task is completed for a specific date (habits only)
                   const isWeekdayCompleted = (() => {
@@ -296,7 +304,7 @@ export default function Planner({ onNavigate }: PlannerProps) {
                         borderRadius: "6px",
                         padding: "2px 4px",
                         fontSize: "var(--font-size-xs)",
-                        color: "#fff",
+                        color: blockTextColor,
                         cursor: "pointer",
                         overflow: "hidden",
                         whiteSpace: "nowrap",

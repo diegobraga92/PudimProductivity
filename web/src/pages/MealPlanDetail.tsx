@@ -63,7 +63,7 @@ export default function MealPlanDetail({ planId, onBack }: { planId: string | nu
     return (
       <div className="animate-fade-in">
         <button className="btn btn-ghost btn-sm" onClick={onBack} style={{ marginBottom: "var(--space-md)" }}>← Back</button>
-        <h2 style={{ fontSize: "var(--font-size-xl)", fontWeight: 700, marginBottom: "var(--space-md)" }}>🗓 New meal plan</h2>
+        <h2 className="page-heading" style={{ marginBottom: "var(--space-md)" }}>🗓 New meal plan</h2>
         <div className="card" style={{ maxWidth: 480, padding: "var(--space-lg)" }}>
           <input className="input" style={{ width: "100%", marginBottom: "var(--space-md)" }} placeholder="Plan name" value={name} onChange={(e) => setName(e.target.value)} />
           <div className="flex-center" style={{ gap: "var(--space-md)", marginBottom: "var(--space-md)" }}>
@@ -97,7 +97,7 @@ export default function MealPlanDetail({ planId, onBack }: { planId: string | nu
     <div className="animate-fade-in">
       <button className="btn btn-ghost btn-sm" onClick={onBack} style={{ marginBottom: "var(--space-md)" }}>← Back</button>
       <div className="flex-center" style={{ justifyContent: "space-between", marginBottom: "var(--space-md)" }}>
-        <h2 style={{ fontSize: "var(--font-size-xl)", fontWeight: 700 }}>{plan?.name || "Meal plan"}</h2>
+        <h2 className="page-heading" style={{ marginBottom: 0 }}>{plan?.name || "Meal plan"}</h2>
         <div className="flex-center" style={{ gap: "0.5rem" }}>
           {/* Phase 9b: printable PDF download */}
           {plan && (

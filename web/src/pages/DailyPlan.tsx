@@ -17,7 +17,7 @@ export default function DailyPlan() {
   return (
     <div className="animate-fade-in">
       <div className="flex-center" style={{ justifyContent: "space-between", marginBottom: "var(--space-md)" }}>
-        <h2 style={{ fontSize: "var(--font-size-xl)", fontWeight: 700 }}>🗓 Daily Plan</h2>
+        <h2 className="page-heading" style={{ marginBottom: 0 }}>🗓 Daily Plan</h2>
         {plan && (
           <span className="badge badge-habit">
             {plan.avg_per_day.toFixed(1)}/day avg · {plan.free_hours}h free

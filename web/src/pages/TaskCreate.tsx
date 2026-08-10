@@ -23,6 +23,20 @@ export default function TaskCreate({ onCreated, onCancel }: TaskCreateProps) {
   const [scheduledDate, setScheduledDate] = useState("");
   const [alarmMinutes, setAlarmMinutes] = useState("");
 
+  // Map validation errors to the field that caused them so it can be highlighted.
+  const errorField =
+    error === null
+      ? null
+      : error.includes("Title")
+      ? "title"
+      : error.includes("day")
+      ? "days"
+      : error.includes("Start time")
+      ? "schedule"
+      : error.includes("date")
+      ? "schedule"
+      : null;
+
   // Check for planner prefill data
   useEffect(() => {
     const prefillJson = sessionStorage.getItem("planner_prefill");
@@ -185,10 +199,11 @@ export default function TaskCreate({ onCreated, onCancel }: TaskCreateProps) {
             </label>
             <input
               type="text"
-              className="input"
+              className={`input ${errorField === "title" ? "input--error" : ""}`}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Have hair cut"
+              aria-invalid={errorField === "title"}
               autoFocus
             />
           </div>
@@ -228,6 +243,8 @@ export default function TaskCreate({ onCreated, onCancel }: TaskCreateProps) {
                         padding: "0.4rem 0.8rem",
                         border: isSelected
                           ? "2px solid var(--color-habit)"
+                          : errorField === "days"
+                          ? "1.5px solid var(--color-danger)"
                           : "1.5px solid var(--color-border)",
                         borderRadius: "var(--radius-sm)",
                         background: isSelected ? "var(--color-habit-light)" : "var(--color-surface)",
@@ -264,9 +281,9 @@ export default function TaskCreate({ onCreated, onCancel }: TaskCreateProps) {
           />
 
           {error && (
-            <p style={{ color: "var(--color-danger)", marginBottom: "0.5rem", fontSize: "var(--font-size-sm)" }}>
+            <div className="form-error-banner" role="alert">
               {error}
-            </p>
+            </div>
           )}
         </div>
 

@@ -14,6 +14,7 @@ import com.pudimproductivity.api.Suggestion
 import com.pudimproductivity.api.scheduleService
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DailyPlanScreen() {
     val scope = rememberCoroutineScope()
@@ -41,53 +42,59 @@ fun DailyPlanScreen() {
         return "$hour:$m $suffix"
     }
 
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("🗓 Daily Plan", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.weight(1f))
-            plan?.let {
-                AssistChip(
-                    onClick = {},
-                    label = { Text("${"%.1f".format(it.avg_per_day)}/day · ${it.free_hours}h free") }
-                )
-            }
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Daily Plan") },
+                actions = {
+                    plan?.let {
+                        AssistChip(
+                            onClick = {},
+                            label = { Text("${("%.1f").format(it.avg_per_day)}/day · ${it.free_hours}h free") }
+                        )
+                    }
+                }
+            )
         }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        when {
-            loading -> CircularProgressIndicator()
-            error != null -> Text(
-                error!!,
-                color = MaterialTheme.colorScheme.error
-            )
-            plan != null && plan!!.slots.isEmpty() -> Text(
-                "Nothing to schedule — no pending tasks or habits for today.",
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            plan != null -> LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(plan!!.slots) { slot ->
-                    val isHabit = slot.kind == "habit"
-                    Card(colors = CardDefaults.cardColors(
-                        containerColor = if (isHabit) Color(0xFFF3E8FF) else MaterialTheme.colorScheme.surfaceVariant
-                    )) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth().padding(12.dp)
-                        ) {
-                            Column(modifier = Modifier.width(110.dp)) {
-                                Text(timeLabel(slot.start_time), style = MaterialTheme.typography.titleSmall)
-                                Text(timeLabel(slot.end_time), style = MaterialTheme.typography.bodySmall)
-                            }
-                            Column(modifier = Modifier.weight(1f).padding(start = 12.dp)) {
-                                Text(slot.title, style = MaterialTheme.typography.titleSmall)
-                                Text(
-                                    slot.kind,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(16.dp)
+        ) {
+            when {
+                loading -> CircularProgressIndicator()
+                error != null -> Text(
+                    error!!,
+                    color = MaterialTheme.colorScheme.error
+                )
+                plan != null && plan!!.slots.isEmpty() -> Text(
+                    "Nothing to schedule — no pending tasks or habits for today.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                plan != null -> LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(plan!!.slots) { slot ->
+                        val isHabit = slot.kind == "habit"
+                        Card(colors = CardDefaults.cardColors(
+                            containerColor = if (isHabit) Color(0xFFF3E8FF) else MaterialTheme.colorScheme.surfaceVariant
+                        )) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth().padding(12.dp)
+                            ) {
+                                Column(modifier = Modifier.width(110.dp)) {
+                                    Text(timeLabel(slot.start_time), style = MaterialTheme.typography.titleSmall)
+                                    Text(timeLabel(slot.end_time), style = MaterialTheme.typography.bodySmall)
+                                }
+                                Column(modifier = Modifier.weight(1f).padding(start = 12.dp)) {
+                                    Text(slot.title, style = MaterialTheme.typography.titleSmall)
+                                    Text(
+                                        slot.kind,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
                         }
                     }

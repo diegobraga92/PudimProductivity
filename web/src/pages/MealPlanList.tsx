@@ -15,7 +15,7 @@ export default function MealPlanList({ onOpen }: { onOpen: (planId: string | nul
   return (
     <div className="animate-fade-in">
       <div className="flex-center" style={{ justifyContent: "space-between", marginBottom: "var(--space-md)" }}>
-        <h2 style={{ fontSize: "var(--font-size-xl)", fontWeight: 700 }}>🗓 Meal Plans</h2>
+        <h2 className="page-heading" style={{ marginBottom: 0 }}>🗓 Meal Plans</h2>
         <button className="btn btn-primary" onClick={() => onOpen(null)}>+ New plan</button>
       </div>
 

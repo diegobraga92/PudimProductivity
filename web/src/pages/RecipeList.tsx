@@ -4,6 +4,23 @@ import { deleteRecipe, listRecipes, type Recipe } from "../api/recipes";
 
 const ALL_TAGS = ["quick", "vegan", "vegetarian", "breakfast", "dinner", "dessert", "soup", "salad"];
 
+/** Maps recipe tags to a food emoji used for the cover placeholder. */
+const TAG_EMOJI: Record<string, string> = {
+  breakfast: "🍳",
+  dinner: "🥘",
+  dessert: "🍰",
+  vegan: "🥗",
+  vegetarian: "🥦",
+  soup: "🍜",
+  salad: "🥗",
+  quick: "⚡",
+};
+
+function recipeEmoji(r: Recipe): string {
+  const tag = (r.tags ?? []).find((t) => TAG_EMOJI[t]);
+  return tag ? TAG_EMOJI[tag] : "🍽️";
+}
+
 export default function RecipeList({ onOpen }: { onOpen: (recipe: Recipe) => void }) {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
@@ -24,7 +41,7 @@ export default function RecipeList({ onOpen }: { onOpen: (recipe: Recipe) => voi
   return (
     <div className="animate-fade-in">
       <div className="flex-center" style={{ justifyContent: "space-between", marginBottom: "var(--space-md)" }}>
-        <h2 style={{ fontSize: "var(--font-size-xl)", fontWeight: 700 }}>🍳 Recipes</h2>
+        <h2 className="page-heading" style={{ marginBottom: 0 }}>🍳 Recipes</h2>
         <button className="btn btn-primary" onClick={() => onOpen({ id: "__new__" } as Recipe)}>
           + New recipe
         </button>
@@ -71,6 +88,13 @@ export default function RecipeList({ onOpen }: { onOpen: (recipe: Recipe) => voi
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "var(--space-md)" }}>
         {recipes.map((r) => (
           <div key={r.id} className="card" style={{ cursor: "pointer" }} onClick={() => onOpen(r)}>
+            {r.image_url && r.image_url.startsWith("http") ? (
+              <img src={r.image_url} alt={r.title} className="recipe-thumb" loading="lazy" />
+            ) : (
+              <div className="recipe-thumb-placeholder" aria-hidden="true">
+                {recipeEmoji(r)}
+              </div>
+            )}
             <div className="flex-center" style={{ justifyContent: "space-between" }}>
               <span className="card-title">{r.title}</span>
               <span className={`badge ${r.difficulty === "easy" ? "badge-done" : r.difficulty === "medium" ? "badge-habit" : "badge-todo"}`}>

@@ -1,6 +1,8 @@
 package com.pudimproductivity.ui.screens
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -38,7 +40,9 @@ fun InsightsScreen(onBack: () -> Unit) {
             TopAppBar(
                 title = { Text("🧠 Insights") },
                 navigationIcon = {
-                    TextButton(onClick = onBack) { Text("‹ Back") }
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
                 }
             )
         }

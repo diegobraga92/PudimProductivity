@@ -1,13 +1,16 @@
 package com.pudimproductivity.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.pudimproductivity.api.SyncClient
@@ -202,7 +205,7 @@ fun TaskListScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             // Tabs
-            TabRow(selectedTabIndex = selectedTab) {
+            PrimaryTabRow(selectedTabIndex = selectedTab) {
                 Tab(
                     selected = selectedTab == 0,
                     onClick = { selectedTab = 0 },
@@ -301,6 +304,15 @@ fun TaskListScreen(
                                             .padding(12.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
+                                        // Left accent strip — brand identity, mirrors web cards
+                                        Box(
+                                            modifier = Modifier
+                                                .width(3.dp)
+                                                .height(20.dp)
+                                                .clip(RoundedCornerShape(2.dp))
+                                                .background(MaterialTheme.colorScheme.primary)
+                                        )
+                                        Spacer(modifier = Modifier.width(10.dp))
                                         Checkbox(
                                             checked = task.status == "done",
                                             onCheckedChange = {

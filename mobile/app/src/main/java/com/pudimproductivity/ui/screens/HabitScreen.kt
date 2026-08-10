@@ -3,6 +3,9 @@ package com.pudimproductivity.ui.screens
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -75,7 +78,11 @@ fun HabitScreen(onBack: () -> Unit, onOpenTask: (String) -> Unit) {
         topBar = {
             TopAppBar(
                 title = { Text("Habits") },
-                navigationIcon = { TextButton(onClick = onBack) { Text("← Back") } }
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                }
             )
         }
     ) { padding ->
@@ -168,15 +175,27 @@ private fun HabitCard(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Material 3 chips for recurrence days
+            // Day-of-week pill markers (display-only, "done today" highlighted)
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 (task.recurrence_days ?: emptyList()).forEach { day ->
                     val doneToday = day == DAY_ORDER[getTodayIndex()] && today in completions
-                    AssistChip(
-                        onClick = {},
-                        enabled = false,
-                        label = { Text("${DAY_LABELS[day] ?: day}${if (doneToday) " ✓" else ""}") }
-                    )
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = if (doneToday)
+                            MaterialTheme.colorScheme.primaryContainer
+                        else
+                            MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = if (doneToday)
+                            MaterialTheme.colorScheme.onPrimaryContainer
+                        else
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                    ) {
+                        Text(
+                            text = "${DAY_LABELS[day] ?: day}${if (doneToday) " ✓" else ""}",
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                    }
                 }
             }
 

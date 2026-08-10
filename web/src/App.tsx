@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { getHealth, type HealthResponse } from "./api/client";
 import { AlarmProvider } from "./components/AlarmProvider";
 import { AlarmToast } from "./components/AlarmToast";
@@ -32,11 +32,41 @@ const Insights = lazy(() => import("./pages/Insights"));
 
 type Page = "dashboard" | "tasks" | "planner" | "pomodoro" | "soundscape" | "recipes" | "booktrack" | "mealplan" | "plan" | "insights" | "health";
 
+const NAV_ITEMS: { id: Page; label: string; icon: string }[] = [
+  { id: "dashboard", label: "Dashboard", icon: "🏠" },
+  { id: "tasks", label: "Tasks", icon: "📋" },
+  { id: "planner", label: "Planner", icon: "📅" },
+  { id: "pomodoro", label: "Timer", icon: "🍅" },
+  { id: "soundscape", label: "Sounds", icon: "🎵" },
+  { id: "recipes", label: "Recipes", icon: "🍳" },
+  { id: "booktrack", label: "Books", icon: "📚" },
+  { id: "mealplan", label: "Meals", icon: "🗓" },
+  { id: "plan", label: "Daily Plan", icon: "🤖" },
+  { id: "insights", label: "Insights", icon: "🧠" },
+  { id: "health", label: "Status", icon: "💚" },
+];
+
 const pageFallback = (
   <div className="container" style={{ paddingTop: "var(--space-xl)", textAlign: "center", color: "var(--color-text-secondary)" }}>
     Loading…
   </div>
 );
+
+/** Theme hook — resolves the system preference, then honors the manual toggle. */
+function useTheme() {
+  const [theme, setTheme] = useState<"light" | "dark">(() => {
+    const saved = localStorage.getItem("theme");
+    if (saved === "light" || saved === "dark") return saved;
+    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  });
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem("theme", theme);
+  }, [theme]);
+
+  return { theme, toggleTheme: () => setTheme((t) => (t === "dark" ? "light" : "dark")) };
+}
 
 function HeaderBadge() {
   const { activeAlarms } = useAlarm();
@@ -52,6 +82,8 @@ function AppInner() {
   const [page, setPage] = useState<Page>("dashboard");
   const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(null);
   const [mealPlanId, setMealPlanId] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const { theme, toggleTheme } = useTheme();
 
   // Polls scheduled habit tasks and fires sound + in-app toast alarms
   useAlarmNotifier();
@@ -81,82 +113,38 @@ function AppInner() {
     }
   };
 
+  /** Central navigation: switches page and resets detail selections. */
+  const go = (view: Page) => {
+    setPage(view);
+    setMenuOpen(false);
+    if (view !== "recipes") setSelectedRecipeId(null);
+    if (view !== "mealplan") setMealPlanId(null);
+  };
+
   const isBackendOk = healthData?.status === "ok" && healthData?.db === "connected";
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
-      {/* ===== Habitica-Inspired Header ===== */}
-      <header
-        style={{
-          background: "linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%)",
-          color: "white",
-          padding: "0 var(--space-lg)",
-          boxShadow: "0 2px 12px rgba(108, 92, 231, 0.3)",
-          position: "sticky",
-          top: 0,
-          zIndex: 100,
-        }}
-      >
-        <div
-          className="container"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            height: "56px",
-          }}
-        >
-          {/* Logo + Title */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "var(--space-sm)",
-              cursor: "pointer",
-            }}
-            onClick={() => setPage("dashboard")}
-          >
-            <span style={{ fontSize: "1.5rem", lineHeight: 1 }}>🍮</span>
-            <span style={{ fontWeight: 700, fontSize: "var(--font-size-lg)", letterSpacing: "-0.5px" }}>
-              Pudim
-            </span>
-          </div>
+      <a className="skip-link" href="#main">
+        Skip to content
+      </a>
 
-          {/* Navigation Tabs */}
-          <nav style={{ display: "flex", gap: "0.25rem", height: "100%", alignItems: "stretch" }}>
-            {[
-              { id: "dashboard" as Page, label: "Dashboard", icon: "🏠" },
-              { id: "tasks" as Page, label: "Tasks", icon: "📋" },
-              { id: "planner" as Page, label: "Planner", icon: "📅" },
-              { id: "pomodoro" as Page, label: "Timer", icon: "🍅" },
-              { id: "soundscape" as Page, label: "Sounds", icon: "🎵" },
-              { id: "recipes" as Page, label: "Recipes", icon: "🍳" },
-              { id: "booktrack" as Page, label: "Books", icon: "📚" },
-              { id: "mealplan" as Page, label: "Meals", icon: "🗓" },
-              { id: "plan" as Page, label: "Daily Plan", icon: "🤖" },
-              { id: "insights" as Page, label: "Insights", icon: "🧠" },
-              { id: "health" as Page, label: "Status", icon: "💚" },
-            ].map((tab) => (
+      {/* ===== Header ===== */}
+      <header className="app-header">
+        <div className="container header-inner">
+          {/* Logo + Title */}
+          <button className="logo" onClick={() => go("dashboard")} aria-label="Go to dashboard">
+            <span className="logo-emoji">🍮</span>
+            <span className="logo-text">Pudim</span>
+          </button>
+
+          {/* Desktop Navigation Tabs */}
+          <nav className="nav-tabs" aria-label="Primary navigation">
+            {NAV_ITEMS.map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setPage(tab.id)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.35rem",
-                  padding: "0 1rem",
-                  background: page === tab.id ? "rgba(255,255,255,0.2)" : "transparent",
-                  color: "white",
-                  border: "none",
-                  borderBottom: page === tab.id ? "3px solid white" : "3px solid transparent",
-                  borderRadius: "0",
-                  cursor: "pointer",
-                  fontFamily: "var(--font-family)",
-                  fontSize: "var(--font-size-sm)",
-                  fontWeight: page === tab.id ? 600 : 400,
-                  transition: "all var(--transition-fast)",
-                  opacity: page === tab.id ? 1 : 0.8,
-                }}
+                className={`nav-tab ${page === tab.id ? "active" : ""}`}
+                onClick={() => go(tab.id)}
               >
                 <span>{tab.icon}</span>
                 <span>{tab.label}</span>
@@ -164,33 +152,56 @@ function AppInner() {
             ))}
           </nav>
 
-          {/* Status Badge + Alarm Badge */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "0.4rem",
-              fontSize: "var(--font-size-xs)",
-              opacity: 0.8,
-            }}
-          >
+          {/* Status Badge + Theme Toggle + Alarm Badge */}
+          <div className="header-right">
             <HeaderBadge />
-            <span
-              style={{
-                width: "8px",
-                height: "8px",
-                borderRadius: "50%",
-                background: isBackendOk ? "#00b894" : "#d63031",
-                display: "inline-block",
-              }}
-            />
-            <span>{isBackendOk ? "Connected" : "Offline"}</span>
+            <button
+              className="theme-toggle"
+              onClick={toggleTheme}
+              title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              {theme === "dark" ? "☀️" : "🌙"}
+            </button>
+            <span className={`status-dot ${isBackendOk ? "online" : "offline"}`} />
+            <span className="conn-label">{isBackendOk ? "Connected" : "Offline"}</span>
           </div>
+
+          {/* Mobile hamburger */}
+          <button className="menu-button" onClick={() => setMenuOpen(true)} aria-label="Open menu">
+            ☰
+          </button>
         </div>
       </header>
 
+      {/* ===== Mobile Slide-Out Drawer ===== */}
+      {menuOpen && (
+        <div className="nav-backdrop" onClick={() => setMenuOpen(false)}>
+          <aside className="nav-drawer" onClick={(e) => e.stopPropagation()} aria-label="Menu">
+            <div className="nav-drawer-header">
+              <span className="nav-drawer-logo">
+                <span>🍮</span> Pudim
+              </span>
+              <button className="nav-drawer-close" onClick={() => setMenuOpen(false)} aria-label="Close menu">
+                ✕
+              </button>
+            </div>
+            {NAV_ITEMS.map((item) => (
+              <button
+                key={item.id}
+                className={`nav-drawer-item ${page === item.id ? "active" : ""}`}
+                onClick={() => go(item.id)}
+              >
+                <span className="nav-icon">{item.icon}</span>
+                <span>{item.label}</span>
+              </button>
+            ))}
+          </aside>
+        </div>
+      )}
+
       {/* ===== Main Content ===== */}
-      <main style={{ flex: 1, padding: "var(--space-lg) 0" }}>
+      <main id="main" style={{ flex: 1, padding: "var(--space-lg) 0" }}>
         <div className="container">
           <Suspense fallback={pageFallback}>
             {page === "dashboard" && <Dashboard onNavigate={handleNavigate} />}

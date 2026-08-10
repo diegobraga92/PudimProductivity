@@ -235,7 +235,7 @@ function Soundscape() {
           marginBottom: "var(--space-lg)",
         }}
       >
-        <h2 style={{ fontSize: "var(--font-size-xl)", fontWeight: 700 }}>🎵 Soundscape</h2>
+        <h2 className="page-heading" style={{ marginBottom: 0 }}>🎵 Soundscape</h2>
       </div>
 
       {/* Frequency Visualizer */}
