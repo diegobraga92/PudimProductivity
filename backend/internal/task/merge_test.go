@@ -88,8 +88,8 @@ func TestMergeTask_NewerWins(t *testing.T) {
 	if merged.Title != "new title" {
 		t.Errorf("Title: got %q, want %q", merged.Title, "new title")
 	}
-	if merged.UpdatedBy != "user-a" {
-		t.Errorf("UpdatedBy: got %q, want %q", merged.UpdatedBy, "user-a")
+	if merged.UpdatedBy == nil || *merged.UpdatedBy != "user-a" {
+		t.Errorf("UpdatedBy: got %v, want %q", merged.UpdatedBy, "user-a")
 	}
 	if !merged.UpdatedAt.Equal(time.Date(2026, 8, 10, 11, 0, 0, 0, time.UTC)) {
 		t.Errorf("UpdatedAt: got %v, want client timestamp", merged.UpdatedAt)
@@ -120,7 +120,8 @@ func TestMergeTask_OlderLoses(t *testing.T) {
 func TestMergeTask_EqualTimestampTieBreaksByUserID(t *testing.T) {
 	ts := time.Date(2026, 8, 10, 12, 0, 0, 0, time.UTC)
 	base := testTaskWithUpdatedAt(t, "from-b", ts)
-	base.UpdatedBy = "user-b"
+	ub := "user-b"
+	base.UpdatedBy = &ub
 	svc := NewTaskService(newFakeRepo(base), nil, nil)
 
 	fromA := "from-a"

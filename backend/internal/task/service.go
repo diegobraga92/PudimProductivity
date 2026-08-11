@@ -151,7 +151,7 @@ func (s *TaskService) MergeTask(ctx context.Context, id, userID string, clientUp
 	}
 
 	wins := clientUpdatedAt.After(current.UpdatedAt) ||
-		(clientUpdatedAt.Equal(current.UpdatedAt) && userID > current.UpdatedBy)
+		(clientUpdatedAt.Equal(current.UpdatedAt) && (current.UpdatedBy == nil || userID > *current.UpdatedBy))
 	if !wins {
 		return current, false, nil
 	}
@@ -162,7 +162,7 @@ func (s *TaskService) MergeTask(ctx context.Context, id, userID string, clientUp
 	// The merge carries the client timestamp (not the server clock) so
 	// concurrent writers can compare against a stable value.
 	current.UpdatedAt = clientUpdatedAt
-	current.UpdatedBy = userID
+	current.UpdatedBy = &userID
 
 	if err := s.repo.Update(ctx, current); err != nil {
 		return nil, false, fmt.Errorf("persist task merge: %w", err)
