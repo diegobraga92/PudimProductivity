@@ -129,20 +129,20 @@ func TestBackupService_ExportImportRoundTrip(t *testing.T) {
 	if backup.AppVersion != "test-version" {
 		t.Fatalf("app_version = %q, want test-version", backup.AppVersion)
 	}
-	expectCount(t, backup.RowCounts, "tasks", 1)
-	expectCount(t, backup.RowCounts, "task_lists", 1)
-	expectCount(t, backup.RowCounts, "task_completions", 1)
-	expectCount(t, backup.RowCounts, "planner_entries", 1)
-	expectCount(t, backup.RowCounts, "books", 1)
-	expectCount(t, backup.RowCounts, "recipes", 1)
-	expectCount(t, backup.RowCounts, "recipe_tags", 1)
-	expectCount(t, backup.RowCounts, "recipe_ingredients", 1)
-	expectCount(t, backup.RowCounts, "recipe_steps", 1)
-	expectCount(t, backup.RowCounts, "meal_plans", 1)
-	expectCount(t, backup.RowCounts, "meal_plan_slots", 1)
-	expectCount(t, backup.RowCounts, "meal_plan_shopping_list", 1)
-	expectCount(t, backup.RowCounts, "pomodoro_sessions", 1)
-	expectCount(t, backup.RowCounts, "insight_reports", 1)
+	expectOne(t, backup.RowCounts, "tasks")
+	expectOne(t, backup.RowCounts, "task_lists")
+	expectOne(t, backup.RowCounts, "task_completions")
+	expectOne(t, backup.RowCounts, "planner_entries")
+	expectOne(t, backup.RowCounts, "books")
+	expectOne(t, backup.RowCounts, "recipes")
+	expectOne(t, backup.RowCounts, "recipe_tags")
+	expectOne(t, backup.RowCounts, "recipe_ingredients")
+	expectOne(t, backup.RowCounts, "recipe_steps")
+	expectOne(t, backup.RowCounts, "meal_plans")
+	expectOne(t, backup.RowCounts, "meal_plan_slots")
+	expectOne(t, backup.RowCounts, "meal_plan_shopping_list")
+	expectOne(t, backup.RowCounts, "pomodoro_sessions")
+	expectOne(t, backup.RowCounts, "insight_reports")
 	if backup.RowCounts["feature_flags"] < 1 {
 		t.Fatalf("feature_flags row count = %d, want >= 1 (seeded by migration)", backup.RowCounts["feature_flags"])
 	}
@@ -235,10 +235,10 @@ func TestBackupService_ImportRejectsBadInput(t *testing.T) {
 	}
 }
 
-func expectCount(t *testing.T, counts map[string]int, table string, want int) {
+func expectOne(t *testing.T, counts map[string]int, table string) {
 	t.Helper()
-	if got := counts[table]; got != want {
-		t.Fatalf("%s row count = %d, want %d", table, got, want)
+	if got := counts[table]; got != 1 {
+		t.Fatalf("%s row count = %d, want 1", table, got)
 	}
 }
 
