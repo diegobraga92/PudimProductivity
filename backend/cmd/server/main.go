@@ -19,6 +19,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/diegobraga92/pudimproductivity/backend/internal/audit"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/backup"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/booktrack"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/booktrack/googlebooks"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/collab"
@@ -225,6 +226,12 @@ func main() {
 	// Phase 9c: offline-first sync — GET /api/v1/sync?since=... returns the
 	// incremental changes (active + soft-deleted rows) for mobile Room DBs.
 	syncstore.RegisterSyncStoreRoutes(r, pool)
+
+	// Backup & Restore — full snapshot of the non-sensitive data as JSON for
+	// disaster recovery (export = download, import = replace backed-up tables).
+	if pool != nil {
+		backup.RegisterBackupRoutes(r, pool, cfg.Version)
+	}
 
 	// Phase 5a: Recipes. Media uploads are optional — when S3_MEDIA_BUCKET is
 	// unset the module runs in degraded mode and upload-URL endpoints return 503.
