@@ -3,7 +3,6 @@ package com.pudimproductivity.api
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
-import com.pudimproductivity.BuildConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -84,7 +83,7 @@ object SyncClient {
         val preferences = prefs ?: return
         lastSeq = preferences.getLong(LAST_SEQ_KEY, 0L)
 
-        val wsUrl = BuildConfig.API_BASE_URL
+        val wsUrl = ServerConfig.url.value
             .replaceFirst("http", "ws")
             .trimEnd('/') + "/ws?last_seq=$lastSeq"
 

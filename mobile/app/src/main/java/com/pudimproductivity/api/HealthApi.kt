@@ -28,10 +28,11 @@ interface HealthService {
 /**
  * Singleton Retrofit client configured for the backend API.
  *
- * The base URL is taken directly from [BuildConfig.API_BASE_URL] which is injected
- * at build time via the `buildConfigField` in `app/build.gradle.kts`.
- * Override it in a local `gradle.properties` or CI environment variable to point
- * at a real device / LAN server instead of the AVD emulator loopback.
+ * The base URL comes from [ServerConfig] — a persisted, runtime-editable value
+ * that defaults to the build-time [BuildConfig.API_BASE_URL] (injected via
+ * `buildConfigField` in app/build.gradle.kts). Users can change the server
+ * address in-app without rebuilding; call [invalidate] after changing it so
+ * the next Retrofit service access is created against the new URL.
  */
 object ApiClient {
     /** Shared OkHttpClient, reused by Retrofit and the WebSocket sync client. */
@@ -57,17 +58,38 @@ object ApiClient {
             .build()
     }
 
-    val retrofit: Retrofit by lazy {
-        val baseUrl = BuildConfig.API_BASE_URL.trimEnd('/') + "/"
+    @Volatile
+    private var _retrofit: Retrofit? = null
 
-        Retrofit.Builder()
+    /**
+     * Retrofit instance for the current [ServerConfig.url]. Recreated lazily
+     * after [invalidate] so a URL change takes effect on the next service call.
+     */
+    val retrofit: Retrofit
+        get() {
+            _retrofit?.let { return it }
+            return synchronized(this) {
+                _retrofit ?: buildRetrofit().also { _retrofit = it }
+            }
+        }
+
+    /** Drops the cached Retrofit so the next access rebuilds against the new URL. */
+    fun invalidate() {
+        synchronized(this) {
+            _retrofit = null
+        }
+    }
+
+    private fun buildRetrofit(): Retrofit {
+        val baseUrl = ServerConfig.url.value.trimEnd('/') + "/"
+
+        return Retrofit.Builder()
             .baseUrl(baseUrl)
             .client(client)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
     }
 
-    val healthService: HealthService by lazy {
-        retrofit.create(HealthService::class.java)
-    }
+    val healthService: HealthService
+        get() = retrofit.create(HealthService::class.java)
 }

@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.RestaurantMenu
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -25,6 +26,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.pudimproductivity.api.ApiClient
 import com.pudimproductivity.api.HealthResponse
+import com.pudimproductivity.api.ServerConfig
 import com.pudimproductivity.api.SyncClient
 import com.pudimproductivity.data.TaskRepository
 import com.pudimproductivity.fcm.ErrorReporter
@@ -42,6 +44,7 @@ import com.pudimproductivity.ui.screens.RecipeListScreen
 import com.pudimproductivity.ui.screens.TaskCreateScreen
 import com.pudimproductivity.ui.screens.TaskDetailScreen
 import com.pudimproductivity.ui.screens.TaskListDetailScreen
+import com.pudimproductivity.ui.screens.ServerSettingsScreen
 import com.pudimproductivity.ui.screens.TaskListScreen
 import com.pudimproductivity.ui.theme.PudimProductivityTheme
 import kotlinx.coroutines.CoroutineScope
@@ -50,7 +53,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 enum class Screen {
-    Health, TaskList, TaskCreate, TaskDetail, TaskListDetail, FocusTimer, Habits, Recipes, RecipeCreate, Books, MealPlans, DailyPlan, Insights
+    Health, ServerSettings, TaskList, TaskCreate, TaskDetail, TaskListDetail, FocusTimer, Habits, Recipes, RecipeCreate, Books, MealPlans, DailyPlan, Insights
 }
 
 class MainActivity : ComponentActivity() {
@@ -60,6 +63,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Load the persisted backend URL before any API client is touched.
+        ServerConfig.init(applicationContext)
 
         // Report uncaught exceptions to the backend error beacon.
         ErrorReporter.install(applicationContext)
@@ -116,6 +122,11 @@ fun AppNavigation(repository: TaskRepository) {
                 when (currentScreen) {
         Screen.Health -> {
             HealthScreen(
+                onBack = { currentScreen = Screen.TaskList }
+            )
+        }
+        Screen.ServerSettings -> {
+            ServerSettingsScreen(
                 onBack = { currentScreen = Screen.TaskList }
             )
         }
@@ -266,6 +277,10 @@ fun AppNavigation(repository: TaskRepository) {
                     MoreSheetItem(Icons.Filled.HealthAndSafety, "Backend Health") {
                         moreSheetOpen = false
                         currentScreen = Screen.Health
+                    }
+                    MoreSheetItem(Icons.Filled.Settings, "Server Settings") {
+                        moreSheetOpen = false
+                        currentScreen = Screen.ServerSettings
                     }
                 }
             }

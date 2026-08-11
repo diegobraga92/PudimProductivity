@@ -3,6 +3,7 @@ package com.pudimproductivity.fcm
 import android.content.Context
 import com.pudimproductivity.BuildConfig
 import com.pudimproductivity.api.ApiClient
+import com.pudimproductivity.api.ServerConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -42,7 +43,7 @@ object ErrorReporter {
                     .put("context", "thread=${thread.name}; app=${BuildConfig.VERSION_NAME}")
 
                 val request = Request.Builder()
-                    .url(BuildConfig.API_BASE_URL.trimEnd('/') + "/errors")
+                    .url(ServerConfig.url.value.trimEnd('/') + "/errors")
                     .header("X-Error-Source", "android")
                     .header("X-User-ID", "dev-user")
                     .header("X-User-Role", "user")
