@@ -177,7 +177,7 @@ fun ServerSettingsScreen(onBack: () -> Unit) {
             modifier = Modifier.padding(top = 24.dp)
         )
         Text(
-            text = ServerConfig.url.value,
+            text = currentUrl,
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.padding(top = 4.dp)
         )
