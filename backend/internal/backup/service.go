@@ -105,21 +105,6 @@ var backupTables = []backupTable{
 		columns:  "id uuid, recipe_id uuid, step_number integer, instruction text",
 	},
 	{
-		name:     "meal_plans",
-		idColumn: "id",
-		columns:  "id uuid, name text, start_date date, end_date date, is_published boolean, created_at timestamptz, updated_at timestamptz",
-	},
-	{
-		name:     "meal_plan_slots",
-		idColumn: "id",
-		columns:  "id uuid, meal_plan_id uuid, date date, meal_type text, recipe_id uuid, notes text",
-	},
-	{
-		name:     "meal_plan_shopping_list",
-		idColumn: "id",
-		columns:  "id uuid, meal_plan_id uuid, ingredient_name text, quantity_agg text, unit text, is_checked boolean",
-	},
-	{
 		name:     "pomodoro_sessions",
 		idColumn: "id",
 		columns:  "id uuid, user_id text, focus_minutes integer, elapsed_s integer, started_at timestamptz, completed_at timestamptz",

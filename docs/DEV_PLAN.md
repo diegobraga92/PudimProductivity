@@ -1,51 +1,3 @@
-## Phase 2 – Real‑Time Sync with WebSocket (1–2 weeks)
-
-**Goal:** Live task updates push to all clients without polling.
-
-- [x] Backend: WebSocket endpoint (`GET /api/v1/ws`) and in‑memory event bus (`internal/eventbus/`, `task.created/updated/deleted/completed/uncompleted` events)
-- [x] Sync hub: `internal/sync/` fans out events to connected clients with atomic registration (replay snapshot + add client), slow-client disconnect
-- [x] Web: `web/src/api/sync.ts` + `useLiveUpdates` hook wired at app root — real-time cache updates (replaces polling for task data)
-- [x] Mobile: `SyncClient.kt` (OkHttp WebSocket + SharedFlow), started in `MainActivity`, TaskListScreen reloads on events
-- [x] API contract: `api/ws/events-v1.json` (JSON Schema for envelope + all payloads)
-- [x] Consistency model: documented in `docs/adr/004-websocket-consistency.md` (server-authoritative, last-write-wins, seq-based replay)
-- [x] Reconnection handling: monotonic sequence numbers, `?last_seq=N` catch-up, ring-buffer replay (1000 events), `stale` → full REST refetch
-- [x] Testing: unit tests for in-memory bus + replay buffer; integration tests for fan-out, replay-on-reconnect, and stale signal (all with `-race`); end-to-end verified with a real server + WS client
-
----
-
-## Phase 3 – Asynchronous Jobs & Notifications (1–2 weeks)
-
-**Goal:** RabbitMQ becomes backbone for event-driven features. Notifications reach mobile.
-
-- [x] RabbitMQ adapter implementing same EventBus interface (`internal/rabbitmq/` — publish to fanout exchange, consumer on `notifications` queue, DLQ pump, trace headers)
-- [x] Publish `task.created`, `task.completed` events to broker via `CompositeBus` (in-memory → sync hub + RabbitMQ → notifications), no changes to the task service or sync hub
-- [x] Notifications service: `internal/notification/` consumes events, sends email (SMTP/Mailpit) and push (FCM HTTP v1 via `golang.org/x/oauth2/google`, no-op fallback)
-- [x] Mobile: `PudimFirebaseMessagingService` (FCM dependency, notification channel, `POST_NOTIFICATIONS` permission, manifest registration) — real project needs `google-services.json`
-- [x] Web: in-app toast notifications via the existing WebSocket stream (`useTaskNotifier` + `ToastProvider`)
-- [x] Idempotent consumers: `notifications` table with `UNIQUE(event_id, channel)`; `ON CONFLICT DO NOTHING`; documented in ADR 005
-- [x] Dead-letter queue + retry logic: `notifications.dlq` + retry pump (bounded by `x-retry-count` ≤ MaxRetries=5, then discard); no queue-TTL loop (cycle protection)
-- [x] Distributed tracing: W3C `traceparent` injected into AMQP headers on publish, extracted on consume — worker logs share the producer's `trace_id` (verified end-to-end)
-- [x] Graceful degradation: documented in ADR 005 (RabbitMQ down → sync unaffected; SMTP/FCM down → DLQ retry / no-op)
-
----
-
-## Phase 4 – Expand Domain: Habits & Focus Timer (2–3 weeks)
-
-**Goal:** Prove architecture absorbs new features without touching existing modules.
-
-- [x] API contracts: `api/openapi/pomodoro-v1.yaml`
-- [x] Backend: `internal/pomodoro/` module with domain events (start/pause/resume/complete/cancel) — in-memory only, no database persistence
-- [x] Web: pomodoro timer page (start/stop/session log)
-- [x] Mobile: habit screen (`HabitScreen.kt` — Material 3 day chips, streak badge, week heatmap, progress) and focus timer (`FocusTimerScreen.kt` — circular countdown + start/pause/resume/stop, `PomodoroApi.kt`)
-- [x] Optional: Android foreground service for focus timer (`FocusTimerService.kt` — persistent notification, keeps countdown alive when backgrounded)
-- [x] Audit log: `focus.started`/`focus.completed` (pomodoro) and `feature.toggled` (feature flags) written to the audit_log table
-- [x] Testing: verify zero changes to `internal/task/`; contract tests for new APIs
-- [x] ADR: "How new modules integrate without coupling" — covered by `docs/adr/002-modular-monolith.md`
-
-**Note:** Habit functionality (recurring tasks with daily completions) was implemented as part of Phase 1 within the task module (recurrence_days, completions resource, WeekHeatmap, StreakBadge, ProgressBar components). A dedicated `internal/habit/` module has not been extracted.
-
----
-
 ## Phase 5 – Meal Planning & Book Tracking (2–3 weeks)
 
 > **Status: IMPLEMENTED (2026-08-09).** Both modules are delivered end-to-end
@@ -82,12 +34,20 @@ then drops `books`). Events are now `library.item.added/updated/deleted` +
 and `booktrack` routes were removed. The Library ships CSV import
 (`POST /api/v1/library/import`) with web column-matching + fixed values.
 
+> **Updated (2026-08-13):** the **meal planner** module was **removed**
+> end-to-end — `internal/mealplan/`, `api/openapi/mealplan-v1.yaml`, the WS
+> `mealplan.published` event, web `MealPlanList.tsx`/`MealPlanDetail.tsx`,
+> mobile `MealPlanScreen.kt`/`MealPlanApi.kt`. Migration `021_drop_mealplans.sql`
+> drops `meal_plans`/`meal_plan_slots`/`meal_plan_shopping_list` and the
+> `meal_planning` feature flag. Recipes remain a standalone feature.
+
 
 ---
 
 ## Phase 5a (Optional) – Recipes Module (2–3 weeks)
 
-**Goal:** A full‑featured cooking recipe manager with media upload support. Complements Phase 5 meal planning.
+**Goal:** A full‑featured cooking recipe manager with media upload support.
+Standalone feature — the Phase 5 meal planner was removed (2026-08-13).
 
 - [x] API contract: `api/openapi/recipes-v1.yaml` (CRUD, search by title/tag/difficulty) — valid + codegen works
 - [x] Backend: `internal/recipe/` module (domain, service, Postgres repository, HTTP handlers, module router)
@@ -219,10 +179,11 @@ and `booktrack` routes were removed. The Library ships CSV import
 ### 9b & 9c (done)
 
 - [x] Image processing worker: barcode → ISBN decoding (`internal/media`,
-      pure-Go gozxing; `POST /api/v1/media/scan-isbn`, no external service);
-      meal-plan PDF generation (`internal/mealplan/pdf.go` via go-pdf/fpdf;
-      `GET /api/v1/mealplans/{planId}/pdf`).
+      pure-Go gozxing; `POST /api/v1/media/scan-isbn`, no external service).
+      **Retired (2026-08-13):** meal-plan PDF generation was removed with the
+      meal planner module.
 - [x] Web: "📄 PDF" download button on the Meal Plan detail page.
+      **Retired (2026-08-13):** removed with the meal planner module.
 - [x] Mobile: camera intent → FileProvider photo → `/media/scan-isbn` →
       auto-fill + add book by ISBN (📷 on BookListScreen).
       **Retired (2026-08-13):** removed with the booktrack → Library replacement.
@@ -294,8 +255,8 @@ deployment (`docs/slo-validation.md`).
 - [x] Performance report complete (docs/performance-report.md — Lighthouse 99, load tests, bundle analysis)
 
 **Core MVP is complete — all of Phases 0–6 delivered**, including Phase 5
-(meal planning + book tracking → now the Library media tracker) and Phase 5a
-(recipes) with web + mobile UIs.
+(book tracking → now the Library media tracker; meal planning removed
+2026-08-13) and Phase 5a (recipes) with web + mobile UIs.
 The barcode scanner (previously deferred) was delivered in Phase 9b: camera
 intent → gozxing ISBN decode → auto-add book — and retired with the
 booktrack → Library replacement (2026-08-13).

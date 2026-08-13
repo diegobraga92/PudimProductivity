@@ -26,7 +26,6 @@ const SPECS = [
   ["tasks-v1.yaml", "tasks-v1.ts"],
   ["recipes-v1.yaml", "recipes-v1.ts"],
   ["library-v1.yaml", "library-v1.ts"],
-  ["mealplan-v1.yaml", "mealplan-v1.ts"],
   ["scheduler-v1.yaml", "scheduler-v1.ts"],
   ["insights-v1.yaml", "insights-v1.ts"],
   ["sync-v1.yaml", "sync-v1.ts"],

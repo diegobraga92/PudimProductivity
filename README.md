@@ -145,9 +145,9 @@ non-engineering readers. Engineering detail lives in `docs/`.
 
 A personal productivity suite: **tasks & habits**, a **weekly planner**, a
 **focus timer (pomodoro)**, **real-time sync** between devices,
-**notifications** (email + push), a **recipe manager** with image upload,
-a **media library** (movies, series, books and games — with CSV import), and **meal planning**
-with an auto-generated shopping list. Web, Android, and a Go API backend.
+**notifications** (email + push), a **recipe manager** with image upload, and
+a **media library** (movies, series, books and games — with CSV import).
+Web, Android, and a Go API backend.
 
 ### The data model: one source of truth
 

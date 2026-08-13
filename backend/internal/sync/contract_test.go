@@ -132,9 +132,6 @@ func TestWsEventsConformToContract(t *testing.T) {
 		{eventbus.EventLibraryItemsImported, map[string]interface{}{
 			"imported": 3, "skipped": 1,
 		}},
-		{eventbus.EventMealPlanPublished, map[string]interface{}{
-			"id": "00000000-0000-0000-0000-000000000001",
-		}},
 		// Phase 5a: recipes.
 		{eventbus.EventRecipeCreated, map[string]interface{}{
 			"id": "00000000-0000-0000-0000-000000000001", "title": "Pancakes", "difficulty": "easy",

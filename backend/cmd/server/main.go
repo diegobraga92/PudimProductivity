@@ -26,7 +26,6 @@ import (
 	"github.com/diegobraga92/pudimproductivity/backend/internal/featureflag"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/insights"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/library"
-	"github.com/diegobraga92/pudimproductivity/backend/internal/mealplan"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/media"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/notification"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/observability"
@@ -251,21 +250,14 @@ func main() {
 	}
 
 	// Phase 5a: Recipes — depends on the media uploader (optional) for images.
-	var recipeService *recipe.RecipeService
 	if pool != nil {
-		recipeService = recipe.RegisterRecipeRoutes(r, pool, auditService, composite, uploads)
+		recipe.RegisterRecipeRoutes(r, pool, auditService, composite, uploads)
 	}
 
 	// Library: media tracking (movies, series, books, games) with a done flag,
 	// release year and optional notes. Replaces the Phase 5 booktrack module.
 	if pool != nil {
 		library.RegisterLibraryRoutes(r, pool, auditService, composite)
-	}
-
-	// Phase 5: Meal planning — depends on the recipes module for shopping-list
-	// generation (recipeService satisfies mealplan.RecipeReader).
-	if pool != nil {
-		mealplan.RegisterMealPlanRoutes(r, pool, recipeService, auditService, composite)
 	}
 
 	// Setup server

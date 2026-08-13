@@ -89,12 +89,6 @@ func seedBackupTestData(t *testing.T, ctx context.Context, pool *pgxpool.Pool) {
 			('77777777-7777-7777-7777-777777777777', '66666666-6666-6666-6666-666666666666', 'Flour', '200', 'g', 1);
 		INSERT INTO recipe_steps (id, recipe_id, step_number, instruction) VALUES
 			('88888888-8888-8888-8888-888888888888', '66666666-6666-6666-6666-666666666666', 1, 'Mix and cook');
-		INSERT INTO meal_plans (id, name, start_date, end_date, is_published) VALUES
-			('99999999-9999-9999-9999-999999999999', 'Week 1', '2026-01-12', '2026-01-18', true);
-		INSERT INTO meal_plan_slots (id, meal_plan_id, date, meal_type, recipe_id, notes) VALUES
-			('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '99999999-9999-9999-9999-999999999999', '2026-01-12', 'breakfast', '66666666-6666-6666-6666-666666666666', '');
-		INSERT INTO meal_plan_shopping_list (id, meal_plan_id, ingredient_name, quantity_agg, unit, is_checked) VALUES
-			('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '99999999-9999-9999-9999-999999999999', 'Flour', '200', 'g', false);
 		INSERT INTO pomodoro_sessions (id, user_id, focus_minutes, elapsed_s, started_at, completed_at) VALUES
 			('cccccccc-cccc-cccc-cccc-cccccccccccc', 'dev-user', 25, 1500, NOW(), NOW());
 		INSERT INTO insight_reports (id, user_id, week_start, report_json, report_text) VALUES
@@ -138,9 +132,6 @@ func TestBackupService_ExportImportRoundTrip(t *testing.T) {
 	expectOne(t, backup.RowCounts, "recipe_tags")
 	expectOne(t, backup.RowCounts, "recipe_ingredients")
 	expectOne(t, backup.RowCounts, "recipe_steps")
-	expectOne(t, backup.RowCounts, "meal_plans")
-	expectOne(t, backup.RowCounts, "meal_plan_slots")
-	expectOne(t, backup.RowCounts, "meal_plan_shopping_list")
 	expectOne(t, backup.RowCounts, "pomodoro_sessions")
 	expectOne(t, backup.RowCounts, "insight_reports")
 	if backup.RowCounts["feature_flags"] < 1 {

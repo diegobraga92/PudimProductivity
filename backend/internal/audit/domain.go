@@ -28,11 +28,6 @@ const (
 	ActionLibraryItemDeleted   = "library.item.deleted"
 	ActionLibraryItemsImported = "library.items.imported"
 
-	// Phase 5: meal planning.
-	ActionMealPlanCreated = "mealplan.created"
-	ActionMealPlanUpdated = "mealplan.updated"
-	ActionMealPlanDeleted = "mealplan.deleted"
-
 	// Phase 5a: recipes.
 	ActionRecipeCreated = "recipe.created"
 	ActionRecipeUpdated = "recipe.updated"
@@ -48,9 +43,6 @@ const (
 
 	// Library media tracking (replaces Phase 5 book tracking).
 	ResourceLibraryItems = "library_items"
-
-	// Phase 5: meal planning.
-	ResourceMealPlans = "meal_plans"
 
 	// Phase 5a: recipes.
 	ResourceRecipes = "recipes"

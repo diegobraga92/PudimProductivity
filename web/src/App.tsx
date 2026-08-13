@@ -25,12 +25,10 @@ const Soundscape = lazy(() => import("./pages/Soundscape"));
 const RecipeList = lazy(() => import("./pages/RecipeList"));
 const RecipeDetail = lazy(() => import("./pages/RecipeDetail"));
 const Library = lazy(() => import("./pages/Library"));
-const MealPlanList = lazy(() => import("./pages/MealPlanList"));
-const MealPlanDetail = lazy(() => import("./pages/MealPlanDetail"));
 const DailyPlan = lazy(() => import("./pages/DailyPlan"));
 const Insights = lazy(() => import("./pages/Insights"));
 
-type Page = "dashboard" | "tasks" | "planner" | "pomodoro" | "soundscape" | "recipes" | "library" | "mealplan" | "plan" | "insights" | "health";
+type Page = "dashboard" | "tasks" | "planner" | "pomodoro" | "soundscape" | "recipes" | "library" | "plan" | "insights" | "health";
 
 const NAV_ITEMS: { id: Page; label: string; icon: string }[] = [
   { id: "dashboard", label: "Dashboard", icon: "🏠" },
@@ -40,7 +38,6 @@ const NAV_ITEMS: { id: Page; label: string; icon: string }[] = [
   { id: "soundscape", label: "Sounds", icon: "🎵" },
   { id: "recipes", label: "Recipes", icon: "🍳" },
   { id: "library", label: "Library", icon: "🎬" },
-  { id: "mealplan", label: "Meals", icon: "🗓" },
   { id: "plan", label: "Daily Plan", icon: "🤖" },
   { id: "insights", label: "Insights", icon: "🧠" },
   { id: "health", label: "Status", icon: "💚" },
@@ -81,7 +78,6 @@ function HeaderBadge() {
 function AppInner() {
   const [page, setPage] = useState<Page>("dashboard");
   const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(null);
-  const [mealPlanId, setMealPlanId] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const { theme, toggleTheme } = useTheme();
 
@@ -118,7 +114,6 @@ function AppInner() {
     setPage(view);
     setMenuOpen(false);
     if (view !== "recipes") setSelectedRecipeId(null);
-    if (view !== "mealplan") setMealPlanId(null);
   };
 
   const isBackendOk = healthData?.status === "ok" && healthData?.db === "connected";
@@ -222,13 +217,6 @@ function AppInner() {
               ))}
 
             {page === "library" && <Library />}
-
-            {page === "mealplan" &&
-              (mealPlanId !== null ? (
-                <MealPlanDetail planId={mealPlanId} onBack={() => setMealPlanId(null)} />
-              ) : (
-                <MealPlanList onOpen={(id) => setMealPlanId(id)} />
-              ))}
 
             {page === "plan" && <DailyPlan />}
 

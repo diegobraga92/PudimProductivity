@@ -32,10 +32,6 @@ const (
 	EventLibraryItemDeleted   EventType = "library.item.deleted"
 	EventLibraryItemsImported EventType = "library.items.imported"
 
-	// Phase 5: meal planning.
-	EventMealPlanCreated   EventType = "mealplan.created"
-	EventMealPlanPublished EventType = "mealplan.published"
-
 	// Phase 5a: recipes.
 	EventRecipeCreated EventType = "recipe.created"
 	EventRecipeUpdated EventType = "recipe.updated"

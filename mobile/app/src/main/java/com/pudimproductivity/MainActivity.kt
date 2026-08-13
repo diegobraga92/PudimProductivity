@@ -16,7 +16,6 @@ import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.Restaurant
-import androidx.compose.material.icons.filled.RestaurantMenu
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.*
@@ -39,7 +38,6 @@ import com.pudimproductivity.ui.screens.FocusTimerScreen
 import com.pudimproductivity.ui.screens.HabitScreen
 import com.pudimproductivity.ui.screens.InsightsScreen
 import com.pudimproductivity.ui.screens.LibraryScreen
-import com.pudimproductivity.ui.screens.MealPlanScreen
 import com.pudimproductivity.ui.screens.RecipeCreateScreen
 import com.pudimproductivity.ui.screens.RecipeListScreen
 import com.pudimproductivity.ui.screens.TaskCreateScreen
@@ -54,7 +52,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 enum class Screen {
-    Health, ServerSettings, TaskList, TaskCreate, TaskDetail, TaskListDetail, FocusTimer, Habits, Recipes, RecipeCreate, Library, MealPlans, DailyPlan, Insights
+    Health, ServerSettings, TaskList, TaskCreate, TaskDetail, TaskListDetail, FocusTimer, Habits, Recipes, RecipeCreate, Library, DailyPlan, Insights
 }
 
 class MainActivity : ComponentActivity() {
@@ -201,7 +199,6 @@ private fun AppNavigation(
                 },
                 onRecipes = { currentScreen = Screen.Recipes },
                 onLibrary = { currentScreen = Screen.Library },
-                onMealPlans = { currentScreen = Screen.MealPlans },
                 onDailyPlan = { currentScreen = Screen.DailyPlan },
                 onInsights = { currentScreen = Screen.Insights }
             )
@@ -256,9 +253,6 @@ private fun AppNavigation(
         }
         Screen.Library -> {
             LibraryScreen(onBack = { currentScreen = Screen.TaskList })
-        }
-        Screen.MealPlans -> {
-            MealPlanScreen(onBack = { currentScreen = Screen.TaskList })
         }
         Screen.DailyPlan -> {
             DailyPlanScreen()
@@ -320,10 +314,6 @@ private fun AppNavigation(
                     MoreSheetItem(Icons.Filled.Movie, "Library") {
                         moreSheetOpen = false
                         currentScreen = Screen.Library
-                    }
-                    MoreSheetItem(Icons.Filled.RestaurantMenu, "Meal Plans") {
-                        moreSheetOpen = false
-                        currentScreen = Screen.MealPlans
                     }
                     MoreSheetItem(Icons.Filled.Insights, "Insights") {
                         moreSheetOpen = false

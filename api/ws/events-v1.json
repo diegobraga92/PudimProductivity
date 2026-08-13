@@ -25,7 +25,6 @@
             "library.item.updated",
             "library.item.deleted",
             "library.items.imported",
-            "mealplan.published",
             "recipe.created",
             "recipe.updated",
             "recipe.deleted",
@@ -132,12 +131,6 @@
         "skipped": { "type": "integer", "description": "Rows rejected during the import." }
       },
       "description": "Library bulk-import summary payload."
-    },
-    "mealPlanRef": {
-      "type": "object",
-      "required": ["id"],
-      "properties": { "id": { "type": "string", "format": "uuid" } },
-      "description": "Meal-plan reference payload (Phase 5)."
     },
     "taskListShare": {
       "type": "object",
@@ -258,12 +251,6 @@
           "properties": {
             "type": { "const": "library.items.imported" },
             "payload": { "$ref": "#/definitions/libraryImport" }
-          }
-        },
-        {
-          "properties": {
-            "type": { "const": "mealplan.published" },
-            "payload": { "$ref": "#/definitions/mealPlanRef" }
           }
         },
         {
