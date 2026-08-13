@@ -4,6 +4,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.content.pm.PackageManager
+import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
@@ -62,9 +63,13 @@ class HabitReminderWorker(
 
         private fun post(context: Context, title: String, text: String) {
             ensureChannel(context)
-            if (ContextCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS)
-                != PackageManager.PERMISSION_GRANTED
-            ) {
+            // Android 13+ requires the runtime POST_NOTIFICATIONS permission;
+            // on older devices the user can still disable notifications in
+            // Settings. Post only when notifications can actually be shown.
+            val permissionGranted = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+                ContextCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) ==
+                PackageManager.PERMISSION_GRANTED
+            if (!permissionGranted || !NotificationManagerCompat.from(context).areNotificationsEnabled()) {
                 return
             }
             val notification = NotificationCompat.Builder(context, CHANNEL_ID)

@@ -1,9 +1,14 @@
 package com.pudimproductivity
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -64,6 +69,12 @@ class MainActivity : ComponentActivity() {
     // widget/TasksWidget.kt, widget/HabitsWidget.kt and [parseLaunch]).
     private val launchTarget = mutableStateOf<LaunchTarget?>(null)
 
+    // Android 13+ notifications are a runtime permission. Habit reminders (and
+    // FCM pushes) are silently dropped while it's denied, so ask up front; the
+    // notification workers re-check before posting. The callback is a no-op.
+    private val requestNotificationPermission =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -84,6 +95,7 @@ class MainActivity : ComponentActivity() {
         repository.start()
         SyncScheduler.schedule(applicationContext)
         HabitReminderScheduler.schedule(applicationContext)
+        requestNotificationPermissionIfNeeded()
 
         // Widget taps arrive as extras on the launch intent (singleTop makes
         // onNewIntent deliver them when the activity is already resumed).
@@ -98,6 +110,16 @@ class MainActivity : ComponentActivity() {
                     AppNavigation(repository, launchTarget)
                 }
             }
+        }
+    }
+
+    /** Asks for POST_NOTIFICATIONS on Android 13+; no-op on older devices. */
+    private fun requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) !=
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            requestNotificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
     }
 
