@@ -24,13 +24,13 @@ const Pomodoro = lazy(() => import("./pages/Pomodoro"));
 const Soundscape = lazy(() => import("./pages/Soundscape"));
 const RecipeList = lazy(() => import("./pages/RecipeList"));
 const RecipeDetail = lazy(() => import("./pages/RecipeDetail"));
-const BookList = lazy(() => import("./pages/BookList"));
+const Library = lazy(() => import("./pages/Library"));
 const MealPlanList = lazy(() => import("./pages/MealPlanList"));
 const MealPlanDetail = lazy(() => import("./pages/MealPlanDetail"));
 const DailyPlan = lazy(() => import("./pages/DailyPlan"));
 const Insights = lazy(() => import("./pages/Insights"));
 
-type Page = "dashboard" | "tasks" | "planner" | "pomodoro" | "soundscape" | "recipes" | "booktrack" | "mealplan" | "plan" | "insights" | "health";
+type Page = "dashboard" | "tasks" | "planner" | "pomodoro" | "soundscape" | "recipes" | "library" | "mealplan" | "plan" | "insights" | "health";
 
 const NAV_ITEMS: { id: Page; label: string; icon: string }[] = [
   { id: "dashboard", label: "Dashboard", icon: "🏠" },
@@ -39,7 +39,7 @@ const NAV_ITEMS: { id: Page; label: string; icon: string }[] = [
   { id: "pomodoro", label: "Timer", icon: "🍅" },
   { id: "soundscape", label: "Sounds", icon: "🎵" },
   { id: "recipes", label: "Recipes", icon: "🍳" },
-  { id: "booktrack", label: "Books", icon: "📚" },
+  { id: "library", label: "Library", icon: "🎬" },
   { id: "mealplan", label: "Meals", icon: "🗓" },
   { id: "plan", label: "Daily Plan", icon: "🤖" },
   { id: "insights", label: "Insights", icon: "🧠" },
@@ -221,7 +221,7 @@ function AppInner() {
                 <RecipeList onOpen={(r) => setSelectedRecipeId(r.id)} />
               ))}
 
-            {page === "booktrack" && <BookList />}
+            {page === "library" && <Library />}
 
             {page === "mealplan" &&
               (mealPlanId !== null ? (

@@ -94,7 +94,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
     setSelectedFile(file);
     const ok = await confirm({
       title: "Restore backup?",
-      message: `Importing "${file.name}" will REPLACE all current tasks, lists, recipes, books, meal plans and insights. This cannot be undone. Continue?`,
+      message: `Importing "${file.name}" will REPLACE all current tasks, lists, recipes, library, meal plans and insights. This cannot be undone. Continue?`,
       confirmLabel: "Restore",
       confirmVariant: "danger",
     });
@@ -275,7 +275,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
           <h3 className="card-title">💾 Backup &amp; Restore</h3>
         </div>
         <p className="text-sm text-secondary" style={{ margin: "0 0 var(--space-md)" }}>
-          Download all your non-sensitive data (tasks, lists, recipes, books, meal plans and
+          Download all your non-sensitive data (tasks, lists, recipes, library, meal plans and
           insights) as a JSON file, or restore from a previous backup. Restoring replaces the
           current data — it cannot be undone.
         </p>

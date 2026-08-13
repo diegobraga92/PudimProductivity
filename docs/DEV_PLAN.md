@@ -155,6 +155,14 @@ These are centralised here to emphasise their importance. Each is introduced at 
 > (backend + web UI + mobile UI + contracts + tests + ADR 007). The previously
 > deferred barcode scanner was delivered in Phase 9b: camera intent →
 > gozxing ISBN decode → auto-add book.
+>
+> **Updated (2026-08-13):** Book tracking was **replaced** by the **Library**
+> module (`internal/library/`, migration 020) — a simple multi-media tracker
+> (movies / series / books / games) with name, media type, release year, a
+> `done` flag and optional notes, plus CSV import with column matching and
+> fixed values. Existing books were migrated as `type=book` items; the Google
+> Books ISBN lookup, the `scan-isbn` barcode decoder and the `booktrack`
+> module were removed.
 
 **Goal:** Introduce external API integrations and file uploads; mobile‑first features.
 
@@ -169,6 +177,13 @@ These are centralised here to emphasise their importance. Each is introduced at 
 `internal/mealplan/` (migrations 015/016), both web + mobile UIs, unit +
 integration + adapter tests, events + audit, ADR 007. Verified live end-to-end
 (recipe → meal plan → shopping-list aggregation → publish).
+
+**Updated (2026-08-13):** `booktrack` replaced by `internal/library/`
+(migration 020 converts `books` → `library_items` with `done = status='read'`,
+then drops `books`). Events are now `library.item.added/updated/deleted` +
+`library.items.imported`; the Google Books adapter, `scan-isbn` barcode decoder
+and `booktrack` routes were removed. The Library ships CSV import
+(`POST /api/v1/library/import`) with web column-matching + fixed values.
 
 
 ---
@@ -313,6 +328,7 @@ integration + adapter tests, events + audit, ADR 007. Verified live end-to-end
 - [x] Web: "📄 PDF" download button on the Meal Plan detail page.
 - [x] Mobile: camera intent → FileProvider photo → `/media/scan-isbn` →
       auto-fill + add book by ISBN (📷 on BookListScreen).
+      **Retired (2026-08-13):** removed with the booktrack → Library replacement.
 - [x] Mobile: offline‑first — local SQLite (`local/LocalDatabase.kt`, Room-style
       DAO API) with optimistic writes + `dirty`/`deleted` flags; incremental
       sync via `GET /api/v1/sync?since=...` (backend `internal/syncstore`,
@@ -381,9 +397,11 @@ deployment (`docs/slo-validation.md`).
 - [x] Performance report complete (docs/performance-report.md — Lighthouse 99, load tests, bundle analysis)
 
 **Core MVP is complete — all of Phases 0–6 delivered**, including Phase 5
-(meal planning + book tracking) and Phase 5a (recipes) with web + mobile UIs.
+(meal planning + book tracking → now the Library media tracker) and Phase 5a
+(recipes) with web + mobile UIs.
 The barcode scanner (previously deferred) was delivered in Phase 9b: camera
-intent → gozxing ISBN decode → auto-add book.
+intent → gozxing ISBN decode → auto-add book — and retired with the
+booktrack → Library replacement (2026-08-13).
 
 **Optional phases 7–9 are all delivered and live-verified** (NLP/auto-scheduler,
 collaboration/CRDTs, AI insights/media/offline) and the Phase 10 ops wrap-up is

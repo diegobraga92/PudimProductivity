@@ -26,8 +26,13 @@ const (
 	// EventTaskUncompleted is published after a habit task completion is removed.
 	EventTaskUncompleted EventType = "task.uncompleted"
 
-	// Phase 5: book tracking + meal planning.
-	EventBookAdded         EventType = "book.added"
+	// Library media tracking (replaces Phase 5 book tracking).
+	EventLibraryItemAdded     EventType = "library.item.added"
+	EventLibraryItemUpdated   EventType = "library.item.updated"
+	EventLibraryItemDeleted   EventType = "library.item.deleted"
+	EventLibraryItemsImported EventType = "library.items.imported"
+
+	// Phase 5: meal planning.
 	EventMealPlanCreated   EventType = "mealplan.created"
 	EventMealPlanPublished EventType = "mealplan.published"
 

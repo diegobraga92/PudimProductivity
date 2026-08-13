@@ -22,10 +22,13 @@ const (
 	ActionFocusStarted   = "focus.started"
 	ActionFocusCompleted = "focus.completed"
 
-	// Phase 5: book tracking + meal planning.
-	ActionBookAdded       = "book.added"
-	ActionBookUpdated     = "book.updated"
-	ActionBookDeleted     = "book.deleted"
+	// Library media tracking (replaces Phase 5 book tracking).
+	ActionLibraryItemAdded     = "library.item.added"
+	ActionLibraryItemUpdated   = "library.item.updated"
+	ActionLibraryItemDeleted   = "library.item.deleted"
+	ActionLibraryItemsImported = "library.items.imported"
+
+	// Phase 5: meal planning.
 	ActionMealPlanCreated = "mealplan.created"
 	ActionMealPlanUpdated = "mealplan.updated"
 	ActionMealPlanDeleted = "mealplan.deleted"
@@ -43,8 +46,10 @@ const (
 	ResourceFeatures  = "feature_flags"
 	ResourcePomodoro  = "pomodoro"
 
-	// Phase 5: book tracking + meal planning.
-	ResourceBooks     = "books"
+	// Library media tracking (replaces Phase 5 book tracking).
+	ResourceLibraryItems = "library_items"
+
+	// Phase 5: meal planning.
 	ResourceMealPlans = "meal_plans"
 
 	// Phase 5a: recipes.

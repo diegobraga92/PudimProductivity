@@ -80,9 +80,9 @@ var backupTables = []backupTable{
 		columns:  "id uuid, title text, days text[], start_time time, end_time time, color text, created_at timestamptz, updated_at timestamptz",
 	},
 	{
-		name:     "books",
+		name:     "library_items",
 		idColumn: "id",
-		columns:  "id uuid, isbn text, title text, authors text[], publisher text, published_date text, description text, page_count integer, thumbnail_url text, status text, created_at timestamptz, updated_at timestamptz",
+		columns:  "id uuid, name text, media_type text, release_year integer, done boolean, notes text, created_at timestamptz, updated_at timestamptz",
 	},
 	{
 		name:     "recipes",

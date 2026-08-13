@@ -44,7 +44,7 @@ fun TaskListScreen(
     onTaskClick: (String) -> Unit,
     onListClick: (String) -> Unit,
     onRecipes: () -> Unit,
-    onBooks: () -> Unit,
+    onLibrary: () -> Unit,
     onMealPlans: () -> Unit,
     onDailyPlan: () -> Unit,
     onInsights: () -> Unit
@@ -113,8 +113,8 @@ fun TaskListScreen(
                         Text("🍳")
                     }
                     Spacer(modifier = Modifier.width(8.dp))
-                    Button(onClick = onBooks) {
-                        Text("📚")
+                    Button(onClick = onLibrary) {
+                        Text("🎬")
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(onClick = onMealPlans) {

@@ -8,11 +8,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.EventNote
-import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.HealthAndSafety
 import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.RestaurantMenu
@@ -33,11 +33,11 @@ import com.pudimproductivity.fcm.ErrorReporter
 import com.pudimproductivity.focus.FocusTimerManager
 import com.pudimproductivity.notifications.HabitReminderScheduler
 import com.pudimproductivity.sync.SyncScheduler
-import com.pudimproductivity.ui.screens.BookListScreen
 import com.pudimproductivity.ui.screens.DailyPlanScreen
 import com.pudimproductivity.ui.screens.FocusTimerScreen
 import com.pudimproductivity.ui.screens.HabitScreen
 import com.pudimproductivity.ui.screens.InsightsScreen
+import com.pudimproductivity.ui.screens.LibraryScreen
 import com.pudimproductivity.ui.screens.MealPlanScreen
 import com.pudimproductivity.ui.screens.RecipeCreateScreen
 import com.pudimproductivity.ui.screens.RecipeListScreen
@@ -53,7 +53,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 enum class Screen {
-    Health, ServerSettings, TaskList, TaskCreate, TaskDetail, TaskListDetail, FocusTimer, Habits, Recipes, RecipeCreate, Books, MealPlans, DailyPlan, Insights
+    Health, ServerSettings, TaskList, TaskCreate, TaskDetail, TaskListDetail, FocusTimer, Habits, Recipes, RecipeCreate, Library, MealPlans, DailyPlan, Insights
 }
 
 class MainActivity : ComponentActivity() {
@@ -145,7 +145,7 @@ fun AppNavigation(repository: TaskRepository) {
                     currentScreen = Screen.TaskListDetail
                 },
                 onRecipes = { currentScreen = Screen.Recipes },
-                onBooks = { currentScreen = Screen.Books },
+                onLibrary = { currentScreen = Screen.Library },
                 onMealPlans = { currentScreen = Screen.MealPlans },
                 onDailyPlan = { currentScreen = Screen.DailyPlan },
                 onInsights = { currentScreen = Screen.Insights }
@@ -199,8 +199,8 @@ fun AppNavigation(repository: TaskRepository) {
         Screen.RecipeCreate -> {
             RecipeCreateScreen(onDone = { currentScreen = Screen.Recipes })
         }
-        Screen.Books -> {
-            BookListScreen(onBack = { currentScreen = Screen.TaskList })
+        Screen.Library -> {
+            LibraryScreen(onBack = { currentScreen = Screen.TaskList })
         }
         Screen.MealPlans -> {
             MealPlanScreen(onBack = { currentScreen = Screen.TaskList })
@@ -262,9 +262,9 @@ fun AppNavigation(repository: TaskRepository) {
                         moreSheetOpen = false
                         currentScreen = Screen.Habits
                     }
-                    MoreSheetItem(Icons.Filled.Book, "Books") {
+                    MoreSheetItem(Icons.Filled.Movie, "Library") {
                         moreSheetOpen = false
-                        currentScreen = Screen.Books
+                        currentScreen = Screen.Library
                     }
                     MoreSheetItem(Icons.Filled.RestaurantMenu, "Meal Plans") {
                         moreSheetOpen = false

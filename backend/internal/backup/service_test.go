@@ -80,8 +80,8 @@ func seedBackupTestData(t *testing.T, ctx context.Context, pool *pgxpool.Pool) {
 			('33333333-3333-3333-3333-333333333333', '22222222-2222-2222-2222-222222222222', '2026-01-15');
 		INSERT INTO planner_entries (id, title, days, start_time, end_time, color) VALUES
 			('44444444-4444-4444-4444-444444444444', 'Deep work', ARRAY['mon'], '09:00', '10:00', '#3B82F6');
-		INSERT INTO books (id, isbn, title, authors, status) VALUES
-			('55555555-5555-5555-5555-555555555555', '9781250237231', 'Permanent Record', ARRAY['Edward Snowden'], 'reading');
+		INSERT INTO library_items (id, name, media_type, release_year, done) VALUES
+			('55555555-5555-5555-5555-555555555555', 'Permanent Record', 'book', 2019, true);
 		INSERT INTO recipes (id, title, difficulty, prep_time_minutes, cook_time_minutes, servings) VALUES
 			('66666666-6666-6666-6666-666666666666', 'Pancakes', 'easy', 5, 10, 2);
 		INSERT INTO recipe_tags (recipe_id, tag) VALUES ('66666666-6666-6666-6666-666666666666', 'breakfast');
@@ -133,7 +133,7 @@ func TestBackupService_ExportImportRoundTrip(t *testing.T) {
 	expectOne(t, backup.RowCounts, "task_lists")
 	expectOne(t, backup.RowCounts, "task_completions")
 	expectOne(t, backup.RowCounts, "planner_entries")
-	expectOne(t, backup.RowCounts, "books")
+	expectOne(t, backup.RowCounts, "library_items")
 	expectOne(t, backup.RowCounts, "recipes")
 	expectOne(t, backup.RowCounts, "recipe_tags")
 	expectOne(t, backup.RowCounts, "recipe_ingredients")

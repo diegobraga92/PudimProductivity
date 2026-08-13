@@ -1,0 +1,306 @@
+# Check latest: https://github.com/OAI/OpenAPI-Specification/releases
+openapi: "3.2.0"
+info:
+  title: PudimProductivity Library API
+  description: |
+    Track media you consume — movies, series, books and games — with a simple
+    done flag, a release year and optional notes. Replaces the book-specific
+    tracking API (booktrack-v1.yaml).
+  version: "0.1.0"
+  contact:
+    name: PudimProductivity Team
+    url: https://github.com/diegobraga92/PudimProductivity
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+
+paths:
+  /api/v1/library:
+    get:
+      operationId: listLibraryItems
+      summary: List library items
+      description: Returns items newest-first, optionally filtered by media type and/or done status.
+      security: []
+      tags:
+        - Library
+      parameters:
+        - name: type
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/MediaType"
+        - name: done
+          in: query
+          required: false
+          schema:
+            type: boolean
+            description: When true, only done items; when false, only unfinished.
+      responses:
+        "200":
+          description: A list of library items.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LibraryItem"
+        "400":
+          description: Invalid filter value.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    post:
+      operationId: createLibraryItem
+      summary: Add an item to the library
+      description: Adds a single item from client-provided fields.
+      security: []
+      tags:
+        - Library
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateLibraryItemRequest"
+      responses:
+        "201":
+          description: Item created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LibraryItem"
+        "400":
+          description: Validation error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/library/import:
+    post:
+      operationId: importLibraryItems
+      summary: Bulk import library items
+      description: |
+        Creates multiple items in a single transaction (used by the CSV import
+        flow). Valid rows are inserted; invalid rows are skipped and reported
+        with their 1-based row number.
+      security: []
+      tags:
+        - Library
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ImportItemsRequest"
+      responses:
+        "200":
+          description: Import summary with created items and skipped rows.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportResult"
+        "400":
+          description: Empty, malformed or oversized payload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/library/{itemId}:
+    parameters:
+      - $ref: "#/components/parameters/itemId"
+    get:
+      operationId: getLibraryItem
+      summary: Get a library item
+      security: []
+      tags:
+        - Library
+      responses:
+        "200":
+          description: The item.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LibraryItem"
+        "404":
+          description: Item not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    put:
+      operationId: updateLibraryItem
+      summary: Update a library item
+      description: |
+        Partial update — omitted fields are left unchanged. Send {"done": true}
+        to mark an item as consumed/read/watched/played.
+      security: []
+      tags:
+        - Library
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateLibraryItemRequest"
+      responses:
+        "200":
+          description: The updated item.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LibraryItem"
+        "400":
+          description: Validation error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Item not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    delete:
+      operationId: deleteLibraryItem
+      summary: Delete a library item
+      security: []
+      tags:
+        - Library
+      responses:
+        "204":
+          description: Item deleted.
+        "404":
+          description: Item not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  parameters:
+    itemId:
+      name: itemId
+      in: path
+      required: true
+      description: The library item UUID.
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    MediaType:
+      type: string
+      enum: [movie, series, book, game]
+      description: Kind of media the item represents.
+
+    LibraryItem:
+      type: object
+      required: [id, name, media_type, done, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          description: The title of the item.
+        media_type:
+          $ref: "#/components/schemas/MediaType"
+        release_year:
+          type: integer
+          nullable: true
+          description: Year the media was released; null when unknown.
+        done:
+          type: boolean
+          description: True when the item has been consumed/read/watched/played.
+        notes:
+          type: string
+          description: Optional free-text notes or comments.
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateLibraryItemRequest:
+      type: object
+      required: [name, media_type]
+      properties:
+        name:
+          type: string
+        media_type:
+          $ref: "#/components/schemas/MediaType"
+        release_year:
+          type: integer
+          nullable: true
+        done:
+          type: boolean
+          default: false
+        notes:
+          type: string
+
+    UpdateLibraryItemRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        media_type:
+          $ref: "#/components/schemas/MediaType"
+        release_year:
+          type: integer
+          nullable: true
+        done:
+          type: boolean
+        notes:
+          type: string
+
+    ImportItemsRequest:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CreateLibraryItemRequest"
+          description: Up to 5000 items per import.
+
+    ImportError:
+      type: object
+      required: [row, message]
+      properties:
+        row:
+          type: integer
+          description: 1-based row number in the original CSV (data rows only).
+        message:
+          type: string
+
+    ImportResult:
+      type: object
+      required: [imported]
+      properties:
+        imported:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/LibraryItem"
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImportError"
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+

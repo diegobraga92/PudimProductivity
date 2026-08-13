@@ -1,0 +1,54 @@
+package com.pudimproductivity.api
+
+import retrofit2.http.Body
+import retrofit2.http.DELETE
+import retrofit2.http.GET
+import retrofit2.http.POST
+import retrofit2.http.PUT
+import retrofit2.http.Path
+import retrofit2.http.Query
+
+data class LibraryItem(
+    val id: String,
+    val name: String,
+    val media_type: String,
+    val release_year: Int? = null,
+    val done: Boolean = false,
+    val notes: String = ""
+)
+
+data class CreateLibraryItemRequest(
+    val name: String,
+    val media_type: String,
+    val release_year: Int? = null,
+    val done: Boolean = false,
+    val notes: String = ""
+)
+
+data class UpdateLibraryItemRequest(
+    val name: String? = null,
+    val media_type: String? = null,
+    val release_year: Int? = null,
+    val done: Boolean? = null,
+    val notes: String? = null
+)
+
+interface LibraryService {
+    @GET("library")
+    suspend fun listItems(
+        @Query("type") mediaType: String? = null,
+        @Query("done") done: Boolean? = null
+    ): List<LibraryItem>
+
+    @POST("library")
+    suspend fun createItem(@Body request: CreateLibraryItemRequest): LibraryItem
+
+    @PUT("library/{itemId}")
+    suspend fun updateItem(@Path("itemId") itemId: String, @Body request: UpdateLibraryItemRequest): LibraryItem
+
+    @DELETE("library/{itemId}")
+    suspend fun deleteItem(@Path("itemId") itemId: String)
+}
+
+val ApiClient.libraryService: LibraryService
+    get() = retrofit.create(LibraryService::class.java)

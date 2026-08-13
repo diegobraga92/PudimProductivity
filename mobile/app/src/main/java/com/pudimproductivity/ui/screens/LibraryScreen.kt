@@ -1,0 +1,255 @@
+package com.pudimproductivity.ui.screens
+
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import com.pudimproductivity.api.ApiClient
+import com.pudimproductivity.api.CreateLibraryItemRequest
+import com.pudimproductivity.api.LibraryItem
+import com.pudimproductivity.api.UpdateLibraryItemRequest
+import com.pudimproductivity.api.libraryService
+import kotlinx.coroutines.launch
+
+private val MEDIA_TYPES = listOf("movie", "series", "book", "game")
+
+private fun mediaLabel(t: String): String = when (t) {
+    "movie" -> "🎬 Movie"
+    "series" -> "📺 Series"
+    "book" -> "📚 Book"
+    "game" -> "🎮 Game"
+    else -> t
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun LibraryScreen(onBack: () -> Unit) {
+    val scope = rememberCoroutineScope()
+    var items by remember { mutableStateOf<List<LibraryItem>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    var formOpen by remember { mutableStateOf(false) }
+    var editing by remember { mutableStateOf<LibraryItem?>(null) }
+    var name by remember { mutableStateOf("") }
+    var mediaType by remember { mutableStateOf("book") }
+    var year by remember { mutableStateOf("") }
+    var done by remember { mutableStateOf(false) }
+    var notes by remember { mutableStateOf("") }
+
+    suspend fun refresh() {
+        try {
+            items = ApiClient.libraryService.listItems()
+            error = null
+        } catch (e: Exception) {
+            error = e.message ?: "Failed to load library"
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        scope.launch { refresh(); isLoading = false }
+    }
+
+    fun openAdd() {
+        editing = null
+        name = ""
+        mediaType = "book"
+        year = ""
+        done = false
+        notes = ""
+        formOpen = true
+    }
+
+    fun openEdit(item: LibraryItem) {
+        editing = item
+        name = item.name
+        mediaType = item.media_type
+        year = item.release_year?.toString() ?: ""
+        done = item.done
+        notes = item.notes
+        formOpen = true
+    }
+
+    fun closeForm() {
+        formOpen = false
+        editing = null
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("🎬 Library") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        Column(Modifier.padding(padding).padding(16.dp)) {
+
+            if (formOpen) {
+                Card(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = name,
+                            onValueChange = { name = it },
+                            label = { Text("Name") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Row(Modifier.horizontalScroll(rememberScrollState())) {
+                            MEDIA_TYPES.forEach { t ->
+                                FilterChip(
+                                    selected = mediaType == t,
+                                    onClick = { mediaType = t },
+                                    label = { Text(t.replaceFirstChar { it.uppercase() }) },
+                                    modifier = Modifier.padding(end = 8.dp)
+                                )
+                            }
+                        }
+                        OutlinedTextField(
+                            value = year,
+                            onValueChange = { year = it.filter { c -> c.isDigit() } },
+                            label = { Text("Release year") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = notes,
+                            onValueChange = { notes = it },
+                            label = { Text("Notes") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(checked = done, onCheckedChange = { done = it })
+                            Text("Done (consumed / read / watched / played)")
+                        }
+                        Button(
+                            enabled = name.isNotBlank(),
+                            onClick = {
+                                scope.launch {
+                                    try {
+                                        val yearValue = year.toIntOrNull()?.takeIf { it in 1800..2100 }
+                                        if (editing != null) {
+                                            ApiClient.libraryService.updateItem(
+                                                editing!!.id,
+                                                UpdateLibraryItemRequest(
+                                                    name = name.trim(),
+                                                    media_type = mediaType,
+                                                    release_year = yearValue,
+                                                    done = done,
+                                                    notes = notes
+                                                )
+                                            )
+                                        } else {
+                                            ApiClient.libraryService.createItem(
+                                                CreateLibraryItemRequest(
+                                                    name = name.trim(),
+                                                    media_type = mediaType,
+                                                    release_year = yearValue,
+                                                    done = done,
+                                                    notes = notes
+                                                )
+                                            )
+                                        }
+                                        closeForm()
+                                        refresh()
+                                    } catch (e: Exception) {
+                                        error = e.message ?: "Save failed"
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text(if (editing != null) "Save changes" else "Add") }
+                    }
+                }
+            }
+
+            error?.let {
+                Text(
+                    it,
+                    color = MaterialTheme.colorScheme.error,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            Button(
+                onClick = { if (formOpen) closeForm() else openAdd() },
+                modifier = Modifier.fillMaxWidth()
+            ) { Text(if (formOpen) "Cancel" else "+ Add item") }
+
+            if (isLoading) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            } else {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxSize()) {
+                    items(items) { item ->
+                        Card(Modifier.fillMaxWidth()) {
+                            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Column(Modifier.weight(1f)) {
+                                        Text(item.name, style = MaterialTheme.typography.titleMedium)
+                                        Text(
+                                            "${mediaLabel(item.media_type)}${item.release_year?.let { " · $it" } ?: ""}",
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
+                                    Checkbox(
+                                        checked = item.done,
+                                        onCheckedChange = { checked ->
+                                            scope.launch {
+                                                try {
+                                                    ApiClient.libraryService.updateItem(
+                                                        item.id,
+                                                        UpdateLibraryItemRequest(done = checked)
+                                                    )
+                                                    refresh()
+                                                } catch (e: Exception) {
+                                                    error = e.message ?: "Update failed"
+                                                }
+                                            }
+                                        }
+                                    )
+                                }
+                                if (item.notes.isNotBlank()) {
+                                    Text("📝 ${item.notes}", style = MaterialTheme.typography.bodySmall)
+                                }
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    OutlinedButton(onClick = { openEdit(item) }, modifier = Modifier.weight(1f)) {
+                                        Text("Edit")
+                                    }
+                                    OutlinedButton(
+                                        onClick = {
+                                            scope.launch {
+                                                try {
+                                                    ApiClient.libraryService.deleteItem(item.id)
+                                                    refresh()
+                                                } catch (e: Exception) {
+                                                    error = e.message ?: "Delete failed"
+                                                }
+                                            }
+                                        },
+                                        modifier = Modifier.weight(1f)
+                                    ) { Text("Delete") }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+

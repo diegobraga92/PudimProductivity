@@ -20,13 +20,12 @@ import (
 
 	"github.com/diegobraga92/pudimproductivity/backend/internal/audit"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/backup"
-	"github.com/diegobraga92/pudimproductivity/backend/internal/booktrack"
-	"github.com/diegobraga92/pudimproductivity/backend/internal/booktrack/googlebooks"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/collab"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/db"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/eventbus"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/featureflag"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/insights"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/library"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/mealplan"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/media"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/notification"
@@ -251,23 +250,16 @@ func main() {
 		log.Info().Msg("S3_MEDIA_BUCKET unset — recipe media uploads disabled")
 	}
 
-	// Phase 9b: barcode → ISBN scan (pure-Go gozxing; no external service).
-	// POST /api/v1/media/scan-isbn accepts a multipart image and returns the
-	// decoded ISBN for the client to feed into /books/by-isbn.
-	r.Post("/api/v1/media/scan-isbn", media.ScanISBNHandler)
+	// Phase 5a: Recipes — depends on the media uploader (optional) for images.
 	var recipeService *recipe.RecipeService
 	if pool != nil {
 		recipeService = recipe.RegisterRecipeRoutes(r, pool, auditService, composite, uploads)
 	}
 
-	// Phase 5: Book tracking. The Google Books adapter is always wired; with no
-	// GOOGLE_BOOKS_API_KEY it uses the anonymous (rate-limited) endpoint. A nil
-	// lookup would degrade by-ISBN entry to 502 while keeping manual entry.
+	// Library: media tracking (movies, series, books, games) with a done flag,
+	// release year and optional notes. Replaces the Phase 5 booktrack module.
 	if pool != nil {
-		gb := googlebooks.NewClient(googlebooks.Config{
-			APIKey: os.Getenv("GOOGLE_BOOKS_API_KEY"),
-		})
-		booktrack.RegisterBookRoutes(r, pool, gb, auditService, composite)
+		library.RegisterLibraryRoutes(r, pool, auditService, composite)
 	}
 
 	// Phase 5: Meal planning — depends on the recipes module for shopping-list

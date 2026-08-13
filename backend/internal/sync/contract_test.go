@@ -119,9 +119,18 @@ func TestWsEventsConformToContract(t *testing.T) {
 		{eventbus.EventPresenceOffline, map[string]interface{}{
 			"user_id": "user-1",
 		}},
-		// Phase 5: book tracking + meal planning.
-		{eventbus.EventBookAdded, map[string]interface{}{
-			"id": "00000000-0000-0000-0000-000000000001", "isbn": "9780553386790", "title": "Permanent Record",
+		// Library media tracking (replaces Phase 5 book tracking).
+		{eventbus.EventLibraryItemAdded, map[string]interface{}{
+			"id": "00000000-0000-0000-0000-000000000001", "name": "The Matrix", "media_type": "movie", "done": false,
+		}},
+		{eventbus.EventLibraryItemUpdated, map[string]interface{}{
+			"id": "00000000-0000-0000-0000-000000000001", "name": "The Matrix", "media_type": "movie", "done": true,
+		}},
+		{eventbus.EventLibraryItemDeleted, map[string]interface{}{
+			"id": "00000000-0000-0000-0000-000000000001",
+		}},
+		{eventbus.EventLibraryItemsImported, map[string]interface{}{
+			"imported": 3, "skipped": 1,
 		}},
 		{eventbus.EventMealPlanPublished, map[string]interface{}{
 			"id": "00000000-0000-0000-0000-000000000001",

@@ -21,7 +21,10 @@
             "tasklist.unshared",
             "presence.online",
             "presence.offline",
-            "book.added",
+            "library.item.added",
+            "library.item.updated",
+            "library.item.deleted",
+            "library.items.imported",
             "mealplan.published",
             "recipe.created",
             "recipe.updated",
@@ -100,15 +103,35 @@
       },
       "description": "Recipe event payload (Phase 5a). Minimal shape — consumers needing the full recipe fetch it via REST."
     },
-    "book": {
+    "libraryItem": {
       "type": "object",
-      "required": ["id", "isbn", "title"],
+      "required": ["id", "name", "media_type"],
       "properties": {
         "id": { "type": "string", "format": "uuid" },
-        "isbn": { "type": "string" },
-        "title": { "type": "string" }
+        "name": { "type": "string" },
+        "media_type": { "type": "string", "enum": ["movie", "series", "book", "game"] },
+        "release_year": { "type": ["integer", "null"] },
+        "done": { "type": "boolean" },
+        "notes": { "type": "string" }
       },
-      "description": "Book event payload (Phase 5)."
+      "description": "Library item event payload. Minimal shape — consumers needing the full item fetch it via REST."
+    },
+    "libraryItemRef": {
+      "type": "object",
+      "required": ["id"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" }
+      },
+      "description": "Minimal library item reference (deletion events)."
+    },
+    "libraryImport": {
+      "type": "object",
+      "required": ["imported"],
+      "properties": {
+        "imported": { "type": "integer", "description": "Items persisted by the import." },
+        "skipped": { "type": "integer", "description": "Rows rejected during the import." }
+      },
+      "description": "Library bulk-import summary payload."
     },
     "mealPlanRef": {
       "type": "object",
@@ -215,8 +238,26 @@
         },
         {
           "properties": {
-            "type": { "const": "book.added" },
-            "payload": { "$ref": "#/definitions/book" }
+            "type": { "const": "library.item.added" },
+            "payload": { "$ref": "#/definitions/libraryItem" }
+          }
+        },
+        {
+          "properties": {
+            "type": { "const": "library.item.updated" },
+            "payload": { "$ref": "#/definitions/libraryItem" }
+          }
+        },
+        {
+          "properties": {
+            "type": { "const": "library.item.deleted" },
+            "payload": { "$ref": "#/definitions/libraryItemRef" }
+          }
+        },
+        {
+          "properties": {
+            "type": { "const": "library.items.imported" },
+            "payload": { "$ref": "#/definitions/libraryImport" }
           }
         },
         {
