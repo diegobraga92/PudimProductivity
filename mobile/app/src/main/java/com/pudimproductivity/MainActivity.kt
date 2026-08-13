@@ -1,5 +1,6 @@
 package com.pudimproductivity
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -61,6 +62,10 @@ class MainActivity : ComponentActivity() {
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private lateinit var repository: TaskRepository
 
+    // Phase 10: deep link targets from home-screen widget taps (see
+    // widget/TasksWidget.kt, widget/HabitsWidget.kt and [parseLaunch]).
+    private val launchTarget = mutableStateOf<LaunchTarget?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -82,29 +87,79 @@ class MainActivity : ComponentActivity() {
         SyncScheduler.schedule(applicationContext)
         HabitReminderScheduler.schedule(applicationContext)
 
+        // Widget taps arrive as extras on the launch intent (singleTop makes
+        // onNewIntent deliver them when the activity is already resumed).
+        launchTarget.value = parseLaunch(intent)
+
         setContent {
             PudimProductivityTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    AppNavigation(repository)
+                    AppNavigation(repository, launchTarget)
                 }
             }
         }
     }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        launchTarget.value = parseLaunch(intent)
+    }
+
+    private fun parseLaunch(intent: Intent?): LaunchTarget? {
+        val screen = intent?.getStringExtra(EXTRA_SCREEN) ?: return null
+        return when (screen) {
+            // Task detail needs the id; without it the tap falls back to no-op.
+            SCREEN_TASK_DETAIL -> intent.getStringExtra(EXTRA_TASK_ID)
+                ?.let { LaunchTarget(Screen.TaskDetail, it) }
+            SCREEN_HABITS -> LaunchTarget(Screen.Habits, null)
+            SCREEN_TASK_CREATE -> LaunchTarget(Screen.TaskCreate, null)
+            else -> null
+        }
+    }
+
+    companion object {
+        // Widget deep-link extras — also used by the Glance widgets.
+        const val EXTRA_SCREEN = "com.pudimproductivity.extra.SCREEN"
+        const val EXTRA_TASK_ID = "com.pudimproductivity.extra.TASK_ID"
+
+        const val SCREEN_TASKS = "tasks"
+        const val SCREEN_TASK_DETAIL = "task_detail"
+        const val SCREEN_HABITS = "habits"
+        const val SCREEN_TASK_CREATE = "task_create"
+    }
 }
+
+/** A widget deep-link target: which [Screen] to open, and with which task. */
+private data class LaunchTarget(val screen: Screen, val taskId: String?)
 
 /** Bottom-navigation top-level destinations. */
 private enum class TopLevel { Tasks, Plan, Timer, Recipes, More }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppNavigation(repository: TaskRepository) {
-    var currentScreen by remember { mutableStateOf(Screen.TaskList) }
-    var selectedTaskId by remember { mutableStateOf<String?>(null) }
+private fun AppNavigation(
+    repository: TaskRepository,
+    launchTarget: MutableState<LaunchTarget?>
+) {
+    var currentScreen by remember { mutableStateOf(launchTarget.value?.screen ?: Screen.TaskList) }
+    var selectedTaskId by remember { mutableStateOf(launchTarget.value?.taskId) }
     var selectedListId by remember { mutableStateOf<String?>(null) }
     var moreSheetOpen by remember { mutableStateOf(false) }
+
+    // Phase 10: navigate to a widget tap target (also fires for the initial
+    // launch), then clear it so the next tap is honoured.
+    val target = launchTarget.value
+    LaunchedEffect(target) {
+        if (target != null) {
+            currentScreen = target.screen
+            selectedTaskId = target.taskId
+            launchTarget.value = null
+        }
+    }
 
     // Map the current screen to the active bottom-nav item.
     val currentTopLevel = when (currentScreen) {

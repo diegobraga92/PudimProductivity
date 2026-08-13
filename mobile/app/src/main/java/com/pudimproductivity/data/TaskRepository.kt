@@ -9,6 +9,7 @@ import com.pudimproductivity.local.LocalDatabase
 import com.pudimproductivity.local.LocalTask
 import com.pudimproductivity.local.LocalTaskList
 import com.pudimproductivity.sync.SyncManager
+import com.pudimproductivity.widget.WidgetUpdater
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,7 +23,7 @@ import kotlinx.coroutines.withContext
  * database (instant, works offline); writes are optimistic (row inserted with
  * `dirty=1`) and flushed to the server by [SyncManager] on the next sync.
  */
-class TaskRepository(context: Context, scope: CoroutineScope) {
+class TaskRepository(private val context: Context, scope: CoroutineScope) {
 
     private val db = LocalDatabase(context)
     private val sync = SyncManager(context)
@@ -58,6 +59,9 @@ class TaskRepository(context: Context, scope: CoroutineScope) {
         _tasks.value = db.queryTasks().map { it.toApi() }
         _completions.value = db.queryCompletions().map { it.toApi() }
         _taskLists.value = db.queryTaskLists().map { it.toApi() }
+        // Phase 10: keep home-screen widgets in sync with the local snapshot.
+        // Covers every local write, WS-event refresh, and post-sync re-emit.
+        appScope.launch { WidgetUpdater.updateAll(context) }
     }
 
     // --- writes (optimistic, local-first) ---

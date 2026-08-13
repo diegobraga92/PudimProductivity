@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Static preview shown in the widget picker for the Today's Habits widget. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="250dp"
+    android:height="110dp"
+    android:viewportWidth="250"
+    android:viewportHeight="110">
+
+    <!-- Cream background card -->
+    <path
+        android:fillColor="#FFF6E9"
+        android:pathData="M0,0h250v110h-250z" />
+
+    <!-- Header: title + done/total -->
+    <path
+        android:fillColor="#EA580C"
+        android:pathData="M8,22h40v10h-40z" />
+    <path
+        android:fillColor="#10B981"
+        android:pathData="M190,22h52v10h-52z" />
+
+    <!-- Progress track + fill (habit green) -->
+    <path
+        android:fillColor="#F2E0D0"
+        android:pathData="M8,40h234v8h-234z" />
+    <path
+        android:fillColor="#10B981"
+        android:pathData="M8,40h120v8h-120z" />
+
+    <!-- Habit rows: checkbox + text + streak -->
+    <path
+        android:fillColor="#10B981"
+        android:pathData="M12,62h12v12h-12z" />
+    <path
+        android:fillColor="#1F1B16"
+        android:pathData="M34,62h100v8h-100z" />
+    <path
+        android:fillColor="#EA580C"
+        android:pathData="M196,62h44v8h-44z" />
+
+    <path
+        android:fillColor="#85736A"
+        android:pathData="M12,84h12v12h-12z" />
+    <path
+        android:fillColor="#1F1B16"
+        android:pathData="M34,84h80v8h-80z" />
+    <path
+        android:fillColor="#85736A"
+        android:pathData="M196,84h44v8h-44z" />
+</vector>

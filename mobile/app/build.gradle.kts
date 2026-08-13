@@ -139,6 +139,14 @@ dependencies {
     // zero annotation-processing build risk.)
     implementation("androidx.work:work-runtime-ktx:2.10.1")
 
+    // Phase 10: home-screen widgets — Jetpack Glance (Compose for widgets).
+    // 1.1.1 is the newest stable release (1.2/1.3 are pre-release only). Glance
+    // needs no KSP, so it works with AGP 9's built-in Kotlin that blocked Room
+    // (docs/adr/012). glance-material3 provides the M3 color scheme +
+    // LinearProgressIndicator used by the task/habit widgets.
+    implementation("androidx.glance:glance-appwidget:1.1.1")
+    implementation("androidx.glance:glance-material3:1.1.1")
+
     // Testing
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
