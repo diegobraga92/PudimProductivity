@@ -109,6 +109,13 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("androidx.activity:activity-compose:1.9.3")
 
+    // Fragment (androidx.fragment:fragment-ktx). Not used directly, but pinned
+    // >= 1.3.0: Firebase's play-services-basement pulls in fragment 1.1.0, and
+    // androidx.activity's ActivityResult APIs (registerForActivityResult — used
+    // for the Android 13+ POST_NOTIFICATIONS permission prompt) require
+    // fragment >= 1.3.0 (lint: InvalidFragmentVersionForActivityResult).
+    implementation("androidx.fragment:fragment-ktx:1.8.9")
+
     // Compose
     implementation(platform("androidx.compose:compose-bom:2026.05.00"))
     implementation("androidx.compose.ui:ui")
