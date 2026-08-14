@@ -148,7 +148,7 @@ class SyncManager(private val context: Context) {
                 } else {
                     val existing = db.queryTaskLists().firstOrNull { it.id == l.id }
                     if (existing?.updated_at == l.created_at) {
-                        api.createTaskList(com.pudimproductivity.api.CreateTaskListRequest(l.name))
+                        api.createTaskList(com.pudimproductivity.api.CreateTaskListRequest(id = l.id, name = l.name))
                     } else {
                         api.updateTaskList(l.id, com.pudimproductivity.api.UpdateTaskListRequest(name = l.name, description = l.description))
                     }

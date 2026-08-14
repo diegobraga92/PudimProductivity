@@ -605,6 +605,12 @@ export interface components {
         };
         CreateTaskListRequest: {
             /**
+             * Format: uuid
+             * @description Optional client-generated UUID. When supplied, the server uses it as the task list ID, making create idempotent for offline-first clients that push a locally-created list more than once.
+             * @example 770e8400-e29b-41d4-a716-446655440002
+             */
+            id?: string;
+            /**
              * @description The name of the new task list.
              * @example Shopping List
              */

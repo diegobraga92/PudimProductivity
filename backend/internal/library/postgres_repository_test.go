@@ -192,3 +192,43 @@ func TestLibraryRepository_ImportRollsBackOnError(t *testing.T) {
 		t.Fatalf("List after failed import = %d rows, want 1 (rollback)", len(all))
 	}
 }
+
+// TestLibraryRepository_ScoreSourceNotNull guards the Library-page regression
+// where GET /api/v1/library returned 500 ("can't scan into dest[8] (col:
+// score_source): cannot scan NULL into *string"). Migration 022 declared
+// score_source TEXT NULL while the Go domain models it as a non-nullable string
+// (empty = no source), so rows written before migration 022 broke the list
+// query. Migration 025 backfills NULLs and enforces NOT NULL DEFAULT ''.
+func TestLibraryRepository_ScoreSourceNotNull(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration test requires Docker")
+	}
+	ctx, pool := setupLibraryTestPostgres(t)
+
+	var isNullable string
+	var columnDefault *string
+	err := pool.QueryRow(ctx, `
+		SELECT is_nullable, column_default
+		FROM information_schema.columns
+		WHERE table_schema = 'public' AND table_name = 'library_items' AND column_name = 'score_source'
+	`).Scan(&isNullable, &columnDefault)
+	if err != nil {
+		t.Fatalf("query score_source column metadata: %v", err)
+	}
+	if isNullable != "NO" {
+		t.Fatalf("score_source is_nullable = %q, want NO (migration 025 must keep it NOT NULL)", isNullable)
+	}
+	if columnDefault == nil || *columnDefault != "''::text" {
+		t.Fatalf("score_source column_default = %v, want ''::text", columnDefault)
+	}
+
+	// An explicit NULL must be rejected by the NOT NULL constraint, so the
+	// library list scan can never hit "cannot scan NULL into *string" again.
+	_, err = pool.Exec(ctx, `
+		INSERT INTO library_items (id, name, media_type, score_source)
+		VALUES (gen_random_uuid(), 'Null Source', 'book', NULL)
+	`)
+	if err == nil {
+		t.Fatal("expected INSERT with NULL score_source to fail (NOT NULL constraint)")
+	}
+}

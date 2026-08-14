@@ -31,6 +31,7 @@ type taskListResponse struct {
 }
 
 type createTaskListRequest struct {
+	ID   string `json:"id,omitempty"`
 	Name string `json:"name"`
 }
 
@@ -103,7 +104,7 @@ func (h *Handler) CreateTaskList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	list, err := h.service.CreateTaskList(r.Context(), req.Name, requester(r))
+	list, err := h.service.CreateTaskList(r.Context(), req.ID, req.Name, requester(r))
 	if err != nil {
 		log.Error().Err(err).Msg("failed to create task list")
 		shared.WriteError(w, http.StatusInternalServerError, "failed to create task list")

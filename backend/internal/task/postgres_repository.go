@@ -153,7 +153,7 @@ func (r *PostgresTaskRepository) List(ctx context.Context, statusFilter, typeFil
 }
 
 func (r *PostgresTaskRepository) ListScheduled(ctx context.Context) ([]*Task, error) {
-	query := `SELECT ` + taskColumns + ` FROM tasks WHERE start_time IS NOT NULL AND deleted_at IS NULL ORDER BY start_time ASC`
+	query := `SELECT ` + taskColumns + ` FROM tasks WHERE start_time IS NOT NULL AND deleted_at IS NULL AND list_id IS NULL ORDER BY start_time ASC`
 
 	rows, err := r.pool.Query(ctx, query)
 	if err != nil {

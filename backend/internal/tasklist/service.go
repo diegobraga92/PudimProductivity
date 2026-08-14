@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 
 	"github.com/diegobraga92/pudimproductivity/backend/internal/eventbus"
@@ -44,8 +45,20 @@ func (s *TaskListService) effectiveRole(ctx context.Context, listID, userID stri
 	return role, nil
 }
 
-func (s *TaskListService) CreateTaskList(ctx context.Context, name, ownerID string) (*TaskList, error) {
-	id := shared.NewUUID()
+func (s *TaskListService) CreateTaskList(ctx context.Context, id, name, ownerID string) (*TaskList, error) {
+	if id == "" {
+		id = shared.NewUUID()
+	} else {
+		// Offline-first clients generate their own UUIDs so a create is
+		// idempotent: re-pushing an already-created list (e.g. after a lost
+		// response) returns the existing row instead of failing or duplicating.
+		if _, err := uuid.Parse(id); err != nil {
+			return nil, fmt.Errorf("create task list: invalid id: %w", err)
+		}
+		if existing, err := s.repo.GetByID(ctx, id); err == nil {
+			return existing, nil
+		}
+	}
 
 	list, err := NewTaskList(id, name)
 	if err != nil {

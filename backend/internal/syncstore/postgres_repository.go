@@ -82,12 +82,20 @@ func (r *PostgresRepository) loadTasks(ctx context.Context, since time.Time, b *
 	for rows.Next() {
 		var t TaskDTO
 		var createdAt, updatedAt time.Time
+		// pgx cannot scan a DATE column into *string directly in binary mode —
+		// mirror task.scanTask and use an intermediate *time.Time for
+		// scheduled_date (start_time/end_time TIME columns scan into *string fine).
+		var scheduledDate *time.Time
 		if err := rows.Scan(
 			&t.ID, &t.Title, &t.Status, &t.RecurrenceDays, &t.ListID,
-			&t.StartTime, &t.EndTime, &t.Color, &t.ScheduledDate, &t.AlarmMinutes,
+			&t.StartTime, &t.EndTime, &t.Color, &scheduledDate, &t.AlarmMinutes,
 			&createdAt, &updatedAt,
 		); err != nil {
 			return fmt.Errorf("scan sync task: %w", err)
+		}
+		if scheduledDate != nil {
+			s := scheduledDate.Format("2006-01-02")
+			t.ScheduledDate = &s
 		}
 		t.CreatedAt = createdAt.Format(time.RFC3339)
 		t.UpdatedAt = updatedAt.Format(time.RFC3339)

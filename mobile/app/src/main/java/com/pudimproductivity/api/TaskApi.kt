@@ -64,6 +64,7 @@ data class TaskList(
 )
 
 data class CreateTaskListRequest(
+    val id: String? = null,
     val name: String
 )
 
