@@ -17,7 +17,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RecipeListScreen(onNew: () -> Unit, onBack: () -> Unit) {
+fun RecipeListScreen(onNew: () -> Unit, onBack: () -> Unit, onRecipeClick: (String) -> Unit) {
     val scope = rememberCoroutineScope()
     var recipes by remember { mutableStateOf<List<Recipe>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
@@ -45,7 +45,7 @@ fun RecipeListScreen(onNew: () -> Unit, onBack: () -> Unit) {
         } else {
             LazyColumn(Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(recipes) { r ->
-                    Card(Modifier.fillMaxWidth()) {
+                    Card(onClick = { onRecipeClick(r.id) }, modifier = Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(12.dp)) {
                             Text(r.title, style = MaterialTheme.typography.titleMedium)
                             r.description?.takeIf { it.isNotEmpty() }?.let { Text(it, style = MaterialTheme.typography.bodySmall) }

@@ -3,13 +3,13 @@ package com.pudimproductivity.ui.screens
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.pudimproductivity.api.ApiClient
 import com.pudimproductivity.api.SyncClient
@@ -17,19 +17,28 @@ import com.pudimproductivity.api.Task
 import com.pudimproductivity.api.taskService
 import com.pudimproductivity.ui.components.ProgressBar
 import com.pudimproductivity.ui.components.ProgressVariant
+import com.pudimproductivity.ui.components.SortSelector
 import com.pudimproductivity.ui.components.StreakBadge
 import com.pudimproductivity.ui.components.WeekHeatmap
+import com.pudimproductivity.ui.components.WeekNavigator
+import com.pudimproductivity.utils.SortOption
+import com.pudimproductivity.utils.TaskSortPreferences
 import com.pudimproductivity.utils.computeStreaks
-import com.pudimproductivity.utils.getToday
 import com.pudimproductivity.utils.getWeekDates
+import com.pudimproductivity.utils.sortTasks
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
 
 private val DAY_ORDER = listOf("mon", "tue", "wed", "thu", "fri", "sat", "sun")
-private val DAY_LABELS = mapOf(
-    "mon" to "M", "tue" to "T", "wed" to "W", "thu" to "T",
-    "fri" to "F", "sat" to "S", "sun" to "S"
+
+// Habit ordering (mirrors web's Habits column sort, including time options).
+private const val HABIT_SORT_KEY = "taskSort.habits"
+
+private val HABIT_SORT_OPTIONS = listOf(
+    SortOption.CREATED_DESC, SortOption.CREATED_ASC,
+    SortOption.ALPHA_ASC, SortOption.ALPHA_DESC,
+    SortOption.TIME_ASC, SortOption.TIME_DESC
 )
 
 /**
@@ -44,6 +53,10 @@ fun HabitScreen(onBack: () -> Unit, onOpenTask: (String) -> Unit) {
     var completionsMap by remember { mutableStateOf<Map<String, List<String>>>(emptyMap()) }
     var isLoading by remember { mutableStateOf(true) }
     var weekOffset by remember { mutableStateOf(0) }
+    val context = LocalContext.current
+    var habitSort by remember { mutableStateOf(TaskSortPreferences.load(context, HABIT_SORT_KEY)) }
+
+    val sortedHabits = sortTasks(habits, habitSort)
 
     fun loadData() {
         scope.launch {
@@ -87,18 +100,26 @@ fun HabitScreen(onBack: () -> Unit, onOpenTask: (String) -> Unit) {
         }
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
+            // Single week selector shared by all habit cards
+            WeekNavigator(
+                weekOffset = weekOffset,
+                onWeekOffsetChange = { weekOffset = it }
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
             Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
             ) {
-                TextButton(onClick = { weekOffset -= 1 }) { Text("‹ Prev") }
-                Text(
-                    text = "Week ${if (weekOffset == 0) "current" else if (weekOffset < 0) "−${-weekOffset}" else "+$weekOffset"}",
-                    style = MaterialTheme.typography.labelMedium,
-                    modifier = Modifier.weight(1f),
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                SortSelector(
+                    value = habitSort,
+                    options = HABIT_SORT_OPTIONS,
+                    onSelect = { option ->
+                        habitSort = option
+                        TaskSortPreferences.save(context, HABIT_SORT_KEY, option)
+                    }
                 )
-                TextButton(onClick = { weekOffset += 1 }) { Text("Next ›") }
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -115,7 +136,7 @@ fun HabitScreen(onBack: () -> Unit, onOpenTask: (String) -> Unit) {
                 )
             } else {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    items(habits, key = { it.id }) { task ->
+                    items(sortedHabits, key = { it.id }) { task ->
                         HabitCard(
                             task = task,
                             completions = completionsMap[task.id] ?: emptyList(),
@@ -149,7 +170,6 @@ private fun HabitCard(
     onToggleDay: (String, Boolean) -> Unit,
     onClick: () -> Unit
 ) {
-    val today = getToday()
     val weekDates = getWeekDates(weekOffset)
     val scheduled = (task.recurrence_days ?: emptyList())
         .mapNotNull { day -> weekDates.getOrNull(DAY_ORDER.indexOf(day)) }
@@ -175,38 +195,12 @@ private fun HabitCard(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Day-of-week pill markers (display-only, "done today" highlighted)
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                (task.recurrence_days ?: emptyList()).forEach { day ->
-                    val doneToday = day == DAY_ORDER[getTodayIndex()] && today in completions
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = if (doneToday)
-                            MaterialTheme.colorScheme.primaryContainer
-                        else
-                            MaterialTheme.colorScheme.surfaceVariant,
-                        contentColor = if (doneToday)
-                            MaterialTheme.colorScheme.onPrimaryContainer
-                        else
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                    ) {
-                        Text(
-                            text = "${DAY_LABELS[day] ?: day}${if (doneToday) " ✓" else ""}",
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            style = MaterialTheme.typography.labelMedium
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
             WeekHeatmap(
                 recurrenceDays = task.recurrence_days ?: emptyList(),
                 completions = completions,
                 onToggleDay = onToggleDay,
                 weekOffset = weekOffset,
-                onWeekOffsetChange = { }
+                onWeekOffsetChange = null
             )
 
             Spacer(modifier = Modifier.height(4.dp))
@@ -227,11 +221,5 @@ private fun HabitCard(
             }
         }
     }
-}
-
-private fun getTodayIndex(): Int {
-    val today = getToday()
-    val date = java.time.LocalDate.parse(today)
-    return (date.dayOfWeek.value + 6) % 7 // 0 = Monday
 }
 

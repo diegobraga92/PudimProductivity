@@ -63,7 +63,7 @@ func ValidateKey(key string) error {
 			return fmt.Errorf("unsafe key %q", key)
 		}
 		for _, r := range part {
-			if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '.' || r == '-' || r == '_') {
+			if (r < 'a' || r > 'z') && (r < 'A' || r > 'Z') && (r < '0' || r > '9') && r != '.' && r != '-' && r != '_' {
 				return fmt.Errorf("unsafe key %q", key)
 			}
 		}

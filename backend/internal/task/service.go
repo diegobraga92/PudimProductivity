@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 
 	"github.com/diegobraga92/pudimproductivity/backend/internal/audit"
@@ -46,15 +47,27 @@ func (s *TaskService) publish(ctx context.Context, typ eventbus.EventType, paylo
 }
 
 func (s *TaskService) CreateTask(ctx context.Context, title string, recurrenceDays []string) (*Task, error) {
-	return s.CreateTaskWithSchedule(ctx, title, recurrenceDays, nil, nil, nil, nil, nil, nil)
+	return s.CreateTaskWithSchedule(ctx, title, recurrenceDays, nil, nil, nil, nil, nil, nil, nil)
 }
 
 func (s *TaskService) CreateTaskWithList(ctx context.Context, title string, recurrenceDays []string, listID *string) (*Task, error) {
-	return s.CreateTaskWithSchedule(ctx, title, recurrenceDays, listID, nil, nil, nil, nil, nil)
+	return s.CreateTaskWithSchedule(ctx, title, recurrenceDays, listID, nil, nil, nil, nil, nil, nil)
 }
 
-func (s *TaskService) CreateTaskWithSchedule(ctx context.Context, title string, recurrenceDays []string, listID *string, startTime, endTime, color, scheduledDate *string, alarmMinutes *int) (*Task, error) {
+func (s *TaskService) CreateTaskWithSchedule(ctx context.Context, title string, recurrenceDays []string, listID *string, startTime, endTime, color, scheduledDate *string, alarmMinutes *int, clientID *string) (*Task, error) {
 	id := shared.NewUUID()
+	if clientID != nil && *clientID != "" {
+		// Offline-first clients generate their own UUIDs (ADR 012) so a create is
+		// idempotent: re-pushing an already-created task (e.g. after a lost
+		// response) returns the existing row instead of failing or duplicating.
+		if _, err := uuid.Parse(*clientID); err != nil {
+			return nil, fmt.Errorf("create task: invalid id: %w", err)
+		}
+		id = *clientID
+		if existing, err := s.repo.GetByID(ctx, id); err == nil {
+			return existing, nil
+		}
+	}
 
 	task, err := NewTaskWithSchedule(id, title, recurrenceDays, startTime, endTime, color, scheduledDate, alarmMinutes)
 	if err != nil {
@@ -189,7 +202,7 @@ func (s *TaskService) DeleteTask(ctx context.Context, id string) error {
 	return nil
 }
 
-func (s *TaskService) CompleteTask(ctx context.Context, taskID, dateStr string) (*TaskCompletion, error) {
+func (s *TaskService) CompleteTask(ctx context.Context, taskID, dateStr string, completionID *string) (*TaskCompletion, error) {
 	task, err := s.repo.GetByID(ctx, taskID)
 	if err != nil {
 		return nil, err
@@ -207,7 +220,25 @@ func (s *TaskService) CompleteTask(ctx context.Context, taskID, dateStr string) 
 		}
 	}
 
-	completion, err := NewTaskCompletion(shared.NewUUID(), taskID, completionDate)
+	id := shared.NewUUID()
+	if completionID != nil && *completionID != "" {
+		// Offline-first clients generate their own completion UUIDs (ADR 012) so
+		// a complete is idempotent: re-pushing an already-recorded completion
+		// (e.g. after a lost response) returns the existing row instead of
+		// failing or duplicating.
+		if _, err := uuid.Parse(*completionID); err != nil {
+			return nil, fmt.Errorf("complete task: invalid id: %w", err)
+		}
+		id = *completionID
+		if existing, err := s.repo.GetCompletion(ctx, taskID, completionDate); err == nil && existing != nil {
+			if existing.ID == id {
+				return existing, nil
+			}
+			return nil, ErrCompletionAlreadyExists
+		}
+	}
+
+	completion, err := NewTaskCompletion(id, taskID, completionDate)
 	if err != nil {
 		return nil, fmt.Errorf("create completion: %w", err)
 	}

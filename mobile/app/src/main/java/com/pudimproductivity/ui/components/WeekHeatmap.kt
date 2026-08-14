@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -15,7 +14,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.pudimproductivity.utils.formatWeekRange
 import com.pudimproductivity.utils.getToday
 import com.pudimproductivity.utils.getWeekDates
 
@@ -53,41 +51,15 @@ fun WeekHeatmap(
     val weekDates = getWeekDates(weekOffset)
     val completedSet = completions.toSet()
     val today = getToday()
-    val isCurrentWeek = weekOffset == 0
-
     Column {
-        // Week navigation bar
+        // Week navigation bar (only when the caller supplies a handler). Lists
+        // of habit cards use a single shared WeekNavigator above the list
+        // instead of one per card.
         if (onWeekOffsetChange != null) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                TextButton(
-                    onClick = { onWeekOffsetChange(weekOffset - 1) }
-                ) {
-                    Text("← Prev", style = MaterialTheme.typography.labelSmall)
-                }
-
-                Text(
-                    text = if (isCurrentWeek) "This Week" else formatWeekRange(weekDates),
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                TextButton(
-                    onClick = { onWeekOffsetChange(weekOffset + 1) },
-                    enabled = weekOffset < 0
-                ) {
-                    Text(
-                        "Next →",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = if (weekOffset < 0) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
-                    )
-                }
-            }
+            WeekNavigator(
+                weekOffset = weekOffset,
+                onWeekOffsetChange = onWeekOffsetChange
+            )
         }
 
         // Day cells row

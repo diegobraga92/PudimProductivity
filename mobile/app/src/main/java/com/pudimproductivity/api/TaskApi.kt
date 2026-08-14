@@ -27,6 +27,7 @@ data class TaskCompletion(
 )
 
 data class CreateTaskRequest(
+    val id: String? = null,
     val title: String,
     val recurrence_days: List<String>? = null,
     val list_id: String? = null
@@ -120,7 +121,8 @@ interface TaskService {
     @POST("tasks/{taskId}/complete")
     suspend fun completeTask(
         @Path("taskId") taskId: String,
-        @Query("date") date: String? = null
+        @Query("date") date: String? = null,
+        @Query("id") id: String? = null
     ): TaskCompletion
 
     @DELETE("tasks/{taskId}/complete")

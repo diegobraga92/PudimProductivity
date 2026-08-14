@@ -22,7 +22,6 @@ import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -35,15 +34,14 @@ import com.pudimproductivity.api.ServerConfig
 import com.pudimproductivity.api.SyncClient
 import com.pudimproductivity.data.TaskRepository
 import com.pudimproductivity.fcm.ErrorReporter
-import com.pudimproductivity.focus.FocusTimerManager
 import com.pudimproductivity.notifications.HabitReminderScheduler
 import com.pudimproductivity.sync.SyncScheduler
-import com.pudimproductivity.ui.screens.FocusTimerScreen
 import com.pudimproductivity.ui.screens.PlannerScreen
 import com.pudimproductivity.ui.screens.HabitScreen
 import com.pudimproductivity.ui.screens.InsightsScreen
 import com.pudimproductivity.ui.screens.LibraryScreen
 import com.pudimproductivity.ui.screens.RecipeCreateScreen
+import com.pudimproductivity.ui.screens.RecipeDetailScreen
 import com.pudimproductivity.ui.screens.RecipeListScreen
 import com.pudimproductivity.ui.screens.TaskCreateScreen
 import com.pudimproductivity.ui.screens.TaskDetailScreen
@@ -57,7 +55,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 enum class Screen {
-    Health, ServerSettings, TaskList, TaskCreate, TaskDetail, TaskListDetail, FocusTimer, Habits, Recipes, RecipeCreate, Library, Planner, Insights
+    Health, ServerSettings, TaskList, TaskCreate, TaskDetail, TaskListDetail, Habits, Recipes, RecipeCreate, RecipeDetail, Library, Planner, Insights
 }
 
 class MainActivity : ComponentActivity() {
@@ -83,9 +81,6 @@ class MainActivity : ComponentActivity() {
 
         // Report uncaught exceptions to the backend error beacon.
         ErrorReporter.install(applicationContext)
-
-        // Focus timer state + foreground service lifecycle.
-        FocusTimerManager.init(applicationContext)
 
         // Real-time task sync (Phase 2): app-lifetime WebSocket connection.
         SyncClient.start(applicationContext)
@@ -158,7 +153,7 @@ class MainActivity : ComponentActivity() {
 private data class LaunchTarget(val screen: Screen, val taskId: String?)
 
 /** Bottom-navigation top-level destinations. */
-private enum class TopLevel { Tasks, Plan, Timer, Recipes, More }
+private enum class TopLevel { Tasks, Plan, Recipes, More }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -169,6 +164,7 @@ private fun AppNavigation(
     var currentScreen by remember { mutableStateOf(launchTarget.value?.screen ?: Screen.TaskList) }
     var selectedTaskId by remember { mutableStateOf(launchTarget.value?.taskId) }
     var selectedListId by remember { mutableStateOf<String?>(null) }
+    var selectedRecipeId by remember { mutableStateOf<String?>(null) }
     var moreSheetOpen by remember { mutableStateOf(false) }
 
     // Phase 10: navigate to a widget tap target (also fires for the initial
@@ -187,8 +183,7 @@ private fun AppNavigation(
         Screen.TaskList, Screen.TaskCreate, Screen.TaskDetail,
         Screen.TaskListDetail, Screen.Habits -> TopLevel.Tasks
         Screen.Planner -> TopLevel.Plan
-        Screen.FocusTimer -> TopLevel.Timer
-        Screen.Recipes, Screen.RecipeCreate -> TopLevel.Recipes
+        Screen.Recipes, Screen.RecipeCreate, Screen.RecipeDetail -> TopLevel.Recipes
         else -> TopLevel.More
     }
 
@@ -210,7 +205,6 @@ private fun AppNavigation(
             TaskListScreen(
                 repository = repository,
                 onCreateTask = { currentScreen = Screen.TaskCreate },
-                onFocusTimer = { currentScreen = Screen.FocusTimer },
                 onHabits = { currentScreen = Screen.Habits },
                 onTaskClick = { taskId ->
                     selectedTaskId = taskId
@@ -223,11 +217,6 @@ private fun AppNavigation(
                 onRecipes = { currentScreen = Screen.Recipes },
                 onLibrary = { currentScreen = Screen.Library },
                 onInsights = { currentScreen = Screen.Insights }
-            )
-        }
-        Screen.FocusTimer -> {
-            FocusTimerScreen(
-                onBack = { currentScreen = Screen.TaskList }
             )
         }
         Screen.Habits -> {
@@ -267,11 +256,24 @@ private fun AppNavigation(
         Screen.Recipes -> {
             RecipeListScreen(
                 onNew = { currentScreen = Screen.RecipeCreate },
-                onBack = { currentScreen = Screen.TaskList }
+                onBack = { currentScreen = Screen.TaskList },
+                onRecipeClick = { recipeId ->
+                    selectedRecipeId = recipeId
+                    currentScreen = Screen.RecipeDetail
+                }
             )
         }
         Screen.RecipeCreate -> {
             RecipeCreateScreen(onDone = { currentScreen = Screen.Recipes })
+        }
+        Screen.RecipeDetail -> {
+            selectedRecipeId?.let { recipeId ->
+                RecipeDetailScreen(
+                    recipeId = recipeId,
+                    onBack = { currentScreen = Screen.Recipes },
+                    onDeleted = { currentScreen = Screen.Recipes }
+                )
+            }
         }
         Screen.Library -> {
             LibraryScreen(onBack = { currentScreen = Screen.TaskList })
@@ -303,12 +305,6 @@ private fun AppNavigation(
                     onClick = { currentScreen = Screen.Planner },
                     icon = { Icon(Icons.AutoMirrored.Filled.EventNote, contentDescription = "Planner") },
                     label = { Text("Planner") }
-                )
-                NavigationBarItem(
-                    selected = currentTopLevel == TopLevel.Timer,
-                    onClick = { currentScreen = Screen.FocusTimer },
-                    icon = { Icon(Icons.Filled.Timer, contentDescription = "Focus timer") },
-                    label = { Text("Timer") }
                 )
                 NavigationBarItem(
                     selected = currentTopLevel == TopLevel.Recipes,

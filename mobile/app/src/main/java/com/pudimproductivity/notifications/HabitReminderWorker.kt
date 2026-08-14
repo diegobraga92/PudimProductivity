@@ -30,7 +30,7 @@ class HabitReminderWorker(
         val today = LocalDate.now().format(DateTimeFormatter.ISO_DATE)
 
         val pendingHabits = db.queryTasks()
-            .filter { !it.recurrence_days.isNullOrEmpty() }
+            .filter { it.list_id == null && !it.recurrence_days.isNullOrEmpty() }
             .filter { task ->
                 val completed = db.queryCompletions()
                     .any { it.task_id == task.id && it.completed_date == today && !it.deleted }

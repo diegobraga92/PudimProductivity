@@ -49,7 +49,7 @@ data class HabitsSnapshot(
  */
 fun buildTasksSnapshot(tasks: List<LocalTask>): TasksSnapshot {
     val rows = tasks
-        .filter { !it.deleted && it.recurrence_days.isNullOrEmpty() }
+        .filter { !it.deleted && it.list_id == null && it.recurrence_days.isNullOrEmpty() }
         .sortedWith(compareBy({ it.status != "done" }, { it.title.lowercase() }))
         .map { TaskRow(id = it.id, title = it.title, done = it.status == "done") }
 
@@ -77,7 +77,7 @@ fun buildHabitsSnapshot(
         .mapTo(mutableSetOf()) { it.task_id }
 
     val habits = tasks
-        .filter { !it.deleted && !it.recurrence_days.isNullOrEmpty() }
+        .filter { !it.deleted && it.list_id == null && !it.recurrence_days.isNullOrEmpty() }
         .filter { it.recurrence_days.orEmpty().contains(todayDay) || it.id in completedTodayIds }
         .sortedBy { it.title.lowercase() }
         .map { task ->

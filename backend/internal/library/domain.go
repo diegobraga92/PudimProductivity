@@ -40,7 +40,7 @@ type Item struct {
 	Notes       string
 	// Subtype is an optional free-text sub-category, e.g. "Console" for games
 	// or "Genre" for movies/series/books. Empty means not set.
-	Subtype     string
+	Subtype string
 	// Score is an optional rating (0-100 scale: IMDb 8.7, Metacritic 95, ...).
 	Score *float64
 	// ScoreSource names where Score came from (e.g. "imdb", "metacritic").

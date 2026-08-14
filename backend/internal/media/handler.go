@@ -51,7 +51,7 @@ func (h *MediaHandler) Put(w http.ResponseWriter, r *http.Request) {
 		shared.WriteError(w, http.StatusInternalServerError, "failed to store media")
 		return
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	body := http.MaxBytesReader(w, r.Body, maxUploadBytes)
 	if _, err := io.Copy(f, body); err != nil {

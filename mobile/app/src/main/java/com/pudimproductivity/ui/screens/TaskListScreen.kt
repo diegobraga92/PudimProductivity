@@ -11,15 +11,21 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.pudimproductivity.api.SyncClient
 import com.pudimproductivity.api.TaskList
 import com.pudimproductivity.ui.components.ProgressBar
 import com.pudimproductivity.ui.components.ProgressVariant
+import com.pudimproductivity.ui.components.SortSelector
 import com.pudimproductivity.ui.components.StreakBadge
 import com.pudimproductivity.ui.components.WeekHeatmap
+import com.pudimproductivity.ui.components.WeekNavigator
+import com.pudimproductivity.utils.SortOption
+import com.pudimproductivity.utils.TaskSortPreferences
 import com.pudimproductivity.utils.computeStreaks
+import com.pudimproductivity.utils.sortTasks
 import com.pudimproductivity.utils.getToday
 import com.pudimproductivity.utils.getWeekDates
 import kotlinx.coroutines.FlowPreview
@@ -27,6 +33,22 @@ import kotlinx.coroutines.flow.debounce
 import java.time.LocalDate
 
 private val DAY_ORDER = listOf("mon", "tue", "wed", "thu", "fri", "sat", "sun")
+
+// Task ordering keys + options (mirrors web's SortSelect; the web persists the
+// same keys "taskSort.todos"/"taskSort.habits").
+private const val TODO_SORT_KEY = "taskSort.todos"
+private const val HABIT_SORT_KEY = "taskSort.habits"
+
+private val TODO_SORT_OPTIONS = listOf(
+    SortOption.CREATED_DESC, SortOption.CREATED_ASC,
+    SortOption.ALPHA_ASC, SortOption.ALPHA_DESC
+)
+
+private val HABIT_SORT_OPTIONS = listOf(
+    SortOption.CREATED_DESC, SortOption.CREATED_ASC,
+    SortOption.ALPHA_ASC, SortOption.ALPHA_DESC,
+    SortOption.TIME_ASC, SortOption.TIME_DESC
+)
 
 private fun getDayName(dateStr: String): String {
     val date = LocalDate.parse(dateStr)
@@ -39,7 +61,6 @@ private fun getDayName(dateStr: String): String {
 fun TaskListScreen(
     repository: com.pudimproductivity.data.TaskRepository,
     onCreateTask: () -> Unit,
-    onFocusTimer: () -> Unit,
     onHabits: () -> Unit,
     onTaskClick: (String) -> Unit,
     onListClick: (String) -> Unit,
@@ -64,6 +85,11 @@ fun TaskListScreen(
     // Week offset for habits (shared across all habits)
     var habitWeekOffset by remember { mutableStateOf(0) }
 
+    // Task ordering (mirrors web): persisted per tab, default newest first.
+    val context = LocalContext.current
+    var todoSort by remember { mutableStateOf(TaskSortPreferences.load(context, TODO_SORT_KEY)) }
+    var habitSort by remember { mutableStateOf(TaskSortPreferences.load(context, HABIT_SORT_KEY)) }
+
     val completionsMap = remember(completions) {
         completions.groupBy({ it.task_id }, { it.completed_date })
     }
@@ -79,8 +105,11 @@ fun TaskListScreen(
             }
     }
 
-    val todoTasks = tasks.filter { it.recurrence_days == null || it.recurrence_days.isEmpty() }
-    val habitTasks = tasks.filter { it.recurrence_days != null && it.recurrence_days.isNotEmpty() }
+    val todoTasks = tasks.filter { it.list_id == null && (it.recurrence_days == null || it.recurrence_days.isEmpty()) }
+    val habitTasks = tasks.filter { it.list_id == null && it.recurrence_days != null && it.recurrence_days.isNotEmpty() }
+
+    val sortedTodoTasks = sortTasks(todoTasks, todoSort)
+    val sortedHabitTasks = sortTasks(habitTasks, habitSort)
 
     Scaffold(
         topBar = {
@@ -89,10 +118,6 @@ fun TaskListScreen(
                 actions = {
                     Button(onClick = onHabits) {
                         Text("📊 Habits")
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Button(onClick = onFocusTimer) {
-                        Text("⏱ Focus")
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(onClick = onRecipes) {
@@ -187,6 +212,22 @@ fun TaskListScreen(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        SortSelector(
+                            value = todoSort,
+                            options = TODO_SORT_OPTIONS,
+                            onSelect = { option ->
+                                todoSort = option
+                                TaskSortPreferences.save(context, TODO_SORT_KEY, option)
+                            }
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
                     if (todoTasks.isEmpty()) {
                         Box(
                             modifier = Modifier.fillMaxSize(),
@@ -202,7 +243,7 @@ fun TaskListScreen(
                         LazyColumn(
                             verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            items(todoTasks, key = { it.id }) { task ->
+                            items(sortedTodoTasks, key = { it.id }) { task ->
                                 Card(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -270,10 +311,34 @@ fun TaskListScreen(
                             )
                         }
                     } else {
+                        // Single week selector + ordering, shared by all habit cards
+                        WeekNavigator(
+                            weekOffset = habitWeekOffset,
+                            onWeekOffsetChange = { habitWeekOffset = it }
+                        )
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            SortSelector(
+                                value = habitSort,
+                                options = HABIT_SORT_OPTIONS,
+                                onSelect = { option ->
+                                    habitSort = option
+                                    TaskSortPreferences.save(context, HABIT_SORT_KEY, option)
+                                }
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
                         LazyColumn(
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            items(habitTasks, key = { it.id }) { task ->
+                            items(sortedHabitTasks, key = { it.id }) { task ->
                                 val taskCompletions = completionsMap[task.id] ?: emptyList()
                                 val weekDates = getWeekDates(habitWeekOffset)
 
@@ -330,7 +395,7 @@ fun TaskListScreen(
 
                                         Spacer(modifier = Modifier.height(6.dp))
 
-                                        // WeekHeatmap with navigation
+                                        // WeekHeatmap (week navigation is shared above the list)
                                         WeekHeatmap(
                                             recurrenceDays = task.recurrence_days ?: emptyList(),
                                             completions = taskCompletions,
@@ -342,9 +407,7 @@ fun TaskListScreen(
                                                 }
                                             },
                                             weekOffset = habitWeekOffset,
-                                            onWeekOffsetChange = { newOffset ->
-                                                habitWeekOffset = newOffset
-                                            }
+                                            onWeekOffsetChange = null
                                         )
 
                                         Spacer(modifier = Modifier.height(4.dp))

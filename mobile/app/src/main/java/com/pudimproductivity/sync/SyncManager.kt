@@ -98,6 +98,7 @@ class SyncManager(private val context: Context) {
                 if (existing == null || existing.updated_at == t.created_at) {
                     api.createTask(
                         CreateTaskRequest(
+                            id = t.id,
                             title = t.title,
                             recurrence_days = t.recurrence_days,
                             list_id = t.list_id
@@ -122,14 +123,17 @@ class SyncManager(private val context: Context) {
         }
 
         // Dirty completions: un-completed locally = DELETE; added = POST complete.
-        db.queryCompletions().filter { it.dirty }.forEach { c ->
+        // Tombstones are included so a local uncomplete actually reaches the
+        // server; a successful push marks the row clean (the pull pass then
+        // hard-deletes confirmed tombstones via deleted_completion_ids).
+        db.dirtyCompletions().forEach { c ->
             try {
                 if (c.deleted) {
                     api.uncompleteTask(c.task_id, c.completed_date)
                 } else {
-                    api.completeTask(c.task_id, c.completed_date)
+                    api.completeTask(c.task_id, c.completed_date, c.id)
                 }
-                if (c.deleted) db.markCompletionDeleted(c.id) else db.markCompletionClean(c.id)
+                db.markCompletionClean(c.id)
             } catch (_: Exception) {
                 // Retry next sync.
             }

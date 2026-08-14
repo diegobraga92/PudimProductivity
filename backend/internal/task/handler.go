@@ -19,7 +19,7 @@ const defaultCompletionsLookbackDays = 7
 type Service interface {
 	CreateTask(ctx context.Context, title string, recurrenceDays []string) (*Task, error)
 	CreateTaskWithList(ctx context.Context, title string, recurrenceDays []string, listID *string) (*Task, error)
-	CreateTaskWithSchedule(ctx context.Context, title string, recurrenceDays []string, listID *string, startTime, endTime, color, scheduledDate *string, alarmMinutes *int) (*Task, error)
+	CreateTaskWithSchedule(ctx context.Context, title string, recurrenceDays []string, listID *string, startTime, endTime, color, scheduledDate *string, alarmMinutes *int, clientID *string) (*Task, error)
 	GetTask(ctx context.Context, id string) (*Task, error)
 	ListTasks(ctx context.Context, statusFilter, typeFilter string) ([]*Task, error)
 	ListScheduledTasks(ctx context.Context) ([]*Task, error)
@@ -27,7 +27,7 @@ type Service interface {
 	UpdateTask(ctx context.Context, id string, title *string, status *TaskStatus, recurrenceDays *[]string, listID **string, startTime, endTime, color, scheduledDate **string, alarmMinutes **int) (*Task, error)
 	MergeTask(ctx context.Context, id, userID string, clientUpdatedAt time.Time, title *string, status *TaskStatus, recurrenceDays *[]string, listID **string, startTime, endTime, color, scheduledDate **string, alarmMinutes **int) (*Task, bool, error)
 	DeleteTask(ctx context.Context, id string) error
-	CompleteTask(ctx context.Context, taskID, dateStr string) (*TaskCompletion, error)
+	CompleteTask(ctx context.Context, taskID, dateStr string, completionID *string) (*TaskCompletion, error)
 	UncompleteTask(ctx context.Context, taskID, dateStr string) error
 	GetTaskCompletions(ctx context.Context, taskID string, from, to time.Time) ([]*TaskCompletion, error)
 	GetAllTaskCompletions(ctx context.Context, from, to time.Time) ([]*TaskCompletion, error)
@@ -59,6 +59,7 @@ type TaskResponse struct {
 }
 
 type createTaskRequest struct {
+	ID             string   `json:"id,omitempty"`
 	Title          string   `json:"title"`
 	RecurrenceDays []string `json:"recurrence_days,omitempty"`
 	ListID         *string  `json:"list_id,omitempty"`
@@ -165,7 +166,12 @@ func (h *Handler) CreateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	task, err := h.service.CreateTaskWithSchedule(r.Context(), req.Title, req.RecurrenceDays, req.ListID, req.StartTime, req.EndTime, req.Color, req.ScheduledDate, req.AlarmMinutes)
+	var clientID *string
+	if req.ID != "" {
+		clientID = &req.ID
+	}
+
+	task, err := h.service.CreateTaskWithSchedule(r.Context(), req.Title, req.RecurrenceDays, req.ListID, req.StartTime, req.EndTime, req.Color, req.ScheduledDate, req.AlarmMinutes, clientID)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to create task")
 		shared.WriteError(w, http.StatusInternalServerError, "failed to create task")
@@ -297,8 +303,12 @@ func (h *Handler) CompleteTask(w http.ResponseWriter, r *http.Request) {
 	}
 
 	dateStr := r.URL.Query().Get("date")
+	var completionID *string
+	if idParam := r.URL.Query().Get("id"); idParam != "" {
+		completionID = &idParam
+	}
 
-	completion, err := h.service.CompleteTask(r.Context(), id, dateStr)
+	completion, err := h.service.CompleteTask(r.Context(), id, dateStr, completionID)
 	if err != nil {
 		if errors.Is(err, ErrTaskNotFound) {
 			shared.WriteError(w, http.StatusNotFound, "task not found")

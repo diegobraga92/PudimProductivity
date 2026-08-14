@@ -19,12 +19,14 @@ class WidgetModelsTest {
         title: String,
         status: String = "todo",
         recurrenceDays: List<String>? = null,
+        listId: String? = null,
         deleted: Boolean = false
     ) = LocalTask(
         id = id,
         title = title,
         status = status,
         recurrence_days = recurrenceDays,
+        list_id = listId,
         created_at = "2026-01-01T00:00:00Z",
         updated_at = "2026-01-01T00:00:00Z",
         dirty = false,
@@ -193,6 +195,40 @@ class WidgetModelsTest {
         val row = snapshot.habits.first()
         assertEquals(0, row.streak)
         assertEquals(1, row.bestStreak)
+    }
+
+    @Test
+    fun `tasks snapshot excludes tasks that belong to a list`() {
+        val snapshot = buildTasksSnapshot(
+            listOf(
+                task("1", "Buy milk"),
+                task("2", "List item", listId = "list-1"),
+                task("3", "Workout", recurrenceDays = listOf("mon")),
+                task("4", "List habit", recurrenceDays = listOf("mon"), listId = "list-1")
+            )
+        )
+
+        assertEquals(1, snapshot.total)
+        assertEquals("Buy milk", snapshot.pending.first().title)
+    }
+
+    @Test
+    fun `habits snapshot excludes habits that belong to a list`() {
+        val today = LocalDate.now()
+        val todayDay = dayName(today)
+
+        val snapshot = buildHabitsSnapshot(
+            tasks = listOf(
+                task("h1", "Workout", recurrenceDays = listOf(todayDay)),
+                task("h2", "List habit", recurrenceDays = listOf(todayDay), listId = "list-1")
+            ),
+            completions = emptyList(),
+            today = today.toString(),
+            todayDay = todayDay
+        )
+
+        assertEquals(1, snapshot.habits.size)
+        assertEquals("Workout", snapshot.habits.first().title)
     }
 
     @Test

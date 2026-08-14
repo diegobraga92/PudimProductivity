@@ -445,6 +445,11 @@ export interface components {
         };
         CreateTaskRequest: {
             /**
+             * Format: uuid
+             * @description Optional client-generated UUID. When supplied, the server uses it as the task ID, making create idempotent for offline-first clients that push a locally-created task more than once.
+             */
+            id?: string;
+            /**
              * @description The task title.
              * @example Have hair cut
              */
@@ -1012,6 +1017,8 @@ export interface operations {
             query?: {
                 /** @description Completion date in YYYY-MM-DD format. Defaults to today (UTC) if omitted. */
                 date?: string;
+                /** @description Optional client-generated UUID for the completion row. When supplied, the server uses it as the completion ID, making complete idempotent for offline-first clients that re-push a locally-recorded completion (e.g. after a lost response). */
+                id?: string;
             };
             header?: never;
             path: {

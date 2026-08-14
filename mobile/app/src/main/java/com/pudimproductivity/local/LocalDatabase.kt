@@ -185,6 +185,25 @@ class LocalDatabase(context: Context) : SQLiteOpenHelper(context.applicationCont
         return out
     }
 
+    /** All locally-changed completions (including tombstones) awaiting push. */
+    fun dirtyCompletions(): List<LocalCompletion> {
+        val db = readableDatabase
+        val out = mutableListOf<LocalCompletion>()
+        db.query("completions", null, "dirty = 1", null, null, null, null).use { c ->
+            while (c.moveToNext()) {
+                out += LocalCompletion(
+                    id = c.getString(c.getColumnIndexOrThrow("id")),
+                    task_id = c.getString(c.getColumnIndexOrThrow("task_id")),
+                    completed_date = c.getString(c.getColumnIndexOrThrow("completed_date")),
+                    created_at = c.getString(c.getColumnIndexOrThrow("created_at")),
+                    dirty = c.getInt(c.getColumnIndexOrThrow("dirty")) == 1,
+                    deleted = c.getInt(c.getColumnIndexOrThrow("deleted")) == 1
+                )
+            }
+        }
+        return out
+    }
+
     fun markCompletionDirty(id: String) {
         writableDatabase.update("completions", ContentValues().apply { put("dirty", 1) }, "id = ?", arrayOf(id))
     }

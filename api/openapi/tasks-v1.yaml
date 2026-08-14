@@ -329,6 +329,15 @@ paths:
             type: string
             format: date
             example: "2026-05-18"
+        - name: id
+          in: query
+          required: false
+          description: Optional client-generated UUID for the completion row. When supplied, the server
+            uses it as the completion ID, making complete idempotent for offline-first clients that
+            re-push a locally-recorded completion (e.g. after a lost response).
+          schema:
+            type: string
+            format: uuid
       responses:
         "201":
           description: Task completed successfully.
@@ -831,6 +840,12 @@ components:
       required:
         - title
       properties:
+        id:
+          type: string
+          format: uuid
+          description: Optional client-generated UUID. When supplied, the server
+            uses it as the task ID, making create idempotent for offline-first
+            clients that push a locally-created task more than once.
         title:
           type: string
           description: The task title.

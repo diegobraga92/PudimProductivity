@@ -116,8 +116,8 @@ func (s *CachedTaskService) DeleteTask(ctx context.Context, id string) error {
 	return nil
 }
 
-func (s *CachedTaskService) CompleteTask(ctx context.Context, taskID, dateStr string) (*TaskCompletion, error) {
-	comp, err := s.TaskService.CompleteTask(ctx, taskID, dateStr)
+func (s *CachedTaskService) CompleteTask(ctx context.Context, taskID, dateStr string, completionID *string) (*TaskCompletion, error) {
+	comp, err := s.TaskService.CompleteTask(ctx, taskID, dateStr, completionID)
 	if err != nil {
 		return nil, err
 	}
