@@ -29,6 +29,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TaskListDetailScreen(
+    repository: com.pudimproductivity.data.TaskRepository,
     listId: String,
     onBack: () -> Unit,
     onDeleted: () -> Unit
@@ -83,12 +84,9 @@ fun TaskListDetailScreen(
                         Text(Localization.text("mobile.list.rename"))
                     }
                     TextButton(onClick = {
-                        scope.launch {
-                            try {
-                                ApiClient.taskService.deleteTaskList(listId)
-                                onDeleted()
-                            } catch (_: Exception) { }
-                        }
+                        // Local-first delete: removes the list locally and syncs.
+                        repository.deleteTaskList(listId)
+                        onDeleted()
                     }) {
                         Text(Localization.text("common.delete"), color = MaterialTheme.colorScheme.error)
                     }
@@ -156,6 +154,7 @@ fun TaskListDetailScreen(
                         scope.launch {
                             try {
                                 ApiClient.taskService.updateTaskList(listId, UpdateTaskListRequest(name = editName))
+                                repository.refresh()
                                 editingName = false
                                 loadData()
                             } catch (_: Exception) { }
@@ -190,6 +189,7 @@ fun TaskListDetailScreen(
                                 ApiClient.taskService.createTask(
                                     CreateTaskRequest(title = newTitle, list_id = listId)
                                 )
+                                repository.refresh()
                                 newTitle = ""
                                 loadData()
                             } catch (_: Exception) { }
@@ -270,6 +270,7 @@ fun TaskListDetailScreen(
                                                         task.id,
                                                         UpdateTaskRequest(status = newStatus)
                                                     )
+                                                    repository.refresh()
                                                     loadData()
                                                 } catch (_: Exception) { }
                                             }
@@ -292,12 +293,10 @@ fun TaskListDetailScreen(
                                     // Per-task delete button
                                     TextButton(
                                         onClick = {
-                                            scope.launch {
-                                                try {
-                                                    ApiClient.taskService.deleteTask(task.id)
-                                                    loadData()
-                                                } catch (_: Exception) { }
-                                            }
+                                            // Local-first delete so the Tasks list
+                                            // (which reads the local DB) updates too.
+                                            repository.deleteTask(task.id)
+                                            tasks = tasks.filter { it.id != task.id }
                                         }
                                     ) {
                                         Text(

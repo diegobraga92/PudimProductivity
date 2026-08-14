@@ -6,7 +6,14 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Insights
+import androidx.compose.material.icons.filled.Movie
+import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -17,8 +24,6 @@ import androidx.compose.ui.unit.dp
 import com.pudimproductivity.api.SyncClient
 import com.pudimproductivity.api.TaskList
 import com.pudimproductivity.i18n.Localization
-import com.pudimproductivity.ui.components.ProgressBar
-import com.pudimproductivity.ui.components.ProgressVariant
 import com.pudimproductivity.ui.components.SortSelector
 import com.pudimproductivity.ui.components.StreakBadge
 import com.pudimproductivity.ui.components.WeekHeatmap
@@ -27,13 +32,9 @@ import com.pudimproductivity.utils.SortOption
 import com.pudimproductivity.utils.TaskSortPreferences
 import com.pudimproductivity.utils.computeStreaks
 import com.pudimproductivity.utils.sortTasks
-import com.pudimproductivity.utils.getToday
-import com.pudimproductivity.utils.getWeekDates
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
-import java.time.LocalDate
-
-private val DAY_ORDER = listOf("mon", "tue", "wed", "thu", "fri", "sat", "sun")
+import kotlinx.coroutines.launch
 
 // Task ordering keys + options (mirrors web's SortSelect; the web persists the
 // same keys "taskSort.todos"/"taskSort.habits").
@@ -50,12 +51,6 @@ private val HABIT_SORT_OPTIONS = listOf(
     SortOption.ALPHA_ASC, SortOption.ALPHA_DESC,
     SortOption.TIME_ASC, SortOption.TIME_DESC
 )
-
-private fun getDayName(dateStr: String): String {
-    val date = LocalDate.parse(dateStr)
-    val dayIndex = (date.dayOfWeek.value + 6) % 7 // 0=Mon
-    return DAY_ORDER[dayIndex]
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -112,40 +107,69 @@ fun TaskListScreen(
     val sortedTodoTasks = sortTasks(todoTasks, todoSort)
     val sortedHabitTasks = sortTasks(habitTasks, habitSort)
 
+    var isRefreshing by remember { mutableStateOf(false) }
+    val refreshScope = rememberCoroutineScope()
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(Localization.text("mobile.tasks.tab")) },
                 actions = {
-                    Button(onClick = onHabits) {
-                        Text("📊 " + Localization.text("tasks.habits"))
+                    // Icon-only shortcuts (with content descriptions) so the
+                    // actions row stays compact and consistent on phones.
+                    IconButton(onClick = onHabits) {
+                        Icon(
+                            Icons.Filled.Repeat,
+                            contentDescription = Localization.text("tasks.habits")
+                        )
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Button(onClick = onRecipes) {
-                        Text("🍳")
+                    IconButton(onClick = onRecipes) {
+                        Icon(
+                            Icons.Filled.Restaurant,
+                            contentDescription = Localization.text("nav.recipes")
+                        )
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Button(onClick = onLibrary) {
-                        Text("🎬")
+                    IconButton(onClick = onLibrary) {
+                        Icon(
+                            Icons.Filled.Movie,
+                            contentDescription = Localization.text("nav.library")
+                        )
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Button(onClick = onInsights) {
-                        Text("🧠")
+                    IconButton(onClick = onInsights) {
+                        Icon(
+                            Icons.Filled.Insights,
+                            contentDescription = Localization.text("nav.insights")
+                        )
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Button(onClick = onCreateTask) {
-                        Text(Localization.text("tasks.newTask"))
+                    IconButton(onClick = onCreateTask) {
+                        Icon(
+                            Icons.Filled.Add,
+                            contentDescription = Localization.text("tasks.newTask")
+                        )
                     }
                 }
             )
         }
     ) { padding ->
-        Column(
+        // Pull-to-refresh: flushes local changes and pulls server changes.
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = {
+                refreshScope.launch {
+                    isRefreshing = true
+                    repository.refresh()
+                    isRefreshing = false
+                }
+            },
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(16.dp)
         ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp)
+            ) {
             // Tabs
             PrimaryTabRow(selectedTabIndex = selectedTab) {
                 Tab(
@@ -341,21 +365,6 @@ fun TaskListScreen(
                         ) {
                             items(sortedHabitTasks, key = { it.id }) { task ->
                                 val taskCompletions = completionsMap[task.id] ?: emptyList()
-                                val weekDates = getWeekDates(habitWeekOffset)
-
-                                // Compute stats
-                                val todayStr = getToday()
-                                val scheduledDays = task.recurrence_days ?: emptyList()
-                                val weekScheduledDates = weekDates.filter { date ->
-                                    val dayName = getDayName(date)
-                                    scheduledDays.contains(dayName) && date <= todayStr
-                                }
-                                val weeklyDone = taskCompletions.count { date ->
-                                    weekScheduledDates.contains(date) && date <= todayStr
-                                }
-                                val weeklyTotal = weekScheduledDates.size
-                                val weeklyPct = if (weeklyTotal > 0) (weeklyDone * 100) / weeklyTotal else 0
-
                                 val streakResult = computeStreaks(taskCompletions)
 
                                 Card(
@@ -410,31 +419,6 @@ fun TaskListScreen(
                                             weekOffset = habitWeekOffset,
                                             onWeekOffsetChange = null
                                         )
-
-                                        Spacer(modifier = Modifier.height(4.dp))
-
-                                        // Compact progress bar
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                            modifier = Modifier.fillMaxWidth()
-                                        ) {
-                                            Box(modifier = Modifier.weight(1f)) {
-                                                ProgressBar(
-                                                    value = weeklyPct,
-                                                    variant = ProgressVariant.HABIT,
-                                                    height = 6.dp
-                                                )
-                                            }
-                                            Text(
-                                                text = if (weeklyTotal > 0 && weeklyDone >= weeklyTotal) "✅ $weeklyDone/$weeklyTotal" else "$weeklyDone/$weeklyTotal",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = if (weeklyTotal > 0 && weeklyDone >= weeklyTotal)
-                                                    MaterialTheme.colorScheme.primary
-                                                else
-                                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
                                     }
                                 }
                             }
@@ -515,6 +499,7 @@ fun TaskListScreen(
                     }
                 }
             }
+        }
         }
     }
 

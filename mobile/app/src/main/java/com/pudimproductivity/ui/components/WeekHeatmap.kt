@@ -1,6 +1,7 @@
 package com.pudimproductivity.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -14,8 +15,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.pudimproductivity.utils.getRollingWindowDates
 import com.pudimproductivity.utils.getToday
-import com.pudimproductivity.utils.getWeekDates
 
 private val DAY_ORDER = listOf("mon", "tue", "wed", "thu", "fri", "sat", "sun")
 private val DAY_SHORT = mapOf(
@@ -32,12 +33,15 @@ private fun getDayName(dateStr: String): String {
 /**
  * A 7-day habit completion heatmap with week navigation.
  *
+ * The window is a rolling 7 days ending today (mirrors the web's habit
+ * heatmap), so today is always the final column and gets a primary-colour ring.
+ *
  * @param recurrenceDays Days of the week this habit is scheduled (e.g. ["mon","wed","fri"])
  * @param completions List of ISO date strings (YYYY-MM-DA) for completed dates
  * @param onToggleDay Called with (date, isCompleted) when a day cell is tapped
  * @param disabled If true, disables all interactions
- * @param weekOffset Week offset (0 = current week, -1 = last week, etc.)
- * @param onWeekOffsetChange Called when user navigates to prev/next week
+ * @param weekOffset Week offset (0 = current window, -1 = previous window, etc.)
+ * @param onWeekOffsetChange Called when user navigates to prev/next window
  */
 @Composable
 fun WeekHeatmap(
@@ -48,7 +52,7 @@ fun WeekHeatmap(
     weekOffset: Int = 0,
     onWeekOffsetChange: ((Int) -> Unit)? = null
 ) {
-    val weekDates = getWeekDates(weekOffset)
+    val weekDates = getRollingWindowDates(weekOffset)
     val completedSet = completions.toSet()
     val today = getToday()
     Column {
@@ -91,6 +95,13 @@ fun WeekHeatmap(
                         .aspectRatio(1f)
                         .clip(CircleShape)
                         .background(cellColor)
+                        .then(
+                            if (isToday) Modifier.border(
+                                width = 2.dp,
+                                color = MaterialTheme.colorScheme.primary,
+                                shape = CircleShape
+                            ) else Modifier
+                        )
                         .then(
                             if (canToggle) Modifier.clickable {
                                 onToggleDay(date, isCompleted)

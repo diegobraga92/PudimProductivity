@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
@@ -171,6 +172,23 @@ private fun AppNavigation(
     var selectedRecipeId by remember { mutableStateOf<String?>(null) }
     var moreSheetOpen by remember { mutableStateOf(false) }
 
+    // System back button: close the "More" sheet first, then navigate to the
+    // parent of the current screen instead of finishing the Activity. Only on a
+    // top-level destination (Tasks/Planner/Recipes) does back exit the app.
+    val isTopLevel = currentScreen == Screen.TaskList ||
+        currentScreen == Screen.Planner ||
+        currentScreen == Screen.Recipes
+    BackHandler(enabled = moreSheetOpen || !isTopLevel) {
+        if (moreSheetOpen) {
+            moreSheetOpen = false
+        } else {
+            currentScreen = when (currentScreen) {
+                Screen.RecipeCreate, Screen.RecipeDetail -> Screen.Recipes
+                else -> Screen.TaskList
+            }
+        }
+    }
+
     // Phase 10: navigate to a widget tap target (also fires for the initial
     // launch), then clear it so the next tap is honoured.
     val target = launchTarget.value
@@ -234,6 +252,7 @@ private fun AppNavigation(
         }
         Screen.TaskCreate -> {
             TaskCreateScreen(
+                repository = repository,
                 onCreated = { currentScreen = Screen.TaskList },
                 onCancel = { currentScreen = Screen.TaskList }
             )
@@ -241,6 +260,7 @@ private fun AppNavigation(
         Screen.TaskDetail -> {
             selectedTaskId?.let { taskId ->
                 TaskDetailScreen(
+                    repository = repository,
                     taskId = taskId,
                     onUpdated = { currentScreen = Screen.TaskList },
                     onDeleted = { currentScreen = Screen.TaskList },
@@ -251,6 +271,7 @@ private fun AppNavigation(
         Screen.TaskListDetail -> {
             selectedListId?.let { listId ->
                 TaskListDetailScreen(
+                    repository = repository,
                     listId = listId,
                     onBack = { currentScreen = Screen.TaskList },
                     onDeleted = { currentScreen = Screen.TaskList }
@@ -284,6 +305,7 @@ private fun AppNavigation(
         }
         Screen.Planner -> {
             PlannerScreen(
+                onBack = { currentScreen = Screen.TaskList },
                 onOpenTask = { taskId ->
                     selectedTaskId = taskId
                     currentScreen = Screen.TaskDetail

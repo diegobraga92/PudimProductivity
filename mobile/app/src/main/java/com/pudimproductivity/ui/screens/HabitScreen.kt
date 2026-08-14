@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -16,8 +17,6 @@ import com.pudimproductivity.api.SyncClient
 import com.pudimproductivity.api.Task
 import com.pudimproductivity.api.taskService
 import com.pudimproductivity.i18n.Localization
-import com.pudimproductivity.ui.components.ProgressBar
-import com.pudimproductivity.ui.components.ProgressVariant
 import com.pudimproductivity.ui.components.SortSelector
 import com.pudimproductivity.ui.components.StreakBadge
 import com.pudimproductivity.ui.components.WeekHeatmap
@@ -25,13 +24,11 @@ import com.pudimproductivity.ui.components.WeekNavigator
 import com.pudimproductivity.utils.SortOption
 import com.pudimproductivity.utils.TaskSortPreferences
 import com.pudimproductivity.utils.computeStreaks
-import com.pudimproductivity.utils.getWeekDates
+import com.pudimproductivity.utils.getRollingWindowDates
 import com.pudimproductivity.utils.sortTasks
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
-
-private val DAY_ORDER = listOf("mon", "tue", "wed", "thu", "fri", "sat", "sun")
 
 // Habit ordering (mirrors web's Habits column sort, including time options).
 private const val HABIT_SORT_KEY = "taskSort.habits"
@@ -53,30 +50,35 @@ fun HabitScreen(onBack: () -> Unit, onOpenTask: (String) -> Unit) {
     var habits by remember { mutableStateOf<List<Task>>(emptyList()) }
     var completionsMap by remember { mutableStateOf<Map<String, List<String>>>(emptyMap()) }
     var isLoading by remember { mutableStateOf(true) }
+    var isRefreshing by remember { mutableStateOf(false) }
     var weekOffset by remember { mutableStateOf(0) }
     val context = LocalContext.current
     var habitSort by remember { mutableStateOf(TaskSortPreferences.load(context, HABIT_SORT_KEY)) }
 
     val sortedHabits = sortTasks(habits, habitSort)
 
+    /** Fetches habits + completions for the visible rolling window (no loading flag). */
+    suspend fun fetchData() {
+        try {
+            habits = ApiClient.taskService.listTasks("habit")
+            val weekDates = getRollingWindowDates(weekOffset)
+            val all = ApiClient.taskService.getAllTaskCompletions(weekDates.first(), weekDates.last())
+            val map = mutableMapOf<String, List<String>>()
+            for (task in habits) {
+                map[task.id] = all.filter { it.task_id == task.id }.map { it.completed_date }
+            }
+            completionsMap = map
+        } catch (_: Exception) {
+            habits = emptyList()
+            completionsMap = emptyMap()
+        }
+    }
+
     fun loadData() {
         scope.launch {
             isLoading = true
-            try {
-                habits = ApiClient.taskService.listTasks("habit")
-                val weekDates = getWeekDates(weekOffset)
-                val all = ApiClient.taskService.getAllTaskCompletions(weekDates.first(), weekDates.last())
-                val map = mutableMapOf<String, List<String>>()
-                for (task in habits) {
-                    map[task.id] = all.filter { it.task_id == task.id }.map { it.completed_date }
-                }
-                completionsMap = map
-            } catch (_: Exception) {
-                habits = emptyList()
-                completionsMap = emptyMap()
-            } finally {
-                isLoading = false
-            }
+            fetchData()
+            isLoading = false
         }
     }
 
@@ -100,12 +102,24 @@ fun HabitScreen(onBack: () -> Unit, onOpenTask: (String) -> Unit) {
             )
         }
     ) { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
-            // Single week selector shared by all habit cards
-            WeekNavigator(
-                weekOffset = weekOffset,
-                onWeekOffsetChange = { weekOffset = it }
-            )
+        // Pull-to-refresh: re-fetches habits + completions from the server.
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = {
+                scope.launch {
+                    isRefreshing = true
+                    fetchData()
+                    isRefreshing = false
+                }
+            },
+            modifier = Modifier.fillMaxSize().padding(padding)
+        ) {
+            Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+                // Single week selector shared by all habit cards
+                WeekNavigator(
+                    weekOffset = weekOffset,
+                    onWeekOffsetChange = { weekOffset = it }
+                )
 
             Spacer(modifier = Modifier.height(4.dp))
 
@@ -160,6 +174,7 @@ fun HabitScreen(onBack: () -> Unit, onOpenTask: (String) -> Unit) {
                 }
             }
         }
+        }
     }
 }
 
@@ -171,10 +186,6 @@ private fun HabitCard(
     onToggleDay: (String, Boolean) -> Unit,
     onClick: () -> Unit
 ) {
-    val weekDates = getWeekDates(weekOffset)
-    val scheduled = (task.recurrence_days ?: emptyList())
-        .mapNotNull { day -> weekDates.getOrNull(DAY_ORDER.indexOf(day)) }
-    val done = scheduled.count { it in completions }
     val streak = computeStreaks(completions)
 
     Card(
@@ -203,23 +214,6 @@ private fun HabitCard(
                 weekOffset = weekOffset,
                 onWeekOffsetChange = null
             )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                Box(modifier = Modifier.weight(1f)) {
-                    ProgressBar(
-                        value = if (scheduled.isNotEmpty()) (done * 100) / scheduled.size else 0,
-                        variant = ProgressVariant.HABIT,
-                        height = 6.dp
-                    )
-                }
-                Text(
-                    text = "$done/${scheduled.size}",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
         }
     }
 }

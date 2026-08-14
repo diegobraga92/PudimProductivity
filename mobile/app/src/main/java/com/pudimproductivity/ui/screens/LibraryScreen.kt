@@ -1,10 +1,13 @@
 package com.pudimproductivity.ui.screens
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -12,8 +15,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.pudimproductivity.api.ApiClient
 import com.pudimproductivity.api.CreateLibraryItemRequest
@@ -218,64 +224,184 @@ fun LibraryScreen(onBack: () -> Unit) {
 
             if (isLoading) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            } else if (items.isEmpty()) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(
+                        text = Localization.text("mobile.library.empty"),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             } else {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxSize()) {
-                    items(items) { item ->
-                        Card(Modifier.fillMaxWidth()) {
-                            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Column(Modifier.weight(1f)) {
-                                        Text(item.name, style = MaterialTheme.typography.titleMedium)
-                                        Text(
-                                            "${mediaLabel(item.media_type)}${item.release_year?.let { " · $it" } ?: ""}",
-                                            style = MaterialTheme.typography.bodySmall
-                                        )
-                                        item.score?.let { scoreVal ->
-                                            Text(
-                                                "★ $scoreVal${if (item.score_source.isNotBlank()) " (${item.score_source})" else ""}",
-                                                style = MaterialTheme.typography.bodySmall
-                                            )
-                                        }
-                                    }
-                                    Checkbox(
-                                        checked = item.done,
-                                        onCheckedChange = { checked ->
-                                            scope.launch {
-                                                try {
-                                                    ApiClient.libraryService.updateItem(
-                                                        item.id,
-                                                        UpdateLibraryItemRequest(done = checked)
-                                                    )
-                                                    refresh()
-                                                } catch (e: Exception) {
-                                                    error = e.message ?: Localization.text("mobile.library.update.failed")
-                                                }
-                                            }
-                                        }
-                                    )
-                                }
-                                if (item.notes.isNotBlank()) {
-                                    Text("📝 ${item.notes}", style = MaterialTheme.typography.bodySmall)
-                                }
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    OutlinedButton(onClick = { openEdit(item) }, modifier = Modifier.weight(1f)) {
-                                        Text(Localization.text("common.edit"))
-                                    }
-                                    OutlinedButton(
-                                        onClick = {
-                                            scope.launch {
-                                                try {
-                                                    ApiClient.libraryService.deleteItem(item.id)
-                                                    refresh()
-                                                } catch (e: Exception) {
-                                                    error = e.message ?: Localization.text("mobile.library.delete.failed")
-                                                }
-                                            }
-                                        },
-                                        modifier = Modifier.weight(1f)
-                                    ) { Text(Localization.text("common.delete")) }
-                                }
+                LibraryRowList(
+                    items = items,
+                    onToggleDone = { item, checked ->
+                        scope.launch {
+                            try {
+                                ApiClient.libraryService.updateItem(
+                                    item.id,
+                                    UpdateLibraryItemRequest(done = checked)
+                                )
+                                refresh()
+                            } catch (e: Exception) {
+                                error = e.message ?: Localization.text("mobile.library.update.failed")
                             }
+                        }
+                    },
+                    onEdit = { openEdit(it) },
+                    onDelete = { item ->
+                        scope.launch {
+                            try {
+                                ApiClient.libraryService.deleteItem(item.id)
+                                refresh()
+                            } catch (e: Exception) {
+                                error = e.message ?: Localization.text("mobile.library.delete.failed")
+                            }
+                        }
+                    }
+                )
+            }
+        }
+    }
+}
+
+
+/**
+ * Library list rendered as table rows (mirrors the web's library list): a
+ * header row followed by one bordered row per item, scrollable horizontally
+ * when the columns don't fit the screen.
+ */
+@Composable
+private fun LibraryRowList(
+    items: List<LibraryItem>,
+    onToggleDone: (LibraryItem, Boolean) -> Unit,
+    onEdit: (LibraryItem) -> Unit,
+    onDelete: (LibraryItem) -> Unit
+) {
+    val borderColor = MaterialTheme.colorScheme.outlineVariant
+    val shape = RoundedCornerShape(8.dp)
+    // Fixed table width so columns line up; scrolls horizontally on narrow screens.
+    val tableWidth = 620.dp
+
+    Row(
+        modifier = Modifier
+            .fillMaxSize()
+            .clip(shape)
+            .border(1.dp, borderColor, shape)
+            .horizontalScroll(rememberScrollState())
+    ) {
+        LazyColumn(modifier = Modifier.width(tableWidth).fillMaxHeight()) {
+            // Header row
+            item {
+                Row(
+                    modifier = Modifier
+                        .width(tableWidth)
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                        .border(1.dp, borderColor.copy(alpha = 0.6f))
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = Localization.text("common.name"),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text(
+                        text = Localization.text("common.type"),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.width(110.dp)
+                    )
+                    Text(
+                        text = Localization.text("common.year"),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.width(60.dp)
+                    )
+                    Text(
+                        text = Localization.text("common.score"),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.width(72.dp)
+                    )
+                    Text(
+                        text = Localization.text("common.actions"),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.width(150.dp)
+                    )
+                }
+            }
+
+            items(items) { item ->
+                Row(
+                    modifier = Modifier
+                        .width(tableWidth)
+                        .border(1.dp, borderColor.copy(alpha = 0.4f))
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(
+                                checked = item.done,
+                                onCheckedChange = { onToggleDone(item, it) },
+                                modifier = Modifier.padding(end = 4.dp)
+                            )
+                            Text(
+                                text = item.name,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        if (item.notes.isNotBlank()) {
+                            Text(
+                                text = "📝 ${item.notes}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.padding(start = 28.dp)
+                            )
+                        }
+                    }
+
+                    Text(
+                        text = mediaLabel(item.media_type),
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.width(110.dp)
+                    )
+                    Text(
+                        text = item.release_year?.toString() ?: "—",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.width(60.dp)
+                    )
+                    Text(
+                        text = item.score?.let { "★ $it" } ?: "—",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.width(72.dp)
+                    )
+                    Row(
+                        modifier = Modifier.width(150.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedButton(onClick = { onEdit(item) }, modifier = Modifier.weight(1f)) {
+                            Text(Localization.text("common.edit"), style = MaterialTheme.typography.labelSmall)
+                        }
+                        OutlinedButton(onClick = { onDelete(item) }, modifier = Modifier.weight(1f)) {
+                            Text(
+                                Localization.text("common.delete"),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.error
+                            )
                         }
                     }
                 }
@@ -283,4 +409,3 @@ fun LibraryScreen(onBack: () -> Unit) {
         }
     }
 }
-

@@ -152,6 +152,20 @@ class TaskRepository(private val context: Context, scope: CoroutineScope) {
         _online.value = value
     }
 
+    /**
+     * Manual refresh (pull-to-refresh): flush local changes to the server, pull
+     * any server changes back into the local database, and re-emit the flows.
+     */
+    suspend fun refresh() {
+        try {
+            sync.sync()
+            refreshFromLocal()
+            _online.value = true
+        } catch (_: Exception) {
+            _online.value = false
+        }
+    }
+
     /** Fire-and-forget server flush; pulls + re-emits on success. */
     private fun triggerSync() {
         appScope.launch {

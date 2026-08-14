@@ -10,12 +10,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import com.pudimproductivity.i18n.Localization
 import com.pudimproductivity.utils.formatWeekRange
-import com.pudimproductivity.utils.getWeekDates
+import com.pudimproductivity.utils.getRollingWindowDates
 
 /**
  * Single week selector shared by a list of habit cards (HabitScreen and the
  * Tasks screen's Habits tab). One navigator drives every heatmap in the list,
- * so the week only has to be chosen once instead of per card.
+ * so the week only has to be chosen once instead of per card. The window is
+ * rolling (last 7 days ending today), matching the web's habit heatmap.
  */
 @Composable
 fun WeekNavigator(
@@ -23,8 +24,8 @@ fun WeekNavigator(
     onWeekOffsetChange: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val weekDates = getWeekDates(weekOffset)
-    val isCurrentWeek = weekOffset == 0
+    val weekDates = getRollingWindowDates(weekOffset)
+    val isCurrentWindow = weekOffset == 0
 
     Row(
         modifier = modifier.fillMaxWidth(),
@@ -36,7 +37,7 @@ fun WeekNavigator(
         }
 
         Text(
-            text = if (isCurrentWeek) Localization.text("week.thisWeek")
+            text = if (isCurrentWindow) Localization.text("week.thisWeek")
             else formatWeekRange(weekDates, Localization.months()),
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.SemiBold,

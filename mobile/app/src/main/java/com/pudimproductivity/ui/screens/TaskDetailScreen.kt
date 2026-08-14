@@ -19,8 +19,8 @@ import com.pudimproductivity.ui.components.ProgressVariant
 import com.pudimproductivity.ui.components.StreakBadge
 import com.pudimproductivity.ui.components.WeekHeatmap
 import com.pudimproductivity.utils.computeStreaks
+import com.pudimproductivity.utils.getRollingWindowDates
 import com.pudimproductivity.utils.getToday
-import com.pudimproductivity.utils.getWeekDates
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
@@ -34,6 +34,7 @@ private fun getDayName(dateStr: String): String {
 
 @Composable
 fun TaskDetailScreen(
+    repository: com.pudimproductivity.data.TaskRepository,
     taskId: String,
     onUpdated: () -> Unit,
     onDeleted: () -> Unit,
@@ -57,7 +58,7 @@ fun TaskDetailScreen(
                 // Load completions if habit
                 val t = task
                 if (t != null && t.recurrence_days != null && t.recurrence_days.isNotEmpty()) {
-                    val weekDates = getWeekDates(weekOffset)
+                    val weekDates = getRollingWindowDates(weekOffset)
                     completions = ApiClient.taskService.getTaskCompletions(
                         taskId, weekDates.first(), weekDates.last()
                     )
@@ -83,7 +84,7 @@ fun TaskDetailScreen(
 
     val isHabit = task?.recurrence_days != null && task?.recurrence_days?.isNotEmpty() == true
     val completionsList = completions.map { it.completed_date }
-    val weekDates = getWeekDates(weekOffset)
+    val weekDates = getRollingWindowDates(weekOffset)
     val streakResult = computeStreaks(completionsList)
     val today = getToday()
 
@@ -149,6 +150,7 @@ fun TaskDetailScreen(
                                         taskId,
                                         UpdateTaskRequest(title = editTitle.trim())
                                     )
+                                    repository.refresh()
                                     isEditing = false
                                     loadTask()
                                     onUpdated()
@@ -190,12 +192,11 @@ fun TaskDetailScreen(
                         }
                         Button(
                             onClick = {
-                                scope.launch {
-                                    try {
-                                        ApiClient.taskService.deleteTask(taskId)
-                                        onDeleted()
-                                    } catch (_: Exception) { }
-                                }
+                                // Local-first delete: removes the row from the
+                                // local DB immediately (lists update) and
+                                // flushes the tombstone to the server on sync.
+                                repository.deleteTask(taskId)
+                                onDeleted()
                             },
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.error
@@ -341,6 +342,7 @@ fun TaskDetailScreen(
                                             } else {
                                                 ApiClient.taskService.completeTask(taskId, date)
                                             }
+                                            repository.refresh()
                                             loadTask()
                                         } catch (_: Exception) { }
                                     }
