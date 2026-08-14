@@ -1,0 +1,18 @@
+# Build context is the repository root (see web/Dockerfile), but only two trees
+# are required: web/ and the shared i18n dictionary. Whitelist those and drop
+# everything else — including .env (secrets), .git, and large local artifacts
+# such as node_modules and dist.
+#
+# Last matching pattern wins, so the explicit exclusions below override the
+# `!web/**` whitelist.
+*
+!web/
+!web/**
+!shared/
+!shared/i18n/
+!shared/i18n/**
+
+# Local artifacts inside the whitelisted trees.
+web/node_modules/
+web/dist/
+web/tsconfig.tsbuildinfo

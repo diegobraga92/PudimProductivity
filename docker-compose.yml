@@ -111,7 +111,8 @@ services:
 
   frontend:
     build:
-      context: ./web
+      context: .
+      dockerfile: web/Dockerfile
     container_name: pudim-frontend
     restart: unless-stopped
     ports:

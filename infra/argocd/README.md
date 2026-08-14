@@ -37,7 +37,7 @@ infra/
 
    ```sh
    docker build -t pudim/backend:dev -f backend/Dockerfile backend/
-   docker build -t pudim/web:dev -f web/Dockerfile web/
+   docker build -t pudim/web:dev -f web/Dockerfile .
    kind load docker-image --name pudim pudim/backend:dev pudim/web:dev
    ```
 

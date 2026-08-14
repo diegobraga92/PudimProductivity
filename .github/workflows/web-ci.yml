@@ -6,12 +6,14 @@ on:
     paths:
       - "web/**"
       - "api/**"
+      - "shared/**"
       - ".github/workflows/web-ci.yml"
   pull_request:
     branches: [main]
     paths:
       - "web/**"
       - "api/**"
+      - "shared/**"
       - ".github/workflows/web-ci.yml"
 
 env:
@@ -116,7 +118,10 @@ jobs:
       # Check latest: https://github.com/actions/checkout/releases
       - uses: actions/checkout@v6
       - name: Build Docker image
-        run: docker build -t pudim-web:ci -f web/Dockerfile web/
+        # Context is the repo root so web/Dockerfile can COPY shared/i18n (the
+        # translations import ../../../shared/i18n). .dockerignore whitelists
+        # web/ + shared/i18n so only those trees reach the daemon.
+        run: docker build -t pudim-web:ci -f web/Dockerfile .
       - name: Run Trivy
         # Action latest: https://github.com/aquasecurity/trivy-action/releases
         uses: aquasecurity/trivy-action@v0.36.0

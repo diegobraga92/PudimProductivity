@@ -274,10 +274,14 @@ func (r *PostgresTaskRepository) Delete(ctx context.Context, id string) error {
 }
 
 func (r *PostgresTaskRepository) CreateCompletion(ctx context.Context, completion *TaskCompletion) error {
+	// Conflict target is the partial unique index (migration 024) that only
+	// constrains active rows (deleted_at IS NULL). A soft-deleted tombstone no
+	// longer blocks re-completing the same date after an uncomplete, while a
+	// genuinely active completion still yields ErrCompletionAlreadyExists.
 	query := `
 		INSERT INTO task_completions (id, task_id, completed_date, created_at)
 		VALUES ($1, $2, $3, $4)
-		ON CONFLICT (task_id, completed_date) DO NOTHING
+		ON CONFLICT (task_id, completed_date) WHERE deleted_at IS NULL DO NOTHING
 	`
 
 	result, err := r.pool.Exec(ctx, query,
