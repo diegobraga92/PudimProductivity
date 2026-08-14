@@ -1,6 +1,7 @@
 # Stage 1: Build
-# Pinned patch for the stdlib vulnerability fixes in the 1.26 line.
-FROM golang:1.26.5-alpine AS builder
+# 1.26.6 ships the stdlib fixes for the vulnerabilities reported by Trivy and
+# govulncheck in 1.26.5 (CVE-2026-39821, CVE-2026-46600 and 5 others).
+FROM golang:1.26.6-alpine AS builder
 
 RUN apk add --no-cache git ca-certificates
 

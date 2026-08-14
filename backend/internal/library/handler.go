@@ -111,14 +111,9 @@ type ScoreCandidateResponse struct {
 func toScoreResponses(cands []ScoreCandidate) []ScoreCandidateResponse {
 	out := make([]ScoreCandidateResponse, 0, len(cands))
 	for _, c := range cands {
-		out = append(out, ScoreCandidateResponse{
-			Title:      c.Title,
-			Year:       c.Year,
-			Score:      c.Score,
-			Source:     c.Source,
-			ExternalID: c.ExternalID,
-			URL:        c.URL,
-		})
+		// ScoreCandidateResponse shares ScoreCandidate's fields 1:1 (the JSON
+		// tag renames Source → score_source), so a plain conversion suffices.
+		out = append(out, ScoreCandidateResponse(c))
 	}
 	return out
 }
