@@ -333,6 +333,7 @@
   "library.pickMatch": "Escolha uma correspondência:",
   "library.doneLabel": "Concluído (consumido / lido / assistido / jogado)",
   "library.loading": "Carregando biblioteca…",
+  "library.loadFailed": "Falha ao carregar a biblioteca. Verifique o backend e tente novamente.",
   "library.empty": "Sua biblioteca está vazia. Adicione um item acima ou importe um CSV.",
   "library.selectedCount": "{count} selecionado(s)",
   "library.deleteSelectedConfirm": "Excluir {count} item(ns)?",

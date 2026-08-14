@@ -333,6 +333,7 @@
   "library.pickMatch": "Pick a match:",
   "library.doneLabel": "Done (consumed / read / watched / played)",
   "library.loading": "Loading library…",
+  "library.loadFailed": "Failed to load the library. Check the backend and try again.",
   "library.empty": "Your library is empty. Add an item above, or import a CSV.",
   "library.selectedCount": "{count} selected",
   "library.deleteSelectedConfirm": "Delete {count} item(s)?",

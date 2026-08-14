@@ -94,5 +94,7 @@ func NewItem(id, name string, mediaType MediaType, releaseYear *int, done bool, 
 		Subtype:     strings.TrimSpace(subtype),
 		Score:       score,
 		ScoreSource: scoreSource,
+		CreatedAt:   time.Now().UTC(),
+		UpdatedAt:   time.Now().UTC(),
 	}, nil
 }

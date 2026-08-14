@@ -13,6 +13,7 @@ import {
 } from "../api/library";
 import { LibraryCsvImport } from "../components/LibraryCsvImport";
 import { useConfirm } from "../components/useConfirm";
+import { useFeatureFlag } from "../hooks/useFeatureFlag";
 import { useI18n } from "../i18n";
 
 const MEDIA_TYPES: MediaType[] = ["movie", "series", "book", "game"];
@@ -62,8 +63,11 @@ export default function Library() {
   // Ids selected for bulk actions (e.g. delete).
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const confirm = useConfirm();
+  // Score lookup is gated by the backend flag `library.score_lookup_enabled`
+  // (off by default). Hide the button so users don't hit a 503 "disabled".
+  const scoreLookupEnabled = useFeatureFlag("library.score_lookup_enabled");
 
-  const { data: items = [], isLoading } = useQuery({
+  const { data: items = [], isLoading, error: listError } = useQuery({
     queryKey: ["library", typeFilter, doneFilter],
     queryFn: () =>
       listLibraryItems(
@@ -304,14 +308,16 @@ export default function Library() {
               onChange={(e) => setForm({ ...form, score_source: e.target.value })}
               style={{ flex: 1, minWidth: 140 }}
             />
-            <button
-              type="button"
-              className="btn btn-sm"
-              disabled={!form.name.trim() || scoreSearching}
-              onClick={lookUpScore}
-            >
-              {scoreSearching ? t("library.searching") : t("library.lookUpScore")}
-            </button>
+            {scoreLookupEnabled && (
+              <button
+                type="button"
+                className="btn btn-sm"
+                disabled={!form.name.trim() || scoreSearching}
+                onClick={lookUpScore}
+              >
+                {scoreSearching ? t("library.searching") : t("library.lookUpScore")}
+              </button>
+            )}
           </div>
 
           {scoreError && (
@@ -361,6 +367,7 @@ export default function Library() {
       )}
 
       {saveError && <p style={{ color: "var(--color-danger)" }}>{String(saveError)}</p>}
+      {listError && <p style={{ color: "var(--color-danger)" }}>{t("library.loadFailed")}</p>}
       {isLoading && <p style={{ color: "var(--color-text-secondary)" }}>{t("library.loading")}</p>}
       {items.length === 0 && !isLoading && (
         <div className="empty-state">
