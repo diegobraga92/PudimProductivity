@@ -13,11 +13,9 @@ Prerequisites:
 # Copy environment file and edit the passwords
 cp .env.example .env
 
-# Start infrastructure (PostgreSQL)
-docker compose up -d postgres
-
-# Start backend and frontend dev servers
-./scripts/dev.sh
+# Start the full dev stack — infrastructure (PostgreSQL, Redis, RabbitMQ,
+# Mailpit) plus the backend and frontend dev servers
+./scripts/run.sh
 ```
 
 ## Deploy on LAN

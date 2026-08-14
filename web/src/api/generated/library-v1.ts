@@ -120,6 +120,8 @@ export interface components {
             done: boolean;
             /** @description Optional free-text notes or comments. */
             notes?: string;
+            /** @description Optional free-text sub-category (e.g. "Console" for games, "Genre" for movies/series/books). */
+            subtype?: string;
             /**
              * @description Optional rating on a 0-100 scale (IMDb 8.7, Metacritic 95, ...).
              *     Null when no score has been recorded.
@@ -156,6 +158,8 @@ export interface components {
             /** @default false */
             done: boolean;
             notes?: string;
+            /** @description Optional free-text sub-category (e.g. "Console" for games, "Genre" for movies/series/books). */
+            subtype?: string;
             /** @description Optional rating on a 0-100 scale. */
             score?: number | null;
             /** @description Where the score came from (e.g. "imdb", "metacritic"). */
@@ -167,6 +171,8 @@ export interface components {
             release_year?: number | null;
             done?: boolean;
             notes?: string;
+            /** @description Optional free-text sub-category. Omit to keep the current value; send "" to clear it. */
+            subtype?: string;
             /**
              * @description Optional rating on a 0-100 scale. Omit to keep the current value;
              *     send null to clear it.

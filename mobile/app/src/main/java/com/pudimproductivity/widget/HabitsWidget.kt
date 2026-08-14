@@ -3,46 +3,57 @@ package com.pudimproductivity.widget
 import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import androidx.glance.ExperimentalGlanceApi
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
-import androidx.glance.action.actionParametersOf
-import androidx.glance.action.actionStartActivity
-import androidx.glance.action.clickable
-import androidx.glance.appwidget.CheckBox
+import androidx.glance.LocalSize
 import androidx.glance.appwidget.GlanceAppWidget
-import androidx.glance.appwidget.LinearProgressIndicator
+import androidx.glance.appwidget.SizeMode
+import androidx.glance.appwidget.lazy.LazyColumn
+import androidx.glance.appwidget.lazy.items
 import androidx.glance.appwidget.provideContent
-import androidx.glance.background
 import androidx.glance.layout.Alignment
-import androidx.glance.layout.Column
-import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
-import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
-import androidx.glance.layout.padding
-import androidx.glance.layout.width
-import androidx.glance.text.FontWeight
-import androidx.glance.text.Text
-import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
-import com.pudimproductivity.MainActivity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+/**
+ * Responsive breakpoints for the Habits widget — same shape as the Tasks
+ * widget so both cards look consistent side by side.
+ */
+private val HABITS_SIZES = setOf(
+    DpSize(180.dp, 110.dp),
+    DpSize(250.dp, 110.dp),
+    DpSize(250.dp, 180.dp),
+    DpSize(250.dp, 250.dp)
+)
+
+private const val MAX_HABIT_ROWS_COMPACT = 2
 private const val MAX_HABIT_ROWS = 5
+private const val MAX_HABIT_ROWS_LARGE = 8
 
 // Matches the app's ProgressVariant.HABIT fill color (ui/components/ProgressBar.kt).
 private val HabitGreen = ColorProvider(Color(0xFF10B981))
 
 /**
- * "Today's Habits" home-screen widget (Phase 10): habits scheduled today with
- * a quick check-off for today's completion. Data comes from the offline-first
- * local SQLite DB via [WidgetData].
+ * "Today's Habits" home-screen widget: habits scheduled today with a quick
+ * check-off for today's completion. Data comes from the offline-first local
+ * SQLite DB via [WidgetData].
+ *
+ * The card adapts to its size: the compact layout swaps the progress bar for
+ * the [WidgetProgressRing] donut in the header, larger layouts keep the pill
+ * bar and show more rows (tall widgets use a scrollable [LazyColumn]).
  */
 object HabitsWidget : GlanceAppWidget() {
+
+    override val sizeMode: SizeMode = SizeMode.Responsive(HABITS_SIZES)
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val snapshot = withContext(Dispatchers.IO) { WidgetData.loadHabits(context) }
@@ -56,97 +67,115 @@ object HabitsWidget : GlanceAppWidget() {
 
 @Composable
 private fun HabitsContent(snapshot: HabitsSnapshot) {
-    Column(
-        modifier = GlanceModifier
-            .fillMaxSize()
-            .background(GlanceTheme.colors.background)
-            .padding(12.dp)
-    ) {
-        Row(
-            modifier = GlanceModifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Today's Habits",
-                style = TextStyle(fontWeight = FontWeight.Bold, color = GlanceTheme.colors.onBackground)
-            )
-            Spacer(GlanceModifier.width(8.dp))
-            Text(
-                text = "${snapshot.doneToday}/${snapshot.scheduledToday}",
-                style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant)
-            )
-        }
-
-        Spacer(GlanceModifier.height(6.dp))
-
-        LinearProgressIndicator(
-            progress = if (snapshot.scheduledToday > 0) {
-                snapshot.doneToday / snapshot.scheduledToday.toFloat()
-            } else 0f,
-            modifier = GlanceModifier.fillMaxWidth(),
-            color = HabitGreen,
-            backgroundColor = GlanceTheme.colors.surfaceVariant
-        )
-
-        Spacer(GlanceModifier.height(8.dp))
-
-        if (snapshot.habits.isEmpty()) {
-            Text(
-                text = "No habits scheduled today",
-                style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant)
-            )
-            Spacer(GlanceModifier.height(10.dp))
-            androidx.glance.Button(
-                text = "Open habits",
-                onClick = actionStartActivity<MainActivity>(
-                    actionParametersOf(EXTRA_SCREEN_KEY to MainActivity.SCREEN_HABITS)
-                )
-            )
-        } else {
-            for (row in snapshot.habits.take(MAX_HABIT_ROWS)) {
-                HabitRowItem(row)
-            }
-            if (snapshot.habits.size > MAX_HABIT_ROWS) {
-                Spacer(GlanceModifier.height(2.dp))
-                Text(
-                    text = "+${snapshot.habits.size - MAX_HABIT_ROWS} more in the app",
-                    style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant)
-                )
-            }
-        }
-    }
+    // The Glance 1.1.1 runtime wraps provideContent in its own per-size
+    // rendering pass (SizeMode.Responsive on HabitsWidget), so LocalSize
+    // reflects the current candidate size and the card just branches on it.
+    HabitsCard(snapshot)
 }
 
 @Composable
-private fun HabitRowItem(row: HabitRow) {
-    Row(
-        modifier = GlanceModifier.fillMaxWidth().padding(vertical = 2.dp),
-        verticalAlignment = Alignment.CenterVertically
+private fun HabitsCard(snapshot: HabitsSnapshot) {
+    val size = LocalSize.current
+    val compact = size.height < 140.dp
+
+    WidgetCard {
+        HabitsHeader(snapshot, showRing = compact)
+
+        if (compact) {
+            Spacer(GlanceModifier.height(4.dp))
+        } else if (snapshot.scheduledToday > 0) {
+            // No point showing an empty progress bar when nothing is scheduled.
+            Spacer(GlanceModifier.height(6.dp))
+            WidgetProgress(
+                progress = snapshot.doneToday / snapshot.scheduledToday.toFloat(),
+                color = HabitGreen
+            )
+            Spacer(GlanceModifier.height(8.dp))
+        }
+
+        HabitsBody(snapshot, size.height, compact)
+    }
+}
+
+@OptIn(ExperimentalGlanceApi::class)
+@Composable
+private fun HabitsBody(snapshot: HabitsSnapshot, height: Dp, compact: Boolean) {
+    if (snapshot.habits.isEmpty()) {
+        WidgetEmptyState(
+            emoji = "🌱",
+            message = "No habits scheduled today",
+            actionLabel = "Open habits",
+            onAction = openHabitsAction()
+        )
+        return
+    }
+
+    val maxRows = when {
+        height >= 200.dp -> MAX_HABIT_ROWS_LARGE
+        height >= 140.dp -> MAX_HABIT_ROWS
+        else -> MAX_HABIT_ROWS_COMPACT
+    }
+
+    if (maxRows == MAX_HABIT_ROWS_LARGE) {
+        LazyColumn(
+            modifier = GlanceModifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.Start
+        ) {
+            items(snapshot.habits.take(maxRows)) { row ->
+                HabitRowItem(row, compact = compact)
+            }
+        }
+    } else {
+        for (row in snapshot.habits.take(maxRows)) {
+            HabitRowItem(row, compact = compact)
+        }
+    }
+    OverflowNote(snapshot.habits.size - maxRows, onOpen = openHabitsAction())
+}
+
+@Composable
+private fun HabitsHeader(snapshot: HabitsSnapshot, showRing: Boolean) {
+    // The ring itself shows "done/scheduled", so in compact layouts the count
+    // text is redundant — hide it to leave room for the ring in narrow widgets.
+    val ringShown = showRing && snapshot.scheduledToday > 0
+    val countText = when {
+        snapshot.scheduledToday == 0 -> "none today"
+        else -> "${snapshot.doneToday}/${snapshot.scheduledToday}"
+    }
+    WidgetHeader(
+        title = "Today's Habits",
+        countText = countText,
+        onOpen = openHabitsAction(),
+        showCount = !ringShown,
+        trailing = if (ringShown) {
+            { WidgetProgressRing(snapshot.doneToday, snapshot.scheduledToday, HabitGreen) }
+        } else {
+            null
+        }
+    )
+}
+
+@Composable
+private fun HabitRowItem(row: HabitRow, compact: Boolean) {
+    WidgetCheckRow(
+        checked = row.completedToday,
+        onToggle = toggleHabitAction(row.id),
+        toggleDescription = if (row.completedToday) {
+            "Uncomplete ${row.title} for today"
+        } else {
+            "Complete ${row.title} for today"
+        },
+        title = row.title,
+        onOpen = openHabitsAction(),
+        compact = compact
     ) {
-        CheckBox(
-            checked = row.completedToday,
-            onCheckedChange = toggleHabitAction(row.id),
-            modifier = GlanceModifier.width(40.dp)
-        )
-        Text(
-            text = row.title,
-            maxLines = 1,
-            style = TextStyle(color = GlanceTheme.colors.onSurface),
-            modifier = GlanceModifier.clickable(
-                actionStartActivity<MainActivity>(
-                    actionParametersOf(EXTRA_SCREEN_KEY to MainActivity.SCREEN_HABITS)
-                )
-            )
-        )
         if (row.streak > 0) {
-            Spacer(GlanceModifier.width(6.dp))
-            Text(
-                text = "🔥${row.streak}",
-                style = TextStyle(
-                    color = GlanceTheme.colors.primary,
-                    fontWeight = FontWeight.Bold
-                )
-            )
+            val badge = if (row.bestStreak > row.streak) {
+                "🔥 ${row.streak} · best ${row.bestStreak}"
+            } else {
+                "🔥 ${row.streak}"
+            }
+            WidgetBadge(text = badge)
         }
     }
 }

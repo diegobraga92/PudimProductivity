@@ -2,47 +2,57 @@ package com.pudimproductivity.widget
 
 import android.content.Context
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
-import androidx.glance.Button
+import androidx.glance.ExperimentalGlanceApi
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
+import androidx.glance.LocalSize
 import androidx.glance.action.actionParametersOf
 import androidx.glance.action.actionStartActivity
-import androidx.glance.action.clickable
-import androidx.glance.appwidget.CheckBox
 import androidx.glance.appwidget.GlanceAppWidget
-import androidx.glance.appwidget.LinearProgressIndicator
+import androidx.glance.appwidget.SizeMode
+import androidx.glance.appwidget.lazy.LazyColumn
+import androidx.glance.appwidget.lazy.items
 import androidx.glance.appwidget.provideContent
-import androidx.glance.background
 import androidx.glance.layout.Alignment
-import androidx.glance.layout.Column
-import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
-import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
-import androidx.glance.layout.padding
-import androidx.glance.layout.width
-import androidx.glance.text.FontWeight
-import androidx.glance.text.Text
 import androidx.glance.text.TextDecoration
-import androidx.glance.text.TextStyle
 import com.pudimproductivity.MainActivity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+/**
+ * Responsive breakpoints for the Tasks widget. On Android 12+ the launcher
+ * picks the closest layout for the actual widget size; on older versions the
+ * best match per orientation is used (see Glance `SizeMode.Responsive`).
+ */
+private val TASKS_SIZES = setOf(
+    DpSize(180.dp, 110.dp),
+    DpSize(250.dp, 110.dp),
+    DpSize(250.dp, 180.dp),
+    DpSize(250.dp, 250.dp)
+)
+
+private const val MAX_TASK_ROWS_COMPACT = 2
 private const val MAX_TASK_ROWS = 5
+private const val MAX_TASK_ROWS_LARGE = 8
 
 /**
- * "Today's Tasks" home-screen widget (Phase 10): pending one-off tasks with
- * quick check-off. Rendered with Jetpack Glance 1.1.1; data comes from the
- * offline-first local SQLite DB via [WidgetData].
+ * "Today's Tasks" home-screen widget: pending one-off tasks with quick
+ * check-off. Data comes from the offline-first local SQLite DB via [WidgetData].
  *
- * Note: Glance 1.1 has no Compose-style `weight`, so rows use fixed spacing
- * and `maxLines` truncation instead.
+ * The card adapts to its size: compact widgets show fewer rows with a thin
+ * layout, tall widgets use a scrollable [LazyColumn]. Rows, header, "+" and
+ * the "+N more" note all deep-link into the app (see [WidgetActions]).
  */
 object TasksWidget : GlanceAppWidget() {
+
+    override val sizeMode: SizeMode = SizeMode.Responsive(TASKS_SIZES)
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val snapshot = withContext(Dispatchers.IO) { WidgetData.loadTasks(context) }
@@ -56,92 +66,104 @@ object TasksWidget : GlanceAppWidget() {
 
 @Composable
 private fun TasksContent(snapshot: TasksSnapshot) {
-    Column(
-        modifier = GlanceModifier
-            .fillMaxSize()
-            .background(GlanceTheme.colors.background)
-            .padding(12.dp)
-    ) {
-        Row(
-            modifier = GlanceModifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Today's Tasks",
-                style = TextStyle(fontWeight = FontWeight.Bold, color = GlanceTheme.colors.onBackground)
-            )
-            Spacer(GlanceModifier.width(8.dp))
-            Text(
-                text = "${snapshot.done}/${snapshot.total}",
-                style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant)
-            )
-        }
-
-        Spacer(GlanceModifier.height(6.dp))
-
-        LinearProgressIndicator(
-            progress = if (snapshot.total > 0) snapshot.done / snapshot.total.toFloat() else 0f,
-            modifier = GlanceModifier.fillMaxWidth(),
-            color = GlanceTheme.colors.primary,
-            backgroundColor = GlanceTheme.colors.surfaceVariant
-        )
-
-        Spacer(GlanceModifier.height(8.dp))
-
-        if (snapshot.pending.isEmpty()) {
-            Text(
-                text = if (snapshot.total == 0) "No tasks yet — add one!" else "All done for today 🎉",
-                style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant)
-            )
-            Spacer(GlanceModifier.height(10.dp))
-            Button(
-                text = "Add task",
-                onClick = actionStartActivity<MainActivity>(
-                    actionParametersOf(EXTRA_SCREEN_KEY to MainActivity.SCREEN_TASK_CREATE)
-                )
-            )
-        } else {
-            for (row in snapshot.pending.take(MAX_TASK_ROWS)) {
-                TaskRowItem(row)
-            }
-            if (snapshot.pending.size > MAX_TASK_ROWS) {
-                Spacer(GlanceModifier.height(2.dp))
-                Text(
-                    text = "+${snapshot.pending.size - MAX_TASK_ROWS} more in the app",
-                    style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant)
-                )
-            }
-        }
-    }
+    // The Glance 1.1.1 runtime wraps provideContent in its own per-size
+    // rendering pass (SizeMode.Responsive on TasksWidget), so LocalSize
+    // reflects the current candidate size and the card just branches on it.
+    TasksCard(snapshot)
 }
 
 @Composable
-private fun TaskRowItem(row: TaskRow) {
-    Row(
-        modifier = GlanceModifier.fillMaxWidth().padding(vertical = 2.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        CheckBox(
-            checked = row.done,
-            onCheckedChange = toggleTaskAction(row.id, done = !row.done),
-            modifier = GlanceModifier.width(40.dp)
-        )
-        Text(
-            text = row.title,
-            maxLines = 1,
-            style = TextStyle(
-                color = GlanceTheme.colors.onSurface,
-                textDecoration = if (row.done) TextDecoration.LineThrough else null
-            ),
-            modifier = GlanceModifier.clickable(
-                actionStartActivity<MainActivity>(
-                    actionParametersOf(
-                        EXTRA_SCREEN_KEY to MainActivity.SCREEN_TASK_DETAIL,
-                        EXTRA_TASK_ID_KEY to row.id
-                    )
-                )
+private fun TasksCard(snapshot: TasksSnapshot) {
+    val size = LocalSize.current
+    WidgetCard {
+        TasksHeader(snapshot)
+
+        // No point showing an empty progress bar before the first task exists.
+        if (snapshot.total > 0) {
+            Spacer(GlanceModifier.height(6.dp))
+            WidgetProgress(
+                progress = snapshot.done / snapshot.total.toFloat(),
+                color = GlanceTheme.colors.primary
+            )
+            Spacer(GlanceModifier.height(8.dp))
+        }
+
+        TasksBody(snapshot, size.height)
+    }
+}
+
+@OptIn(ExperimentalGlanceApi::class)
+@Composable
+private fun TasksBody(snapshot: TasksSnapshot, height: Dp) {
+    if (snapshot.pending.isEmpty()) {
+        WidgetEmptyState(
+            emoji = if (snapshot.total == 0) "🎯" else "🎉",
+            message = if (snapshot.total == 0) "No tasks yet — add one!" else "All done for today!",
+            actionLabel = "Add task",
+            onAction = actionStartActivity<MainActivity>(
+                actionParametersOf(EXTRA_SCREEN_KEY to MainActivity.SCREEN_TASK_CREATE)
             )
         )
+        return
     }
+
+    val maxRows = when {
+        height >= 200.dp -> MAX_TASK_ROWS_LARGE
+        height >= 140.dp -> MAX_TASK_ROWS
+        else -> MAX_TASK_ROWS_COMPACT
+    }
+    val compact = height < 140.dp
+
+    if (maxRows == MAX_TASK_ROWS_LARGE) {
+        // Tall layout: LazyColumn scrolls within the fixed widget bounds.
+        LazyColumn(
+            modifier = GlanceModifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.Start
+        ) {
+            items(snapshot.pending.take(maxRows)) { row ->
+                TaskRowItem(row, compact = compact)
+            }
+        }
+    } else {
+        for (row in snapshot.pending.take(maxRows)) {
+            TaskRowItem(row, compact = compact)
+        }
+    }
+    OverflowNote(snapshot.pending.size - maxRows, onOpen = openTasksAction())
+}
+
+@Composable
+private fun TasksHeader(snapshot: TasksSnapshot) {
+    val countText = when {
+        snapshot.total == 0 -> "no tasks"
+        snapshot.remaining == 0 -> "all done"
+        else -> "${snapshot.remaining} left"
+    }
+    WidgetHeader(
+        title = "Today's Tasks",
+        countText = countText,
+        onOpen = openTasksAction(),
+        onAdd = actionStartActivity<MainActivity>(
+            actionParametersOf(EXTRA_SCREEN_KEY to MainActivity.SCREEN_TASK_CREATE)
+        )
+    )
+}
+
+@Composable
+private fun TaskRowItem(row: TaskRow, compact: Boolean) {
+    WidgetCheckRow(
+        checked = row.done,
+        onToggle = toggleTaskAction(row.id, done = !row.done),
+        toggleDescription = if (row.done) "Mark ${row.title} as not done" else "Mark ${row.title} as done",
+        title = row.title,
+        onOpen = actionStartActivity<MainActivity>(
+            actionParametersOf(
+                EXTRA_SCREEN_KEY to MainActivity.SCREEN_TASK_DETAIL,
+                EXTRA_TASK_ID_KEY to row.id
+            )
+        ),
+        titleDecoration = if (row.done) TextDecoration.LineThrough else null,
+        compact = compact
+    )
 }
 

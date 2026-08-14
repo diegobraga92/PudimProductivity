@@ -38,6 +38,9 @@ type Item struct {
 	ReleaseYear *int
 	Done        bool
 	Notes       string
+	// Subtype is an optional free-text sub-category, e.g. "Console" for games
+	// or "Genre" for movies/series/books. Empty means not set.
+	Subtype     string
 	// Score is an optional rating (0-100 scale: IMDb 8.7, Metacritic 95, ...).
 	Score *float64
 	// ScoreSource names where Score came from (e.g. "imdb", "metacritic").
@@ -61,7 +64,7 @@ const (
 )
 
 // NewItem validates and builds an item.
-func NewItem(id, name string, mediaType MediaType, releaseYear *int, done bool, notes string, score *float64, scoreSource string) (*Item, error) {
+func NewItem(id, name string, mediaType MediaType, releaseYear *int, done bool, notes string, score *float64, scoreSource, subtype string) (*Item, error) {
 	if id == "" {
 		return nil, fmt.Errorf("item id cannot be empty")
 	}
@@ -88,6 +91,7 @@ func NewItem(id, name string, mediaType MediaType, releaseYear *int, done bool, 
 		ReleaseYear: releaseYear,
 		Done:        done,
 		Notes:       notes,
+		Subtype:     strings.TrimSpace(subtype),
 		Score:       score,
 		ScoreSource: scoreSource,
 	}, nil

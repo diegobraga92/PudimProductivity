@@ -17,9 +17,12 @@ function getDayName(dateStr: string): string {
 
 /**
  * Whether a date falls on a scheduled day for the habit.
- * When scheduledDays is omitted, every calendar day counts as scheduled.
+ * When scheduledDays is omitted or empty, every calendar day counts as scheduled.
  */
-function isScheduledDay(dateStr: string, scheduledDays?: readonly string[] | null): boolean {
+export function isScheduledOn(
+  dateStr: string,
+  scheduledDays?: readonly string[] | null
+): boolean {
   if (!scheduledDays || scheduledDays.length === 0) return true;
   return scheduledDays.includes(getDayName(dateStr));
 }
@@ -39,7 +42,7 @@ function countScheduledGapDays(
   const cursor = new Date(from);
   cursor.setDate(cursor.getDate() + 1);
   while (cursor < to) {
-    if (isScheduledDay(formatLocalDate(cursor), scheduledDays)) count++;
+    if (isScheduledOn(formatLocalDate(cursor), scheduledDays)) count++;
     cursor.setDate(cursor.getDate() + 1);
   }
   return count;
@@ -113,7 +116,7 @@ export function computeStreaks(
     if (dateSet.has(dateStr)) {
       current++;
       checkDate.setDate(checkDate.getDate() - 1);
-    } else if (!isScheduledDay(dateStr, scheduledDays)) {
+    } else if (!isScheduledOn(dateStr, scheduledDays)) {
       // Non-scheduled day — skip without breaking the streak.
       checkDate.setDate(checkDate.getDate() - 1);
     } else {

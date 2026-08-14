@@ -18,6 +18,7 @@ type CreateInput struct {
 	ReleaseYear *int
 	Done        bool
 	Notes       string
+	Subtype     string
 	Score       *float64
 	ScoreSource string
 }
@@ -31,6 +32,7 @@ type UpdateInput struct {
 	ReleaseYear **int
 	Done        *bool
 	Notes       *string
+	Subtype     *string
 	Score       **float64
 	ScoreSource *string
 }
@@ -64,7 +66,7 @@ func NewLibraryService(repo Repository, auditLogger audit.Logger, bus eventbus.B
 
 // Create validates and persists a single item.
 func (s *LibraryService) Create(ctx context.Context, in CreateInput) (*Item, error) {
-	item, err := NewItem(shared.NewUUID(), in.Name, in.MediaType, in.ReleaseYear, in.Done, in.Notes, in.Score, in.ScoreSource)
+	item, err := NewItem(shared.NewUUID(), in.Name, in.MediaType, in.ReleaseYear, in.Done, in.Notes, in.Score, in.ScoreSource, in.Subtype)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +89,7 @@ func (s *LibraryService) Import(ctx context.Context, in []CreateInput) (*ImportR
 	var items []*Item
 	errs := make([]ImportError, 0)
 	for i, input := range in {
-		item, err := NewItem(shared.NewUUID(), input.Name, input.MediaType, input.ReleaseYear, input.Done, input.Notes, input.Score, input.ScoreSource)
+		item, err := NewItem(shared.NewUUID(), input.Name, input.MediaType, input.ReleaseYear, input.Done, input.Notes, input.Score, input.ScoreSource, input.Subtype)
 		if err != nil {
 			errs = append(errs, ImportError{Row: i + 1, Message: err.Error()})
 			continue
@@ -141,6 +143,9 @@ func (s *LibraryService) Update(ctx context.Context, id string, in UpdateInput) 
 	if in.Notes != nil {
 		current.Notes = *in.Notes
 	}
+	if in.Subtype != nil {
+		current.Subtype = *in.Subtype
+	}
 	if in.Score != nil {
 		current.Score = *in.Score
 	}
@@ -176,7 +181,7 @@ func (s *LibraryService) Delete(ctx context.Context, id string) error {
 
 // validateItem re-checks a merged item without re-generating an ID.
 func validateItem(item *Item) error {
-	if _, err := NewItem(item.ID, item.Name, item.MediaType, item.ReleaseYear, item.Done, item.Notes, item.Score, item.ScoreSource); err != nil {
+	if _, err := NewItem(item.ID, item.Name, item.MediaType, item.ReleaseYear, item.Done, item.Notes, item.Score, item.ScoreSource, item.Subtype); err != nil {
 		return fmt.Errorf("update library item: %w", err)
 	}
 	return nil

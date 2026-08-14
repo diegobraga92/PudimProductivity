@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import { createTask, parseTask, type RecurrenceDay } from "../api/tasks";
 import ScheduleFields from "../components/ScheduleFields";
-import { COLOR_PALETTE, DAY_OPTIONS } from "../utils/constants";
+import RecurrenceDayPicker from "../components/RecurrenceDayPicker";
+import Modal from "../components/Modal";
+import { COLOR_PALETTE } from "../utils/constants";
 
 interface TaskCreateProps {
   onCreated: () => void;
@@ -146,10 +148,15 @@ export default function TaskCreate({ onCreated, onCancel }: TaskCreateProps) {
   };
 
   return (
-    <div className="animate-fade-in" style={{ maxWidth: "450px" }}>
-      <h2 className="page-heading" style={{ marginBottom: "var(--space-lg)" }}>
-        ✨ New Task
-      </h2>
+    <Modal onClose={onCancel} maxWidth={480}>
+      <div className="flex-between" style={{ marginBottom: "var(--space-md)" }}>
+        <h2 className="page-heading" style={{ marginBottom: 0 }}>
+          ✨ New Task
+        </h2>
+        <button className="btn btn-ghost btn-sm" onClick={onCancel} aria-label="Close">
+          ✕
+        </button>
+      </div>
 
       <form onSubmit={handleSubmit}>
         {/* Smart Parse (Phase 7): quick natural-language entry */}
@@ -231,36 +238,11 @@ export default function TaskCreate({ onCreated, onCancel }: TaskCreateProps) {
               <label className="form-label">
                 Repeat on:
               </label>
-              <div style={{ display: "flex", gap: "0.3rem", flexWrap: "wrap" }}>
-                {DAY_OPTIONS.map(({ value, label }) => {
-                  const isSelected = selectedDays.includes(value);
-                  return (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() => toggleDay(value)}
-                      style={{
-                        padding: "0.4rem 0.8rem",
-                        border: isSelected
-                          ? "2px solid var(--color-habit)"
-                          : errorField === "days"
-                          ? "1.5px solid var(--color-danger)"
-                          : "1.5px solid var(--color-border)",
-                        borderRadius: "var(--radius-sm)",
-                        background: isSelected ? "var(--color-habit-light)" : "var(--color-surface)",
-                        cursor: "pointer",
-                        fontWeight: isSelected ? 600 : 400,
-                        color: isSelected ? "var(--color-habit)" : "var(--color-text-secondary)",
-                        fontFamily: "var(--font-family)",
-                        fontSize: "var(--font-size-sm)",
-                        transition: "all var(--transition-fast)",
-                      }}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
+              <RecurrenceDayPicker
+                selectedDays={selectedDays}
+                onToggle={toggleDay}
+                error={errorField === "days"}
+              />
             </div>
           )}
 
@@ -304,6 +286,6 @@ export default function TaskCreate({ onCreated, onCancel }: TaskCreateProps) {
           </button>
         </div>
       </form>
-    </div>
+    </Modal>
   );
 }

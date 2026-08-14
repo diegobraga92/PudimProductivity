@@ -18,13 +18,13 @@ func NewPostgresRepository(pool *pgxpool.Pool) *PostgresRepository {
 	return &PostgresRepository{pool: pool}
 }
 
-const itemColumns = `id, name, media_type, release_year, done, notes, score, score_source, created_at, updated_at`
+const itemColumns = `id, name, media_type, release_year, done, notes, subtype, score, score_source, created_at, updated_at`
 
 func scanItem(scanner interface{ Scan(dest ...any) error }) (*Item, error) {
 	it := &Item{}
 	err := scanner.Scan(
 		&it.ID, &it.Name, (*string)(&it.MediaType), &it.ReleaseYear, &it.Done, &it.Notes,
-		&it.Score, &it.ScoreSource, &it.CreatedAt, &it.UpdatedAt,
+		&it.Subtype, &it.Score, &it.ScoreSource, &it.CreatedAt, &it.UpdatedAt,
 	)
 	if err != nil {
 		return nil, err
@@ -34,9 +34,9 @@ func scanItem(scanner interface{ Scan(dest ...any) error }) (*Item, error) {
 
 func (r *PostgresRepository) Create(ctx context.Context, item *Item) error {
 	_, err := r.pool.Exec(ctx, `
-		INSERT INTO library_items (id, name, media_type, release_year, done, notes, score, score_source)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-		item.ID, item.Name, item.MediaType, item.ReleaseYear, item.Done, item.Notes, item.Score, item.ScoreSource,
+		INSERT INTO library_items (id, name, media_type, release_year, done, notes, subtype, score, score_source)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+		item.ID, item.Name, item.MediaType, item.ReleaseYear, item.Done, item.Notes, item.Subtype, item.Score, item.ScoreSource,
 	)
 	if err != nil {
 		return fmt.Errorf("insert library item: %w", err)
@@ -93,9 +93,9 @@ func (r *PostgresRepository) List(ctx context.Context, mediaType string, done *b
 func (r *PostgresRepository) Update(ctx context.Context, item *Item) error {
 	tag, err := r.pool.Exec(ctx, `
 		UPDATE library_items
-		SET name = $2, media_type = $3, release_year = $4, done = $5, notes = $6, score = $7, score_source = $8, updated_at = NOW()
+		SET name = $2, media_type = $3, release_year = $4, done = $5, notes = $6, subtype = $7, score = $8, score_source = $9, updated_at = NOW()
 		WHERE id = $1`,
-		item.ID, item.Name, item.MediaType, item.ReleaseYear, item.Done, item.Notes, item.Score, item.ScoreSource,
+		item.ID, item.Name, item.MediaType, item.ReleaseYear, item.Done, item.Notes, item.Subtype, item.Score, item.ScoreSource,
 	)
 	if err != nil {
 		return fmt.Errorf("update library item: %w", err)
@@ -132,9 +132,9 @@ func (r *PostgresRepository) Import(ctx context.Context, items []*Item) error {
 
 	for _, item := range items {
 		_, err := tx.Exec(ctx, `
-			INSERT INTO library_items (id, name, media_type, release_year, done, notes, score, score_source)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-			item.ID, item.Name, item.MediaType, item.ReleaseYear, item.Done, item.Notes, item.Score, item.ScoreSource,
+			INSERT INTO library_items (id, name, media_type, release_year, done, notes, subtype, score, score_source)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+			item.ID, item.Name, item.MediaType, item.ReleaseYear, item.Done, item.Notes, item.Subtype, item.Score, item.ScoreSource,
 		)
 		if err != nil {
 			return fmt.Errorf("import library item %q: %w", item.Name, err)

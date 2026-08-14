@@ -26,13 +26,13 @@ usage() {
 Usage: $(basename "$0") [OPTIONS]
 
 Start the PudimProductivity mobile development environment.
-Delegates DB/backend/web setup to dev.sh, then boots the emulator,
+Delegates DB/backend/web setup to run.sh, then boots the emulator,
 builds and installs the Android app, and launches it.
 
 Options:
   --no-emulator   Build and install to an already-running device/emulator only
-  --no-db         Skip starting Docker services (postgres) — passed to dev.sh
-  --no-web        Skip web frontend — passed to dev.sh
+  --no-db         Skip starting Docker services — passed to run.sh
+  --no-web        Skip web frontend — passed to run.sh
   --help          Show this help message and exit
 EOF
     exit 0
@@ -86,7 +86,7 @@ cleanup() {
         pkill -9 -f "qemu.*${AVD_NAME}" 2>/dev/null || true
     fi
 
-    # 2. Stop the backend stack launched by dev.sh
+    # 2. Stop the backend stack launched by run.sh
     log_info "Stopping backend (go process)..."
     pkill -9 -f "go run.*cmd/server" 2>/dev/null || true
 
@@ -96,7 +96,7 @@ cleanup() {
     log_info "Stopping Docker services..."
     docker compose -f "$ROOT_DIR/docker-compose.yml" down 2>/dev/null || true
 
-    # 3. Stop dev.sh itself (if still alive after children are gone)
+    # 3. Stop run.sh itself (if still alive after children are gone)
     if [ -n "${DEV_PID:-}" ]; then
         kill "$DEV_PID" 2>/dev/null || true
         wait "$DEV_PID" 2>/dev/null || true
@@ -108,13 +108,13 @@ cleanup() {
 
 trap cleanup SIGINT SIGTERM
 
-# ─── 1. Launch backend, database, and other services via dev.sh ────────────
-log_info "Starting backend stack via dev.sh..."
-"$SCRIPT_DIR/dev.sh" "${DEV_SH_ARGS[@]}" &
+# ─── 1. Launch backend, database, and other services via run.sh ────────────
+log_info "Starting backend stack via run.sh..."
+"$SCRIPT_DIR/run.sh" "${DEV_SH_ARGS[@]}" &
 DEV_PID=$!
-log_ok "dev.sh started (PID $DEV_PID)."
+log_ok "run.sh started (PID $DEV_PID)."
 
-# Give dev.sh time to boot services before starting the emulator
+# Give run.sh time to boot services before starting the emulator
 sleep 3
 
 # ─── 2. Start Android emulator ─────────────────────────────────────────────
@@ -210,5 +210,5 @@ log_ok "  Press Ctrl+C to stop all services."
 log_ok "═══════════════════════════════════════════════════════════"
 echo ""
 
-# Wait for dev.sh to exit (keeps script alive, forwards Ctrl+C)
+# Wait for run.sh to exit (keeps script alive, forwards Ctrl+C)
 wait "$DEV_PID"

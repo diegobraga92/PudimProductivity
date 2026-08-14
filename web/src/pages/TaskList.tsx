@@ -11,26 +11,15 @@ import {
   type Task,
   type TaskStatus,
 } from "../api/tasks";
-import {
-  listTaskLists,
-  createTaskList,
-  deleteTaskList,
-  type TaskList,
-} from "../api/taskLists";
 import TaskCreate from "./TaskCreate";
-import TaskDetail from "./TaskDetail";
+import TaskEditModal from "../components/TaskEditModal";
 import QuickAddForm from "../components/QuickAddForm";
 import TaskCard from "../components/TaskCard";
-import ListDetailPanel from "../components/ListDetailPanel";
-import TaskListShare from "../components/TaskListShare";
 import WeekHeatmap from "../components/WeekHeatmap";
 import StreakBadge from "../components/StreakBadge";
-import ProgressBar from "../components/ProgressBar";
 import SortSelect from "../components/SortSelect";
 import { usePersistedSort } from "../hooks/usePersistedSort";
 import { useHabitCompletions } from "../hooks/useHabitCompletions";
-import { usePresence } from "../hooks/usePresence";
-import { DEV_USER_ID } from "../api/client";
 import { computeStreaks } from "../utils/streaks";
 import { getRollingWindowDates, formatWeekRange } from "../utils/dates";
 import { sortTasks } from "../utils/sort";
@@ -41,21 +30,14 @@ import {
   playTodoUncompletionSound,
 } from "../utils/sounds";
 
-type View = "list" | "create" | "detail";
-
 export default function TaskList() {
   const queryClient = useQueryClient();
-  const [view, setView] = useState<View>("list");
+  const [showCreate, setShowCreate] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
-  const [selectedListForDetail, setSelectedListForDetail] = useState<string | null>(null);
   const [newTodoTitle, setNewTodoTitle] = useState("");
-  const [newHabitTitle, setNewHabitTitle] = useState("");
-  const [newListName, setNewListName] = useState("");
   const [weekOffset, setWeekOffset] = useState(0);
   const [todoSort, setTodoSort] = usePersistedSort("taskSort.todos", "created-desc");
   const [habitSort, setHabitSort] = usePersistedSort("taskSort.habits", "created-desc");
-  // Phase 8: which list's share dialog is open.
-  const [shareListId, setShareListId] = useState<string | null>(null);
   const handleWeekOffsetChange = useCallback((newOffset: number) => {
     setWeekOffset(newOffset);
   }, []);
@@ -71,15 +53,6 @@ export default function TaskList() {
     queryKey: ["tasks", "habit"],
     queryFn: () => listTasks(undefined, "habit"),
   });
-
-  // Fetch task lists
-  const { data: taskLists = [] } = useQuery<TaskList[]>({
-    queryKey: ["taskLists"],
-    queryFn: listTaskLists,
-  });
-
-  // Phase 8: live presence — who is online per list.
-  const { online: onlineByList } = usePresence(taskLists.map((l) => l.id));
 
   const isLoading = todoLoading || habitLoading;
   const error = todoError || habitError;
@@ -137,67 +110,8 @@ export default function TaskList() {
     },
   });
 
-  const createHabitMutation = useMutation({
-    mutationFn: (title: string) =>
-      createTask({ title, recurrence_days: ["mon", "tue", "wed", "thu", "fri"] }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tasks", "habit"] });
-      setNewHabitTitle("");
-    },
-  });
-
-  const createListMutation = useMutation({
-    mutationFn: (name: string) => createTaskList({ name }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["taskLists"] });
-      setNewListName("");
-    },
-  });
-
-  const deleteListMutation = useMutation({
-    mutationFn: deleteTaskList,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["taskLists"] });
-      setSelectedListForDetail(null);
-    },
-  });
-
-  // View routing
-  if (view === "create") {
-    return (
-      <TaskCreate
-        onCreated={() => {
-          queryClient.invalidateQueries({ queryKey: ["tasks", "one-off"] });
-          queryClient.invalidateQueries({ queryKey: ["tasks", "habit"] });
-          setView("list");
-        }}
-        onCancel={() => setView("list")}
-      />
-    );
-  }
-
-  if (view === "detail" && selectedTaskId) {
-    return (
-      <TaskDetail
-        taskId={selectedTaskId}
-        onUpdated={() => {
-          queryClient.invalidateQueries({ queryKey: ["tasks", "one-off"] });
-          queryClient.invalidateQueries({ queryKey: ["tasks", "habit"] });
-        }}
-        onDeleted={() => {
-          queryClient.invalidateQueries({ queryKey: ["tasks", "one-off"] });
-          queryClient.invalidateQueries({ queryKey: ["tasks", "habit"] });
-          setView("list");
-          setSelectedTaskId(null);
-        }}
-        onBack={() => setView("list")}
-      />
-    );
-  }
-
-  // Compute stats
-  const doneTodos = todoTasks.filter((t) => t.status === "done").length;
-  const todoProgress = todoTasks.length > 0 ? Math.round((doneTodos / todoTasks.length) * 100) : 0;
+  // Tasks and habits now open in edit modals (rendered at the bottom of this
+  // component) instead of swapping the whole page.
 
   // Sort tasks based on selected sort options
   const sortedTodoTasks = sortTasks(todoTasks, todoSort);
@@ -212,37 +126,12 @@ export default function TaskList() {
             📋 Tasks
           </h1>
           <p className="page-subtitle">
-            Manage your todos, habits, and lists
+            Manage your todos and habits
           </p>
         </div>
-        <button className="btn btn-primary" onClick={() => setView("create")}>
+        <button className="btn btn-primary" onClick={() => setShowCreate(true)}>
           + New Task
         </button>
-      </div>
-
-      {/* Progress Row */}
-      <div
-        className="flex flex-wrap"
-        style={{
-          gap: "var(--space-lg)",
-          marginBottom: "var(--space-xl)",
-          background: "var(--color-surface)",
-          border: "1px solid var(--color-border)",
-          borderRadius: "var(--radius-md)",
-          padding: "var(--space-md) var(--space-lg)",
-        }}
-      >
-        <span className="text-sm text-bold text-secondary">
-          Today's Progress
-        </span>
-        <div className="flex" style={{ gap: "var(--space-lg)", alignItems: "center" }}>
-          <div className="flex-center" style={{ gap: "var(--space-sm)" }}>
-            <span className="badge badge-todo">{doneTodos}/{todoTasks.length}</span>
-            <div style={{ width: "100px" }}>
-              <ProgressBar value={todoProgress} variant="todo" />
-            </div>
-          </div>
-        </div>
       </div>
 
       {isLoading && (
@@ -311,7 +200,6 @@ export default function TaskList() {
                 }}
                 onTitleClick={() => {
                   setSelectedTaskId(task.id);
-                  setView("detail");
                 }}
                 animationDelay={`${index * 30}ms`}
               />
@@ -367,21 +255,10 @@ export default function TaskList() {
             </button>
           </div>
 
-          {/* Quick-add for habits */}
-          <QuickAddForm
-            value={newHabitTitle}
-            onChange={setNewHabitTitle}
-            onSubmit={() => {
-              if (newHabitTitle.trim()) createHabitMutation.mutate(newHabitTitle.trim());
-            }}
-            placeholder="Quick add habit (weekdays)..."
-            isPending={createHabitMutation.isPending}
-          />
-
           {habitTasks.length === 0 && !isLoading && (
             <div className="empty-state">
               <div className="empty-state-icon">🔄</div>
-              <p className="empty-state-text">No habits yet.<br />Start building one above!</p>
+              <p className="empty-state-text">No habits yet.<br />Use + New Task to create one!</p>
             </div>
           )}
 
@@ -410,7 +287,6 @@ export default function TaskList() {
                       }}
                       onClick={() => {
                         setSelectedTaskId(task.id);
-                        setView("detail");
                       }}
                     >
                       {task.title}
@@ -455,142 +331,35 @@ export default function TaskList() {
         </div>
       </div>
 
-      {/* ===== BOTTOM: LISTS SECTION ===== */}
-      <div className="task-lists-section">
-        <h2 className="section-header">
-          📁 Lists <span className="badge" style={{ background: "var(--color-list-light)", color: "#047857" }}>{taskLists.length}</span>
-        </h2>
+      {/* New task / habit modal */}
+      {showCreate && (
+        <TaskCreate
+          onCreated={() => {
+            queryClient.invalidateQueries({ queryKey: ["tasks", "one-off"] });
+            queryClient.invalidateQueries({ queryKey: ["tasks", "habit"] });
+            setShowCreate(false);
+          }}
+          onCancel={() => setShowCreate(false)}
+        />
+      )}
 
-        <div className="lists-inner">
-          {/* ===== LEFT: LIST PICKER ===== */}
-          <div className="list-picker">
-            {/* Create new list */}
-            <QuickAddForm
-              value={newListName}
-              onChange={setNewListName}
-              onSubmit={() => {
-                if (newListName.trim()) createListMutation.mutate(newListName.trim());
-              }}
-              placeholder="New list name..."
-              submitLabel="Create"
-              isPending={createListMutation.isPending}
-            />
-
-            {taskLists.length === 0 && (
-              <div className="empty-state" style={{ padding: "var(--space-md)" }}>
-                <div className="empty-state-icon" style={{ fontSize: "1.5rem" }}>📁</div>
-                <p className="empty-state-text">No lists yet.<br />Create your first one above!</p>
-              </div>
-            )}
-
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
-              {taskLists.map((list) => {
-                const ownerId = list.owner_id ?? "";
-                const isOwner = ownerId === DEV_USER_ID;
-                const ownerOnline = onlineByList.get(list.id)?.has(ownerId) ?? false;
-                return (
-                  <div
-                    key={list.id}
-                    className={`list-picker-item ${selectedListForDetail === list.id ? "selected" : ""}`}
-                    onClick={() => setSelectedListForDetail(list.id)}
-                  >
-                    <span style={{ fontSize: "1rem" }}>📁</span>
-                    {/* Phase 8: owner presence dot */}
-                    <span
-                      style={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: "50%",
-                        background: ownerOnline ? "#00b894" : "#b2bec3",
-                        flexShrink: 0,
-                      }}
-                      title={`Owner ${list.owner_id} ${ownerOnline ? "online" : "offline"}`}
-                    />
-                    <span
-                      className="flex-1"
-                      style={{
-                        fontWeight: selectedListForDetail === list.id ? 600 : 500,
-                        fontSize: "var(--font-size-sm)",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {list.name}
-                    </span>
-                    {/* Phase 8: share dialog */}
-                    <button
-                      className="btn btn-ghost btn-sm"
-                      style={{ padding: "0.15rem 0.4rem", fontSize: "0.7rem" }}
-                      title="Share list"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShareListId(list.id);
-                      }}
-                    >
-                      👥
-                    </button>
-                    {/* Only the owner can delete a list (Phase 8) */}
-                    {isOwner && (
-                      <button
-                        className="btn btn-danger btn-sm"
-                        style={{ padding: "0.15rem 0.4rem", fontSize: "0.65rem" }}
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          const ok = await confirm({
-                            title: `Delete list "${list.name}"?`,
-                            confirmLabel: "Delete",
-                            confirmVariant: "danger",
-                          });
-                          if (ok) {
-                            deleteListMutation.mutate(list.id);
-                          }
-                        }}
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* ===== RIGHT: LIST DETAIL ===== */}
-          <div className="list-detail">
-            {selectedListForDetail ? (
-              <ListDetailPanel
-                listId={selectedListForDetail}
-                onListDeleted={() => {
-                  queryClient.invalidateQueries({ queryKey: ["taskLists"] });
-                  setSelectedListForDetail(null);
-                }}
-              />
-            ) : (
-              <div className="empty-state">
-                <div className="empty-state-icon">👈</div>
-                <p className="empty-state-text">Select a list from the left to view and manage its tasks</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Phase 8: share dialog */}
-      {shareListId &&
-        (() => {
-          const list = taskLists.find((l) => l.id === shareListId);
-          if (!list) return null;
-          return (
-            <TaskListShare
-              listId={list.id}
-              listName={list.name}
-              isOwner={list.owner_id === DEV_USER_ID}
-              onlineUsers={onlineByList.get(list.id)}
-              onClose={() => setShareListId(null)}
-            />
-          );
-        })()}
+      {/* Edit task / habit modal — opens directly in edit mode on card click */}
+      {selectedTaskId && (
+        <TaskEditModal
+          key={selectedTaskId}
+          taskId={selectedTaskId}
+          onClose={() => setSelectedTaskId(null)}
+          onUpdated={() => {
+            queryClient.invalidateQueries({ queryKey: ["tasks", "one-off"] });
+            queryClient.invalidateQueries({ queryKey: ["tasks", "habit"] });
+          }}
+          onDeleted={() => {
+            queryClient.invalidateQueries({ queryKey: ["tasks", "one-off"] });
+            queryClient.invalidateQueries({ queryKey: ["tasks", "habit"] });
+            setSelectedTaskId(null);
+          }}
+        />
+      )}
     </div>
   );
 }

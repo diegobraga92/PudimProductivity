@@ -281,6 +281,9 @@ components:
         notes:
           type: string
           description: Optional free-text notes or comments.
+        subtype:
+          type: string
+          description: Optional free-text sub-category (e.g. "Console" for games, "Genre" for movies/series/books).
         score:
           type: number
           nullable: true
@@ -338,6 +341,9 @@ components:
           default: false
         notes:
           type: string
+        subtype:
+          type: string
+          description: Optional free-text sub-category (e.g. "Console" for games, "Genre" for movies/series/books).
         score:
           type: number
           nullable: true
@@ -360,6 +366,9 @@ components:
           type: boolean
         notes:
           type: string
+        subtype:
+          type: string
+          description: Optional free-text sub-category. Omit to keep the current value; send "" to clear it.
         score:
           type: number
           nullable: true

@@ -38,8 +38,8 @@ import com.pudimproductivity.fcm.ErrorReporter
 import com.pudimproductivity.focus.FocusTimerManager
 import com.pudimproductivity.notifications.HabitReminderScheduler
 import com.pudimproductivity.sync.SyncScheduler
-import com.pudimproductivity.ui.screens.DailyPlanScreen
 import com.pudimproductivity.ui.screens.FocusTimerScreen
+import com.pudimproductivity.ui.screens.PlannerScreen
 import com.pudimproductivity.ui.screens.HabitScreen
 import com.pudimproductivity.ui.screens.InsightsScreen
 import com.pudimproductivity.ui.screens.LibraryScreen
@@ -57,7 +57,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 enum class Screen {
-    Health, ServerSettings, TaskList, TaskCreate, TaskDetail, TaskListDetail, FocusTimer, Habits, Recipes, RecipeCreate, Library, DailyPlan, Insights
+    Health, ServerSettings, TaskList, TaskCreate, TaskDetail, TaskListDetail, FocusTimer, Habits, Recipes, RecipeCreate, Library, Planner, Insights
 }
 
 class MainActivity : ComponentActivity() {
@@ -135,6 +135,7 @@ class MainActivity : ComponentActivity() {
             // Task detail needs the id; without it the tap falls back to no-op.
             SCREEN_TASK_DETAIL -> intent.getStringExtra(EXTRA_TASK_ID)
                 ?.let { LaunchTarget(Screen.TaskDetail, it) }
+            SCREEN_TASKS -> LaunchTarget(Screen.TaskList, null)
             SCREEN_HABITS -> LaunchTarget(Screen.Habits, null)
             SCREEN_TASK_CREATE -> LaunchTarget(Screen.TaskCreate, null)
             else -> null
@@ -185,7 +186,7 @@ private fun AppNavigation(
     val currentTopLevel = when (currentScreen) {
         Screen.TaskList, Screen.TaskCreate, Screen.TaskDetail,
         Screen.TaskListDetail, Screen.Habits -> TopLevel.Tasks
-        Screen.DailyPlan -> TopLevel.Plan
+        Screen.Planner -> TopLevel.Plan
         Screen.FocusTimer -> TopLevel.Timer
         Screen.Recipes, Screen.RecipeCreate -> TopLevel.Recipes
         else -> TopLevel.More
@@ -221,7 +222,6 @@ private fun AppNavigation(
                 },
                 onRecipes = { currentScreen = Screen.Recipes },
                 onLibrary = { currentScreen = Screen.Library },
-                onDailyPlan = { currentScreen = Screen.DailyPlan },
                 onInsights = { currentScreen = Screen.Insights }
             )
         }
@@ -276,8 +276,13 @@ private fun AppNavigation(
         Screen.Library -> {
             LibraryScreen(onBack = { currentScreen = Screen.TaskList })
         }
-        Screen.DailyPlan -> {
-            DailyPlanScreen()
+        Screen.Planner -> {
+            PlannerScreen(
+                onOpenTask = { taskId ->
+                    selectedTaskId = taskId
+                    currentScreen = Screen.TaskDetail
+                }
+            )
         }
         Screen.Insights -> {
             InsightsScreen(onBack = { currentScreen = Screen.TaskList })
@@ -295,9 +300,9 @@ private fun AppNavigation(
                 )
                 NavigationBarItem(
                     selected = currentTopLevel == TopLevel.Plan,
-                    onClick = { currentScreen = Screen.DailyPlan },
-                    icon = { Icon(Icons.AutoMirrored.Filled.EventNote, contentDescription = "Daily plan") },
-                    label = { Text("Plan") }
+                    onClick = { currentScreen = Screen.Planner },
+                    icon = { Icon(Icons.AutoMirrored.Filled.EventNote, contentDescription = "Planner") },
+                    label = { Text("Planner") }
                 )
                 NavigationBarItem(
                     selected = currentTopLevel == TopLevel.Timer,

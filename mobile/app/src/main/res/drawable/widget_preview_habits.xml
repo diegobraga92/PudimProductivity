@@ -1,50 +1,59 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Static preview shown in the widget picker for the Today's Habits widget. -->
+<!-- Static preview shown in the widget picker for the Today's Habits widget.
+     Mirrors the rendered card: cream background, header, green pill progress
+     bar, and habit rows with a streak badge. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="250dp"
     android:height="110dp"
     android:viewportWidth="250"
     android:viewportHeight="110">
 
-    <!-- Cream background card -->
+    <!-- Cream card background -->
     <path
-        android:fillColor="#FFF6E9"
+        android:fillColor="#FEF6E9"
         android:pathData="M0,0h250v110h-250z" />
 
-    <!-- Header: title + done/total -->
+    <!-- Header: title + count -->
     <path
         android:fillColor="#EA580C"
-        android:pathData="M8,22h40v10h-40z" />
+        android:pathData="M12,16h84v10h-84z" />
     <path
         android:fillColor="#10B981"
-        android:pathData="M190,22h52v10h-52z" />
+        android:pathData="M196,16h42v10h-42z" />
 
-    <!-- Progress track + fill (habit green) -->
+    <!-- Pill progress track + fill -->
     <path
         android:fillColor="#F2E0D0"
-        android:pathData="M8,40h234v8h-234z" />
+        android:pathData="M12,36 a4,4 0 0 1 4,-4 h218 a4,4 0 0 1 4,4 a4,4 0 0 1 -4,4 h-218 a4,4 0 0 1 -4,-4 z" />
     <path
         android:fillColor="#10B981"
-        android:pathData="M8,40h120v8h-120z" />
+        android:pathData="M12,36 a4,4 0 0 1 4,-4 h120 a4,4 0 0 1 4,4 a4,4 0 0 1 -4,4 h-120 a4,4 0 0 1 -4,-4 z" />
 
-    <!-- Habit rows: checkbox + text + streak -->
+    <!-- Habit rows: checkbox + text + streak badge pill -->
     <path
         android:fillColor="#10B981"
-        android:pathData="M12,62h12v12h-12z" />
+        android:pathData="M12,54h12v12h-12z" />
     <path
         android:fillColor="#1F1B16"
-        android:pathData="M34,62h100v8h-100z" />
+        android:pathData="M32,54h110v8h-110z" />
     <path
-        android:fillColor="#EA580C"
-        android:pathData="M196,62h44v8h-44z" />
+        android:fillColor="#FFDBC7"
+        android:pathData="M176,51 a5,5 0 0 1 5,-5 h34 a5,5 0 0 1 5,5 a5,5 0 0 1 -5,5 h-34 a5,5 0 0 1 -5,-5 z" />
+    <path
+        android:fillColor="#3B0A00"
+        android:pathData="M186,55h20v4h-20z" />
+
+    <path
+        android:fillColor="#10B981"
+        android:pathData="M12,74h12v12h-12z" />
+    <path
+        android:fillColor="#1F1B16"
+        android:pathData="M32,74h100v8h-100z" />
 
     <path
         android:fillColor="#85736A"
-        android:pathData="M12,84h12v12h-12z" />
+        android:pathData="M12,94h12v12h-12z" />
     <path
         android:fillColor="#1F1B16"
-        android:pathData="M34,84h80v8h-80z" />
-    <path
-        android:fillColor="#85736A"
-        android:pathData="M196,84h44v8h-44z" />
+        android:pathData="M32,94h80v8h-80z" />
 </vector>

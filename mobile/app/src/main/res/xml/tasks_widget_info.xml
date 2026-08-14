@@ -1,15 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Phase 10: "Today's Tasks" home-screen widget (Jetpack Glance).
+<!-- "Today's Tasks" home-screen widget (Jetpack Glance).
      updatePeriodMillis is the system fallback (min 30 min); the app pushes
      immediate updates after every write/sync via WidgetUpdater (see
-     widget/WidgetUpdater.kt). -->
+     widget/WidgetUpdater.kt). The widget renders adaptive layouts for the
+     sizes declared in TasksWidget (SizeMode.Responsive). -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
-    android:minWidth="250dp"
+    android:minWidth="180dp"
     android:minHeight="110dp"
     android:targetCellWidth="4"
     android:targetCellHeight="2"
     android:minResizeWidth="180dp"
-    android:minResizeHeight="80dp"
+    android:minResizeHeight="110dp"
     android:updatePeriodMillis="1800000"
     android:initialLayout="@layout/widget_loading"
     android:previewImage="@drawable/widget_preview_tasks"

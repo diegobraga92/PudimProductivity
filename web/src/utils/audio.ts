@@ -14,6 +14,8 @@
  *   - campfire     : crackling fire with embers and pops
  */
 
+import { AMBIENT_SOUND_FILES } from "./soundFiles";
+
 export type SoundID =
   | "white-noise"
   | "pink-noise"
@@ -39,8 +41,11 @@ interface Preset {
 }
 
 interface ActiveSource {
-  source: AudioBufferSourceNode;
+  /** Web Audio source for synthesized sounds, or the media-element node for file sounds. */
+  source: AudioBufferSourceNode | MediaElementAudioSourceNode;
   gain: GainNode;
+  /** Set when this sound is played from a looping audio file. */
+  element?: HTMLAudioElement;
 }
 
 /** How long (seconds) to fade in/out a sound when playing/stopping. */
@@ -179,6 +184,37 @@ class SoundscapeEngine {
     gain.gain.value = fadeIn ? 0 : (this.soundVolumes[id] ?? 0.5);
     gain.connect(this.masterGain!);
 
+    // If a sound file is registered for this sound, play it as a looping media
+    // element routed through the same gain → masterGain graph (so volume,
+    // reverb and the visualizer apply). Fall back to synthesis on any failure.
+    const file = AMBIENT_SOUND_FILES[id];
+    if (file) {
+      try {
+        const element = new Audio(file);
+        element.loop = true;
+        const source = ctx.createMediaElementSource(element);
+        source.connect(gain);
+
+        if (fadeIn) {
+          const targetVol = this.soundVolumes[id] ?? 0.5;
+          gain.gain.setValueAtTime(0, ctx.currentTime);
+          gain.gain.linearRampToValueAtTime(targetVol, ctx.currentTime + FADE_DURATION);
+        }
+
+        const entry = { source, gain, element };
+        this.active.set(id, entry);
+        void element.play().catch(() => {
+          // Autoplay may be blocked outside a user gesture — clean up and
+          // remove the entry so the sound can be retried.
+          this.releaseEntry(entry);
+          this.active.delete(id);
+        });
+        return;
+      } catch {
+        // File playback unavailable — fall through to synthesis.
+      }
+    }
+
     const source = this.createSource(ctx, id, gain);
     if (!source) return;
 
@@ -200,30 +236,18 @@ class SoundscapeEngine {
     if (fadeOut && this.ctx) {
       // Fade out, then disconnect
       const ctx = this.ctx;
-      const { source, gain } = entry;
+      const gain = entry.gain;
       const currentTime = ctx.currentTime;
       gain.gain.setValueAtTime(gain.gain.value, currentTime);
       gain.gain.linearRampToValueAtTime(0, currentTime + FADE_DURATION);
 
       // Schedule the actual stop + cleanup after fade
       setTimeout(() => {
-        try {
-          source.stop();
-        } catch {
-          // already stopped
-        }
-        source.disconnect();
-        gain.disconnect();
+        this.releaseEntry(entry);
         this.active.delete(id);
       }, FADE_DURATION * 1000 + 50);
     } else {
-      try {
-        entry.source.stop();
-      } catch {
-        // already stopped
-      }
-      entry.source.disconnect();
-      entry.gain.disconnect();
+      this.releaseEntry(entry);
       this.active.delete(id);
     }
   }
@@ -233,6 +257,27 @@ class SoundscapeEngine {
     for (const id of this.active.keys()) {
       this.stop(id, false);
     }
+  }
+
+  /**
+   * Release an active sound's underlying resources: pause and free a looping
+   * audio element for file-backed sounds, or stop the buffer source for
+   * synthesized ones. Disconnects the node chain in both cases.
+   */
+  private releaseEntry(entry: ActiveSource): void {
+    if (entry.element) {
+      entry.element.pause();
+      entry.element.removeAttribute("src");
+      entry.element.load();
+    } else {
+      try {
+        (entry.source as AudioBufferSourceNode).stop();
+      } catch {
+        // already stopped
+      }
+    }
+    entry.source.disconnect();
+    entry.gain.disconnect();
   }
 
   /** Set master volume (0–1). */

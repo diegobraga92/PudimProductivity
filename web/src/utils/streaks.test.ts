@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { computeStreaks } from "./streaks";
+import { computeStreaks, isScheduledOn } from "./streaks";
 
 // Helper: freeze Date.now() and new Date() to a fixed instant.
 // Uses noon local time to avoid timezone boundary issues with formatLocalDate().
@@ -199,5 +199,24 @@ describe("computeStreaks — scheduled days (habits)", () => {
     const allDays = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
     expect(computeStreaks(completions, allDays))
       .toEqual({ current: 2, longest: 2 });
+  });
+});
+
+describe("isScheduledOn", () => {
+  it("returns true when the date falls on a scheduled weekday", () => {
+    // 2026-05-25 is a Monday; 2026-05-27 is a Wednesday.
+    expect(isScheduledOn("2026-05-25", ["mon", "wed", "fri"])).toBe(true);
+    expect(isScheduledOn("2026-05-27", ["mon", "wed", "fri"])).toBe(true);
+  });
+
+  it("returns false when the date is not on a scheduled weekday", () => {
+    // 2026-05-26 is a Tuesday.
+    expect(isScheduledOn("2026-05-26", ["mon", "wed", "fri"])).toBe(false);
+  });
+
+  it("treats null, undefined and empty scheduled days as every day", () => {
+    expect(isScheduledOn("2026-05-26", null)).toBe(true);
+    expect(isScheduledOn("2026-05-26", undefined)).toBe(true);
+    expect(isScheduledOn("2026-05-26", [])).toBe(true);
   });
 });

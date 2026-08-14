@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.glance.GlanceId
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.actionParametersOf
+import androidx.glance.action.actionStartActivity
 import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.work.ExistingWorkPolicy
@@ -56,6 +57,18 @@ internal fun toggleHabitAction(taskId: String) =
             KEY_ACTION to ACTION_TOGGLE_HABIT,
             KEY_TASK_ID to taskId
         )
+    )
+
+/** Header / overflow tap: open the Tasks screen in the app. */
+internal fun openTasksAction() =
+    actionStartActivity<MainActivity>(
+        actionParametersOf(EXTRA_SCREEN_KEY to MainActivity.SCREEN_TASKS)
+    )
+
+/** Header / overflow tap: open the Habits screen in the app. */
+internal fun openHabitsAction() =
+    actionStartActivity<MainActivity>(
+        actionParametersOf(EXTRA_SCREEN_KEY to MainActivity.SCREEN_HABITS)
     )
 
 /**

@@ -76,8 +76,17 @@ Glance has no reactive update channel, so freshness is pushed:
 
 ## When to Revisit
 
-- When Glance 1.2+ reaches stable, evaluate `SizeMode.Responsive` (adaptive
-  layouts per widget size) and `CircularProgressIndicator` for a habit ring.
+- **Outdated note (corrected):** the adaptive layout and ring features listed
+  here were originally assumed to need Glance 1.2+, but the 1.1.1 jars ship
+  `SizeMode.Responsive` / `SizeBox` / `ForEachSize`, `CircularProgressIndicator`
+  and `GlanceModifier.cornerRadius`, plus `lazy.LazyColumn`. Phase 10.1 uses
+  them: both widgets render per-size layouts via `ForEachSize`, tall widgets
+  use `LazyColumn`, and the compact Habits layout uses a donut-style progress
+  ring (1.1.1's `CircularProgressIndicator` is indeterminate-only, so the ring
+  is a track-coloured disc with the count in the centre).
+- When Glance 1.2+ reaches stable, evaluate `SizeMode.Responsive`'s richer
+  `SizeBox` scope (per-size `DpSize` branching without `LocalSize`) and a true
+  determinate `CircularProgressIndicator` for a real progress arc.
 - If more widget types appear (daily plan, focus timer), consider a per-widget
   configuration picker (choose a task list / habit set) via a configuration
   activity backed by the existing `GlanceStateDefinition` preferences.

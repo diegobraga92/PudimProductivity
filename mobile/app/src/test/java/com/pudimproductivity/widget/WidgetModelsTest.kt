@@ -55,6 +55,7 @@ class WidgetModelsTest {
         assertEquals(2, snapshot.total)
         assertEquals(1, snapshot.done)
         assertEquals(1, snapshot.pending.size)
+        assertEquals(1, snapshot.remaining)
         assertEquals("Buy milk", snapshot.pending.first().title)
         assertFalse(snapshot.pending.any { it.id == "4" })
     }
@@ -71,6 +72,21 @@ class WidgetModelsTest {
 
         assertEquals(listOf("Apple", "Banana"), snapshot.pending.map { it.title })
         assertEquals(1, snapshot.done)
+        assertEquals(2, snapshot.remaining)
+    }
+
+    @Test
+    fun `tasks snapshot remaining is zero when everything is done`() {
+        val snapshot = buildTasksSnapshot(
+            listOf(
+                task("1", "Read", status = "done"),
+                task("2", "Run", status = "done")
+            )
+        )
+
+        assertEquals(0, snapshot.remaining)
+        assertEquals(2, snapshot.done)
+        assertTrue(snapshot.pending.isEmpty())
     }
 
     @Test
@@ -132,6 +148,51 @@ class WidgetModelsTest {
         )
 
         assertEquals(3, snapshot.habits.first().streak)
+        assertEquals(3, snapshot.habits.first().bestStreak)
+    }
+
+    @Test
+    fun `habits snapshot keeps the best streak even when longer than the current one`() {
+        val today = LocalDate.now()
+
+        val snapshot = buildHabitsSnapshot(
+            tasks = listOf(task("h1", "Run", recurrenceDays = listOf(dayName(today)))),
+            completions = listOf(
+                // Current run: today + yesterday.
+                completion("h1", today.toString()),
+                completion("h1", today.minusDays(1).toString()),
+                // Longer run that ended a few days ago — no longer contiguous.
+                completion("h1", today.minusDays(6).toString()),
+                completion("h1", today.minusDays(7).toString()),
+                completion("h1", today.minusDays(8).toString()),
+                completion("h1", today.minusDays(9).toString()),
+                completion("h1", today.minusDays(10).toString())
+            ),
+            today = today.toString(),
+            todayDay = dayName(today)
+        )
+
+        val row = snapshot.habits.first()
+        assertEquals(2, row.streak)
+        assertEquals(5, row.bestStreak)
+    }
+
+    @Test
+    fun `habits snapshot hides streak badge when there is no streak`() {
+        val today = LocalDate.now()
+
+        val snapshot = buildHabitsSnapshot(
+            tasks = listOf(task("h1", "Run", recurrenceDays = listOf(dayName(today)))),
+            completions = listOf(
+                completion("h1", today.minusDays(3).toString())
+            ),
+            today = today.toString(),
+            todayDay = dayName(today)
+        )
+
+        val row = snapshot.habits.first()
+        assertEquals(0, row.streak)
+        assertEquals(1, row.bestStreak)
     }
 
     @Test

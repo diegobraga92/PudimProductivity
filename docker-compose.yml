@@ -83,8 +83,18 @@ services:
       # only). Set to http://jaeger:4318 in .env and run `docker compose
       # --profile tracing up` to view traces in Jaeger (http://localhost:16686).
       OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-}"
+      # Media storage (recipe images). Priority: S3_MEDIA_BUCKET (real S3 or
+      # any S3-compatible store) → local disk (MEDIA_STORAGE=local). Unset both
+      # to disable image uploads (degraded mode).
+      S3_MEDIA_BUCKET: "${S3_MEDIA_BUCKET:-}"
+      S3_MEDIA_REGION: "${S3_MEDIA_REGION:-us-east-1}"
+      MEDIA_STORAGE: "${MEDIA_STORAGE:-}"
+      MEDIA_LOCAL_DIR: "/data/media"
+      MEDIA_PUBLIC_BASE_URL: "${MEDIA_PUBLIC_BASE_URL:-}"
     ports:
       - "${BACKEND_PORT:-8080}:8080"
+    volumes:
+      - mediadata:/data/media
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:8080/api/v1/health"]
       interval: 10s
@@ -128,3 +138,4 @@ volumes:
   pgdata:
   rabbitmqdata:
   redisdata:
+  mediadata:

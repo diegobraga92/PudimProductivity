@@ -12,7 +12,11 @@ data class Task(
     val recurrence_days: List<String>? = null,
     val list_id: String? = null,
     val created_at: String,
-    val updated_at: String
+    val updated_at: String,
+    val start_time: String? = null,
+    val end_time: String? = null,
+    val color: String? = null,
+    val scheduled_date: String? = null
 )
 
 data class TaskCompletion(
@@ -91,6 +95,9 @@ data class ListPresenceResponse(
 interface TaskService {
     @GET("tasks")
     suspend fun listTasks(@Query("type") type: String? = null): List<Task>
+
+    @GET("tasks/scheduled")
+    suspend fun listScheduledTasks(): List<Task>
 
     @POST("tasks/parse")
     suspend fun parseTask(@Body request: ParseTaskRequest): ParseTaskResponse

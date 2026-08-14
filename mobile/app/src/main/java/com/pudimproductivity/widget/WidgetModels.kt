@@ -21,14 +21,18 @@ data class TasksSnapshot(
     val pending: List<TaskRow>,
     val done: Int,
     val total: Int
-)
+) {
+    /** Tasks still to complete — what the widget header should emphasise. */
+    val remaining: Int get() = pending.size
+}
 
 /** One row in the "Today's Habits" widget. */
 data class HabitRow(
     val id: String,
     val title: String,
     val completedToday: Boolean,
-    val streak: Int
+    val streak: Int,
+    val bestStreak: Int
 )
 
 /** Full state for the "Today's Habits" widget. */
@@ -80,11 +84,13 @@ fun buildHabitsSnapshot(
             val dates = completions
                 .filter { !it.deleted && it.task_id == task.id }
                 .map { it.completed_date }
+            val streak = computeStreaks(dates)
             HabitRow(
                 id = task.id,
                 title = task.title,
                 completedToday = task.id in completedTodayIds,
-                streak = computeStreaks(dates).current
+                streak = streak.current,
+                bestStreak = streak.longest
             )
         }
 

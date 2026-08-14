@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { deleteRecipe, listRecipes, type Recipe } from "../api/recipes";
+import { deleteRecipe, listRecipes, resolveMediaUrl, type Recipe } from "../api/recipes";
 
 const ALL_TAGS = ["quick", "vegan", "vegetarian", "breakfast", "dinner", "dessert", "soup", "salad"];
 
@@ -88,8 +88,8 @@ export default function RecipeList({ onOpen }: { onOpen: (recipe: Recipe) => voi
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "var(--space-md)" }}>
         {recipes.map((r) => (
           <div key={r.id} className="card" style={{ cursor: "pointer" }} onClick={() => onOpen(r)}>
-            {r.image_url && r.image_url.startsWith("http") ? (
-              <img src={r.image_url} alt={r.title} className="recipe-thumb" loading="lazy" />
+            {resolveMediaUrl(r.image_url) ? (
+              <img src={resolveMediaUrl(r.image_url)!} alt={r.title} className="recipe-thumb" loading="lazy" />
             ) : (
               <div className="recipe-thumb-placeholder" aria-hidden="true">
                 {recipeEmoji(r)}

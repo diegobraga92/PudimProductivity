@@ -232,8 +232,11 @@ func main() {
 		backup.RegisterBackupRoutes(r, pool, cfg.Version)
 	}
 
-	// Phase 5a: Recipes. Media uploads are optional — when S3_MEDIA_BUCKET is
-	// unset the module runs in degraded mode and upload-URL endpoints return 503.
+	// Phase 5a: Recipes. Media uploads are optional. Storage backend selection
+	// in priority order: S3_MEDIA_BUCKET (real S3 or any S3-compatible store)
+	// → local server disk (MEDIA_STORAGE=local or MEDIA_LOCAL_DIR set). With
+	// neither set the module runs in degraded mode and upload-URL endpoints
+	// return 503.
 	var uploads media.Generator
 	if bucket := os.Getenv("S3_MEDIA_BUCKET"); bucket != "" {
 		region := os.Getenv("S3_MEDIA_REGION")
@@ -246,8 +249,20 @@ func main() {
 		} else {
 			uploads = s3Uploader
 		}
+	} else if os.Getenv("MEDIA_STORAGE") == "local" || os.Getenv("MEDIA_LOCAL_DIR") != "" {
+		dir := os.Getenv("MEDIA_LOCAL_DIR")
+		if dir == "" {
+			dir = "./data/media"
+		}
+		localUploader, err := media.NewFilesystemUploader(dir, os.Getenv("MEDIA_PUBLIC_BASE_URL"))
+		if err != nil {
+			log.Warn().Err(err).Msg("media uploads disabled — local storage not configured")
+		} else {
+			uploads = localUploader
+			media.RegisterMediaRoutes(r, dir)
+		}
 	} else {
-		log.Info().Msg("S3_MEDIA_BUCKET unset — recipe media uploads disabled")
+		log.Info().Msg("no media storage configured — recipe media uploads disabled (degraded mode)")
 	}
 
 	// Phase 5a: Recipes — depends on the media uploader (optional) for images.

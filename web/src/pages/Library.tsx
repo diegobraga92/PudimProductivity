@@ -12,6 +12,7 @@ import {
   type ScoreCandidate,
 } from "../api/library";
 import { LibraryCsvImport } from "../components/LibraryCsvImport";
+import { useConfirm } from "../components/useConfirm";
 
 const MEDIA_TYPES: MediaType[] = ["movie", "series", "book", "game"];
 
@@ -35,6 +36,7 @@ const EMPTY_FORM: CreateLibraryItemRequest = {
   release_year: null,
   done: false,
   notes: "",
+  subtype: "",
   score: null,
   score_source: "",
 };
@@ -55,6 +57,9 @@ export default function Library() {
   const [scoreHits, setScoreHits] = useState<ScoreCandidate[] | null>(null);
   const [scoreSearching, setScoreSearching] = useState(false);
   const [scoreError, setScoreError] = useState<string | null>(null);
+  // Ids selected for bulk actions (e.g. delete).
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const confirm = useConfirm();
 
   const { data: items = [], isLoading } = useQuery({
     queryKey: ["library", typeFilter, doneFilter],
@@ -83,6 +88,7 @@ export default function Library() {
         release_year: form.release_year,
         done: form.done,
         notes: form.notes,
+        subtype: form.subtype,
         score: form.score,
         score_source: form.score_source,
       }),
@@ -103,8 +109,16 @@ export default function Library() {
     onSuccess: invalidate,
   });
 
+  const bulkDelete = useMutation({
+    mutationFn: (ids: string[]) => Promise.all(ids.map((id) => deleteLibraryItem(id))),
+    onSuccess: () => {
+      invalidate();
+      setSelected(new Set());
+    },
+  });
+
   const saving = create.isPending || update.isPending;
-  const saveError = create.error ?? update.error ?? toggleDone.error ?? del.error;
+  const saveError = create.error ?? update.error ?? toggleDone.error ?? del.error ?? bulkDelete.error;
 
   function openAdd() {
     setEditing(null);
@@ -122,6 +136,7 @@ export default function Library() {
       release_year: item.release_year,
       done: item.done,
       notes: item.notes,
+      subtype: item.subtype ?? "",
       score: item.score ?? null,
       score_source: item.score_source ?? "",
     });
@@ -250,6 +265,12 @@ export default function Library() {
                 })
               }
             />
+            <input
+              className="input"
+              placeholder={form.media_type === "game" ? "Console (e.g. PlayStation 5)" : "Genre (e.g. Sci-fi)"}
+              value={form.subtype}
+              onChange={(e) => setForm({ ...form, subtype: e.target.value })}
+            />
             <textarea
               className="input"
               style={{ gridColumn: "1 / -1", minHeight: 56 }}
@@ -350,25 +371,131 @@ export default function Library() {
 
 
       {/* Item list */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "var(--space-md)" }}>
+      {/* Bulk actions */}
+      {selected.size > 0 && (
+        <div
+          className="flex-center"
+          style={{ gap: "var(--space-sm)", marginBottom: "var(--space-sm)", flexWrap: "wrap" }}
+        >
+          <span className="text-sm text-secondary">{selected.size} selected</span>
+          <button
+            className="btn btn-danger btn-sm"
+            disabled={bulkDelete.isPending}
+            onClick={async () => {
+              const ok = await confirm({
+                title: `Delete ${selected.size} item(s)?`,
+                message: "This cannot be undone.",
+                confirmLabel: "Delete",
+                confirmVariant: "danger",
+              });
+              if (ok) bulkDelete.mutate([...selected]);
+            }}
+          >
+            {bulkDelete.isPending ? "Deleting…" : `🗑 Delete selected (${selected.size})`}
+          </button>
+          <button className="btn btn-ghost btn-sm" onClick={() => setSelected(new Set())}>
+            Clear
+          </button>
+        </div>
+      )}
+
+      <div
+        className="library-list"
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          border: "1px solid var(--color-border)",
+          borderRadius: "var(--radius-md)",
+          overflowX: "auto",
+        }}
+      >
+        {/* Header row */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "28px minmax(160px, 2fr) 90px 130px 70px 80px 170px",
+            gap: "var(--space-sm)",
+            alignItems: "center",
+            padding: "0.5rem var(--space-md)",
+            background: "var(--color-surface)",
+            borderBottom: "1px solid var(--color-border)",
+            fontWeight: 600,
+            fontSize: "var(--font-size-sm)",
+            minWidth: 640,
+          }}
+        >
+          <label className="checkbox-wrapper" title="Select all">
+            <input
+              type="checkbox"
+              checked={items.length > 0 && selected.size === items.length}
+              onChange={(e) =>
+                setSelected(e.target.checked ? new Set(items.map((i) => i.id)) : new Set())
+              }
+            />
+            <span className="checkbox-custom" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="12" height="12">
+                <path fill="none" stroke="currentColor" strokeWidth="3" d="M20 6L9 17l-5-5" />
+              </svg>
+            </span>
+          </label>
+          <span>Name</span>
+          <span>Type</span>
+          <span>Subtype</span>
+          <span>Year</span>
+          <span>Score</span>
+          <span>Actions</span>
+        </div>
+
         {items.map((item) => (
-          <div key={item.id} className="card" style={{ padding: "var(--space-md)" }}>
-            <div className="flex-center" style={{ justifyContent: "space-between", gap: "var(--space-sm)" }}>
-              <div style={{ minWidth: 0 }}>
-                <p className="card-title" style={{ margin: 0, fontSize: "var(--font-size-sm)" }}>
-                  {item.name}
+          <div
+            key={item.id}
+            style={{
+              display: "grid",
+              gridTemplateColumns: "28px minmax(160px, 2fr) 90px 130px 70px 80px 170px",
+              gap: "var(--space-sm)",
+              alignItems: "center",
+              padding: "0.5rem var(--space-md)",
+              borderBottom: "1px solid var(--color-border-light)",
+              background: selected.has(item.id) ? "var(--color-primary-subtle)" : undefined,
+              minWidth: 640,
+            }}
+          >
+            <label className="checkbox-wrapper" title="Select for bulk actions">
+              <input
+                type="checkbox"
+                checked={selected.has(item.id)}
+                onChange={(e) => {
+                  const next = new Set(selected);
+                  if (e.target.checked) next.add(item.id);
+                  else next.delete(item.id);
+                  setSelected(next);
+                }}
+              />
+              <span className="checkbox-custom" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="12" height="12">
+                  <path fill="none" stroke="currentColor" strokeWidth="3" d="M20 6L9 17l-5-5" />
+                </svg>
+              </span>
+            </label>
+            <div style={{ minWidth: 0 }}>
+              <p className="card-title" style={{ margin: 0, fontSize: "var(--font-size-sm)" }}>
+                {item.name}
+              </p>
+              {item.notes && (
+                <p className="text-sm text-secondary" style={{ margin: "0.1rem 0 0" }} title={item.notes}>
+                  📝 {item.notes.length > 60 ? `${item.notes.slice(0, 60)}…` : item.notes}
                 </p>
-                <p className="text-sm text-secondary" style={{ margin: "0.2rem 0 0" }}>
-                  {MEDIA_ICONS[item.media_type]} {MEDIA_LABELS[item.media_type] ?? item.media_type}
-                  {item.release_year != null && <> · {item.release_year}</>}
-                </p>
-                {item.score != null && (
-                  <p className="text-sm text-secondary" style={{ margin: "0.2rem 0 0" }}>
-                    ★ {item.score}
-                    {item.score_source ? ` (${item.score_source})` : ""}
-                  </p>
-                )}
-              </div>
+              )}
+            </div>
+            <span className="text-sm">
+              {MEDIA_ICONS[item.media_type]} {MEDIA_LABELS[item.media_type] ?? item.media_type}
+            </span>
+            <span className="text-sm" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {item.subtype || <span style={{ color: "var(--color-text-muted)" }}>—</span>}
+            </span>
+            <span className="text-sm">{item.release_year ?? "—"}</span>
+            <span className="text-sm">{item.score != null ? `★ ${item.score}` : "—"}</span>
+            <div className="flex-center" style={{ gap: "0.35rem" }}>
               <label className="checkbox-wrapper" title={item.done ? "Mark as not done" : "Mark as done"}>
                 <input
                   type="checkbox"
@@ -376,23 +503,15 @@ export default function Library() {
                   onChange={(e) => toggleDone.mutate({ id: item.id, done: e.target.checked })}
                 />
                 <span className="checkbox-custom" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" width="14" height="14">
+                  <svg viewBox="0 0 24 24" width="12" height="12">
                     <path fill="none" stroke="currentColor" strokeWidth="3" d="M20 6L9 17l-5-5" />
                   </svg>
                 </span>
               </label>
-            </div>
-            {item.notes && (
-              <p className="text-sm text-secondary" style={{ margin: "0.35rem 0 0" }} title={item.notes}>
-                📝 {item.notes.length > 90 ? `${item.notes.slice(0, 90)}…` : item.notes}
-              </p>
-            )}
-            <div className="flex-center" style={{ gap: "var(--space-sm)", marginTop: "0.5rem" }}>
               <button className="btn btn-sm" onClick={() => openEdit(item)}>Edit</button>
               <button className="btn btn-danger btn-sm" onClick={() => del.mutate(item.id)}>
                 Delete
               </button>
-              {item.done && <span className="badge badge-done">Done</span>}
             </div>
           </div>
         ))}

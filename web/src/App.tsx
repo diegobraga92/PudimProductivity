@@ -19,26 +19,26 @@ import "./styles.css";
 // Pomodoro and Soundscape chunks load on demand. Run `npm run build:analyze`
 // to inspect chunk sizes.
 const TaskList = lazy(() => import("./pages/TaskList"));
+const Lists = lazy(() => import("./pages/Lists"));
 const Planner = lazy(() => import("./pages/Planner"));
 const Pomodoro = lazy(() => import("./pages/Pomodoro"));
 const Soundscape = lazy(() => import("./pages/Soundscape"));
 const RecipeList = lazy(() => import("./pages/RecipeList"));
 const RecipeDetail = lazy(() => import("./pages/RecipeDetail"));
 const Library = lazy(() => import("./pages/Library"));
-const DailyPlan = lazy(() => import("./pages/DailyPlan"));
 const Insights = lazy(() => import("./pages/Insights"));
 
-type Page = "dashboard" | "tasks" | "planner" | "pomodoro" | "soundscape" | "recipes" | "library" | "plan" | "insights" | "health";
+type Page = "dashboard" | "tasks" | "lists" | "planner" | "pomodoro" | "soundscape" | "recipes" | "library" | "insights" | "health";
 
 const NAV_ITEMS: { id: Page; label: string; icon: string }[] = [
   { id: "dashboard", label: "Dashboard", icon: "🏠" },
   { id: "tasks", label: "Tasks", icon: "📋" },
+  { id: "lists", label: "Lists", icon: "📁" },
   { id: "planner", label: "Planner", icon: "📅" },
   { id: "pomodoro", label: "Timer", icon: "🍅" },
   { id: "soundscape", label: "Sounds", icon: "🎵" },
   { id: "recipes", label: "Recipes", icon: "🍳" },
   { id: "library", label: "Library", icon: "🎬" },
-  { id: "plan", label: "Daily Plan", icon: "🤖" },
   { id: "insights", label: "Insights", icon: "🧠" },
   { id: "health", label: "Status", icon: "💚" },
 ];
@@ -203,6 +203,8 @@ function AppInner() {
 
             {page === "tasks" && <TaskList />}
 
+            {page === "lists" && <Lists />}
+
             {page === "planner" && <Planner onNavigate={handleNavigate} />}
 
             {page === "pomodoro" && <Pomodoro />}
@@ -217,8 +219,6 @@ function AppInner() {
               ))}
 
             {page === "library" && <Library />}
-
-            {page === "plan" && <DailyPlan />}
 
             {page === "insights" && <Insights />}
           </Suspense>

@@ -72,7 +72,7 @@ func TestLibraryRepository_CRUDAndFilters(t *testing.T) {
 
 	item, err := NewItem(
 		"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "The Matrix",
-		MediaTypeMovie, ptrInt(1999), false, "Sci-fi classic", ptrFloat(8.7), "imdb",
+		MediaTypeMovie, ptrInt(1999), false, "Sci-fi classic", ptrFloat(8.7), "imdb", "Sci-fi",
 	)
 	if err != nil {
 		t.Fatalf("NewItem: %v", err)
@@ -169,12 +169,12 @@ func TestLibraryRepository_ImportRollsBackOnError(t *testing.T) {
 	// Second item is invalid (empty name would still insert — use a duplicate
 	// UUID to force a constraint violation mid-batch instead).
 	dup := "dddddddd-dddd-dddd-dddd-dddddddddddd"
-	good, _ := NewItem(dup, "Good", MediaTypeMovie, nil, false, "", nil, "")
+	good, _ := NewItem(dup, "Good", MediaTypeMovie, nil, false, "", nil, "", "")
 	if err := repo.Create(ctx, good); err != nil {
 		t.Fatalf("seed: %v", err)
 	}
 
-	bad, _ := NewItem(dup, "Duplicate ID", MediaTypeGame, nil, false, "", nil, "")
+	bad, _ := NewItem(dup, "Duplicate ID", MediaTypeGame, nil, false, "", nil, "", "")
 	items := []*Item{
 		{ID: "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee", Name: "First", MediaType: MediaTypeBook, ReleaseYear: nil, Notes: ""},
 		bad,

@@ -4,7 +4,7 @@ import { listTasks, type Task } from "../api/tasks";
 import { listTaskLists, type TaskList } from "../api/taskLists";
 import { exportBackup, importBackup } from "../api/backup";
 import { useHabitCompletions } from "../hooks/useHabitCompletions";
-import { computeStreaks } from "../utils/streaks";
+import { computeStreaks, isScheduledOn } from "../utils/streaks";
 import { getToday } from "../utils/dates";
 import { useConfirm } from "../components/useConfirm";
 import { useToast } from "../components/toastContext";
@@ -38,12 +38,21 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   const today = getToday();
   const allCompletions = useHabitCompletions(habitTasks);
 
-  // Stats
-  const totalTasks = todoTasks.length + habitTasks.length;
-  const doneTodos = todoTasks.filter((t) => t.status === "done").length;
+  // Stats — one-off tasks and habits are deliberately kept separate: habits are
+  // daily commitments (done per-day, tracked via completions), while one-off
+  // tasks are single items with a flat todo/done status and no "done today".
+  const openTodos = todoTasks.filter((t) => t.status === "todo").length;
   const todayHabitCompletions = Object.values(allCompletions).filter((dates) =>
     dates.includes(today)
   ).length;
+  // Habits that are due today (or were completed today even if off-schedule,
+  // mirroring the mobile widgets) — the denominator for the "Habits Today" stat.
+  const habitsToday = habitTasks.filter(
+    (h) =>
+      isScheduledOn(today, h.recurrence_days) ||
+      (allCompletions[h.id] ?? []).includes(today)
+  );
+  const habitsScheduledToday = habitsToday.length;
 
   // Best streak across all habits
   let bestStreak = 0;
@@ -118,14 +127,14 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         }}
       >
         <div className="stat-card">
-          <div className="stat-card-value">{totalTasks}</div>
-          <div className="stat-card-label">Total Tasks</div>
+          <div className="stat-card-value">{openTodos}</div>
+          <div className="stat-card-label">Open Tasks</div>
         </div>
         <div className="stat-card">
-          <div className="stat-card-value" style={{ color: "var(--color-done)" }}>
-            {doneTodos + todayHabitCompletions}
+          <div className="stat-card-value" style={{ color: "var(--color-habit)" }}>
+            {todayHabitCompletions}/{habitsScheduledToday}
           </div>
-          <div className="stat-card-label">Done Today</div>
+          <div className="stat-card-label">Habits Today</div>
         </div>
         <div className="stat-card">
           <div className="stat-card-value" style={{ color: "var(--color-habit)" }}>
@@ -205,6 +214,8 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
               {habitTasks.slice(0, 5).map((task) => {
                 const completions = allCompletions[task.id] ?? [];
                 const doneToday = completions.includes(today);
+                const scheduledToday = isScheduledOn(today, task.recurrence_days);
+                const offSchedule = !scheduledToday && !doneToday;
                 const { current: streak } = computeStreaks(completions, task.recurrence_days);
                 return (
                   <li
@@ -216,9 +227,10 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                       padding: "0.3rem 0",
                       borderBottom: "1px solid var(--color-border-light)",
                       fontSize: "var(--font-size-sm)",
+                      opacity: offSchedule ? 0.5 : 1,
                     }}
                   >
-                    <span>{doneToday ? "✅" : "🔄"}</span>
+                    <span>{doneToday ? "✅" : scheduledToday ? "🔄" : "⏸️"}</span>
                     <span style={{ flex: 1 }}>{task.title}</span>
                     {streak > 0 && (
                       <span style={{ fontSize: "var(--font-size-xs)", fontWeight: 600, color: "var(--color-habit)" }}>

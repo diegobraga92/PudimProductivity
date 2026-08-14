@@ -45,7 +45,6 @@ fun TaskListScreen(
     onListClick: (String) -> Unit,
     onRecipes: () -> Unit,
     onLibrary: () -> Unit,
-    onDailyPlan: () -> Unit,
     onInsights: () -> Unit
 ) {
     // Phase 9c: local-first — read straight from the local database via the
@@ -58,7 +57,6 @@ fun TaskListScreen(
 
     var selectedTab by remember { mutableStateOf(0) }
     var newTodoTitle by remember { mutableStateOf("") }
-    var newHabitTitle by remember { mutableStateOf("") }
     var newListName by remember { mutableStateOf("") }
     // Phase 8: list currently open in the share dialog.
     var shareList by remember { mutableStateOf<TaskList?>(null) }
@@ -84,17 +82,6 @@ fun TaskListScreen(
     val todoTasks = tasks.filter { it.recurrence_days == null || it.recurrence_days.isEmpty() }
     val habitTasks = tasks.filter { it.recurrence_days != null && it.recurrence_days.isNotEmpty() }
 
-    // Compute today's habit completions
-    val today = getToday()
-    val todayHabitCompletions = completionsMap.values.count { dates -> today in dates }
-    val habitProgress = if (habitTasks.isNotEmpty()) {
-        (todayHabitCompletions * 100) / habitTasks.size
-    } else 0
-    val doneTodos = todoTasks.count { it.status == "done" }
-    val todoProgress = if (todoTasks.isNotEmpty()) {
-        (doneTodos * 100) / todoTasks.size
-    } else 0
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -116,10 +103,6 @@ fun TaskListScreen(
                         Text("🎬")
                     }
                     Spacer(modifier = Modifier.width(8.dp))
-                    Button(onClick = onDailyPlan) {
-                        Text("🤖")
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
                     Button(onClick = onInsights) {
                         Text("🧠")
                     }
@@ -137,68 +120,6 @@ fun TaskListScreen(
                 .padding(padding)
                 .padding(16.dp)
         ) {
-            // Today's Progress Row
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                )
-            ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text(
-                        text = "Today's Progress",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        // Todo progress
-                        Column(modifier = Modifier.weight(1f)) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Text(
-                                    text = "$doneTodos/${todoTasks.size}",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                                ProgressBar(
-                                    value = todoProgress,
-                                    variant = ProgressVariant.TODO,
-                                    height = 6.dp,
-                                    modifier = Modifier.weight(1f)
-                                )
-                            }
-                        }
-                        // Habit progress
-                        Column(modifier = Modifier.weight(1f)) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Text(
-                                    text = "$todayHabitCompletions/${habitTasks.size}",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                                ProgressBar(
-                                    value = habitProgress,
-                                    variant = ProgressVariant.HABIT,
-                                    height = 6.dp,
-                                    modifier = Modifier.weight(1f)
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
             // Tabs
             PrimaryTabRow(selectedTabIndex = selectedTab) {
                 Tab(
@@ -337,41 +258,13 @@ fun TaskListScreen(
                 }
                 1 -> {
                     // HABITS TAB
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        OutlinedTextField(
-                            value = newHabitTitle,
-                            onValueChange = { newHabitTitle = it },
-                            modifier = Modifier.weight(1f),
-                            placeholder = { Text("Quick add habit (weekdays)...") },
-                            singleLine = true
-                        )
-                        Button(
-                            onClick = {
-                                repository.createTask(
-                                    title = newHabitTitle,
-                                    recurrenceDays = listOf("mon", "tue", "wed", "thu", "fri")
-                                )
-                                newHabitTitle = ""
-                            },
-                            enabled = newHabitTitle.isNotBlank()
-                        ) {
-                            Text("Add")
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
                     if (habitTasks.isEmpty()) {
                         Box(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "No habits yet. Create one!",
+                                text = "No habits yet. Use + New Task to create one!",
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )

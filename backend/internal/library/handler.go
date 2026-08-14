@@ -13,6 +13,7 @@ type CreateItemRequest struct {
 	ReleaseYear *int     `json:"release_year"`
 	Done        bool     `json:"done"`
 	Notes       string   `json:"notes"`
+	Subtype     string   `json:"subtype"`
 	Score       *float64 `json:"score"`
 	ScoreSource string   `json:"score_source"`
 }
@@ -24,6 +25,7 @@ func (req CreateItemRequest) toInput() CreateInput {
 		ReleaseYear: req.ReleaseYear,
 		Done:        req.Done,
 		Notes:       req.Notes,
+		Subtype:     req.Subtype,
 		Score:       req.Score,
 		ScoreSource: req.ScoreSource,
 	}
@@ -35,6 +37,7 @@ type UpdateItemRequest struct {
 	ReleaseYear **int     `json:"release_year"`
 	Done        *bool     `json:"done"`
 	Notes       *string   `json:"notes"`
+	Subtype     *string   `json:"subtype"`
 	Score       **float64 `json:"score"`
 	ScoreSource *string   `json:"score_source"`
 }
@@ -45,6 +48,7 @@ func (req UpdateItemRequest) toInput() UpdateInput {
 		ReleaseYear: req.ReleaseYear,
 		Done:        req.Done,
 		Notes:       req.Notes,
+		Subtype:     req.Subtype,
 		Score:       req.Score,
 		ScoreSource: req.ScoreSource,
 	}
@@ -68,6 +72,7 @@ type ItemResponse struct {
 	ReleaseYear *int     `json:"release_year"`
 	Done        bool     `json:"done"`
 	Notes       string   `json:"notes"`
+	Subtype     string   `json:"subtype"`
 	Score       *float64 `json:"score"`
 	ScoreSource string   `json:"score_source"`
 	CreatedAt   string   `json:"created_at"`
@@ -82,6 +87,7 @@ func toResponse(it *Item) ItemResponse {
 		ReleaseYear: it.ReleaseYear,
 		Done:        it.Done,
 		Notes:       it.Notes,
+		Subtype:     it.Subtype,
 		Score:       it.Score,
 		ScoreSource: it.ScoreSource,
 		CreatedAt:   it.CreatedAt.Format(time.RFC3339),
