@@ -38,12 +38,30 @@ type Item struct {
 	ReleaseYear *int
 	Done        bool
 	Notes       string
+	// Score is an optional rating (0-100 scale: IMDb 8.7, Metacritic 95, ...).
+	Score *float64
+	// ScoreSource names where Score came from (e.g. "imdb", "metacritic").
+	// Empty means no score is recorded.
+	ScoreSource string
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }
 
+// ScoreSource is a canonical token for where an item's score came from. Any
+// non-empty string is accepted so configurable providers can introduce new
+// sources without a domain change; these constants document the known ones.
+type ScoreSource string
+
+const (
+	ScoreSourceIMDb       ScoreSource = "imdb"
+	ScoreSourceMetacritic ScoreSource = "metacritic"
+	ScoreSourceTMDB       ScoreSource = "tmdb"
+	ScoreSourceRAWG       ScoreSource = "rawg"
+	ScoreSourceCustom     ScoreSource = "custom"
+)
+
 // NewItem validates and builds an item.
-func NewItem(id, name string, mediaType MediaType, releaseYear *int, done bool, notes string) (*Item, error) {
+func NewItem(id, name string, mediaType MediaType, releaseYear *int, done bool, notes string, score *float64, scoreSource string) (*Item, error) {
 	if id == "" {
 		return nil, fmt.Errorf("item id cannot be empty")
 	}
@@ -56,6 +74,13 @@ func NewItem(id, name string, mediaType MediaType, releaseYear *int, done bool, 
 	if releaseYear != nil && (*releaseYear < 1800 || *releaseYear > 2100) {
 		return nil, fmt.Errorf("release year %d out of range (1800-2100)", *releaseYear)
 	}
+	if score != nil && (*score < 0 || *score > 100) {
+		return nil, fmt.Errorf("score %v out of range (0-100)", *score)
+	}
+	scoreSource = strings.TrimSpace(scoreSource)
+	if score == nil && scoreSource != "" {
+		return nil, fmt.Errorf("score source %q requires a score", scoreSource)
+	}
 	return &Item{
 		ID:          id,
 		Name:        strings.TrimSpace(name),
@@ -63,5 +88,7 @@ func NewItem(id, name string, mediaType MediaType, releaseYear *int, done bool, 
 		ReleaseYear: releaseYear,
 		Done:        done,
 		Notes:       notes,
+		Score:       score,
+		ScoreSource: scoreSource,
 	}, nil
 }

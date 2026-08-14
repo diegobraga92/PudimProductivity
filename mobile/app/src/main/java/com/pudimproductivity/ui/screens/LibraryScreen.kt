@@ -47,6 +47,8 @@ fun LibraryScreen(onBack: () -> Unit) {
     var year by remember { mutableStateOf("") }
     var done by remember { mutableStateOf(false) }
     var notes by remember { mutableStateOf("") }
+    var score by remember { mutableStateOf("") }
+    var scoreSource by remember { mutableStateOf("") }
 
     suspend fun refresh() {
         try {
@@ -68,6 +70,8 @@ fun LibraryScreen(onBack: () -> Unit) {
         year = ""
         done = false
         notes = ""
+        score = ""
+        scoreSource = ""
         formOpen = true
     }
 
@@ -78,6 +82,8 @@ fun LibraryScreen(onBack: () -> Unit) {
         year = item.release_year?.toString() ?: ""
         done = item.done
         notes = item.notes
+        score = item.score?.toString() ?: ""
+        scoreSource = item.score_source
         formOpen = true
     }
 
@@ -127,6 +133,19 @@ fun LibraryScreen(onBack: () -> Unit) {
                             modifier = Modifier.fillMaxWidth()
                         )
                         OutlinedTextField(
+                            value = score,
+                            onValueChange = { score = it.filter { c -> c.isDigit() || c == '.' } },
+                            label = { Text("Score (0-100)") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = scoreSource,
+                            onValueChange = { scoreSource = it },
+                            label = { Text("Score source (e.g. imdb)") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
                             value = notes,
                             onValueChange = { notes = it },
                             label = { Text("Notes") },
@@ -142,6 +161,7 @@ fun LibraryScreen(onBack: () -> Unit) {
                                 scope.launch {
                                     try {
                                         val yearValue = year.toIntOrNull()?.takeIf { it in 1800..2100 }
+                                        val scoreValue = score.toDoubleOrNull()?.takeIf { it in 0.0..100.0 }
                                         if (editing != null) {
                                             ApiClient.libraryService.updateItem(
                                                 editing!!.id,
@@ -150,7 +170,9 @@ fun LibraryScreen(onBack: () -> Unit) {
                                                     media_type = mediaType,
                                                     release_year = yearValue,
                                                     done = done,
-                                                    notes = notes
+                                                    notes = notes,
+                                                    score = scoreValue,
+                                                    score_source = scoreSource.trim()
                                                 )
                                             )
                                         } else {
@@ -160,7 +182,9 @@ fun LibraryScreen(onBack: () -> Unit) {
                                                     media_type = mediaType,
                                                     release_year = yearValue,
                                                     done = done,
-                                                    notes = notes
+                                                    notes = notes,
+                                                    score = scoreValue,
+                                                    score_source = scoreSource.trim()
                                                 )
                                             )
                                         }
@@ -205,6 +229,12 @@ fun LibraryScreen(onBack: () -> Unit) {
                                             "${mediaLabel(item.media_type)}${item.release_year?.let { " · $it" } ?: ""}",
                                             style = MaterialTheme.typography.bodySmall
                                         )
+                                        item.score?.let { scoreVal ->
+                                            Text(
+                                                "★ $scoreVal${if (item.score_source.isNotBlank()) " (${item.score_source})" else ""}",
+                                                style = MaterialTheme.typography.bodySmall
+                                            )
+                                        }
                                     }
                                     Checkbox(
                                         checked = item.done,

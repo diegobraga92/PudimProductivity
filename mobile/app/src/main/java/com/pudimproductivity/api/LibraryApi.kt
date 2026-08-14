@@ -14,7 +14,9 @@ data class LibraryItem(
     val media_type: String,
     val release_year: Int? = null,
     val done: Boolean = false,
-    val notes: String = ""
+    val notes: String = "",
+    val score: Double? = null,
+    val score_source: String = ""
 )
 
 data class CreateLibraryItemRequest(
@@ -22,7 +24,9 @@ data class CreateLibraryItemRequest(
     val media_type: String,
     val release_year: Int? = null,
     val done: Boolean = false,
-    val notes: String = ""
+    val notes: String = "",
+    val score: Double? = null,
+    val score_source: String = ""
 )
 
 data class UpdateLibraryItemRequest(
@@ -30,7 +34,18 @@ data class UpdateLibraryItemRequest(
     val media_type: String? = null,
     val release_year: Int? = null,
     val done: Boolean? = null,
-    val notes: String? = null
+    val notes: String? = null,
+    val score: Double? = null,
+    val score_source: String? = null
+)
+
+data class ScoreCandidate(
+    val title: String,
+    val year: Int? = null,
+    val score: Double,
+    val score_source: String,
+    val external_id: String? = null,
+    val url: String? = null
 )
 
 interface LibraryService {
@@ -48,6 +63,13 @@ interface LibraryService {
 
     @DELETE("library/{itemId}")
     suspend fun deleteItem(@Path("itemId") itemId: String)
+
+    @GET("library/score/search")
+    suspend fun searchScores(
+        @Query("type") mediaType: String,
+        @Query("query") query: String,
+        @Query("year") year: Int? = null
+    ): List<ScoreCandidate>
 }
 
 val ApiClient.libraryService: LibraryService

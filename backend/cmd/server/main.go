@@ -26,6 +26,7 @@ import (
 	"github.com/diegobraga92/pudimproductivity/backend/internal/featureflag"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/insights"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/library"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/library/scoring"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/media"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/notification"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/observability"
@@ -255,9 +256,21 @@ func main() {
 	}
 
 	// Library: media tracking (movies, series, books, games) with a done flag,
-	// release year and optional notes. Replaces the Phase 5 booktrack module.
+	// release year, optional notes and an optional score lookup. The provider is
+	// configurable per media type (SCORE_PROVIDER_MOVIE/SERIES/GAME/BOOK, keys
+	// in OMDB_API_KEY / RAWG_API_KEY); when nothing is configured the feature
+	// runs in degraded mode (score search returns 503), per ADR 007. Replaces
+	// the Phase 5 booktrack module.
 	if pool != nil {
-		library.RegisterLibraryRoutes(r, pool, auditService, composite)
+		scoreCfg := shared.LoadScoreProviderConfig()
+		lookup, err := scoring.NewComposite(context.Background(), scoreCfg)
+		if err != nil {
+			log.Warn().Err(err).Msg("library score lookup disabled — invalid provider config")
+			lookup = library.NoopScoreLookup{}
+		} else if _, noop := lookup.(library.NoopScoreLookup); noop {
+			log.Info().Msg("no score providers configured — library score lookup disabled")
+		}
+		library.RegisterLibraryRoutes(r, pool, auditService, composite, lookup, flagService)
 	}
 
 	// Setup server

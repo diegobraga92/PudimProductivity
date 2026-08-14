@@ -76,3 +76,12 @@ export function parseYearValue(value: string): number | null {
   if (!Number.isInteger(n) || n < 1800 || n > 2100) return null;
   return n;
 }
+
+/** Parses a CSV score cell into a number on the 0-100 scale, or null. */
+export function parseScoreValue(value: string): number | null {
+  const v = value.trim();
+  if (v === "") return null;
+  const n = Number(v);
+  if (!Number.isFinite(n) || n < 0 || n > 100) return null;
+  return n;
+}

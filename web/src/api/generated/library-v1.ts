@@ -28,6 +28,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/library/score/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search for a media score
+         * @description Looks up ratings for a title from the configured score provider (OMDb/IMDb
+         *     for films and series, RAWG/Metacritic for games). Returns a small list of
+         *     candidates so the client can confirm the right title before saving its
+         *     score. Returns 503 when the feature is disabled or no provider is configured.
+         */
+        get: operations["searchLibraryScores"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/library/import": {
         parameters: {
             query?: never;
@@ -97,10 +120,34 @@ export interface components {
             done: boolean;
             /** @description Optional free-text notes or comments. */
             notes?: string;
+            /**
+             * @description Optional rating on a 0-100 scale (IMDb 8.7, Metacritic 95, ...).
+             *     Null when no score has been recorded.
+             */
+            score?: number | null;
+            /**
+             * @description Where the score came from (e.g. "imdb", "metacritic", "custom").
+             *     Empty when no score is recorded.
+             */
+            score_source?: string;
             /** Format: date-time */
             created_at: string;
             /** Format: date-time */
             updated_at: string;
+        };
+        ScoreCandidate: {
+            /** @description The provider's title for the match. */
+            title: string;
+            /** @description Release year when the provider reports one. */
+            year?: number;
+            /** @description Rating on the same 0-100 scale as library items. */
+            score: number;
+            /** @description e.g. "imdb" or "metacritic". */
+            score_source: string;
+            /** @description Provider-specific identifier (e.g. IMDb tt id, RAWG id). */
+            external_id?: string;
+            /** @description Link to the provider's page for the title. */
+            url?: string;
         };
         CreateLibraryItemRequest: {
             name: string;
@@ -109,6 +156,10 @@ export interface components {
             /** @default false */
             done: boolean;
             notes?: string;
+            /** @description Optional rating on a 0-100 scale. */
+            score?: number | null;
+            /** @description Where the score came from (e.g. "imdb", "metacritic"). */
+            score_source?: string;
         };
         UpdateLibraryItemRequest: {
             name?: string;
@@ -116,6 +167,13 @@ export interface components {
             release_year?: number | null;
             done?: boolean;
             notes?: string;
+            /**
+             * @description Optional rating on a 0-100 scale. Omit to keep the current value;
+             *     send null to clear it.
+             */
+            score?: number | null;
+            /** @description Where the score came from. Send "" to clear it. */
+            score_source?: string;
         };
         ImportItemsRequest: {
             /** @description Up to 5000 items per import. */
@@ -202,6 +260,57 @@ export interface operations {
             };
             /** @description Validation error. */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    searchLibraryScores: {
+        parameters: {
+            query: {
+                type: components["schemas"]["MediaType"];
+                query: string;
+                year?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Matching titles with their ratings. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScoreCandidate"][];
+                };
+            };
+            /** @description Missing or invalid parameters. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The rating provider could not be reached. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Score lookup is disabled or not configured. */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };

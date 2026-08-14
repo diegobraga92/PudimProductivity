@@ -83,6 +83,8 @@ func (b *busSpy) Close() error { return nil }
 
 func ptrInt(v int) *int { return &v }
 
+func ptrFloat(v float64) *float64 { return &v }
+
 // --- tests ---
 
 func TestService_Create_PublishesEventAndAudits(t *testing.T) {
@@ -120,6 +122,12 @@ func TestService_Create_Validation(t *testing.T) {
 	}
 	if _, err := svc.Create(ctx, CreateInput{Name: "X", MediaType: MediaTypeGame, ReleaseYear: ptrInt(1400)}); err == nil {
 		t.Fatal("expected error for out-of-range year")
+	}
+	if _, err := svc.Create(ctx, CreateInput{Name: "X", MediaType: MediaTypeMovie, Score: ptrFloat(150)}); err == nil {
+		t.Fatal("expected error for out-of-range score")
+	}
+	if _, err := svc.Create(ctx, CreateInput{Name: "X", MediaType: MediaTypeMovie, ScoreSource: "imdb"}); err == nil {
+		t.Fatal("expected error for score source without a score")
 	}
 }
 
@@ -164,6 +172,40 @@ func TestService_Update_ClearsReleaseYear(t *testing.T) {
 	}
 	if updated.ReleaseYear != nil {
 		t.Fatalf("expected release_year cleared, got %v", *updated.ReleaseYear)
+	}
+}
+
+func TestService_Update_SetsAndClearsScore(t *testing.T) {
+	repo := &fakeRepo{}
+	svc := NewLibraryService(repo, nil, nil)
+	ctx := context.Background()
+
+	item, err := svc.Create(ctx, CreateInput{Name: "The Matrix", MediaType: MediaTypeMovie})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	// Set a score + source.
+	score := 8.7
+	scorePtr := &score
+	source := "imdb"
+	updated, err := svc.Update(ctx, item.ID, UpdateInput{Score: &scorePtr, ScoreSource: &source})
+	if err != nil {
+		t.Fatalf("Update: %v", err)
+	}
+	if updated.Score == nil || *updated.Score != 8.7 || updated.ScoreSource != "imdb" {
+		t.Fatalf("expected score 8.7/imdb after update, got %+v", updated)
+	}
+
+	// Clear the score and its source.
+	var nilScore *float64
+	emptySource := ""
+	updated, err = svc.Update(ctx, item.ID, UpdateInput{Score: &nilScore, ScoreSource: &emptySource})
+	if err != nil {
+		t.Fatalf("Update (clear): %v", err)
+	}
+	if updated.Score != nil || updated.ScoreSource != "" {
+		t.Fatalf("expected score cleared, got %+v", updated)
 	}
 }
 

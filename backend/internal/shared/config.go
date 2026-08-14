@@ -32,6 +32,18 @@ type DatabaseConfig struct {
 	MaxConnIdleTime time.Duration
 }
 
+// ScoreProviderConfig selects which rating provider serves each library media
+// type. An empty/"none" value disables score lookup for that media type. Keys
+// and base URLs are indexed by provider name (e.g. "omdb", "rawg").
+type ScoreProviderConfig struct {
+	Movie    string
+	Series   string
+	Game     string
+	Book     string
+	Keys     map[string]string
+	BaseURLs map[string]string
+}
+
 func LoadConfig() Config {
 	return Config{
 		Server: ServerConfig{
@@ -79,4 +91,24 @@ func getEnvDuration(key string, fallback time.Duration) time.Duration {
 		}
 	}
 	return fallback
+}
+
+// LoadScoreProviderConfig reads the score-provider selection from the
+// environment. Keys are optional: an empty key means the provider is configured
+// but unusable, which the scoring registry surfaces as a startup warning.
+func LoadScoreProviderConfig() ScoreProviderConfig {
+	return ScoreProviderConfig{
+		Movie:  getEnv("SCORE_PROVIDER_MOVIE", ""),
+		Series: getEnv("SCORE_PROVIDER_SERIES", ""),
+		Game:   getEnv("SCORE_PROVIDER_GAME", ""),
+		Book:   getEnv("SCORE_PROVIDER_BOOK", ""),
+		Keys: map[string]string{
+			"omdb": getEnv("OMDB_API_KEY", ""),
+			"rawg": getEnv("RAWG_API_KEY", ""),
+		},
+		BaseURLs: map[string]string{
+			"omdb": getEnv("OMDB_BASE_URL", ""),
+			"rawg": getEnv("RAWG_BASE_URL", ""),
+		},
+	}
 }

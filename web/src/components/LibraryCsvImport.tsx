@@ -5,17 +5,19 @@ import {
   type CreateLibraryItemRequest,
   type ImportResult,
 } from "../api/library";
-import { normalizeMediaType, parseCsv, parseDoneValue, parseYearValue } from "../utils/csv";
+import { parseCsv, parseDoneValue, parseScoreValue, normalizeMediaType, parseYearValue } from "../utils/csv";
 
 const MEDIA_TYPES = ["movie", "series", "book", "game"] as const;
 
-type FieldKey = "name" | "media_type" | "release_year" | "done" | "notes";
+type FieldKey = "name" | "media_type" | "release_year" | "done" | "notes" | "score" | "score_source";
 
 const FIELDS: { key: FieldKey; label: string; hint: string }[] = [
   { key: "name", label: "Name", hint: "Title — required." },
   { key: "media_type", label: "Type", hint: "movie / series / book / game" },
   { key: "release_year", label: "Year", hint: "Release year (number)" },
   { key: "done", label: "Done", hint: "true / yes / 1 / x / read / …" },
+  { key: "score", label: "Score", hint: "Rating 0-100, e.g. 8.7 or 96 (optional)" },
+  { key: "score_source", label: "Score source", hint: "imdb / metacritic / … (optional)" },
   { key: "notes", label: "Notes", hint: "Optional comments" },
 ];
 
@@ -27,6 +29,8 @@ const EMPTY_MAPPING: Record<FieldKey, string> = {
   release_year: "",
   done: "",
   notes: "",
+  score: "",
+  score_source: "",
 };
 
 const DEFAULT_FIXED: Record<FieldKey, string> = {
@@ -35,6 +39,8 @@ const DEFAULT_FIXED: Record<FieldKey, string> = {
   release_year: "",
   done: "false",
   notes: "",
+  score: "",
+  score_source: "",
 };
 
 /** Header-based auto-mapping: matches common column names case-insensitively. */
@@ -49,6 +55,8 @@ function suggestMapping(headers: string[]): Record<FieldKey, string> {
     media_type: find(["type", "mediatype", "kind"]),
     release_year: find(["year", "releaseyear", "yearreleased", "yearofrelease"]),
     done: find(["done", "status", "completed", "finished", "watched", "read", "played"]),
+    score: find(["score", "rating", "metascore", "metacritic", "imdbrating"]),
+    score_source: find(["scoresource", "ratingsource", "source", "site"]),
     notes: find(["notes", "note", "comments", "comment"]),
   };
 }
@@ -144,6 +152,8 @@ export function LibraryCsvImport({ onClose, onImported }: LibraryCsvImportProps)
         media_type: mediaType,
         release_year: parseYearValue(resolve("release_year", i)),
         done: parseDoneValue(resolve("done", i)),
+        score: parseScoreValue(resolve("score", i)),
+        score_source: resolve("score_source", i).trim(),
         notes: resolve("notes", i),
       });
     });

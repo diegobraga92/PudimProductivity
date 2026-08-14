@@ -4,10 +4,12 @@ import {
   createLibraryItem,
   deleteLibraryItem,
   listLibraryItems,
+  searchLibraryScores,
   updateLibraryItem,
   type CreateLibraryItemRequest,
   type LibraryItem,
   type MediaType,
+  type ScoreCandidate,
 } from "../api/library";
 import { LibraryCsvImport } from "../components/LibraryCsvImport";
 
@@ -33,6 +35,8 @@ const EMPTY_FORM: CreateLibraryItemRequest = {
   release_year: null,
   done: false,
   notes: "",
+  score: null,
+  score_source: "",
 };
 
 /**
@@ -48,6 +52,9 @@ export default function Library() {
   const [editing, setEditing] = useState<LibraryItem | null>(null);
   const [form, setForm] = useState<CreateLibraryItemRequest>(EMPTY_FORM);
   const [importOpen, setImportOpen] = useState(false);
+  const [scoreHits, setScoreHits] = useState<ScoreCandidate[] | null>(null);
+  const [scoreSearching, setScoreSearching] = useState(false);
+  const [scoreError, setScoreError] = useState<string | null>(null);
 
   const { data: items = [], isLoading } = useQuery({
     queryKey: ["library", typeFilter, doneFilter],
@@ -76,6 +83,8 @@ export default function Library() {
         release_year: form.release_year,
         done: form.done,
         notes: form.notes,
+        score: form.score,
+        score_source: form.score_source,
       }),
     onSuccess: () => {
       invalidate();
@@ -100,6 +109,8 @@ export default function Library() {
   function openAdd() {
     setEditing(null);
     setForm(EMPTY_FORM);
+    setScoreHits(null);
+    setScoreError(null);
     setFormOpen(true);
   }
 
@@ -111,13 +122,50 @@ export default function Library() {
       release_year: item.release_year,
       done: item.done,
       notes: item.notes,
+      score: item.score ?? null,
+      score_source: item.score_source ?? "",
     });
+    setScoreHits(null);
+    setScoreError(null);
     setFormOpen(true);
   }
 
   function closeForm() {
     setFormOpen(false);
     setEditing(null);
+    setScoreHits(null);
+    setScoreError(null);
+  }
+
+  /** Queries the configured rating provider for the form's current title. */
+  async function lookUpScore() {
+    const title = form.name.trim();
+    if (!title) return;
+    setScoreSearching(true);
+    setScoreError(null);
+    setScoreHits(null);
+    try {
+      const hits = await searchLibraryScores(title, form.media_type, form.release_year ?? undefined);
+      setScoreHits(hits);
+      if (hits.length === 0) setScoreError("No ratings found for this title.");
+    } catch (err) {
+      setScoreError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setScoreSearching(false);
+    }
+  }
+
+  /** Applies a confirmed candidate's score + source to the form. */
+  function applyCandidate(candidate: ScoreCandidate) {
+    setForm({
+      ...form,
+      score: candidate.score,
+      score_source: candidate.score_source,
+      name: candidate.title.trim() ? candidate.title.trim() : form.name,
+      release_year:
+        candidate.year != null && candidate.year > 0 ? candidate.year : form.release_year,
+    });
+    setScoreHits(null);
   }
 
   function save() {
@@ -210,6 +258,64 @@ export default function Library() {
               onChange={(e) => setForm({ ...form, notes: e.target.value })}
             />
           </div>
+
+          {/* Score: manual entry or looked up from a configured provider */}
+          <div className="flex-center" style={{ gap: "0.4rem", marginBottom: "0.4rem", flexWrap: "wrap" }}>
+            <input
+              className="input"
+              type="number"
+              min={0}
+              max={100}
+              step="0.1"
+              placeholder="Score (e.g. 8.7)"
+              value={form.score ?? ""}
+              onChange={(e) =>
+                setForm({ ...form, score: e.target.value === "" ? null : Number(e.target.value) })
+              }
+              style={{ flex: 1, minWidth: 120 }}
+            />
+            <input
+              className="input"
+              placeholder="Source (e.g. imdb, metacritic)"
+              value={form.score_source}
+              onChange={(e) => setForm({ ...form, score_source: e.target.value })}
+              style={{ flex: 1, minWidth: 140 }}
+            />
+            <button
+              type="button"
+              className="btn btn-sm"
+              disabled={!form.name.trim() || scoreSearching}
+              onClick={lookUpScore}
+            >
+              {scoreSearching ? "Searching…" : "⭐ Look up score"}
+            </button>
+          </div>
+
+          {scoreError && (
+            <p className="text-sm" style={{ color: "var(--color-danger)", margin: "0 0 0.4rem" }}>
+              {scoreError}
+            </p>
+          )}
+
+          {scoreHits && scoreHits.length > 0 && (
+            <div style={{ marginBottom: "0.4rem" }}>
+              <p className="text-sm" style={{ fontWeight: 600 }}>Pick a match:</p>
+              {scoreHits.map((hit) => (
+                <button
+                  key={hit.external_id || hit.title}
+                  type="button"
+                  className="btn btn-sm"
+                  style={{ margin: "0 0.25rem 0.25rem 0" }}
+                  onClick={() => applyCandidate(hit)}
+                >
+                  {hit.title}
+                  {hit.year != null && hit.year > 0 ? ` (${hit.year})` : ""} · ★ {hit.score}
+                  {hit.score_source ? ` (${hit.score_source})` : ""}
+                </button>
+              ))}
+            </div>
+          )}
+
           <label className="flex-center" style={{ gap: "var(--space-sm)", marginBottom: "0.4rem" }}>
             <input
               type="checkbox"
@@ -256,6 +362,12 @@ export default function Library() {
                   {MEDIA_ICONS[item.media_type]} {MEDIA_LABELS[item.media_type] ?? item.media_type}
                   {item.release_year != null && <> · {item.release_year}</>}
                 </p>
+                {item.score != null && (
+                  <p className="text-sm text-secondary" style={{ margin: "0.2rem 0 0" }}>
+                    ★ {item.score}
+                    {item.score_source ? ` (${item.score_source})` : ""}
+                  </p>
+                )}
               </div>
               <label className="checkbox-wrapper" title={item.done ? "Mark as not done" : "Mark as done"}>
                 <input

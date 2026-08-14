@@ -18,17 +18,21 @@ type CreateInput struct {
 	ReleaseYear *int
 	Done        bool
 	Notes       string
+	Score       *float64
+	ScoreSource string
 }
 
 // UpdateInput carries the editable fields of an existing item. nil values mean
-// "unchanged"; ReleaseYear is **int so callers can distinguish "absent"
-// (nil) from "set to null" (a nil *int).
+// "unchanged"; ReleaseYear and Score are double pointers so callers can
+// distinguish "absent" (nil) from "set to null" (a nil inner pointer).
 type UpdateInput struct {
 	Name        *string
 	MediaType   *MediaType
 	ReleaseYear **int
 	Done        *bool
 	Notes       *string
+	Score       **float64
+	ScoreSource *string
 }
 
 // ImportError describes a single skipped row during a bulk import.
@@ -60,7 +64,7 @@ func NewLibraryService(repo Repository, auditLogger audit.Logger, bus eventbus.B
 
 // Create validates and persists a single item.
 func (s *LibraryService) Create(ctx context.Context, in CreateInput) (*Item, error) {
-	item, err := NewItem(shared.NewUUID(), in.Name, in.MediaType, in.ReleaseYear, in.Done, in.Notes)
+	item, err := NewItem(shared.NewUUID(), in.Name, in.MediaType, in.ReleaseYear, in.Done, in.Notes, in.Score, in.ScoreSource)
 	if err != nil {
 		return nil, err
 	}
@@ -71,6 +75,7 @@ func (s *LibraryService) Create(ctx context.Context, in CreateInput) (*Item, err
 	log.Info().Ctx(ctx).Str("item_id", item.ID).Str("media_type", string(item.MediaType)).Str("name", item.Name).Msg("library item added")
 	s.audit.Log(ctx, audit.ActionLibraryItemAdded, audit.ResourceLibraryItems, item.ID, nil, map[string]any{
 		"name": item.Name, "media_type": item.MediaType, "done": item.Done,
+		"score": item.Score, "score_source": item.ScoreSource,
 	})
 	s.publish(ctx, eventbus.EventLibraryItemAdded, toResponse(item))
 	return item, nil
@@ -82,7 +87,7 @@ func (s *LibraryService) Import(ctx context.Context, in []CreateInput) (*ImportR
 	var items []*Item
 	errs := make([]ImportError, 0)
 	for i, input := range in {
-		item, err := NewItem(shared.NewUUID(), input.Name, input.MediaType, input.ReleaseYear, input.Done, input.Notes)
+		item, err := NewItem(shared.NewUUID(), input.Name, input.MediaType, input.ReleaseYear, input.Done, input.Notes, input.Score, input.ScoreSource)
 		if err != nil {
 			errs = append(errs, ImportError{Row: i + 1, Message: err.Error()})
 			continue
@@ -136,6 +141,12 @@ func (s *LibraryService) Update(ctx context.Context, id string, in UpdateInput) 
 	if in.Notes != nil {
 		current.Notes = *in.Notes
 	}
+	if in.Score != nil {
+		current.Score = *in.Score
+	}
+	if in.ScoreSource != nil {
+		current.ScoreSource = *in.ScoreSource
+	}
 
 	// Re-validate the merged state.
 	if err := validateItem(current); err != nil {
@@ -148,6 +159,7 @@ func (s *LibraryService) Update(ctx context.Context, id string, in UpdateInput) 
 	log.Info().Ctx(ctx).Str("item_id", id).Msg("library item updated")
 	s.audit.Log(ctx, audit.ActionLibraryItemUpdated, audit.ResourceLibraryItems, id, nil, map[string]any{
 		"name": current.Name, "media_type": current.MediaType, "done": current.Done,
+		"score": current.Score, "score_source": current.ScoreSource,
 	})
 	s.publish(ctx, eventbus.EventLibraryItemUpdated, toResponse(current))
 	return current, nil
@@ -164,7 +176,7 @@ func (s *LibraryService) Delete(ctx context.Context, id string) error {
 
 // validateItem re-checks a merged item without re-generating an ID.
 func validateItem(item *Item) error {
-	if _, err := NewItem(item.ID, item.Name, item.MediaType, item.ReleaseYear, item.Done, item.Notes); err != nil {
+	if _, err := NewItem(item.ID, item.Name, item.MediaType, item.ReleaseYear, item.Done, item.Notes, item.Score, item.ScoreSource); err != nil {
 		return fmt.Errorf("update library item: %w", err)
 	}
 	return nil

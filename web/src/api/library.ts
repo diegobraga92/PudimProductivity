@@ -8,6 +8,7 @@ export type MediaType = components["schemas"]["MediaType"];
 export type CreateLibraryItemRequest = components["schemas"]["CreateLibraryItemRequest"];
 export type UpdateLibraryItemRequest = components["schemas"]["UpdateLibraryItemRequest"];
 export type ImportResult = components["schemas"]["ImportResult"];
+export type ScoreCandidate = components["schemas"]["ScoreCandidate"];
 
 async function handleError(response: Response, fallback: string): Promise<never> {
   const body = await response.json().catch(() => null);
@@ -65,4 +66,21 @@ export async function importLibraryItems(req: {
   });
   if (!res.ok) await handleError(res, `Failed to import items: ${res.status}`);
   return res.json() as Promise<ImportResult>;
+}
+
+/**
+ * Searches the configured rating provider (OMDb for films/series, RAWG for
+ * games) for a title. The returned candidates let the user confirm the right
+ * match before its score is saved with the item.
+ */
+export async function searchLibraryScores(
+  query: string,
+  type: MediaType,
+  year?: number,
+): Promise<ScoreCandidate[]> {
+  const params = new URLSearchParams({ query, type });
+  if (year != null) params.set("year", String(year));
+  const res = await fetch(`${config.apiBaseUrl}/library/score/search?${params}`);
+  if (!res.ok) await handleError(res, `Failed to look up score: ${res.status}`);
+  return res.json() as Promise<ScoreCandidate[]>;
 }

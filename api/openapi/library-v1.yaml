@@ -79,6 +79,64 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /api/v1/library/score/search:
+    get:
+      operationId: searchLibraryScores
+      summary: Search for a media score
+      description: |
+        Looks up ratings for a title from the configured score provider (OMDb/IMDb
+        for films and series, RAWG/Metacritic for games). Returns a small list of
+        candidates so the client can confirm the right title before saving its
+        score. Returns 503 when the feature is disabled or no provider is configured.
+      security: []
+      tags:
+        - Library
+      parameters:
+        - name: type
+          in: query
+          required: true
+          schema:
+            $ref: "#/components/schemas/MediaType"
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+            description: Title to search for.
+        - name: year
+          in: query
+          required: false
+          schema:
+            type: integer
+            description: Optional release year to narrow the search.
+      responses:
+        "200":
+          description: Matching titles with their ratings.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ScoreCandidate"
+        "400":
+          description: Missing or invalid parameters.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: The rating provider could not be reached.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Score lookup is disabled or not configured.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /api/v1/library/import:
     post:
       operationId: importLibraryItems
@@ -223,12 +281,46 @@ components:
         notes:
           type: string
           description: Optional free-text notes or comments.
+        score:
+          type: number
+          nullable: true
+          description: |
+            Optional rating on a 0-100 scale (IMDb 8.7, Metacritic 95, ...).
+            Null when no score has been recorded.
+        score_source:
+          type: string
+          description: |
+            Where the score came from (e.g. "imdb", "metacritic", "custom").
+            Empty when no score is recorded.
         created_at:
           type: string
           format: date-time
         updated_at:
           type: string
           format: date-time
+
+    ScoreCandidate:
+      type: object
+      required: [title, score, score_source]
+      properties:
+        title:
+          type: string
+          description: The provider's title for the match.
+        year:
+          type: integer
+          description: Release year when the provider reports one.
+        score:
+          type: number
+          description: Rating on the same 0-100 scale as library items.
+        score_source:
+          type: string
+          description: e.g. "imdb" or "metacritic".
+        external_id:
+          type: string
+          description: Provider-specific identifier (e.g. IMDb tt id, RAWG id).
+        url:
+          type: string
+          description: Link to the provider's page for the title.
 
     CreateLibraryItemRequest:
       type: object
@@ -246,6 +338,13 @@ components:
           default: false
         notes:
           type: string
+        score:
+          type: number
+          nullable: true
+          description: Optional rating on a 0-100 scale.
+        score_source:
+          type: string
+          description: Where the score came from (e.g. "imdb", "metacritic").
 
     UpdateLibraryItemRequest:
       type: object
@@ -261,6 +360,15 @@ components:
           type: boolean
         notes:
           type: string
+        score:
+          type: number
+          nullable: true
+          description: |
+            Optional rating on a 0-100 scale. Omit to keep the current value;
+            send null to clear it.
+        score_source:
+          type: string
+          description: Where the score came from. Send "" to clear it.
 
     ImportItemsRequest:
       type: object

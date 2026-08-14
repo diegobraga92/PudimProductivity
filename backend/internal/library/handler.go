@@ -8,11 +8,13 @@ import (
 // --- Requests ---
 
 type CreateItemRequest struct {
-	Name        string `json:"name"`
-	MediaType   string `json:"media_type"`
-	ReleaseYear *int   `json:"release_year"`
-	Done        bool   `json:"done"`
-	Notes       string `json:"notes"`
+	Name        string   `json:"name"`
+	MediaType   string   `json:"media_type"`
+	ReleaseYear *int     `json:"release_year"`
+	Done        bool     `json:"done"`
+	Notes       string   `json:"notes"`
+	Score       *float64 `json:"score"`
+	ScoreSource string   `json:"score_source"`
 }
 
 func (req CreateItemRequest) toInput() CreateInput {
@@ -22,15 +24,19 @@ func (req CreateItemRequest) toInput() CreateInput {
 		ReleaseYear: req.ReleaseYear,
 		Done:        req.Done,
 		Notes:       req.Notes,
+		Score:       req.Score,
+		ScoreSource: req.ScoreSource,
 	}
 }
 
 type UpdateItemRequest struct {
-	Name        *string `json:"name"`
-	MediaType   *string `json:"media_type"`
-	ReleaseYear **int   `json:"release_year"`
-	Done        *bool   `json:"done"`
-	Notes       *string `json:"notes"`
+	Name        *string   `json:"name"`
+	MediaType   *string   `json:"media_type"`
+	ReleaseYear **int     `json:"release_year"`
+	Done        *bool     `json:"done"`
+	Notes       *string   `json:"notes"`
+	Score       **float64 `json:"score"`
+	ScoreSource *string   `json:"score_source"`
 }
 
 func (req UpdateItemRequest) toInput() UpdateInput {
@@ -39,6 +45,8 @@ func (req UpdateItemRequest) toInput() UpdateInput {
 		ReleaseYear: req.ReleaseYear,
 		Done:        req.Done,
 		Notes:       req.Notes,
+		Score:       req.Score,
+		ScoreSource: req.ScoreSource,
 	}
 	if req.MediaType != nil {
 		mt := MediaType(*req.MediaType)
@@ -54,14 +62,16 @@ type ImportItemsRequest struct {
 // --- Responses ---
 
 type ItemResponse struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	MediaType   string `json:"media_type"`
-	ReleaseYear *int   `json:"release_year"`
-	Done        bool   `json:"done"`
-	Notes       string `json:"notes"`
-	CreatedAt   string `json:"created_at"`
-	UpdatedAt   string `json:"updated_at"`
+	ID          string   `json:"id"`
+	Name        string   `json:"name"`
+	MediaType   string   `json:"media_type"`
+	ReleaseYear *int     `json:"release_year"`
+	Done        bool     `json:"done"`
+	Notes       string   `json:"notes"`
+	Score       *float64 `json:"score"`
+	ScoreSource string   `json:"score_source"`
+	CreatedAt   string   `json:"created_at"`
+	UpdatedAt   string   `json:"updated_at"`
 }
 
 func toResponse(it *Item) ItemResponse {
@@ -72,6 +82,8 @@ func toResponse(it *Item) ItemResponse {
 		ReleaseYear: it.ReleaseYear,
 		Done:        it.Done,
 		Notes:       it.Notes,
+		Score:       it.Score,
+		ScoreSource: it.ScoreSource,
 		CreatedAt:   it.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:   it.UpdatedAt.Format(time.RFC3339),
 	}
@@ -81,6 +93,32 @@ func toResponses(items []*Item) []ItemResponse {
 	out := make([]ItemResponse, 0, len(items))
 	for _, it := range items {
 		out = append(out, toResponse(it))
+	}
+	return out
+}
+
+// ScoreCandidateResponse is a single rating-provider match for the score
+// search endpoint.
+type ScoreCandidateResponse struct {
+	Title      string  `json:"title"`
+	Year       int     `json:"year"`
+	Score      float64 `json:"score"`
+	Source     string  `json:"score_source"`
+	ExternalID string  `json:"external_id"`
+	URL        string  `json:"url"`
+}
+
+func toScoreResponses(cands []ScoreCandidate) []ScoreCandidateResponse {
+	out := make([]ScoreCandidateResponse, 0, len(cands))
+	for _, c := range cands {
+		out = append(out, ScoreCandidateResponse{
+			Title:      c.Title,
+			Year:       c.Year,
+			Score:      c.Score,
+			Source:     c.Source,
+			ExternalID: c.ExternalID,
+			URL:        c.URL,
+		})
 	}
 	return out
 }

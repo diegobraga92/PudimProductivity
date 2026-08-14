@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseCsv, parseDoneValue, normalizeMediaType, parseYearValue } from "./csv";
+import { parseCsv, parseDoneValue, normalizeMediaType, parseYearValue, parseScoreValue } from "./csv";
 
 describe("parseCsv", () => {
   it("parses simple comma-separated rows", () => {
@@ -78,5 +78,20 @@ describe("parseYearValue", () => {
     expect(parseYearValue("n/a")).toBeNull();
     expect(parseYearValue("999")).toBeNull();
     expect(parseYearValue("3000")).toBeNull();
+  });
+});
+
+describe("parseScoreValue", () => {
+  it("parses integers and decimals on the 0-100 scale", () => {
+    expect(parseScoreValue("96")).toBe(96);
+    expect(parseScoreValue("8.7")).toBe(8.7);
+    expect(parseScoreValue(" 42 ")).toBe(42);
+  });
+
+  it("returns null for empty, garbage or out-of-range values", () => {
+    expect(parseScoreValue("")).toBeNull();
+    expect(parseScoreValue("n/a")).toBeNull();
+    expect(parseScoreValue("-1")).toBeNull();
+    expect(parseScoreValue("101")).toBeNull();
   });
 });

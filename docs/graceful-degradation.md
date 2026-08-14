@@ -15,6 +15,8 @@
 | **SMTP / Mailpit** | Down | Email send fails → message rejected to DLQ → retried up to 5× → discarded | Restart Mailpit; messages in DLQ at restart get retried by the pump | [ADR 005](./adr/005-async-notifications.md) |
 | **FCM** | No credentials / down | Push disabled; email still delivered (senders are independent) | Add `google-services.json` + set `FCM_DEVICE_TOKEN` | [ADR 005](./adr/005-async-notifications.md) |
 | **WebSocket clients** | Disconnected | Clients auto-reconnect with exponential backoff; replay from `last_seq` or `stale` → full REST refetch | Self-healing | [ADR 004](./adr/004-websocket-consistency.md), [runbook](./runbooks/ws-disconnect-storm.md) |
+| **Rating providers (OMDb / RAWG)** | Down at runtime | Library `score/search` returns 502; the circuit breaker opens (fail-fast) and self-recovers after 30s; item CRUD is unaffected | Provider recovers; breaker half-open probe re-closes | [ADR 007](./adr/007-external-api-integrations.md) |
+| **Rating providers (OMDb / RAWG)** | No credentials / flag off | Library `score/search` returns 503 ("not configured"/"disabled"); the score columns stay fully usable for manual entry | Add `OMDB_API_KEY`/`RAWG_API_KEY` and enable the `library.score_lookup_enabled` flag | [ADR 007](./adr/007-external-api-integrations.md) |
 
 ## Design Principles
 
