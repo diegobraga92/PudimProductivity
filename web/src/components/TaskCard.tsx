@@ -1,4 +1,5 @@
 import Checkbox from "./Checkbox";
+import { useI18n } from "../i18n";
 
 interface TaskCardProps {
   variant: "todo" | "list";
@@ -21,6 +22,7 @@ export default function TaskCard({
   animationDelay,
   compact = false,
 }: TaskCardProps) {
+  const { t } = useI18n();
   const cardClass = variant === "todo" ? "card-todo" : "card-list";
 
   return (
@@ -55,7 +57,7 @@ export default function TaskCard({
       <button
         className="btn btn-danger btn-sm"
         onClick={onDelete}
-        aria-label={`Delete ${title}`}
+        aria-label={t("tasks.deleteAria", { title })}
       >
         ✕
       </button>

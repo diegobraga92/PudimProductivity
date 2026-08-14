@@ -20,15 +20,16 @@ import com.pudimproductivity.api.CreateLibraryItemRequest
 import com.pudimproductivity.api.LibraryItem
 import com.pudimproductivity.api.UpdateLibraryItemRequest
 import com.pudimproductivity.api.libraryService
+import com.pudimproductivity.i18n.Localization
 import kotlinx.coroutines.launch
 
 private val MEDIA_TYPES = listOf("movie", "series", "book", "game")
 
 private fun mediaLabel(t: String): String = when (t) {
-    "movie" -> "🎬 Movie"
-    "series" -> "📺 Series"
-    "book" -> "📚 Book"
-    "game" -> "🎮 Game"
+    "movie" -> "🎬 " + Localization.text("library.movie")
+    "series" -> "📺 " + Localization.text("library.series")
+    "book" -> "📚 " + Localization.text("library.book")
+    "game" -> "🎮 " + Localization.text("library.game")
     else -> t
 }
 
@@ -55,7 +56,7 @@ fun LibraryScreen(onBack: () -> Unit) {
             items = ApiClient.libraryService.listItems()
             error = null
         } catch (e: Exception) {
-            error = e.message ?: "Failed to load library"
+            error = e.message ?: Localization.text("mobile.library.load.failed")
         }
     }
 
@@ -95,10 +96,10 @@ fun LibraryScreen(onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("🎬 Library") },
+                title = { Text(Localization.text("library.title")) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = Localization.text("common.back"))
                     }
                 }
             )
@@ -112,7 +113,7 @@ fun LibraryScreen(onBack: () -> Unit) {
                         OutlinedTextField(
                             value = name,
                             onValueChange = { name = it },
-                            label = { Text("Name") },
+                            label = { Text(Localization.text("common.name")) },
                             modifier = Modifier.fillMaxWidth()
                         )
                         Row(Modifier.horizontalScroll(rememberScrollState())) {
@@ -120,7 +121,7 @@ fun LibraryScreen(onBack: () -> Unit) {
                                 FilterChip(
                                     selected = mediaType == t,
                                     onClick = { mediaType = t },
-                                    label = { Text(t.replaceFirstChar { it.uppercase() }) },
+                                    label = { Text(Localization.text("library.$t")) },
                                     modifier = Modifier.padding(end = 8.dp)
                                 )
                             }
@@ -128,32 +129,32 @@ fun LibraryScreen(onBack: () -> Unit) {
                         OutlinedTextField(
                             value = year,
                             onValueChange = { year = it.filter { c -> c.isDigit() } },
-                            label = { Text("Release year") },
+                            label = { Text(Localization.text("mobile.library.releaseYear")) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             modifier = Modifier.fillMaxWidth()
                         )
                         OutlinedTextField(
                             value = score,
                             onValueChange = { score = it.filter { c -> c.isDigit() || c == '.' } },
-                            label = { Text("Score (0-100)") },
+                            label = { Text(Localization.text("mobile.library.scoreLabel")) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                             modifier = Modifier.fillMaxWidth()
                         )
                         OutlinedTextField(
                             value = scoreSource,
                             onValueChange = { scoreSource = it },
-                            label = { Text("Score source (e.g. imdb)") },
+                            label = { Text(Localization.text("mobile.library.sourceLabel")) },
                             modifier = Modifier.fillMaxWidth()
                         )
                         OutlinedTextField(
                             value = notes,
                             onValueChange = { notes = it },
-                            label = { Text("Notes") },
+                            label = { Text(Localization.text("common.notes")) },
                             modifier = Modifier.fillMaxWidth()
                         )
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Checkbox(checked = done, onCheckedChange = { done = it })
-                            Text("Done (consumed / read / watched / played)")
+                            Text(Localization.text("library.doneLabel"))
                         }
                         Button(
                             enabled = name.isNotBlank(),
@@ -191,12 +192,12 @@ fun LibraryScreen(onBack: () -> Unit) {
                                         closeForm()
                                         refresh()
                                     } catch (e: Exception) {
-                                        error = e.message ?: "Save failed"
+                                        error = e.message ?: Localization.text("mobile.library.save.failed")
                                     }
                                 }
                             },
                             modifier = Modifier.fillMaxWidth()
-                        ) { Text(if (editing != null) "Save changes" else "Add") }
+                        ) { Text(if (editing != null) Localization.text("library.saveChanges") else Localization.text("common.add")) }
                     }
                 }
             }
@@ -213,7 +214,7 @@ fun LibraryScreen(onBack: () -> Unit) {
             Button(
                 onClick = { if (formOpen) closeForm() else openAdd() },
                 modifier = Modifier.fillMaxWidth()
-            ) { Text(if (formOpen) "Cancel" else "+ Add item") }
+            ) { Text(if (formOpen) Localization.text("common.cancel") else Localization.text("library.addItem")) }
 
             if (isLoading) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
@@ -247,7 +248,7 @@ fun LibraryScreen(onBack: () -> Unit) {
                                                     )
                                                     refresh()
                                                 } catch (e: Exception) {
-                                                    error = e.message ?: "Update failed"
+                                                    error = e.message ?: Localization.text("mobile.library.update.failed")
                                                 }
                                             }
                                         }
@@ -258,7 +259,7 @@ fun LibraryScreen(onBack: () -> Unit) {
                                 }
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     OutlinedButton(onClick = { openEdit(item) }, modifier = Modifier.weight(1f)) {
-                                        Text("Edit")
+                                        Text(Localization.text("common.edit"))
                                     }
                                     OutlinedButton(
                                         onClick = {
@@ -267,12 +268,12 @@ fun LibraryScreen(onBack: () -> Unit) {
                                                     ApiClient.libraryService.deleteItem(item.id)
                                                     refresh()
                                                 } catch (e: Exception) {
-                                                    error = e.message ?: "Delete failed"
+                                                    error = e.message ?: Localization.text("mobile.library.delete.failed")
                                                 }
                                             }
                                         },
                                         modifier = Modifier.weight(1f)
-                                    ) { Text("Delete") }
+                                    ) { Text(Localization.text("common.delete")) }
                                 }
                             }
                         }

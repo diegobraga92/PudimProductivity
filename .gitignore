@@ -30,6 +30,7 @@ mobile/.gradle/
 mobile/.kotlin/
 mobile/build/
 mobile/app/build/
+mobile/app/src/main/assets/i18n/
 mobile/local.properties
 mobile/captures/
 mobile/.externalNativeBuild/

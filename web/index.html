@@ -24,6 +24,22 @@
         } catch (e) {}
       })();
     </script>
+    <script>
+      // Apply the saved/system language before React mounts so the first paint
+      // (and <html lang>) matches the selected language.
+      (function () {
+        try {
+          var saved = localStorage.getItem("language");
+          var lang =
+            saved === "en" || saved === "pt-BR"
+              ? saved
+              : (navigator.language || "en").toLowerCase().indexOf("pt") === 0
+                ? "pt-BR"
+                : "en";
+          document.documentElement.lang = lang;
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

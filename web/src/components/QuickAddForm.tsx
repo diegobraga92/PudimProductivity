@@ -7,14 +7,17 @@ interface QuickAddFormProps {
   isPending?: boolean;
 }
 
+import { useI18n } from "../i18n";
+
 export default function QuickAddForm({
   value,
   onChange,
   onSubmit,
   placeholder,
-  submitLabel = "Add",
+  submitLabel,
   isPending = false,
 }: QuickAddFormProps) {
+  const { t } = useI18n();
   return (
     <form
       onSubmit={(e) => {
@@ -35,7 +38,7 @@ export default function QuickAddForm({
         className="btn btn-primary"
         disabled={isPending || !value.trim()}
       >
-        {isPending ? "..." : submitLabel}
+        {isPending ? "..." : (submitLabel ?? t("common.add"))}
       </button>
     </form>
   );

@@ -1,33 +1,40 @@
 import { useEffect, useRef, useState } from "react";
 import { getSoundscape, type SoundID, type PresetID } from "../utils/audio";
+import { useI18n } from "../i18n";
 
 interface SoundDef {
   id: SoundID;
-  label: string;
+  labelKey: string;
   icon: string;
-  description: string;
+  descKey: string;
 }
 
 const SOUNDS: SoundDef[] = [
-  { id: "white-noise", label: "White Noise", icon: "🌊", description: "Flat static — crisp and neutral" },
-  { id: "pink-noise", label: "Pink Noise", icon: "🌸", description: "Softer highs — warmer, more natural" },
-  { id: "brown-noise", label: "Brown Noise", icon: "🌫️", description: "Deep rumble — calming bass" },
-  { id: "rain", label: "Rain", icon: "🌧️", description: "Gentle rainfall with movement" },
-  { id: "ocean", label: "Ocean", icon: "🌊", description: "Slow waves with a natural swell" },
-  { id: "wind", label: "Wind", icon: "💨", description: "Howling wind with occasional gusts" },
-  { id: "campfire", label: "Campfire", icon: "🔥", description: "Crackling fire with embers and pops" },
-  { id: "binaural-beat", label: "Binaural Beat", icon: "🎧", description: "Two tones — requires headphones for the brainwave effect" },
-  { id: "isochronic-tone", label: "Isochronic Tone", icon: "📳", description: "Pulsing tone — works on any speakers" },
-  { id: "meditation-bowl", label: "Meditation Bowl", icon: "🕉️", description: "Resonant singing bowl with harmonic overtones" },
-  { id: "ambient-pad", label: "Ambient Pad", icon: "🎹", description: "Evolving chord drone — like YouTube focus music" },
+  { id: "white-noise", labelKey: "soundscape.whiteNoise", icon: "🌊", descKey: "soundscape.desc.whiteNoise" },
+  { id: "pink-noise", labelKey: "soundscape.pinkNoise", icon: "🌸", descKey: "soundscape.desc.pinkNoise" },
+  { id: "brown-noise", labelKey: "soundscape.brownNoise", icon: "🌫️", descKey: "soundscape.desc.brownNoise" },
+  { id: "rain", labelKey: "soundscape.rainSound", icon: "🌧️", descKey: "soundscape.desc.rain" },
+  { id: "ocean", labelKey: "soundscape.ocean", icon: "🌊", descKey: "soundscape.desc.ocean" },
+  { id: "wind", labelKey: "soundscape.wind", icon: "💨", descKey: "soundscape.desc.wind" },
+  { id: "campfire", labelKey: "soundscape.campfire", icon: "🔥", descKey: "soundscape.desc.campfire" },
+  { id: "binaural-beat", labelKey: "soundscape.binaural", icon: "🎧", descKey: "soundscape.desc.binaural" },
+  { id: "isochronic-tone", labelKey: "soundscape.isochronic", icon: "📳", descKey: "soundscape.desc.isochronic" },
+  { id: "meditation-bowl", labelKey: "soundscape.meditationBowl", icon: "🕉️", descKey: "soundscape.desc.meditationBowl" },
+  { id: "ambient-pad", labelKey: "soundscape.ambientPad", icon: "🎹", descKey: "soundscape.desc.ambientPad" },
 ];
 
 const LS_POMODORO_ENABLED = "soundscape_pomodoro_enabled";
 const LS_POMODORO_SOUND = "soundscape_pomodoro_sound";
 const LS_RAIN_INTENSITY = "soundscape_rain_intensity";
 
-// Rain intensity labels
-const RAIN_LABELS = ["Drizzle", "Light", "Moderate", "Heavy", "Downpour"];
+// Rain intensity translation keys
+const RAIN_LABEL_KEYS = [
+  "soundscape.rainDrizzle",
+  "soundscape.rainLight",
+  "soundscape.rainModerate",
+  "soundscape.rainHeavy",
+  "soundscape.rainDownpour",
+];
 
 /** Canvas-based frequency visualizer. */
 function Visualizer() {
@@ -92,6 +99,7 @@ function Visualizer() {
 }
 
 function Soundscape() {
+  const { t } = useI18n();
   const [playing, setPlaying] = useState<Set<SoundID>>(new Set());
   const [masterVolume, setMasterVolume] = useState(0.5);
   const [volumes, setVolumes] = useState<Record<SoundID, number>>({
@@ -166,7 +174,7 @@ function Soundscape() {
 
   /** Save current mix as a preset. */
   const savePreset = () => {
-    const label = prompt("Name this soundscape preset:");
+    const label = prompt(t("soundscape.presetPrompt"));
     if (!label) return;
     const currentSounds: Partial<Record<SoundID, boolean>> = {};
     for (const id of SOUNDS.map((s) => s.id)) {
@@ -235,7 +243,7 @@ function Soundscape() {
           marginBottom: "var(--space-lg)",
         }}
       >
-        <h2 className="page-heading" style={{ marginBottom: 0 }}>🎵 Soundscape</h2>
+        <h2 className="page-heading" style={{ marginBottom: 0 }}>{t("soundscape.title")}</h2>
       </div>
 
       {/* Frequency Visualizer */}
@@ -254,7 +262,7 @@ function Soundscape() {
         }}
       >
         <span style={{ fontSize: "var(--font-size-sm)", fontWeight: 600, minWidth: "60px" }}>
-          🔊 Master
+          🔊 {t("soundscape.master")}
         </span>
         <input
           type="range"
@@ -305,16 +313,16 @@ function Soundscape() {
                   fontSize: "var(--font-size-base)",
                 }}
               >
-                {isOn ? "⏸️ Pause" : "▶️ Play"}
+                {isOn ? t("soundscape.pause") : t("soundscape.play")}
               </button>
 
               {/* Info */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 600, fontSize: "var(--font-size-sm)" }}>
-                  {sound.icon} {sound.label}
+                  {sound.icon} {t(sound.labelKey)}
                 </div>
                 <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)" }}>
-                  {sound.description}
+                  {t(sound.descKey)}
                 </div>
               </div>
 
@@ -354,7 +362,7 @@ function Soundscape() {
             }}
           >
             <span style={{ fontSize: "var(--font-size-sm)", fontWeight: 600, minWidth: "60px" }}>
-              🌧️ Rain
+              🌧️ {t("soundscape.rain")}
             </span>
             <input
               type="range"
@@ -366,7 +374,7 @@ function Soundscape() {
               style={{ flex: 1, accentColor: "var(--color-primary)" }}
             />
             <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)", minWidth: "80px", textAlign: "right" }}>
-              {RAIN_LABELS[Math.round(rainIntensity * 4)]}
+              {t(RAIN_LABEL_KEYS[Math.round(rainIntensity * 4)])}
             </span>
           </div>
         </div>
@@ -391,17 +399,17 @@ function Soundscape() {
         >
           <div>
             <div style={{ fontWeight: 600, fontSize: "var(--font-size-sm)" }}>
-              💾 Presets
+              {t("soundscape.presets")}
             </div>
           </div>
           <button className="btn btn-primary" onClick={savePreset} style={{ fontSize: "var(--font-size-xs)" }}>
-            + Save Current
+            {t("soundscape.saveCurrent")}
           </button>
         </div>
 
         {presets.length === 0 && (
           <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", textAlign: "center", padding: "var(--space-sm)" }}>
-            No presets saved yet. Adjust your mix and click save.
+            {t("soundscape.noPresets")}
           </div>
         )}
 
@@ -435,7 +443,7 @@ function Soundscape() {
                 color: "var(--color-danger, #e74c3c)",
                 padding: "var(--space-xs)",
               }}
-              title="Delete preset"
+              title={t("soundscape.deletePreset")}
             >
               ✕
             </button>
@@ -462,10 +470,10 @@ function Soundscape() {
         >
           <div>
             <div style={{ fontWeight: 600, fontSize: "var(--font-size-sm)" }}>
-              🎯 Pomodoro Sync
+              {t("soundscape.pomodoroSync")}
             </div>
             <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)" }}>
-              Auto-play sound while timer is running
+              {t("soundscape.pomodoroSyncDesc")}
             </div>
           </div>
           <label
@@ -516,7 +524,7 @@ function Soundscape() {
         {pomodoroEnabled && (
           <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)", marginTop: "var(--space-sm)" }}>
             <span style={{ fontSize: "var(--font-size-sm)", fontWeight: 500, whiteSpace: "nowrap" }}>
-              Sound:
+              {t("soundscape.sound")}
             </span>
             <select
               className="select"
@@ -530,7 +538,7 @@ function Soundscape() {
             >
               {SOUNDS.map((s) => (
                 <option key={s.id} value={s.id}>
-                  {s.icon} {s.label}
+                  {s.icon} {t(s.labelKey)}
                 </option>
               ))}
             </select>
@@ -548,7 +556,7 @@ function Soundscape() {
           color: "var(--color-text-muted)",
         }}
       >
-        💡 You can layer multiple sounds at once. Adjust each volume to create your perfect mix.
+        💡 {t("soundscape.tip")}
       </div>
     </div>
   );

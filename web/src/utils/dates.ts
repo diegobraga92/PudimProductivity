@@ -12,13 +12,14 @@ function formatLocalDate(d: Date): string {
 
 /**
  * Format a string like "YYYY-MM-DD" to a short display format e.g. "Jun 1".
+ * Month abbreviations can be localized by passing the translated month list
+ * (e.g. from the i18n dictionary); it defaults to English.
  */
-function formatShortDisplay(dateStr: string): string {
+function formatShortDisplay(dateStr: string, months: string[] = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+]): string {
   const d = new Date(dateStr + "T00:00:00");
-  const months = [
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-  ];
   return `${months[d.getMonth()]} ${d.getDate()}`;
 }
 
@@ -86,10 +87,13 @@ export function getToday(): string {
  * Format a week's date range into a compact display string.
  * Same-month: "1–7 Jun"
  * Cross-month: "29 Jun – 5 Jul"
+ *
+ * @param monthNames Optional localized month abbreviations (length 12). Falls
+ *   back to English when omitted.
  */
-export function formatWeekRange(weekDates: string[]): string {
-  const start = formatShortDisplay(weekDates[0]);
-  const end = formatShortDisplay(weekDates[6]);
+export function formatWeekRange(weekDates: string[], monthNames?: string[]): string {
+  const start = formatShortDisplay(weekDates[0], monthNames);
+  const end = formatShortDisplay(weekDates[6], monthNames);
   // Check if both dates are in the same month
   const startMonth = start.split(" ")[0];
   const endMonth = end.split(" ")[0];

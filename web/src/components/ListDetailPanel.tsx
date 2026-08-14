@@ -18,6 +18,7 @@ import QuickAddForm from "./QuickAddForm";
 import TaskCard from "./TaskCard";
 import SortSelect from "./SortSelect";
 import { usePersistedSort } from "../hooks/usePersistedSort";
+import { useI18n } from "../i18n";
 import { sortTasks } from "../utils/sort";
 import {
   playTodoCompletionSound,
@@ -31,6 +32,7 @@ interface ListDetailPanelProps {
 
 export default function ListDetailPanel({ listId, onListDeleted }: ListDetailPanelProps) {
   const queryClient = useQueryClient();
+  const { t } = useI18n();
   const [newTitle, setNewTitle] = useState("");
   const [editingName, setEditingName] = useState(false);
   const [editName, setEditName] = useState("");
@@ -99,7 +101,7 @@ export default function ListDetailPanel({ listId, onListDeleted }: ListDetailPan
   if (listLoading) {
     return (
       <div className="card loading-card" style={{ padding: "var(--space-lg)" }}>
-        <p className="text-secondary">Loading list...</p>
+        <p className="text-secondary">{t("lists.loading")}</p>
       </div>
     );
   }
@@ -107,7 +109,7 @@ export default function ListDetailPanel({ listId, onListDeleted }: ListDetailPan
   if (!taskList) {
     return (
       <div className="card error-card" style={{ borderWidth: "3px 0 0" }}>
-        <p className="error-text">List not found</p>
+        <p className="error-text">{t("lists.notFound")}</p>
       </div>
     );
   }
@@ -136,10 +138,10 @@ export default function ListDetailPanel({ listId, onListDeleted }: ListDetailPan
             autoFocus
           />
           <button type="submit" className="btn btn-primary btn-sm">
-            Save
+            {t("common.save")}
           </button>
           <button type="button" className="btn btn-ghost btn-sm" onClick={() => setEditingName(false)}>
-            Cancel
+            {t("common.cancel")}
           </button>
         </form>
       ) : (
@@ -160,9 +162,9 @@ export default function ListDetailPanel({ listId, onListDeleted }: ListDetailPan
               className="btn btn-danger btn-sm"
               onClick={async () => {
                 const ok = await confirm({
-                  title: `Delete list "${taskList.name}"?`,
-                  message: "All tasks in this list will also be deleted.",
-                  confirmLabel: "Delete",
+                  title: t("lists.deleteConfirm", { name: taskList.name }),
+                  message: t("lists.deleteMessage"),
+                  confirmLabel: t("tasks.delete"),
                   confirmVariant: "danger",
                 });
                 if (ok) {
@@ -175,7 +177,7 @@ export default function ListDetailPanel({ listId, onListDeleted }: ListDetailPan
           </div>
           {tasks.length > 0 && (
             <div className="flex-center" style={{ gap: "var(--space-sm)", marginTop: "var(--space-sm)" }}>
-              <span className="badge badge-done">{doneCount}/{tasks.length} done</span>
+              <span className="badge badge-done">{t("lists.progressDone", { done: doneCount, total: tasks.length })}</span>
               <div style={{ flex: 1, maxWidth: "150px" }}>
                 <div className="progress-bar">
                   <div className="progress-bar-fill" style={{ width: `${progress}%` }} />
@@ -196,20 +198,20 @@ export default function ListDetailPanel({ listId, onListDeleted }: ListDetailPan
         value={newTitle}
         onChange={setNewTitle}
         onSubmit={handleQuickAdd}
-        placeholder="Add a task to this list..."
+        placeholder={t("lists.quickAdd")}
         isPending={createMutation.isPending}
       />
 
       {tasksLoading && (
         <div className="card loading-card" style={{ padding: "var(--space-lg)" }}>
-          <p className="text-secondary">Loading tasks...</p>
+          <p className="text-secondary">{t("tasks.loading")}</p>
         </div>
       )}
 
       {!tasksLoading && tasks.length === 0 && (
         <div className="empty-state" style={{ padding: "var(--space-md)" }}>
           <div className="empty-state-icon" style={{ fontSize: "1.5rem" }}>📝</div>
-          <p className="empty-state-text">No tasks in this list yet.<br />Add your first one above!</p>
+          <p className="empty-state-text">{t("lists.emptyTasks")}</p>
         </div>
       )}
 
@@ -224,8 +226,8 @@ export default function ListDetailPanel({ listId, onListDeleted }: ListDetailPan
               onToggle={() => toggleMutation.mutate({ id: task.id, status: task.status })}
               onDelete={async () => {
                 const ok = await confirm({
-                  title: "Delete this task?",
-                  confirmLabel: "Delete",
+                  title: t("tasks.deleteTaskTitle"),
+                  confirmLabel: t("tasks.delete"),
                   confirmVariant: "danger",
                 });
                 if (ok) {

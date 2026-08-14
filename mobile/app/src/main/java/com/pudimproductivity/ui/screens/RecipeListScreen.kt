@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.dp
 import com.pudimproductivity.api.ApiClient
 import com.pudimproductivity.api.Recipe
 import com.pudimproductivity.api.recipeService
+import com.pudimproductivity.i18n.Localization
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -28,14 +29,14 @@ fun RecipeListScreen(onNew: () -> Unit, onBack: () -> Unit, onRecipeClick: (Stri
             try {
                 recipes = ApiClient.recipeService.listRecipes()
             } catch (e: Exception) {
-                error = e.message ?: "Failed to load recipes"
+                error = e.message ?: Localization.text("mobile.recipes.load.failed")
             }
             isLoading = false
         }
     }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("🍳 Recipes") }, navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") } }) },
+        topBar = { TopAppBar(title = { Text(Localization.text("recipes.title")) }, navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = Localization.text("common.back")) } }) },
         floatingActionButton = { FloatingActionButton(onClick = onNew) { Text("+") } }
     ) { padding ->
         if (isLoading) {
@@ -50,7 +51,7 @@ fun RecipeListScreen(onNew: () -> Unit, onBack: () -> Unit, onRecipeClick: (Stri
                             Text(r.title, style = MaterialTheme.typography.titleMedium)
                             r.description?.takeIf { it.isNotEmpty() }?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
                             Text(
-                                "${r.difficulty} · ${r.prep_time_minutes + r.cook_time_minutes} min · ${r.servings} serv",
+                                "${r.difficulty} · " + Localization.text("recipes.meta", "minutes" to (r.prep_time_minutes + r.cook_time_minutes), "servings" to r.servings),
                                 style = MaterialTheme.typography.labelSmall
                             )
                             r.tags?.takeIf { it.isNotEmpty() }?.let { Text(it.joinToString(" ") { "#$it" }, style = MaterialTheme.typography.labelSmall) }

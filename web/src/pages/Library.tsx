@@ -13,14 +13,15 @@ import {
 } from "../api/library";
 import { LibraryCsvImport } from "../components/LibraryCsvImport";
 import { useConfirm } from "../components/useConfirm";
+import { useI18n } from "../i18n";
 
 const MEDIA_TYPES: MediaType[] = ["movie", "series", "book", "game"];
 
-const MEDIA_LABELS: Record<MediaType, string> = {
-  movie: "Movie",
-  series: "Series",
-  book: "Book",
-  game: "Game",
+const MEDIA_LABEL_KEYS: Record<MediaType, string> = {
+  movie: "library.movie",
+  series: "library.series",
+  book: "library.book",
+  game: "library.game",
 };
 
 const MEDIA_ICONS: Record<MediaType, string> = {
@@ -48,6 +49,7 @@ const EMPTY_FORM: CreateLibraryItemRequest = {
  */
 export default function Library() {
   const queryClient = useQueryClient();
+  const { t } = useI18n();
   const [typeFilter, setTypeFilter] = useState("");
   const [doneFilter, setDoneFilter] = useState("");
   const [formOpen, setFormOpen] = useState(false);
@@ -162,7 +164,7 @@ export default function Library() {
     try {
       const hits = await searchLibraryScores(title, form.media_type, form.release_year ?? undefined);
       setScoreHits(hits);
-      if (hits.length === 0) setScoreError("No ratings found for this title.");
+      if (hits.length === 0) setScoreError(t("library.noRatings"));
     } catch (err) {
       setScoreError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -194,25 +196,25 @@ export default function Library() {
   return (
     <div className="animate-fade-in">
       <div className="flex-center" style={{ justifyContent: "space-between", marginBottom: "var(--space-md)" }}>
-        <h2 className="page-heading" style={{ marginBottom: 0 }}>🎬 Library</h2>
+        <h2 className="page-heading" style={{ marginBottom: 0 }}>{t("library.title")}</h2>
       </div>
 
       {/* Toolbar: add / import / filters */}
       <div className="flex-center" style={{ gap: "var(--space-sm)", marginBottom: "var(--space-md)", flexWrap: "wrap" }}>
         <button className="btn btn-primary" onClick={openAdd} disabled={formOpen}>
-          {formOpen ? "Editing…" : "+ Add item"}
+          {formOpen ? t("library.editing") : t("library.addItem")}
         </button>
-        <button className="btn" onClick={() => setImportOpen(true)}>📥 Import CSV</button>
+        <button className="btn" onClick={() => setImportOpen(true)}>📥 {t("library.importCsv")}</button>
         <select
           className="select"
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value)}
-          aria-label="Filter by type"
+          aria-label={t("library.filterType")}
         >
-          <option value="">All types</option>
-          {MEDIA_TYPES.map((t) => (
-            <option key={t} value={t}>
-              {MEDIA_ICONS[t]} {MEDIA_LABELS[t]}
+          <option value="">{t("library.allTypes")}</option>
+          {MEDIA_TYPES.map((type) => (
+            <option key={type} value={type}>
+              {MEDIA_ICONS[type]} {t(MEDIA_LABEL_KEYS[type])}
             </option>
           ))}
         </select>
@@ -220,11 +222,11 @@ export default function Library() {
           className="select"
           value={doneFilter}
           onChange={(e) => setDoneFilter(e.target.value)}
-          aria-label="Filter by status"
+          aria-label={t("library.filterStatus")}
         >
-          <option value="">All</option>
-          <option value="true">Done</option>
-          <option value="false">Not done</option>
+          <option value="">{t("common.all")}</option>
+          <option value="true">{t("common.done")}</option>
+          <option value="false">{t("common.notDone")}</option>
         </select>
       </div>
 
@@ -235,7 +237,7 @@ export default function Library() {
             <input
               className="input"
               style={{ gridColumn: "1 / -1" }}
-              placeholder="Name (e.g. The Matrix)"
+              placeholder={t("library.namePlaceholder")}
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               autoFocus
@@ -245,9 +247,9 @@ export default function Library() {
               value={form.media_type}
               onChange={(e) => setForm({ ...form, media_type: e.target.value as MediaType })}
             >
-              {MEDIA_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {MEDIA_ICONS[t]} {MEDIA_LABELS[t]}
+              {MEDIA_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {MEDIA_ICONS[type]} {t(MEDIA_LABEL_KEYS[type])}
                 </option>
               ))}
             </select>
@@ -256,7 +258,7 @@ export default function Library() {
               type="number"
               min={1800}
               max={2100}
-              placeholder="Year (e.g. 1999)"
+              placeholder={t("library.yearPlaceholder")}
               value={form.release_year ?? ""}
               onChange={(e) =>
                 setForm({
@@ -267,14 +269,14 @@ export default function Library() {
             />
             <input
               className="input"
-              placeholder={form.media_type === "game" ? "Console (e.g. PlayStation 5)" : "Genre (e.g. Sci-fi)"}
+              placeholder={form.media_type === "game" ? t("library.consolePlaceholder") : t("library.genrePlaceholder")}
               value={form.subtype}
               onChange={(e) => setForm({ ...form, subtype: e.target.value })}
             />
             <textarea
               className="input"
               style={{ gridColumn: "1 / -1", minHeight: 56 }}
-              placeholder="Notes (optional)"
+              placeholder={t("library.notesPlaceholder")}
               value={form.notes}
               onChange={(e) => setForm({ ...form, notes: e.target.value })}
             />
@@ -288,7 +290,7 @@ export default function Library() {
               min={0}
               max={100}
               step="0.1"
-              placeholder="Score (e.g. 8.7)"
+              placeholder={t("library.scorePlaceholder")}
               value={form.score ?? ""}
               onChange={(e) =>
                 setForm({ ...form, score: e.target.value === "" ? null : Number(e.target.value) })
@@ -297,7 +299,7 @@ export default function Library() {
             />
             <input
               className="input"
-              placeholder="Source (e.g. imdb, metacritic)"
+              placeholder={t("library.sourcePlaceholder")}
               value={form.score_source}
               onChange={(e) => setForm({ ...form, score_source: e.target.value })}
               style={{ flex: 1, minWidth: 140 }}
@@ -308,7 +310,7 @@ export default function Library() {
               disabled={!form.name.trim() || scoreSearching}
               onClick={lookUpScore}
             >
-              {scoreSearching ? "Searching…" : "⭐ Look up score"}
+              {scoreSearching ? t("library.searching") : t("library.lookUpScore")}
             </button>
           </div>
 
@@ -320,7 +322,7 @@ export default function Library() {
 
           {scoreHits && scoreHits.length > 0 && (
             <div style={{ marginBottom: "0.4rem" }}>
-              <p className="text-sm" style={{ fontWeight: 600 }}>Pick a match:</p>
+              <p className="text-sm" style={{ fontWeight: 600 }}>{t("library.pickMatch")}:</p>
               {scoreHits.map((hit) => (
                 <button
                   key={hit.external_id || hit.title}
@@ -343,7 +345,7 @@ export default function Library() {
               checked={form.done}
               onChange={(e) => setForm({ ...form, done: e.target.checked })}
             />
-            <span className="text-sm">Done (consumed / read / watched / played)</span>
+            <span className="text-sm">{t("library.doneLabel")}</span>
           </label>
           <div className="flex-center" style={{ gap: "var(--space-sm)" }}>
             <button
@@ -351,20 +353,20 @@ export default function Library() {
               disabled={!form.name.trim() || saving}
               onClick={save}
             >
-              {saving ? "Saving…" : editing ? "Save changes" : "Add"}
+              {saving ? t("common.saving") : editing ? t("library.saveChanges") : t("common.add")}
             </button>
-            <button className="btn btn-ghost btn-sm" onClick={closeForm}>Cancel</button>
+            <button className="btn btn-ghost btn-sm" onClick={closeForm}>{t("common.cancel")}</button>
           </div>
         </div>
       )}
 
       {saveError && <p style={{ color: "var(--color-danger)" }}>{String(saveError)}</p>}
-      {isLoading && <p style={{ color: "var(--color-text-secondary)" }}>Loading library…</p>}
+      {isLoading && <p style={{ color: "var(--color-text-secondary)" }}>{t("library.loading")}</p>}
       {items.length === 0 && !isLoading && (
         <div className="empty-state">
           <div className="empty-state-icon">🎬</div>
           <p className="empty-state-text">
-            Your library is empty. Add an item above, or import a CSV.
+            {t("library.empty")}
           </p>
         </div>
       )}
@@ -377,24 +379,24 @@ export default function Library() {
           className="flex-center"
           style={{ gap: "var(--space-sm)", marginBottom: "var(--space-sm)", flexWrap: "wrap" }}
         >
-          <span className="text-sm text-secondary">{selected.size} selected</span>
+          <span className="text-sm text-secondary">{t("library.selectedCount", { count: selected.size })}</span>
           <button
             className="btn btn-danger btn-sm"
             disabled={bulkDelete.isPending}
             onClick={async () => {
               const ok = await confirm({
-                title: `Delete ${selected.size} item(s)?`,
-                message: "This cannot be undone.",
-                confirmLabel: "Delete",
+                title: t("library.deleteSelectedConfirm", { count: selected.size }),
+                message: t("library.cannotUndo"),
+                confirmLabel: t("common.delete"),
                 confirmVariant: "danger",
               });
               if (ok) bulkDelete.mutate([...selected]);
             }}
           >
-            {bulkDelete.isPending ? "Deleting…" : `🗑 Delete selected (${selected.size})`}
+            {bulkDelete.isPending ? t("common.deleting") : t("library.deleteSelected", { count: selected.size })}
           </button>
           <button className="btn btn-ghost btn-sm" onClick={() => setSelected(new Set())}>
-            Clear
+            {t("library.clear")}
           </button>
         </div>
       )}
@@ -424,7 +426,7 @@ export default function Library() {
             minWidth: 640,
           }}
         >
-          <label className="checkbox-wrapper" title="Select all">
+          <label className="checkbox-wrapper" title={t("library.selectAll")}>
             <input
               type="checkbox"
               checked={items.length > 0 && selected.size === items.length}
@@ -438,12 +440,12 @@ export default function Library() {
               </svg>
             </span>
           </label>
-          <span>Name</span>
-          <span>Type</span>
-          <span>Subtype</span>
-          <span>Year</span>
-          <span>Score</span>
-          <span>Actions</span>
+          <span>{t("common.name")}</span>
+          <span>{t("common.type")}</span>
+          <span>{t("common.subtype")}</span>
+          <span>{t("common.year")}</span>
+          <span>{t("common.score")}</span>
+          <span>{t("common.actions")}</span>
         </div>
 
         {items.map((item) => (
@@ -460,7 +462,7 @@ export default function Library() {
               minWidth: 640,
             }}
           >
-            <label className="checkbox-wrapper" title="Select for bulk actions">
+            <label className="checkbox-wrapper" title={t("library.selectBulk")}>
               <input
                 type="checkbox"
                 checked={selected.has(item.id)}
@@ -488,7 +490,7 @@ export default function Library() {
               )}
             </div>
             <span className="text-sm">
-              {MEDIA_ICONS[item.media_type]} {MEDIA_LABELS[item.media_type] ?? item.media_type}
+              {MEDIA_ICONS[item.media_type]} {t(MEDIA_LABEL_KEYS[item.media_type] ?? "common.type")}
             </span>
             <span className="text-sm" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {item.subtype || <span style={{ color: "var(--color-text-muted)" }}>—</span>}
@@ -496,7 +498,7 @@ export default function Library() {
             <span className="text-sm">{item.release_year ?? "—"}</span>
             <span className="text-sm">{item.score != null ? `★ ${item.score}` : "—"}</span>
             <div className="flex-center" style={{ gap: "0.35rem" }}>
-              <label className="checkbox-wrapper" title={item.done ? "Mark as not done" : "Mark as done"}>
+              <label className="checkbox-wrapper" title={item.done ? t("library.markNotDone") : t("library.markDone")}>
                 <input
                   type="checkbox"
                   checked={item.done}
@@ -508,9 +510,9 @@ export default function Library() {
                   </svg>
                 </span>
               </label>
-              <button className="btn btn-sm" onClick={() => openEdit(item)}>Edit</button>
+              <button className="btn btn-sm" onClick={() => openEdit(item)}>{t("common.edit")}</button>
               <button className="btn btn-danger btn-sm" onClick={() => del.mutate(item.id)}>
-                Delete
+                {t("common.delete")}
               </button>
             </div>
           </div>

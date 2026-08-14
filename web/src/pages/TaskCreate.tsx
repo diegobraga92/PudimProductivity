@@ -3,6 +3,7 @@ import { createTask, parseTask, type RecurrenceDay } from "../api/tasks";
 import ScheduleFields from "../components/ScheduleFields";
 import RecurrenceDayPicker from "../components/RecurrenceDayPicker";
 import Modal from "../components/Modal";
+import { useI18n } from "../i18n";
 import { COLOR_PALETTE } from "../utils/constants";
 
 interface TaskCreateProps {
@@ -11,6 +12,7 @@ interface TaskCreateProps {
 }
 
 export default function TaskCreate({ onCreated, onCancel }: TaskCreateProps) {
+  const { t } = useI18n();
   const [title, setTitle] = useState("");
   const [isHabit, setIsHabit] = useState(false);
   const [selectedDays, setSelectedDays] = useState<RecurrenceDay[]>([]);
@@ -25,19 +27,8 @@ export default function TaskCreate({ onCreated, onCancel }: TaskCreateProps) {
   const [scheduledDate, setScheduledDate] = useState("");
   const [alarmMinutes, setAlarmMinutes] = useState("");
 
-  // Map validation errors to the field that caused them so it can be highlighted.
-  const errorField =
-    error === null
-      ? null
-      : error.includes("Title")
-      ? "title"
-      : error.includes("day")
-      ? "days"
-      : error.includes("Start time")
-      ? "schedule"
-      : error.includes("date")
-      ? "schedule"
-      : null;
+  // Which field a validation error belongs to, so it can be highlighted.
+  const [errorField, setErrorField] = useState<"title" | "days" | "schedule" | null>(null);
 
   // Check for planner prefill data
   useEffect(() => {
@@ -107,24 +98,29 @@ export default function TaskCreate({ onCreated, onCancel }: TaskCreateProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setErrorField(null);
 
     if (!title.trim()) {
-      setError("Title is required");
+      setError(t("tasks.validation.titleRequired"));
+      setErrorField("title");
       return;
     }
 
     if (isHabit && selectedDays.length === 0) {
-      setError("Select at least one day for the habit");
+      setError(t("tasks.validation.dayRequired"));
+      setErrorField("days");
       return;
     }
 
     if (showSchedule && !isHabit && !scheduledDate) {
-      setError("Select a date for the scheduled task");
+      setError(t("tasks.validation.dateRequired"));
+      setErrorField("schedule");
       return;
     }
 
     if (showSchedule && startTime >= endTime) {
-      setError("Start time must be before end time");
+      setError(t("tasks.validation.timeOrder"));
+      setErrorField("schedule");
       return;
     }
 
@@ -151,9 +147,9 @@ export default function TaskCreate({ onCreated, onCancel }: TaskCreateProps) {
     <Modal onClose={onCancel} maxWidth={480}>
       <div className="flex-between" style={{ marginBottom: "var(--space-md)" }}>
         <h2 className="page-heading" style={{ marginBottom: 0 }}>
-          ✨ New Task
+          {t("tasks.newTaskTitle")}
         </h2>
-        <button className="btn btn-ghost btn-sm" onClick={onCancel} aria-label="Close">
+        <button className="btn btn-ghost btn-sm" onClick={onCancel} aria-label={t("a11y.close")}>
           ✕
         </button>
       </div>
@@ -168,17 +164,17 @@ export default function TaskCreate({ onCreated, onCancel }: TaskCreateProps) {
               style={{ width: "100%", textAlign: "center" }}
               onClick={() => setShowParse(true)}
             >
-              ✨ Smart parse — type it in plain English
+              {t("tasks.smartParse")}
             </button>
           ) : (
             <div>
-              <label className="form-label">Describe the task:</label>
+              <label className="form-label">{t("tasks.describeTask")}</label>
               <input
                 type="text"
                 className="input"
                 value={parseInput}
                 onChange={(e) => setParseInput(e.target.value)}
-                placeholder='e.g. "Buy milk tomorrow at 9am for 30 minutes"'
+                placeholder={t("tasks.parsePlaceholder")}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
@@ -188,10 +184,10 @@ export default function TaskCreate({ onCreated, onCancel }: TaskCreateProps) {
               />
               <div style={{ display: "flex", gap: "var(--space-sm)", marginTop: "var(--space-sm)" }}>
                 <button type="button" className="btn btn-primary" disabled={parsing} onClick={handleParse}>
-                  {parsing ? "Parsing…" : "Parse"}
+                  {parsing ? t("tasks.parsing") : t("tasks.parse")}
                 </button>
                 <button type="button" className="btn btn-ghost" onClick={() => setShowParse(false)}>
-                  Cancel
+                  {t("common.cancel")}
                 </button>
               </div>
               {parseError && <p style={{ color: "var(--color-danger)", fontSize: "var(--font-size-sm)" }}>{parseError}</p>}
@@ -202,14 +198,14 @@ export default function TaskCreate({ onCreated, onCancel }: TaskCreateProps) {
         <div className="card" style={{ marginBottom: "var(--space-lg)" }}>
           <div style={{ marginBottom: "var(--space-md)" }}>
             <label className="form-label">
-              What do you need to do?
+              {t("tasks.whatToDo")}
             </label>
             <input
               type="text"
               className={`input ${errorField === "title" ? "input--error" : ""}`}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Have hair cut"
+              placeholder={t("tasks.titlePlaceholder")}
               aria-invalid={errorField === "title"}
               autoFocus
             />
@@ -228,7 +224,7 @@ export default function TaskCreate({ onCreated, onCancel }: TaskCreateProps) {
                 className="toggle-checkbox"
                 style={{ accentColor: "var(--color-habit)" }}
               />
-              Make this a habit (repeats weekly)
+              {t("tasks.makeHabit")}
             </label>
           </div>
 
@@ -236,7 +232,7 @@ export default function TaskCreate({ onCreated, onCancel }: TaskCreateProps) {
           {isHabit && (
             <div style={{ marginBottom: "var(--space-md)" }}>
               <label className="form-label">
-                Repeat on:
+                {t("tasks.repeatOn")}
               </label>
               <RecurrenceDayPicker
                 selectedDays={selectedDays}
@@ -275,14 +271,14 @@ export default function TaskCreate({ onCreated, onCancel }: TaskCreateProps) {
             className="btn btn-primary"
             disabled={submitting}
           >
-            {submitting ? "Adding..." : "✨ Add Task"}
+            {submitting ? t("tasks.adding") : t("tasks.addTask")}
           </button>
           <button
             type="button"
             className="btn btn-ghost"
             onClick={onCancel}
           >
-            Cancel
+            {t("common.cancel")}
           </button>
         </div>
       </form>

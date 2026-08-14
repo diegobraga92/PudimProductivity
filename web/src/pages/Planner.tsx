@@ -6,6 +6,7 @@ import {
 } from "../api/tasks";
 import { useHabitCompletions } from "../hooks/useHabitCompletions";
 import { getWeekDates, formatWeekRange, sanitizeTime } from "../utils/dates";
+import { useI18n, useMonthNames } from "../i18n";
 import { DAY_OPTIONS } from "../utils/constants";
 
 const DAYS = DAY_OPTIONS.map((d) => d.value);
@@ -46,6 +47,8 @@ interface PlannerProps {
 
 export default function Planner({ onNavigate }: PlannerProps) {
   const [weekOffset, setWeekOffset] = useState(0);
+  const { t } = useI18n();
+  const monthNames = useMonthNames();
 
   const weekDates = getWeekDates(weekOffset);
 
@@ -116,7 +119,7 @@ export default function Planner({ onNavigate }: PlannerProps) {
         }}
       >
         <h2 className="page-heading" style={{ marginBottom: 0 }}>
-          📅 Weekly Planner
+          {t("planner.title")}
         </h2>
         <div
           style={{
@@ -128,9 +131,9 @@ export default function Planner({ onNavigate }: PlannerProps) {
           <button
             className="btn btn-ghost btn-sm"
             onClick={() => setWeekOffset(weekOffset - 1)}
-            aria-label="Previous week"
+            aria-label={t("a11y.previousWeek")}
           >
-            &larr; Prev
+            &larr; {t("week.prev")}
           </button>
           <span
             style={{
@@ -142,16 +145,16 @@ export default function Planner({ onNavigate }: PlannerProps) {
             }}
           >
             {weekOffset === 0
-              ? "This Week"
-              : formatWeekRange(weekDates)}
+              ? t("week.thisWeek")
+              : formatWeekRange(weekDates, monthNames)}
           </span>
           <button
             className="btn btn-ghost btn-sm"
             onClick={() => setWeekOffset(weekOffset + 1)}
             disabled={!canGoForward}
-            aria-label="Next week"
+            aria-label={t("a11y.nextWeek")}
           >
-            Next &rarr;
+            {t("week.next")} &rarr;
           </button>
         </div>
       </div>
@@ -184,7 +187,7 @@ export default function Planner({ onNavigate }: PlannerProps) {
               color: "var(--color-text-muted)",
             }}
           >
-            Time
+            {t("planner.time")}
           </div>
           {dayLabels.map((day, idx) => (
             <div
@@ -200,7 +203,7 @@ export default function Planner({ onNavigate }: PlannerProps) {
                 color: "var(--color-text)",
               }}
             >
-              {DAY_OPTIONS.find((d) => d.value === day)?.label ?? day}
+              {t(`days.${day}`)}
               <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", fontWeight: 400 }}>
                 {weekDates[idx]?.slice(5) ?? ""}
               </div>
@@ -270,7 +273,7 @@ export default function Planner({ onNavigate }: PlannerProps) {
                         handleCellClick(day, hour.value);
                       }
                     }}
-                    aria-label={`Add task ${day} at ${hour.label}`}
+                    aria-label={t("planner.addTaskAria", { day: t(`days.${day}`), time: hour.label })}
                   />
                 ))}
 
@@ -321,7 +324,7 @@ export default function Planner({ onNavigate }: PlannerProps) {
                         e.stopPropagation();
                         handleEntryClick(task);
                       }}
-                      title={`${task.title} (${sanitizeTime(task.start_time)}–${sanitizeTime(task.end_time)})${isWeekdayCompleted ? " ✓ Done" : ""}`}
+                      title={`${task.title} (${sanitizeTime(task.start_time)}–${sanitizeTime(task.end_time)})${isWeekdayCompleted ? t("planner.doneSuffix") : ""}`}
                       onMouseEnter={(e) => {
                         (e.currentTarget as HTMLElement).style.opacity = "0.9";
                       }}
@@ -345,7 +348,7 @@ export default function Planner({ onNavigate }: PlannerProps) {
         <div className="empty-state" style={{ marginTop: "var(--space-lg)" }}>
           <div className="empty-state-icon">📅</div>
           <p className="empty-state-text">
-            No scheduled tasks yet. Click on a time slot to add your first planned activity!
+            {t("planner.empty")}
           </p>
         </div>
       )}

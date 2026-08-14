@@ -16,6 +16,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.pudimproductivity.api.SyncClient
 import com.pudimproductivity.api.TaskList
+import com.pudimproductivity.i18n.Localization
 import com.pudimproductivity.ui.components.ProgressBar
 import com.pudimproductivity.ui.components.ProgressVariant
 import com.pudimproductivity.ui.components.SortSelector
@@ -114,10 +115,10 @@ fun TaskListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Tasks") },
+                title = { Text(Localization.text("mobile.tasks.tab")) },
                 actions = {
                     Button(onClick = onHabits) {
-                        Text("📊 Habits")
+                        Text("📊 " + Localization.text("tasks.habits"))
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(onClick = onRecipes) {
@@ -133,7 +134,7 @@ fun TaskListScreen(
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(onClick = onCreateTask) {
-                        Text("+ New Task")
+                        Text(Localization.text("tasks.newTask"))
                     }
                 }
             )
@@ -150,17 +151,17 @@ fun TaskListScreen(
                 Tab(
                     selected = selectedTab == 0,
                     onClick = { selectedTab = 0 },
-                    text = { Text("To-Do (${todoTasks.size})") }
+                    text = { Text(Localization.text("mobile.tasks.toDo", "count" to todoTasks.size)) }
                 )
                 Tab(
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
-                    text = { Text("Habits (${habitTasks.size})") }
+                    text = { Text(Localization.text("mobile.tasks.habits", "count" to habitTasks.size)) }
                 )
                 Tab(
                     selected = selectedTab == 2,
                     onClick = { selectedTab = 2 },
-                    text = { Text("Lists (${taskLists.size})") }
+                    text = { Text(Localization.text("mobile.tasks.lists", "count" to taskLists.size)) }
                 )
             }
 
@@ -175,7 +176,7 @@ fun TaskListScreen(
                     shape = MaterialTheme.shapes.small
                 ) {
                     Text(
-                        text = "📡 Offline — changes will sync when you reconnect",
+                        text = Localization.text("mobile.tasks.offlineBanner"),
                         modifier = Modifier.padding(10.dp),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onErrorContainer
@@ -196,7 +197,7 @@ fun TaskListScreen(
                             value = newTodoTitle,
                             onValueChange = { newTodoTitle = it },
                             modifier = Modifier.weight(1f),
-                            placeholder = { Text("Quick add todo...") },
+                            placeholder = { Text(Localization.text("mobile.tasks.quickAddTodo")) },
                             singleLine = true
                         )
                         Button(
@@ -206,7 +207,7 @@ fun TaskListScreen(
                             },
                             enabled = newTodoTitle.isNotBlank()
                         ) {
-                            Text("Add")
+                            Text(Localization.text("common.add"))
                         }
                     }
 
@@ -234,7 +235,7 @@ fun TaskListScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "No todos yet. Create one!",
+                                text = Localization.text("mobile.tasks.noTodos"),
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -305,7 +306,7 @@ fun TaskListScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "No habits yet. Use + New Task to create one!",
+                                text = Localization.text("mobile.tasks.noHabits"),
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -451,7 +452,7 @@ fun TaskListScreen(
                             value = newListName,
                             onValueChange = { newListName = it },
                             modifier = Modifier.weight(1f),
-                            placeholder = { Text("New list name...") },
+                            placeholder = { Text(Localization.text("mobile.tasks.newListName")) },
                             singleLine = true
                         )
                         Button(
@@ -461,7 +462,7 @@ fun TaskListScreen(
                             },
                             enabled = newListName.isNotBlank()
                         ) {
-                            Text("Create")
+                            Text(Localization.text("lists.create"))
                         }
                     }
 
@@ -473,7 +474,7 @@ fun TaskListScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "No lists yet. Create one above!",
+                                text = Localization.text("mobile.tasks.noLists"),
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )

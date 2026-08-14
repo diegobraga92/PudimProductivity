@@ -7,6 +7,7 @@ import {
   type TaskListMember,
 } from "../api/collab";
 import { useToast } from "./toastContext";
+import { useI18n } from "../i18n";
 
 interface TaskListShareProps {
   listId: string;
@@ -31,6 +32,7 @@ export default function TaskListShare({
 }: TaskListShareProps) {
   const queryClient = useQueryClient();
   const { pushToast } = useToast();
+  const { t } = useI18n();
   const [userId, setUserId] = useState("");
   const [role, setRole] = useState<"editor" | "viewer">("editor");
   const [error, setError] = useState<string | null>(null);
@@ -46,7 +48,7 @@ export default function TaskListShare({
       queryClient.invalidateQueries({ queryKey: ["taskListMembers", listId] });
       setUserId("");
       setError(null);
-      pushToast({ icon: "👥", title: "List shared", body: `Granted ${role} access to ${userId.trim()}` });
+      pushToast({ icon: "👥", title: t("toast.listShared"), body: t("toast.listSharedBody", { role, user: userId.trim() }) });
     },
     onError: (err: Error) => setError(err.message),
   });
@@ -55,7 +57,7 @@ export default function TaskListShare({
     mutationFn: (target: string) => unshareTaskList(listId, target),
     onSuccess: (_data, target) => {
       queryClient.invalidateQueries({ queryKey: ["taskListMembers", listId] });
-      pushToast({ icon: "🔒", title: "Access revoked", body: `Removed ${target} from the list` });
+      pushToast({ icon: "🔒", title: t("toast.accessRevoked"), body: t("toast.accessRevokedBody", { target }) });
     },
     onError: (err: Error) => setError(err.message),
   });
@@ -80,8 +82,8 @@ export default function TaskListShare({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex-center" style={{ justifyContent: "space-between", marginBottom: "var(--space-md)" }}>
-          <h3 style={{ margin: 0, fontSize: "var(--font-size-lg)" }}>👥 Share &ldquo;{listName}&rdquo;</h3>
-          <button className="btn btn-ghost btn-sm" onClick={onClose} aria-label="Close">
+          <h3 style={{ margin: 0, fontSize: "var(--font-size-lg)" }}>{t("share.title", { name: listName })}</h3>
+          <button className="btn btn-ghost btn-sm" onClick={onClose} aria-label={t("a11y.close")}>
             ✕
           </button>
         </div>
@@ -103,7 +105,7 @@ export default function TaskListShare({
           >
             <input
               className="form-input"
-              placeholder="User ID to invite"
+              placeholder={t("share.userId")}
               value={userId}
               onChange={(e) => setUserId(e.target.value)}
               style={{ flex: 1 }}
@@ -112,23 +114,23 @@ export default function TaskListShare({
               className="form-select"
               value={role}
               onChange={(e) => setRole(e.target.value as "editor" | "viewer")}
-              aria-label="Role"
+              aria-label={t("share.editor")}
             >
-              <option value="editor">Editor</option>
-              <option value="viewer">Viewer</option>
+              <option value="editor">{t("share.editor")}</option>
+              <option value="viewer">{t("share.viewer")}</option>
             </select>
             <button className="btn btn-primary" type="submit" disabled={shareMutation.isPending}>
-              Invite
+              {t("share.invite")}
             </button>
           </form>
         ) : (
           <p className="text-sm text-secondary" style={{ marginBottom: "var(--space-md)" }}>
-            You have access to this list. Ask the owner to change your role.
+            {t("share.notOwner")}
           </p>
         )}
 
         {/* Member list */}
-        {isLoading && <p className="text-sm text-secondary">Loading members…</p>}
+        {isLoading && <p className="text-sm text-secondary">{t("share.loadingMembers")}</p>}
         <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
           {members.map((member) => {
             const isOnline = onlineUsers?.has(member.shared_with) ?? false;
@@ -146,7 +148,7 @@ export default function TaskListShare({
                     background: isOnline ? "#00b894" : "#b2bec3",
                     flexShrink: 0,
                   }}
-                  title={isOnline ? "Online" : "Offline"}
+                  title={isOnline ? t("common.online") : t("common.offline")}
                 />
                 <span className="flex-1" style={{ fontSize: "var(--font-size-sm)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {member.shared_with}
@@ -160,7 +162,7 @@ export default function TaskListShare({
                     style={{ padding: "0.15rem 0.4rem", fontSize: "0.65rem" }}
                     onClick={() => unshareMutation.mutate(member.shared_with)}
                     disabled={unshareMutation.isPending}
-                    title="Revoke access"
+                    title={t("share.revoke")}
                   >
                     ✕
                   </button>
@@ -169,7 +171,7 @@ export default function TaskListShare({
             );
           })}
           {!isLoading && members.length === 0 && (
-            <p className="text-sm text-secondary">No shared members yet.</p>
+            <p className="text-sm text-secondary">{t("share.noMembers")}</p>
           )}
         </div>
       </div>

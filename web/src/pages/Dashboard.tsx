@@ -8,6 +8,7 @@ import { computeStreaks, isScheduledOn } from "../utils/streaks";
 import { getToday } from "../utils/dates";
 import { useConfirm } from "../components/useConfirm";
 import { useToast } from "../components/toastContext";
+import { useI18n } from "../i18n";
 
 interface DashboardProps {
   onNavigate: (view: string, taskId?: string) => void;
@@ -17,6 +18,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   const queryClient = useQueryClient();
   const { pushToast } = useToast();
   const confirm = useConfirm();
+  const { t } = useI18n();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
@@ -79,32 +81,32 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-      pushToast({ icon: "💾", title: "Backup exported", body: `${filename} downloaded` });
+      pushToast({ icon: "💾", title: t("dashboard.toast.exportedTitle"), body: t("dashboard.toast.exportedBody", { filename }) });
     },
     onError: (err: Error) =>
-      pushToast({ icon: "⚠️", title: "Export failed", body: err.message }),
+      pushToast({ icon: "⚠️", title: t("dashboard.toast.exportFailed"), body: err.message }),
   });
 
   const importMutation = useMutation({
     mutationFn: (file: File) => importBackup(file),
     onSuccess: (result) => {
       const total = Object.values(result.row_counts).reduce((sum, n) => sum + n, 0);
-      pushToast({ icon: "♻️", title: "Backup restored", body: `${total} rows restored` });
+      pushToast({ icon: "♻️", title: t("dashboard.toast.restoredTitle"), body: t("dashboard.toast.restoredBody", { count: total }) });
       // A restore replaces everything the client may have cached.
       queryClient.invalidateQueries();
       setSelectedFile(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
     },
     onError: (err: Error) =>
-      pushToast({ icon: "⚠️", title: "Restore failed", body: err.message }),
+      pushToast({ icon: "⚠️", title: t("dashboard.toast.restoreFailed"), body: err.message }),
   });
 
   const handleFileSelected = async (file: File) => {
     setSelectedFile(file);
     const ok = await confirm({
-      title: "Restore backup?",
-      message: `Importing "${file.name}" will REPLACE all current tasks, lists, recipes, library, meal plans and insights. This cannot be undone. Continue?`,
-      confirmLabel: "Restore",
+      title: t("dashboard.confirm.restoreTitle"),
+      message: t("dashboard.confirm.restoreMessage", { name: file.name }),
+      confirmLabel: t("dashboard.confirm.restore"),
       confirmVariant: "danger",
     });
     if (ok) {
@@ -128,13 +130,13 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
       >
         <div className="stat-card">
           <div className="stat-card-value">{openTodos}</div>
-          <div className="stat-card-label">Open Tasks</div>
+          <div className="stat-card-label">{t("dashboard.openTasks")}</div>
         </div>
         <div className="stat-card">
           <div className="stat-card-value" style={{ color: "var(--color-habit)" }}>
             {todayHabitCompletions}/{habitsScheduledToday}
           </div>
-          <div className="stat-card-label">Habits Today</div>
+          <div className="stat-card-label">{t("dashboard.habitsToday")}</div>
         </div>
         <div className="stat-card">
           <div className="stat-card-value" style={{ color: "var(--color-habit)" }}>
@@ -142,8 +144,8 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
           </div>
           <div className="stat-card-label">
             {bestStreakName
-              ? `Best Streak: ${bestStreakName.length > 12 ? bestStreakName.slice(0, 12) + "…" : bestStreakName}`
-              : "Best Streak"}
+              ? t("dashboard.bestStreakNamed", { name: bestStreakName.length > 12 ? bestStreakName.slice(0, 12) + "…" : bestStreakName })
+              : t("dashboard.bestStreak")}
           </div>
         </div>
       </div>
@@ -160,13 +162,13 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         <div className="card card-todo card-clickable" onClick={() => onNavigate("tasks")}>
           <div className="section-card-header">
             <h3 className="card-title">
-              📋 To-Dos
+              📋 {t("dashboard.todos")}
             </h3>
             <span className="badge badge-todo">{todoTasks.length}</span>
           </div>
           {todoTasks.length === 0 ? (
             <p className="empty-state-text" style={{ margin: 0 }}>
-              No todos yet. Create one!
+              {t("dashboard.noTodos")}
             </p>
           ) : (
             <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
@@ -190,7 +192,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
               ))}
               {todoTasks.length > 5 && (
                 <li style={{ padding: "0.3rem 0", fontSize: "var(--font-size-xs)", color: "var(--color-primary)" }}>
-                  +{todoTasks.length - 5} more...
+                  {t("dashboard.more", { count: todoTasks.length - 5 })}
                 </li>
               )}
             </ul>
@@ -201,13 +203,13 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         <div className="card card-habit card-clickable" onClick={() => onNavigate("tasks")}>
           <div className="section-card-header">
             <h3 className="card-title">
-              🔄 Habits
+              🔄 {t("dashboard.habits")}
             </h3>
             <span className="badge badge-habit">{habitTasks.length}</span>
           </div>
           {habitTasks.length === 0 ? (
             <p className="empty-state-text" style={{ margin: 0 }}>
-              No habits yet. Create one!
+              {t("dashboard.noHabits")}
             </p>
           ) : (
             <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
@@ -242,7 +244,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
               })}
               {habitTasks.length > 5 && (
                 <li style={{ padding: "0.3rem 0", fontSize: "var(--font-size-xs)", color: "var(--color-primary)" }}>
-                  +{habitTasks.length - 5} more...
+                  {t("dashboard.more", { count: habitTasks.length - 5 })}
                 </li>
               )}
             </ul>
@@ -255,7 +257,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         <div className="card card-list mt-lg card-clickable" onClick={() => onNavigate("tasks")}>
           <div className="section-card-header">
             <h3 className="card-title">
-              📁 Task Lists
+              📁 {t("dashboard.taskLists")}
             </h3>
             <span className="badge" style={{ background: "var(--color-list-light)", color: "var(--color-list)" }}>
               {taskLists.length}
@@ -284,12 +286,10 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
       {/* Backup & Restore */}
       <div className="card mt-lg">
         <div className="section-card-header">
-          <h3 className="card-title">💾 Backup &amp; Restore</h3>
+          <h3 className="card-title">{t("dashboard.backupTitle")}</h3>
         </div>
         <p className="text-sm text-secondary" style={{ margin: "0 0 var(--space-md)" }}>
-          Download all your non-sensitive data (tasks, lists, recipes, library, meal plans and
-          insights) as a JSON file, or restore from a previous backup. Restoring replaces the
-          current data — it cannot be undone.
+          {t("dashboard.backupDescription")}
         </p>
         <div className="flex-center" style={{ gap: "var(--space-md)", flexWrap: "wrap" }}>
           <button
@@ -297,14 +297,14 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
             onClick={() => exportMutation.mutate()}
             disabled={exportMutation.isPending}
           >
-            {exportMutation.isPending ? "Exporting…" : "⬇️ Export backup"}
+            {exportMutation.isPending ? t("dashboard.exporting") : t("dashboard.exportBackup")}
           </button>
           <button
             className="btn btn-ghost"
             onClick={() => fileInputRef.current?.click()}
             disabled={importMutation.isPending}
           >
-            {importMutation.isPending ? "Restoring…" : "⬆️ Restore backup"}
+            {importMutation.isPending ? t("dashboard.restoring") : t("dashboard.restoreBackup")}
           </button>
           <input
             ref={fileInputRef}
@@ -319,7 +319,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         </div>
         {selectedFile && !importMutation.isPending && (
           <p className="text-sm text-secondary" style={{ margin: "var(--space-sm) 0 0" }}>
-            Selected file: {selectedFile.name}
+            {t("dashboard.selectedFile", { name: selectedFile.name })}
           </p>
         )}
       </div>

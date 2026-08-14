@@ -9,6 +9,7 @@ import androidx.core.app.NotificationCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.pudimproductivity.R
+import com.pudimproductivity.i18n.Localization
 
 /**
  * Firebase Cloud Messaging handler (Phase 3). Receives push notifications from
@@ -45,9 +46,10 @@ class PudimFirebaseMessagingService : FirebaseMessagingService() {
 
     private fun createChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            Localization.init(this)
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "Task notifications",
+                Localization.text("notifications.channel.task"),
                 NotificationManager.IMPORTANCE_DEFAULT
             )
             val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager

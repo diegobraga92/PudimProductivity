@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useI18n } from "../i18n";
 
 export interface ConfirmDialogOptions {
   title: string;
@@ -21,6 +22,7 @@ export default function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const { t } = useI18n();
   const confirmRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -77,14 +79,14 @@ export default function ConfirmDialog({
 
         <div className="modal-actions">
           <button className="btn btn-ghost" onClick={onCancel}>
-            {options.cancelLabel ?? "Cancel"}
+            {options.cancelLabel ?? t("common.cancel")}
           </button>
           <button
             ref={confirmRef}
             className={confirmClassName}
             onClick={onConfirm}
           >
-            {options.confirmLabel ?? "Confirm"}
+            {options.confirmLabel ?? t("common.confirm")}
           </button>
         </div>
       </div>

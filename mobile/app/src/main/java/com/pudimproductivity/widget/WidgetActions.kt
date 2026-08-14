@@ -11,6 +11,7 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.pudimproductivity.MainActivity
+import com.pudimproductivity.i18n.Localization
 import com.pudimproductivity.local.LocalCompletion
 import com.pudimproductivity.local.LocalDatabase
 import com.pudimproductivity.sync.SyncWorker
@@ -86,6 +87,7 @@ class WidgetActionCallback : ActionCallback {
         glanceId: GlanceId,
         parameters: ActionParameters
     ) {
+        Localization.init(context)
         when (parameters[KEY_ACTION]) {
             ACTION_TOGGLE_TASK -> {
                 val taskId = parameters[KEY_TASK_ID] ?: return

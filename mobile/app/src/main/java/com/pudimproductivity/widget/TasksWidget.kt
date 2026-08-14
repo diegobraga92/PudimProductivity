@@ -23,6 +23,7 @@ import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.text.TextDecoration
 import com.pudimproductivity.MainActivity
+import com.pudimproductivity.i18n.Localization
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -55,6 +56,7 @@ object TasksWidget : GlanceAppWidget() {
     override val sizeMode: SizeMode = SizeMode.Responsive(TASKS_SIZES)
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
+        Localization.init(context)
         val snapshot = withContext(Dispatchers.IO) { WidgetData.loadTasks(context) }
         provideContent {
             GlanceTheme(colors = WidgetColors.providers) {
@@ -98,8 +100,8 @@ private fun TasksBody(snapshot: TasksSnapshot, height: Dp) {
     if (snapshot.pending.isEmpty()) {
         WidgetEmptyState(
             emoji = if (snapshot.total == 0) "🎯" else "🎉",
-            message = if (snapshot.total == 0) "No tasks yet — add one!" else "All done for today!",
-            actionLabel = "Add task",
+            message = if (snapshot.total == 0) Localization.text("widgets.tasks.empty") else Localization.text("widgets.tasks.allDone"),
+            actionLabel = Localization.text("widgets.tasks.add"),
             onAction = actionStartActivity<MainActivity>(
                 actionParametersOf(EXTRA_SCREEN_KEY to MainActivity.SCREEN_TASK_CREATE)
             )
@@ -135,12 +137,12 @@ private fun TasksBody(snapshot: TasksSnapshot, height: Dp) {
 @Composable
 private fun TasksHeader(snapshot: TasksSnapshot) {
     val countText = when {
-        snapshot.total == 0 -> "no tasks"
-        snapshot.remaining == 0 -> "all done"
-        else -> "${snapshot.remaining} left"
+        snapshot.total == 0 -> Localization.text("widgets.tasks.noTasksShort")
+        snapshot.remaining == 0 -> Localization.text("widgets.tasks.allDoneShort")
+        else -> Localization.text("widgets.tasks.remaining", "count" to snapshot.remaining)
     }
     WidgetHeader(
-        title = "Today's Tasks",
+        title = Localization.text("widgets.tasks.title"),
         countText = countText,
         onOpen = openTasksAction(),
         onAdd = actionStartActivity<MainActivity>(
@@ -154,7 +156,11 @@ private fun TaskRowItem(row: TaskRow, compact: Boolean) {
     WidgetCheckRow(
         checked = row.done,
         onToggle = toggleTaskAction(row.id, done = !row.done),
-        toggleDescription = if (row.done) "Mark ${row.title} as not done" else "Mark ${row.title} as done",
+        toggleDescription = if (row.done) {
+            Localization.text("widgets.tasks.markNotDone", "title" to row.title)
+        } else {
+            Localization.text("widgets.tasks.markDone", "title" to row.title)
+        },
         title = row.title,
         onOpen = actionStartActivity<MainActivity>(
             actionParametersOf(

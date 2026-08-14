@@ -12,7 +12,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import com.pudimproductivity.i18n.Localization
 import com.pudimproductivity.utils.SortOption
+
+private fun sortLabelKey(option: SortOption): String = when (option) {
+    SortOption.ALPHA_ASC -> "sort.alphaAsc"
+    SortOption.ALPHA_DESC -> "sort.alphaDesc"
+    SortOption.CREATED_ASC -> "sort.createdAsc"
+    SortOption.CREATED_DESC -> "sort.createdDesc"
+    SortOption.TIME_ASC -> "sort.timeAsc"
+    SortOption.TIME_DESC -> "sort.timeDesc"
+}
 
 /**
  * Ordering dropdown for task/habit lists — the mobile counterpart of the web's
@@ -29,7 +39,7 @@ fun SortSelector(
 
     Box(modifier = modifier) {
         TextButton(onClick = { expanded = true }) {
-            Text("↕ ${value.label}", style = MaterialTheme.typography.labelMedium)
+            Text("↕ " + Localization.text(sortLabelKey(value)), style = MaterialTheme.typography.labelMedium)
         }
         DropdownMenu(
             expanded = expanded,
@@ -37,7 +47,7 @@ fun SortSelector(
         ) {
             options.forEach { option ->
                 DropdownMenuItem(
-                    text = { Text(option.label) },
+                    text = { Text(Localization.text(sortLabelKey(option))) },
                     onClick = {
                         expanded = false
                         onSelect(option)

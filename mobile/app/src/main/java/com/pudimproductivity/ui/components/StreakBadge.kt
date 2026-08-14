@@ -8,6 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.pudimproductivity.i18n.Localization
 import com.pudimproductivity.utils.StreakResult
 
 /**
@@ -38,7 +39,7 @@ fun StreakBadge(
         )
         if (longest > current) {
             Text(
-                text = "(best: $longest)",
+                text = Localization.text("streak.best", "count" to longest),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
             )

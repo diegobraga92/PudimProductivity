@@ -6,19 +6,20 @@ import {
   type ImportResult,
 } from "../api/library";
 import { parseCsv, parseDoneValue, parseScoreValue, normalizeMediaType, parseYearValue } from "../utils/csv";
+import { useI18n } from "../i18n";
 
 const MEDIA_TYPES = ["movie", "series", "book", "game"] as const;
 
 type FieldKey = "name" | "media_type" | "release_year" | "done" | "notes" | "score" | "score_source";
 
-const FIELDS: { key: FieldKey; label: string; hint: string }[] = [
-  { key: "name", label: "Name", hint: "Title — required." },
-  { key: "media_type", label: "Type", hint: "movie / series / book / game" },
-  { key: "release_year", label: "Year", hint: "Release year (number)" },
-  { key: "done", label: "Done", hint: "true / yes / 1 / x / read / …" },
-  { key: "score", label: "Score", hint: "Rating 0-100, e.g. 8.7 or 96 (optional)" },
-  { key: "score_source", label: "Score source", hint: "imdb / metacritic / … (optional)" },
-  { key: "notes", label: "Notes", hint: "Optional comments" },
+const FIELDS: { key: FieldKey; labelKey: string; hintKey: string }[] = [
+  { key: "name", labelKey: "csv.fieldName", hintKey: "csv.fieldNameHint" },
+  { key: "media_type", labelKey: "csv.fieldType", hintKey: "csv.fieldTypeHint" },
+  { key: "release_year", labelKey: "csv.fieldYear", hintKey: "csv.fieldYearHint" },
+  { key: "done", labelKey: "csv.fieldDone", hintKey: "csv.fieldDoneHint" },
+  { key: "score", labelKey: "csv.fieldScore", hintKey: "csv.fieldScoreHint" },
+  { key: "score_source", labelKey: "csv.fieldSource", hintKey: "csv.fieldSourceHint" },
+  { key: "notes", labelKey: "csv.fieldNotes", hintKey: "csv.fieldNotesHint" },
 ];
 
 const FIXED_VALUE = "__fixed__";
@@ -73,6 +74,7 @@ interface LibraryCsvImportProps {
  */
 export function LibraryCsvImport({ onClose, onImported }: LibraryCsvImportProps) {
   const queryClient = useQueryClient();
+  const { t } = useI18n();
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [fileName, setFileName] = useState("");
@@ -109,14 +111,14 @@ export function LibraryCsvImport({ onClose, onImported }: LibraryCsvImportProps)
       const text = String(reader.result ?? "");
       const parsed = parseCsv(text);
       if (parsed.length === 0) {
-        setError("The file is empty or not valid CSV.");
+        setError(t("csv.emptyFile"));
         setRows([]);
         return;
       }
       setRows(parsed);
       setMapping(suggestMapping(parsed[0]));
     };
-    reader.onerror = () => setError("Could not read the selected file.");
+    reader.onerror = () => setError(t("csv.readError"));
     reader.readAsText(file);
   }
 
@@ -138,13 +140,13 @@ export function LibraryCsvImport({ onClose, onImported }: LibraryCsvImportProps)
       const rowNum = i + 1;
       const name = resolve("name", i).trim();
       if (!name) {
-        rowErrors.push(`Row ${rowNum}: missing name`);
+        rowErrors.push(t("csv.rowMissingName", { row: rowNum }));
         return;
       }
       const mediaRaw = resolve("media_type", i);
       const mediaType = normalizeMediaType(mediaRaw);
       if (!mediaType) {
-        rowErrors.push(`Row ${rowNum}: invalid type "${mediaRaw.trim()}"`);
+        rowErrors.push(t("csv.rowInvalidType", { row: rowNum, type: mediaRaw.trim() }));
         return;
       }
       items.push({
@@ -175,7 +177,7 @@ export function LibraryCsvImport({ onClose, onImported }: LibraryCsvImportProps)
         aria-labelledby="csv-import-title"
       >
         <h3 id="csv-import-title" className="modal-title">
-          📥 Import from CSV
+          {t("csv.title")}
         </h3>
 
         <input
@@ -189,22 +191,21 @@ export function LibraryCsvImport({ onClose, onImported }: LibraryCsvImportProps)
         {rows.length === 0 ? (
           <>
             <p className="modal-message">
-              Pick a CSV file, then map its columns to the library fields. Use a{" "}
-              <em>fixed value</em> to fill a field for every row (e.g. Type = book).
+              {t("csv.intro")}
             </p>
             <div className="flex-center" style={{ gap: "var(--space-sm)", justifyContent: "flex-start" }}>
               <button className="btn btn-primary" onClick={() => fileRef.current?.click()}>
-                Choose CSV file
+                {t("csv.chooseFile")}
               </button>
               <button className="btn btn-ghost" onClick={onClose}>
-                Cancel
+                {t("common.cancel")}
               </button>
             </div>
           </>
         ) : (
           <>
             <p className="text-sm text-secondary" style={{ margin: "0 0 var(--space-sm)" }}>
-              📄 {fileName} · {dataRows.length} data row{dataRows.length === 1 ? "" : "s"}
+              📄 {fileName} · {t("csv.fileInfo", { count: dataRows.length })}
             </p>
 
             <label className="flex-center" style={{ gap: "var(--space-sm)", marginBottom: "var(--space-sm)" }}>
@@ -213,7 +214,7 @@ export function LibraryCsvImport({ onClose, onImported }: LibraryCsvImportProps)
                 checked={hasHeader}
                 onChange={(e) => setHasHeader(e.target.checked)}
               />
-              <span className="text-sm">First row is a header</span>
+              <span className="text-sm">{t("csv.firstRowHeader")}</span>
             </label>
 
             {/* Column mapping */}
@@ -221,7 +222,7 @@ export function LibraryCsvImport({ onClose, onImported }: LibraryCsvImportProps)
               {FIELDS.map((f) => (
                 <div key={f.key}>
                   <label className="text-sm" style={{ fontWeight: 600 }}>
-                    {f.label}
+                    {t(f.labelKey)}
                   </label>
                   <select
                     className="select"
@@ -229,14 +230,14 @@ export function LibraryCsvImport({ onClose, onImported }: LibraryCsvImportProps)
                     value={mapping[f.key]}
                     onChange={(e) => setMapping({ ...mapping, [f.key]: e.target.value })}
                   >
-                    <option value="">— Not mapped —</option>
+                    <option value="">{t("csv.notMapped")}</option>
                     {columns.map((c, i) => (
                       <option key={i} value={String(i)}>
-                        {c || `Column ${i + 1}`}
+                        {c || t("csv.column", { number: i + 1 })}
                       </option>
                     ))}
                     {f.key !== "name" && (
-                      <option value={FIXED_VALUE}>⚙️ Fixed value for all rows</option>
+                      <option value={FIXED_VALUE}>{t("csv.fixedValue")}</option>
                     )}
                   </select>
                   {mapping[f.key] === FIXED_VALUE && (
@@ -247,9 +248,9 @@ export function LibraryCsvImport({ onClose, onImported }: LibraryCsvImportProps)
                           value={fixed.media_type}
                           onChange={(e) => setFixed({ ...fixed, media_type: e.target.value })}
                         >
-                          {MEDIA_TYPES.map((t) => (
-                            <option key={t} value={t}>
-                              {t}
+                          {MEDIA_TYPES.map((type) => (
+                            <option key={type} value={type}>
+                              {type}
                             </option>
                           ))}
                         </select>
@@ -259,14 +260,14 @@ export function LibraryCsvImport({ onClose, onImported }: LibraryCsvImportProps)
                           value={fixed.done}
                           onChange={(e) => setFixed({ ...fixed, done: e.target.value })}
                         >
-                          <option value="false">Not done</option>
-                          <option value="true">Done</option>
+                          <option value="false">{t("common.notDone")}</option>
+                          <option value="true">{t("common.done")}</option>
                         </select>
                       ) : (
                         <input
                           className="input"
                           style={{ width: "100%" }}
-                          placeholder={f.label}
+                          placeholder={t(f.labelKey)}
                           value={fixed[f.key]}
                           onChange={(e) => setFixed({ ...fixed, [f.key]: e.target.value })}
                         />
@@ -274,7 +275,7 @@ export function LibraryCsvImport({ onClose, onImported }: LibraryCsvImportProps)
                     </div>
                   )}
                   <p className="text-sm text-secondary" style={{ margin: "0.15rem 0 0" }}>
-                    {f.hint}
+                    {t(f.hintKey)}
                   </p>
                 </div>
               ))}
@@ -284,13 +285,13 @@ export function LibraryCsvImport({ onClose, onImported }: LibraryCsvImportProps)
             {/* Preview */}
             {previewRows.length > 0 && (
               <div style={{ marginBottom: "var(--space-sm)", overflowX: "auto" }}>
-                <p className="text-sm" style={{ fontWeight: 600 }}>Preview</p>
+                <p className="text-sm" style={{ fontWeight: 600 }}>{t("csv.preview")}</p>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "var(--font-size-xs)" }}>
                   <thead>
                     <tr>
                       {FIELDS.map((f) => (
                         <th key={f.key} style={{ textAlign: "left", padding: "0.25rem 0.5rem", borderBottom: "1px solid var(--color-border, #ddd)" }}>
-                          {f.label}
+                          {t(f.labelKey)}
                         </th>
                       ))}
                     </tr>
@@ -313,31 +314,31 @@ export function LibraryCsvImport({ onClose, onImported }: LibraryCsvImportProps)
             {preview.rowErrors.length > 0 && (
               <div style={{ marginBottom: "var(--space-sm)" }}>
                 <p className="text-sm" style={{ color: "var(--color-danger)", fontWeight: 600 }}>
-                  ⚠️ {preview.rowErrors.length} row(s) will be skipped
+                  {t("csv.rowsSkipped", { count: preview.rowErrors.length })}
                 </p>
                 <ul style={{ margin: 0, paddingLeft: "1.1rem", fontSize: "var(--font-size-xs)", color: "var(--color-danger)" }}>
                   {preview.rowErrors.slice(0, 10).map((e, i) => (
                     <li key={i}>{e}</li>
                   ))}
-                  {preview.rowErrors.length > 10 && <li>…and {preview.rowErrors.length - 10} more</li>}
+                  {preview.rowErrors.length > 10 && <li>{t("csv.andMore", { count: preview.rowErrors.length - 10 })}</li>}
                 </ul>
               </div>
             )}
 
             {result && (
               <p className="text-sm" style={{ color: "var(--color-done)", marginBottom: "var(--space-sm)" }}>
-                ✅ Imported {result.imported} item(s)
-                {result.errors && result.errors.length > 0 && ` · ${result.errors.length} row(s) skipped by the server`}
+                ✅ {t("csv.imported", { count: result.imported })}
+                {result.errors && result.errors.length > 0 && ` · ${t("csv.rowsSkippedByServer", { count: result.errors.length })}`}
               </p>
             )}
             {error && <p style={{ color: "var(--color-danger)", marginBottom: "var(--space-sm)" }}>{error}</p>}
 
             <div className="modal-actions">
               <button className="btn btn-ghost" onClick={() => fileRef.current?.click()}>
-                Choose another file
+                {t("csv.chooseAnother")}
               </button>
               <button className="btn btn-ghost" onClick={onClose}>
-                Close
+                {t("common.close")}
               </button>
               <button
                 className="btn btn-primary"
@@ -345,8 +346,8 @@ export function LibraryCsvImport({ onClose, onImported }: LibraryCsvImportProps)
                 onClick={() => mutation.mutate(preview.items)}
               >
                 {mutation.isPending
-                  ? "Importing…"
-                  : `Import ${preview.items.length} item${preview.items.length === 1 ? "" : "s"}`}
+                  ? t("common.importing")
+                  : t("csv.importCount", { count: preview.items.length })}
               </button>
             </div>
           </>

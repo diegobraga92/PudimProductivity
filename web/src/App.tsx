@@ -12,6 +12,7 @@ import { useErrorReporter } from "./hooks/useErrorReporter";
 import { useLiveUpdates } from "./hooks/useLiveUpdates";
 import { useTaskNotifier } from "./hooks/useTaskNotifier";
 import Dashboard from "./pages/Dashboard";
+import { useI18n } from "./i18n";
 import "./styles.css";
 
 // Secondary pages are code-split (React.lazy) so the initial bundle only
@@ -30,24 +31,27 @@ const Insights = lazy(() => import("./pages/Insights"));
 
 type Page = "dashboard" | "tasks" | "lists" | "planner" | "pomodoro" | "soundscape" | "recipes" | "library" | "insights" | "health";
 
-const NAV_ITEMS: { id: Page; label: string; icon: string }[] = [
-  { id: "dashboard", label: "Dashboard", icon: "🏠" },
-  { id: "tasks", label: "Tasks", icon: "📋" },
-  { id: "lists", label: "Lists", icon: "📁" },
-  { id: "planner", label: "Planner", icon: "📅" },
-  { id: "pomodoro", label: "Timer", icon: "🍅" },
-  { id: "soundscape", label: "Sounds", icon: "🎵" },
-  { id: "recipes", label: "Recipes", icon: "🍳" },
-  { id: "library", label: "Library", icon: "🎬" },
-  { id: "insights", label: "Insights", icon: "🧠" },
-  { id: "health", label: "Status", icon: "💚" },
+const NAV_ITEMS: { id: Page; labelKey: string; icon: string }[] = [
+  { id: "dashboard", labelKey: "nav.dashboard", icon: "🏠" },
+  { id: "tasks", labelKey: "nav.tasks", icon: "📋" },
+  { id: "lists", labelKey: "nav.lists", icon: "📁" },
+  { id: "planner", labelKey: "nav.planner", icon: "📅" },
+  { id: "pomodoro", labelKey: "nav.timer", icon: "🍅" },
+  { id: "soundscape", labelKey: "nav.sounds", icon: "🎵" },
+  { id: "recipes", labelKey: "nav.recipes", icon: "🍳" },
+  { id: "library", labelKey: "nav.library", icon: "🎬" },
+  { id: "insights", labelKey: "nav.insights", icon: "🧠" },
+  { id: "health", labelKey: "nav.status", icon: "💚" },
 ];
 
-const pageFallback = (
-  <div className="container" style={{ paddingTop: "var(--space-xl)", textAlign: "center", color: "var(--color-text-secondary)" }}>
-    Loading…
-  </div>
-);
+function PageFallback() {
+  const { t } = useI18n();
+  return (
+    <div className="container" style={{ paddingTop: "var(--space-xl)", textAlign: "center", color: "var(--color-text-secondary)" }}>
+      {t("common.loading")}
+    </div>
+  );
+}
 
 /** Theme hook — resolves the system preference, then honors the manual toggle. */
 function useTheme() {
@@ -67,9 +71,10 @@ function useTheme() {
 
 function HeaderBadge() {
   const { activeAlarms } = useAlarm();
+  const { t } = useI18n();
   if (activeAlarms.length === 0) return null;
   return (
-    <span className="alarm-badge" title={`${activeAlarms.length} active alarm${activeAlarms.length > 1 ? "s" : ""}`}>
+    <span className="alarm-badge" title={t("alarm.activeBadge", { count: activeAlarms.length })}>
       🔔 {activeAlarms.length}
     </span>
   );
@@ -80,6 +85,7 @@ function AppInner() {
   const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const { theme, toggleTheme } = useTheme();
+  const { t, lang, toggleLang } = useI18n();
 
   // Polls scheduled habit tasks and fires sound + in-app toast alarms
   useAlarmNotifier();
@@ -121,20 +127,20 @@ function AppInner() {
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
       <a className="skip-link" href="#main">
-        Skip to content
+        {t("a11y.skipToContent")}
       </a>
 
       {/* ===== Header ===== */}
       <header className="app-header">
         <div className="container header-inner">
           {/* Logo + Title */}
-          <button className="logo" onClick={() => go("dashboard")} aria-label="Go to dashboard">
+          <button className="logo" onClick={() => go("dashboard")} aria-label={t("a11y.goToDashboard")}>
             <span className="logo-emoji">🍮</span>
             <span className="logo-text">Pudim</span>
           </button>
 
           {/* Desktop Navigation Tabs */}
-          <nav className="nav-tabs" aria-label="Primary navigation">
+          <nav className="nav-tabs" aria-label={t("a11y.primaryNav")}>
             {NAV_ITEMS.map((tab) => (
               <button
                 key={tab.id}
@@ -142,28 +148,37 @@ function AppInner() {
                 onClick={() => go(tab.id)}
               >
                 <span>{tab.icon}</span>
-                <span>{tab.label}</span>
+                <span>{t(tab.labelKey)}</span>
               </button>
             ))}
           </nav>
 
-          {/* Status Badge + Theme Toggle + Alarm Badge */}
+          {/* Status Badge + Language/Theme Toggles + Alarm Badge */}
           <div className="header-right">
             <HeaderBadge />
             <button
               className="theme-toggle"
+              onClick={toggleLang}
+              title={lang === "en" ? t("lang.portuguese") : t("lang.english")}
+              aria-label={lang === "en" ? t("lang.portuguese") : t("lang.english")}
+              style={{ fontSize: "0.95rem" }}
+            >
+              {lang === "en" ? "🇧🇷" : "🇺🇸"}
+            </button>
+            <button
+              className="theme-toggle"
               onClick={toggleTheme}
-              title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-              aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              title={theme === "dark" ? t("theme.light") : t("theme.dark")}
+              aria-label={theme === "dark" ? t("theme.light") : t("theme.dark")}
             >
               {theme === "dark" ? "☀️" : "🌙"}
             </button>
             <span className={`status-dot ${isBackendOk ? "online" : "offline"}`} />
-            <span className="conn-label">{isBackendOk ? "Connected" : "Offline"}</span>
+            <span className="conn-label">{isBackendOk ? t("status.connected") : t("status.offline")}</span>
           </div>
 
           {/* Mobile hamburger */}
-          <button className="menu-button" onClick={() => setMenuOpen(true)} aria-label="Open menu">
+          <button className="menu-button" onClick={() => setMenuOpen(true)} aria-label={t("a11y.openMenu")}>
             ☰
           </button>
         </div>
@@ -172,12 +187,12 @@ function AppInner() {
       {/* ===== Mobile Slide-Out Drawer ===== */}
       {menuOpen && (
         <div className="nav-backdrop" onClick={() => setMenuOpen(false)}>
-          <aside className="nav-drawer" onClick={(e) => e.stopPropagation()} aria-label="Menu">
+          <aside className="nav-drawer" onClick={(e) => e.stopPropagation()} aria-label={t("nav.more")}>
             <div className="nav-drawer-header">
               <span className="nav-drawer-logo">
                 <span>🍮</span> Pudim
               </span>
-              <button className="nav-drawer-close" onClick={() => setMenuOpen(false)} aria-label="Close menu">
+              <button className="nav-drawer-close" onClick={() => setMenuOpen(false)} aria-label={t("a11y.closeMenu")}>
                 ✕
               </button>
             </div>
@@ -188,7 +203,7 @@ function AppInner() {
                 onClick={() => go(item.id)}
               >
                 <span className="nav-icon">{item.icon}</span>
-                <span>{item.label}</span>
+                <span>{t(item.labelKey)}</span>
               </button>
             ))}
           </aside>
@@ -198,7 +213,7 @@ function AppInner() {
       {/* ===== Main Content ===== */}
       <main id="main" style={{ flex: 1, padding: "var(--space-lg) 0" }}>
         <div className="container">
-          <Suspense fallback={pageFallback}>
+          <Suspense fallback={<PageFallback />}>
             {page === "dashboard" && <Dashboard onNavigate={handleNavigate} />}
 
             {page === "tasks" && <TaskList />}
@@ -234,19 +249,19 @@ function AppInner() {
                 }}
               >
                 <h2 style={{ fontSize: "var(--font-size-xl)", fontWeight: 700 }}>
-                  💚 Backend Health
+                  💚 {t("nav.health")}
                 </h2>
                 <span
                   className={`badge ${isBackendOk ? "badge-done" : "badge-habit"}`}
                 >
-                  {isBackendOk ? "Healthy" : "Issues"}
+                  {isBackendOk ? t("status.healthy") : t("status.issues")}
                 </span>
               </div>
 
               {!healthData && (
                 <div className="card" style={{ textAlign: "center", padding: "var(--space-xl)" }}>
                   <p style={{ color: "var(--color-text-secondary)" }}>
-                    Checking backend status...
+                    {t("status.checking")}
                   </p>
                 </div>
               )}
@@ -268,13 +283,13 @@ function AppInner() {
                     >
                       {healthData.status}
                     </div>
-                    <div className="stat-card-label">Status</div>
+                    <div className="stat-card-label">{t("nav.status")}</div>
                   </div>
                   <div className="stat-card">
                     <div className="stat-card-value" style={{ fontSize: "var(--font-size-lg)" }}>
                       v{healthData.version}
                     </div>
-                    <div className="stat-card-label">Version</div>
+                    <div className="stat-card-label">{t("status.version")}</div>
                   </div>
                   <div className="stat-card">
                     <div
@@ -286,7 +301,7 @@ function AppInner() {
                     >
                       {healthData.db}
                     </div>
-                    <div className="stat-card-label">Database</div>
+                    <div className="stat-card-label">{t("status.database")}</div>
                   </div>
                 </div>
               )}

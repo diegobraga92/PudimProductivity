@@ -11,10 +11,12 @@ import ListDetailPanel from "../components/ListDetailPanel";
 import TaskListShare from "../components/TaskListShare";
 import QuickAddForm from "../components/QuickAddForm";
 import { usePresence } from "../hooks/usePresence";
+import { useI18n } from "../i18n";
 import { DEV_USER_ID } from "../api/client";
 
 export default function Lists() {
   const queryClient = useQueryClient();
+  const { t } = useI18n();
   const [selectedListForDetail, setSelectedListForDetail] = useState<string | null>(null);
   const [newListName, setNewListName] = useState("");
   // Phase 8: which list's share dialog is open.
@@ -52,10 +54,10 @@ export default function Lists() {
       <div className="page-header">
         <div>
           <h1 className="page-heading" style={{ marginBottom: "0.25rem" }}>
-            📁 Lists
+            {t("lists.title")}
           </h1>
           <p className="page-subtitle">
-            Organize tasks into named collections
+            {t("lists.subtitle")}
           </p>
         </div>
       </div>
@@ -70,15 +72,15 @@ export default function Lists() {
             onSubmit={() => {
               if (newListName.trim()) createListMutation.mutate(newListName.trim());
             }}
-            placeholder="New list name..."
-            submitLabel="Create"
+            placeholder={t("lists.newName")}
+            submitLabel={t("lists.create")}
             isPending={createListMutation.isPending}
           />
 
           {taskLists.length === 0 && (
             <div className="empty-state" style={{ padding: "var(--space-md)" }}>
               <div className="empty-state-icon" style={{ fontSize: "1.5rem" }}>📁</div>
-              <p className="empty-state-text">No lists yet.<br />Create your first one above!</p>
+              <p className="empty-state-text">{t("lists.empty")}</p>
             </div>
           )}
 
@@ -103,7 +105,7 @@ export default function Lists() {
                       background: ownerOnline ? "#00b894" : "#b2bec3",
                       flexShrink: 0,
                     }}
-                    title={`Owner ${list.owner_id} ${ownerOnline ? "online" : "offline"}`}
+                    title={t("lists.ownerStatus", { id: list.owner_id ?? "", status: ownerOnline ? t("common.online") : t("common.offline") })}
                   />
                   <span
                     className="flex-1"
@@ -121,7 +123,7 @@ export default function Lists() {
                   <button
                     className="btn btn-ghost btn-sm"
                     style={{ padding: "0.15rem 0.4rem", fontSize: "0.7rem" }}
-                    title="Share list"
+                    title={t("lists.share")}
                     onClick={(e) => {
                       e.stopPropagation();
                       setShareListId(list.id);
@@ -137,8 +139,8 @@ export default function Lists() {
                       onClick={async (e) => {
                         e.stopPropagation();
                         const ok = await confirm({
-                          title: `Delete list "${list.name}"?`,
-                          confirmLabel: "Delete",
+                          title: t("lists.deleteConfirm", { name: list.name }),
+                          confirmLabel: t("tasks.delete"),
                           confirmVariant: "danger",
                         });
                         if (ok) {
@@ -168,7 +170,7 @@ export default function Lists() {
           ) : (
             <div className="empty-state">
               <div className="empty-state-icon">👈</div>
-              <p className="empty-state-text">Select a list from the left to view and manage its tasks</p>
+              <p className="empty-state-text">{t("lists.selectPrompt")}</p>
             </div>
           )}
         </div>

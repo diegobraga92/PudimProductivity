@@ -13,6 +13,7 @@ import com.pudimproductivity.api.ShareTaskListRequest
 import com.pudimproductivity.api.TaskList
 import com.pudimproductivity.api.TaskListMember
 import com.pudimproductivity.api.taskService
+import com.pudimproductivity.i18n.Localization
 import kotlinx.coroutines.launch
 
 /**
@@ -45,7 +46,7 @@ fun TaskListShareDialog(
                 members = ApiClient.taskService.listTaskListMembers(taskList.id)
                 onlineIds = ApiClient.taskService.getListPresence(taskList.id).online.toSet()
             } catch (e: Exception) {
-                error = e.message ?: "Failed to load members"
+                error = e.message ?: Localization.text("mobile.share.load.failed")
             } finally {
                 isLoading = false
             }
@@ -56,7 +57,7 @@ fun TaskListShareDialog(
 
     AlertDialog(
         onDismissRequest = onClose,
-        title = { Text("👥 Share \"${taskList.name}\"") },
+        title = { Text(Localization.text("share.title", "name" to taskList.name)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (error != null) {
@@ -71,19 +72,19 @@ fun TaskListShareDialog(
                         OutlinedTextField(
                             value = inviteUserId,
                             onValueChange = { inviteUserId = it },
-                            label = { Text("User ID") },
+                            label = { Text(Localization.text("share.userId")) },
                             singleLine = true,
                             modifier = Modifier.weight(1f)
                         )
                         FilterChip(
                             selected = inviteRole == "editor",
                             onClick = { inviteRole = "editor" },
-                            label = { Text("Editor") }
+                            label = { Text(Localization.text("share.editor")) }
                         )
                         FilterChip(
                             selected = inviteRole == "viewer",
                             onClick = { inviteRole = "viewer" },
-                            label = { Text("Viewer") }
+                            label = { Text(Localization.text("share.viewer")) }
                         )
                     }
                     if (inviteError != null) {
@@ -103,22 +104,22 @@ fun TaskListShareDialog(
                                     inviteUserId = ""
                                     loadData()
                                 } catch (e: Exception) {
-                                    inviteError = e.message ?: "Failed to share"
+                                    inviteError = e.message ?: Localization.text("mobile.share.invite.failed")
                                 } finally {
                                     busy = false
                                 }
                             }
                         }
                     ) {
-                        Text("Invite")
+                        Text(Localization.text("share.invite"))
                     }
                 } else {
-                    Text("You have access to this list. Ask the owner to change your role.")
+                    Text(Localization.text("share.notOwner"))
                 }
 
 
                 if (isLoading) {
-                    Text("Loading members…")
+                    Text(Localization.text("share.loadingMembers"))
                 } else {
                     LazyColumn(modifier = Modifier.heightIn(max = 240.dp)) {
                         items(members, key = { it.shared_with }) { member ->
@@ -159,7 +160,7 @@ fun TaskListShareDialog(
                                                     ApiClient.taskService.unshareTaskList(taskList.id, member.shared_with)
                                                     loadData()
                                                 } catch (e: Exception) {
-                                                    error = e.message ?: "Failed to revoke access"
+                                                    error = e.message ?: Localization.text("mobile.share.revoke.failed")
                                                 }
                                             }
                                         }
@@ -174,7 +175,7 @@ fun TaskListShareDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onClose) { Text("Close") }
+            TextButton(onClick = onClose) { Text(Localization.text("common.close")) }
         }
     )
 }

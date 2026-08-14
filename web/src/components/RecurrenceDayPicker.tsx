@@ -1,5 +1,6 @@
 import { DAY_OPTIONS } from "../utils/constants";
 import type { RecurrenceDay } from "../api/tasks";
+import { useI18n } from "../i18n";
 
 interface RecurrenceDayPickerProps {
   selectedDays: RecurrenceDay[];
@@ -17,9 +18,10 @@ export default function RecurrenceDayPicker({
   onToggle,
   error = false,
 }: RecurrenceDayPickerProps) {
+  const { t } = useI18n();
   return (
     <div style={{ display: "flex", gap: "0.3rem", flexWrap: "wrap" }}>
-      {DAY_OPTIONS.map(({ value, label }) => {
+      {DAY_OPTIONS.map(({ value }) => {
         const isSelected = selectedDays.includes(value);
         return (
           <button
@@ -43,7 +45,7 @@ export default function RecurrenceDayPicker({
               transition: "all var(--transition-fast)",
             }}
           >
-            {label}
+            {t(`days.${value}`)}
           </button>
         );
       })}

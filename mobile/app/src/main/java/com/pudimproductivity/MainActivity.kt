@@ -34,6 +34,7 @@ import com.pudimproductivity.api.ServerConfig
 import com.pudimproductivity.api.SyncClient
 import com.pudimproductivity.data.TaskRepository
 import com.pudimproductivity.fcm.ErrorReporter
+import com.pudimproductivity.i18n.Localization
 import com.pudimproductivity.notifications.HabitReminderScheduler
 import com.pudimproductivity.sync.SyncScheduler
 import com.pudimproductivity.ui.screens.PlannerScreen
@@ -78,6 +79,9 @@ class MainActivity : ComponentActivity() {
 
         // Load the persisted backend URL before any API client is touched.
         ServerConfig.init(applicationContext)
+
+        // Load the shared UI dictionary + persisted language choice.
+        Localization.init(applicationContext)
 
         // Report uncaught exceptions to the backend error beacon.
         ErrorReporter.install(applicationContext)
@@ -297,26 +301,26 @@ private fun AppNavigation(
                 NavigationBarItem(
                     selected = currentTopLevel == TopLevel.Tasks,
                     onClick = { currentScreen = Screen.TaskList },
-                    icon = { Icon(Icons.Filled.Checklist, contentDescription = "Tasks") },
-                    label = { Text("Tasks") }
+                    icon = { Icon(Icons.Filled.Checklist, contentDescription = Localization.text("mobile.tasks.tab")) },
+                    label = { Text(Localization.text("mobile.tasks.tab")) }
                 )
                 NavigationBarItem(
                     selected = currentTopLevel == TopLevel.Plan,
                     onClick = { currentScreen = Screen.Planner },
-                    icon = { Icon(Icons.AutoMirrored.Filled.EventNote, contentDescription = "Planner") },
-                    label = { Text("Planner") }
+                    icon = { Icon(Icons.AutoMirrored.Filled.EventNote, contentDescription = Localization.text("nav.planner")) },
+                    label = { Text(Localization.text("nav.planner")) }
                 )
                 NavigationBarItem(
                     selected = currentTopLevel == TopLevel.Recipes,
                     onClick = { currentScreen = Screen.Recipes },
-                    icon = { Icon(Icons.Filled.Restaurant, contentDescription = "Recipes") },
-                    label = { Text("Recipes") }
+                    icon = { Icon(Icons.Filled.Restaurant, contentDescription = Localization.text("nav.recipes")) },
+                    label = { Text(Localization.text("nav.recipes")) }
                 )
                 NavigationBarItem(
                     selected = currentTopLevel == TopLevel.More,
                     onClick = { moreSheetOpen = true },
-                    icon = { Icon(Icons.Filled.MoreHoriz, contentDescription = "More") },
-                    label = { Text("More") }
+                    icon = { Icon(Icons.Filled.MoreHoriz, contentDescription = Localization.text("nav.more")) },
+                    label = { Text(Localization.text("nav.more")) }
                 )
             }
         }
@@ -326,27 +330,27 @@ private fun AppNavigation(
             ModalBottomSheet(onDismissRequest = { moreSheetOpen = false }) {
                 Column(modifier = Modifier.padding(bottom = 24.dp)) {
                     Text(
-                        text = "More",
+                        text = Localization.text("nav.more"),
                         style = MaterialTheme.typography.titleLarge,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                     )
-                    MoreSheetItem(Icons.Filled.Repeat, "Habits") {
+                    MoreSheetItem(Icons.Filled.Repeat, Localization.text("tasks.habits")) {
                         moreSheetOpen = false
                         currentScreen = Screen.Habits
                     }
-                    MoreSheetItem(Icons.Filled.Movie, "Library") {
+                    MoreSheetItem(Icons.Filled.Movie, Localization.text("nav.library")) {
                         moreSheetOpen = false
                         currentScreen = Screen.Library
                     }
-                    MoreSheetItem(Icons.Filled.Insights, "Insights") {
+                    MoreSheetItem(Icons.Filled.Insights, Localization.text("nav.insights")) {
                         moreSheetOpen = false
                         currentScreen = Screen.Insights
                     }
-                    MoreSheetItem(Icons.Filled.HealthAndSafety, "Backend Health") {
+                    MoreSheetItem(Icons.Filled.HealthAndSafety, Localization.text("nav.health")) {
                         moreSheetOpen = false
                         currentScreen = Screen.Health
                     }
-                    MoreSheetItem(Icons.Filled.Settings, "Server Settings") {
+                    MoreSheetItem(Icons.Filled.Settings, Localization.text("nav.serverSettings")) {
                         moreSheetOpen = false
                         currentScreen = Screen.ServerSettings
                     }
@@ -389,19 +393,19 @@ fun HealthScreen(onBack: () -> Unit) {
             try {
                 health = ApiClient.healthService.getHealth()
             } catch (e: Exception) {
-                error = e.message ?: "Unknown error"
+                error = e.message ?: Localization.text("mobile.unknownError")
             }
         }
     }
 
     Column(modifier = Modifier.padding(24.dp)) {
         Text(
-            text = "PudimProductivity",
+            text = Localization.text("app.fullName"),
             style = MaterialTheme.typography.headlineLarge
         )
 
         Text(
-            text = "Backend Health",
+            text = Localization.text("nav.health"),
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(top = 16.dp)
         )
@@ -418,27 +422,27 @@ fun HealthScreen(onBack: () -> Unit) {
                 }
 
                 Text(
-                    text = "Status: ${health!!.status}",
+                    text = "${Localization.text("nav.status")}: ${health!!.status}",
                     color = statusColor,
                     modifier = Modifier.padding(top = 8.dp)
                 )
-                Text(text = "Version: ${health!!.version}")
+                Text(text = "${Localization.text("status.version")}: ${health!!.version}")
                 Text(
-                    text = "Database: ${health!!.db}",
+                    text = "${Localization.text("status.database")}: ${health!!.db}",
                     color = dbColor,
                     modifier = Modifier.padding(top = 4.dp)
                 )
             }
             error != null -> {
                 Text(
-                    text = "Error: $error",
+                    text = "${Localization.text("common.error")}: $error",
                     color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.padding(top = 8.dp)
                 )
             }
             else -> {
                 Text(
-                    text = "Checking backend status...",
+                    text = Localization.text("status.checking"),
                     modifier = Modifier.padding(top = 8.dp)
                 )
             }
@@ -446,7 +450,7 @@ fun HealthScreen(onBack: () -> Unit) {
 
         Spacer(modifier = Modifier.height(16.dp))
         Button(onClick = onBack) {
-            Text("Back to Tasks")
+            Text(Localization.text("common.backToTasks"))
         }
     }
 }

@@ -17,6 +17,7 @@ import RecurrenceDayPicker from "./RecurrenceDayPicker";
 import Modal from "./Modal";
 import { computeStreaks } from "../utils/streaks";
 import { getToday, sanitizeTime } from "../utils/dates";
+import { useI18n } from "../i18n";
 import { COLOR_PALETTE, STREAK_HISTORY_START } from "../utils/constants";
 import {
   playHabitCompletionSound,
@@ -46,6 +47,7 @@ export default function TaskEditModal({
 }: TaskEditModalProps) {
   const queryClient = useQueryClient();
   const confirm = useConfirm();
+  const { t } = useI18n();
   const [error, setError] = useState<string | null>(null);
   const [weekOffset, setWeekOffset] = useState(0);
   const [showHistory, setShowHistory] = useState(false);
@@ -163,17 +165,17 @@ export default function TaskEditModal({
     setError(null);
 
     if (!title.trim()) {
-      setError("Title is required");
+      setError(t("tasks.validation.titleRequired"));
       return;
     }
 
     if (isHabit && selectedDays.length === 0) {
-      setError("Select at least one day for the habit");
+      setError(t("tasks.validation.dayRequired"));
       return;
     }
 
     if (showSchedule && startTime >= endTime) {
-      setError("Start time must be before end time");
+      setError(t("tasks.validation.timeOrder"));
       return;
     }
 
@@ -192,8 +194,8 @@ export default function TaskEditModal({
 
   const handleDelete = async () => {
     const ok = await confirm({
-      title: "Delete this task?",
-      confirmLabel: "Delete",
+      title: t("tasks.deleteTaskTitle"),
+      confirmLabel: t("tasks.delete"),
       confirmVariant: "danger",
     });
     if (ok) deleteMutation.mutate();
@@ -201,13 +203,13 @@ export default function TaskEditModal({
 
   return (
     <Modal onClose={onClose} maxWidth={520}>
-      {isLoading && <p className="text-secondary">Loading task...</p>}
+      {isLoading && <p className="text-secondary">{t("common.loadingDot")}</p>}
 
       {fetchError && (
         <div>
-          <p className="error-text">Error: {(fetchError as Error).message}</p>
+          <p className="error-text">{t("common.error")}: {(fetchError as Error).message}</p>
           <button className="btn btn-ghost mt-sm" onClick={onClose}>
-            Close
+            {t("common.close")}
           </button>
         </div>
       )}
@@ -217,9 +219,9 @@ export default function TaskEditModal({
           {/* Header */}
           <div className="flex-between" style={{ marginBottom: "var(--space-md)" }}>
             <h2 className="page-heading" style={{ margin: 0 }}>
-              {isHabit ? "🔄 Edit Habit" : "✏️ Edit Task"}
+              {isHabit ? t("tasks.editHabit") : t("tasks.editTask")}
             </h2>
-            <button className="btn btn-ghost btn-sm" onClick={onClose} aria-label="Close">
+            <button className="btn btn-ghost btn-sm" onClick={onClose} aria-label={t("a11y.close")}>
               ✕
             </button>
           </div>
@@ -227,7 +229,7 @@ export default function TaskEditModal({
           <form onSubmit={handleSubmit}>
             {/* Title */}
             <div style={{ marginBottom: "var(--space-md)" }}>
-              <label className="form-label">Title</label>
+              <label className="form-label">{t("tasks.editTitle")}</label>
               <input
                 type="text"
                 className="input"
@@ -250,14 +252,14 @@ export default function TaskEditModal({
                   className="toggle-checkbox"
                   style={{ accentColor: "var(--color-habit)" }}
                 />
-                Make this a habit (repeats weekly)
+                {t("tasks.makeHabit")}
               </label>
             </div>
 
             {/* Recurrence day picker */}
             {isHabit && (
               <div style={{ marginBottom: "var(--space-md)" }}>
-                <label className="form-label">Repeat on:</label>
+                <label className="form-label">{t("tasks.repeatOn")}</label>
                 <RecurrenceDayPicker
                   selectedDays={selectedDays}
                   onToggle={toggleDay}
@@ -295,7 +297,7 @@ export default function TaskEditModal({
                     }
                     style={{ width: "1.2rem", height: "1.2rem", accentColor: "var(--color-primary)" }}
                   />
-                  {task.status === "done" ? "Mark as todo" : "Mark as done"}
+                  {task.status === "done" ? t("tasks.markTodo") : t("tasks.markDone")}
                 </label>
               </div>
             )}
@@ -309,10 +311,10 @@ export default function TaskEditModal({
             {/* Actions */}
             <div style={{ display: "flex", gap: "0.5rem", marginTop: "var(--space-md)" }}>
               <button type="submit" className="btn btn-primary" disabled={updateMutation.isPending}>
-                {updateMutation.isPending ? "Saving..." : "💾 Save"}
+                {updateMutation.isPending ? t("common.saving") : "💾 " + t("common.save")}
               </button>
               <button type="button" className="btn btn-ghost" onClick={onClose}>
-                Cancel
+                {t("common.cancel")}
               </button>
               <div style={{ flex: 1 }} />
               <button
@@ -321,7 +323,7 @@ export default function TaskEditModal({
                 onClick={handleDelete}
                 disabled={deleteMutation.isPending}
               >
-                🗑 Delete
+                🗑 {t("common.delete")}
               </button>
             </div>
           </form>
@@ -335,10 +337,10 @@ export default function TaskEditModal({
                 style={{ width: "100%" }}
                 onClick={() => setShowHistory((v) => !v)}
               >
-                {showHistory ? "▾ Hide history" : "▸ Show history"}
+                {showHistory ? "▾ " + t("tasks.hideHistory") : "▸ " + t("tasks.showHistory")}
                 {" · 🔥 "}
                 {currentStreak}
-                {longestStreak > currentStreak ? ` (best ${longestStreak})` : ""}
+                {longestStreak > currentStreak ? ` ${t("tasks.best", { count: longestStreak })}` : ""}
               </button>
               {showHistory && (
                 <div style={{ marginTop: "var(--space-sm)" }}>

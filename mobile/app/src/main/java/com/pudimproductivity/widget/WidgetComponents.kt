@@ -30,6 +30,7 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextDecoration
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
+import com.pudimproductivity.i18n.Localization
 
 /** Corner radius of the widget card (rounds the background on Android 12+). */
 internal val WidgetCornerRadius = 20.dp
@@ -212,7 +213,7 @@ internal fun WidgetCheckRow(
             .fillMaxWidth()
             .padding(vertical = if (compact) 1.dp else 2.dp)
             .clickable(onOpen)
-            .semantics { contentDescription = "$title — open in app" },
+            .semantics { contentDescription = Localization.text("widgets.openInApp", "title" to title) },
         verticalAlignment = Alignment.CenterVertically
     ) {
         CheckBox(
@@ -292,7 +293,7 @@ internal fun OverflowNote(extra: Int, onOpen: Action) {
     if (extra <= 0) return
     Spacer(GlanceModifier.height(2.dp))
     Text(
-        text = "+$extra more in the app",
+        text = Localization.text("widgets.moreInApp", "count" to extra),
         style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant),
         modifier = GlanceModifier.clickable(onOpen)
     )

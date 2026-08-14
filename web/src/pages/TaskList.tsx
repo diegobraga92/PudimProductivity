@@ -20,6 +20,7 @@ import StreakBadge from "../components/StreakBadge";
 import SortSelect from "../components/SortSelect";
 import { usePersistedSort } from "../hooks/usePersistedSort";
 import { useHabitCompletions } from "../hooks/useHabitCompletions";
+import { useI18n } from "../i18n";
 import { computeStreaks } from "../utils/streaks";
 import { getRollingWindowDates, formatWeekRange } from "../utils/dates";
 import { sortTasks } from "../utils/sort";
@@ -32,6 +33,7 @@ import {
 
 export default function TaskList() {
   const queryClient = useQueryClient();
+  const { t } = useI18n();
   const [showCreate, setShowCreate] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [newTodoTitle, setNewTodoTitle] = useState("");
@@ -123,26 +125,26 @@ export default function TaskList() {
       <div className="page-header">
         <div>
           <h1 className="page-heading" style={{ marginBottom: "0.25rem" }}>
-            📋 Tasks
+            📋 {t("tasks.title")}
           </h1>
           <p className="page-subtitle">
-            Manage your todos and habits
+            {t("tasks.subtitle")}
           </p>
         </div>
         <button className="btn btn-primary" onClick={() => setShowCreate(true)}>
-          + New Task
+          {t("tasks.newTask")}
         </button>
       </div>
 
       {isLoading && (
         <div className="card loading-card">
-          <p className="text-secondary">Loading tasks...</p>
+          <p className="text-secondary">{t("tasks.loading")}</p>
         </div>
       )}
       {error && (
         <div className="card error-card">
           <p className="error-text">
-            Error: {(error as Error).message}
+            {t("common.error")}: {(error as Error).message}
           </p>
         </div>
       )}
@@ -153,7 +155,7 @@ export default function TaskList() {
         <div className="task-column">
           <div className="task-column-header">
             <h2 className="section-header" style={{ marginBottom: 0 }}>
-              📋 To-Dos <span className="badge badge-todo">{todoTasks.length}</span>
+              📋 {t("tasks.todos")} <span className="badge badge-todo">{todoTasks.length}</span>
             </h2>
             <SortSelect
               value={todoSort}
@@ -169,14 +171,14 @@ export default function TaskList() {
             onSubmit={() => {
               if (newTodoTitle.trim()) createTodoMutation.mutate(newTodoTitle.trim());
             }}
-            placeholder="Quick add todo..."
+            placeholder={t("tasks.quickAddTodo")}
             isPending={createTodoMutation.isPending}
           />
 
           {todoTasks.length === 0 && !isLoading && (
             <div className="empty-state">
               <div className="empty-state-icon">📋</div>
-              <p className="empty-state-text">No todos yet.<br />Add your first one above!</p>
+              <p className="empty-state-text">{t("tasks.noTodos")}</p>
             </div>
           )}
 
@@ -190,8 +192,8 @@ export default function TaskList() {
                 onToggle={() => toggleMutation.mutate({ id: task.id, status: task.status })}
                 onDelete={async () => {
                   const ok = await confirm({
-                    title: "Delete this task?",
-                    confirmLabel: "Delete",
+                    title: t("tasks.deleteTaskTitle"),
+                    confirmLabel: t("tasks.delete"),
                     confirmVariant: "danger",
                   });
                   if (ok) {
@@ -211,7 +213,7 @@ export default function TaskList() {
         <div className="task-column">
           <div className="task-column-header">
             <h2 className="section-header" style={{ marginBottom: 0 }}>
-              🔄 Habits <span className="badge badge-habit">{habitTasks.length}</span>
+              🔄 {t("tasks.habits")} <span className="badge badge-habit">{habitTasks.length}</span>
             </h2>
             <SortSelect
               value={habitSort}
@@ -233,15 +235,15 @@ export default function TaskList() {
               className="btn btn-ghost"
               style={{ padding: "0.2rem 0.5rem", fontSize: "var(--font-size-sm)" }}
               onClick={() => handleWeekOffsetChange(weekOffset - 1)}
-              aria-label="Previous week"
+              aria-label={t("a11y.previousWeek")}
             >
-              &larr; Prev Week
+              &larr; {t("week.prevWeek")}
             </button>
             <span
               className="text-sm text-bold text-secondary"
             >
               {weekOffset === 0
-                ? "Last 7 Days"
+                ? t("week.last7Days")
                 : formatWeekRange(weekDates)}
             </span>
             <button
@@ -249,16 +251,16 @@ export default function TaskList() {
               style={{ padding: "0.2rem 0.5rem", fontSize: "var(--font-size-sm)" }}
               onClick={() => handleWeekOffsetChange(weekOffset + 1)}
               disabled={weekOffset >= 0}
-              aria-label="Next week"
+              aria-label={t("a11y.nextWeek")}
             >
-              Next Week &rarr;
+              {t("week.nextWeek")} &rarr;
             </button>
           </div>
 
           {habitTasks.length === 0 && !isLoading && (
             <div className="empty-state">
               <div className="empty-state-icon">🔄</div>
-              <p className="empty-state-text">No habits yet.<br />Use + New Task to create one!</p>
+              <p className="empty-state-text">{t("tasks.noHabits")}</p>
             </div>
           )}
 
@@ -297,16 +299,16 @@ export default function TaskList() {
                       onClick={async (e) => {
                         e.stopPropagation();
                         const ok = await confirm({
-                          title: "Delete this habit?",
-                          confirmLabel: "Delete",
+                          title: t("tasks.deleteHabitTitle"),
+                          confirmLabel: t("tasks.delete"),
                           confirmVariant: "danger",
                         });
                         if (ok) {
                           deleteMutation.mutate(task.id);
                         }
                       }}
-                      title="Delete habit"
-                      aria-label="Delete habit"
+                      title={t("tasks.deleteHabitAria")}
+                      aria-label={t("tasks.deleteHabitAria")}
                     >
                       ⋯
                     </button>

@@ -15,6 +15,7 @@ import com.pudimproductivity.api.ApiClient
 import com.pudimproductivity.api.SyncClient
 import com.pudimproductivity.api.Task
 import com.pudimproductivity.api.taskService
+import com.pudimproductivity.i18n.Localization
 import com.pudimproductivity.ui.components.ProgressBar
 import com.pudimproductivity.ui.components.ProgressVariant
 import com.pudimproductivity.ui.components.SortSelector
@@ -90,10 +91,10 @@ fun HabitScreen(onBack: () -> Unit, onOpenTask: (String) -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Habits") },
+                title = { Text(Localization.text("tasks.habits")) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = Localization.text("common.back"))
                     }
                 }
             )
@@ -130,7 +131,7 @@ fun HabitScreen(onBack: () -> Unit, onOpenTask: (String) -> Unit) {
                 }
             } else if (habits.isEmpty()) {
                 Text(
-                    text = "No habits yet. Create a task with recurrence days to start building a habit.",
+                    text = Localization.text("mobile.habits.empty"),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

@@ -10,6 +10,7 @@ import androidx.compose.ui.unit.dp
 import com.pudimproductivity.api.ApiClient
 import com.pudimproductivity.api.InsightReport
 import com.pudimproductivity.api.insightsService
+import com.pudimproductivity.i18n.Localization
 import kotlinx.coroutines.launch
 
 /**
@@ -29,7 +30,7 @@ fun InsightsScreen(onBack: () -> Unit) {
             report = ApiClient.insightsService.getWeeklyInsights()
             error = null
         } catch (e: Exception) {
-            error = e.message ?: "Failed to load insights"
+            error = e.message ?: Localization.text("mobile.insights.load.failed")
         } finally {
             loading = false
         }
@@ -38,10 +39,10 @@ fun InsightsScreen(onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("🧠 Insights") },
+                title = { Text(Localization.text("insights.title")) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = Localization.text("common.back"))
                     }
                 }
             )
@@ -55,34 +56,44 @@ fun InsightsScreen(onBack: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             when {
-                loading -> Text("Crunching the numbers…")
+                loading -> Text(Localization.text("insights.crunching"))
                 error != null -> Text(error ?: "", color = MaterialTheme.colorScheme.error)
-                report == null -> Text("No report available yet.")
+                report == null -> Text(Localization.text("insights.empty"))
                 else -> {
                     val stats = report!!.stats
 
                     // Week badge
                     Text(
-                        "Week of ${report!!.week_start}",
+                        Localization.text("insights.weekOf", "date" to report!!.week_start),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
                     // Stats cards
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        StatCard("Completed", "${stats.total_completions}", "${"%.1f".format(stats.completions_per_day)}/day", Modifier.weight(1f))
-                        StatCard("Focus", "${stats.focus_minutes}m", "${stats.focus_sessions} sessions", Modifier.weight(1f))
+                        StatCard(
+                            Localization.text("mobile.insights.completed"),
+                            "${stats.total_completions}",
+                            Localization.text("mobile.insights.perDay", "count" to "%.1f".format(stats.completions_per_day)),
+                            Modifier.weight(1f)
+                        )
+                        StatCard(
+                            Localization.text("mobile.insights.focus"),
+                            "${stats.focus_minutes}m",
+                            Localization.text("mobile.insights.focusSessions", "count" to stats.focus_sessions),
+                            Modifier.weight(1f)
+                        )
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        StatCard("Recipes", "${stats.recipes_created}", "added", Modifier.weight(1f))
-                        StatCard("Top habits", "${stats.top_habits?.size ?: 0}", stats.top_habits?.joinToString { it.title }.orEmpty(), Modifier.weight(1f))
+                        StatCard(Localization.text("mobile.insights.recipes"), "${stats.recipes_created}", Localization.text("mobile.insights.added"), Modifier.weight(1f))
+                        StatCard(Localization.text("insights.topHabits"), "${stats.top_habits?.size ?: 0}", stats.top_habits?.joinToString { it.title }.orEmpty(), Modifier.weight(1f))
                     }
 
                     // Optional LLM summary
                     report!!.llm_summary?.let { summary ->
                         Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
                             Column(Modifier.padding(12.dp)) {
-                                Text("✨ AI Coach", style = MaterialTheme.typography.titleSmall)
+                                Text(Localization.text("insights.aiCoach"), style = MaterialTheme.typography.titleSmall)
                                 Spacer(Modifier.height(4.dp))
                                 Text(summary, style = MaterialTheme.typography.bodySmall)
                             }
@@ -92,7 +103,7 @@ fun InsightsScreen(onBack: () -> Unit) {
                     // Template report
                     Card {
                         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text("📈 Weekly report", style = MaterialTheme.typography.titleSmall)
+                            Text(Localization.text("insights.weeklyReport"), style = MaterialTheme.typography.titleSmall)
                             report!!.report_text.split("\n").forEach { line ->
                                 if (line.isNotBlank()) {
                                     Text(line.trim(), style = MaterialTheme.typography.bodySmall)

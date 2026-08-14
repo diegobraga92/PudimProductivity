@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { getWeeklyInsights, type InsightReport } from "../api/insights";
+import { useI18n } from "../i18n";
 
 /** Formats a plain-text report as paragraphs for display. */
 function paragraphs(text: string): string[] {
@@ -18,17 +19,18 @@ export default function Insights() {
     queryKey: ["insights", "weekly"],
     queryFn: () => getWeeklyInsights(),
   });
+  const { t } = useI18n();
 
   return (
     <div className="animate-fade-in">
       <div className="flex-center" style={{ justifyContent: "space-between", marginBottom: "var(--space-md)" }}>
-        <h2 className="page-heading" style={{ marginBottom: 0 }}>🧠 Insights</h2>
+        <h2 className="page-heading" style={{ marginBottom: 0 }}>{t("insights.title")}</h2>
         {report && (
-          <span className="badge badge-habit">Week of {report.week_start}</span>
+          <span className="badge badge-habit">{t("insights.weekOf", { date: report.week_start })}</span>
         )}
       </div>
 
-      {isLoading && <p style={{ color: "var(--color-text-secondary)" }}>Crunching the numbers…</p>}
+      {isLoading && <p style={{ color: "var(--color-text-secondary)" }}>{t("insights.crunching")}</p>}
       {error && <p style={{ color: "var(--color-danger)" }}>{(error as Error).message}</p>}
 
       {report && (
@@ -37,19 +39,19 @@ export default function Insights() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "var(--space-sm)", marginBottom: "var(--space-lg)" }}>
             <div className="card stat-card">
               <div className="stat-card-value">{report.stats.total_completions}</div>
-              <div className="stat-card-label">Completed · {report.stats.completions_per_day.toFixed(1)}/day</div>
+              <div className="stat-card-label">{t("insights.completedPerDay", { count: report.stats.completions_per_day.toFixed(1) })}</div>
             </div>
             <div className="card stat-card">
               <div className="stat-card-value">{report.stats.focus_minutes}m</div>
-              <div className="stat-card-label">Focus · {report.stats.focus_sessions} session{report.stats.focus_sessions === 1 ? "" : "s"}</div>
+              <div className="stat-card-label">{t("insights.focus", { count: report.stats.focus_sessions })}</div>
             </div>
             <div className="card stat-card">
               <div className="stat-card-value">{report.stats.recipes_created}</div>
-              <div className="stat-card-label">Recipes added</div>
+              <div className="stat-card-label">{t("insights.recipesAdded")}</div>
             </div>
             <div className="card stat-card">
               <div className="stat-card-value">{(report.stats.top_habits ?? []).length}</div>
-              <div className="stat-card-label">Top habits</div>
+              <div className="stat-card-label">{t("insights.topHabits")}</div>
               <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)" }}>
                 {(report.stats.top_habits ?? []).map((h) => h.title).join(", ") || "—"}
               </div>
@@ -59,14 +61,14 @@ export default function Insights() {
           {/* LLM summary (only when the optional flag produced one) */}
           {report.llm_summary && (
             <div className="card" style={{ marginBottom: "var(--space-md)", background: "var(--color-primary-light)" }}>
-              <div style={{ fontWeight: 600, marginBottom: "0.25rem" }}>✨ AI Coach</div>
+              <div style={{ fontWeight: 600, marginBottom: "0.25rem" }}>{t("insights.aiCoach")}</div>
               <p style={{ margin: 0, fontSize: "var(--font-size-sm)" }}>{report.llm_summary}</p>
             </div>
           )}
 
           {/* Template report */}
           <div className="card">
-            <div style={{ fontWeight: 600, marginBottom: "0.5rem" }}>📈 Weekly report</div>
+            <div style={{ fontWeight: 600, marginBottom: "0.5rem" }}>{t("insights.weeklyReport")}</div>
             {paragraphs(report.report_text).map((line, i) => (
               <p key={i} style={{ margin: "0.25rem 0", fontSize: "var(--font-size-sm)" }}>
                 {line}
@@ -79,7 +81,7 @@ export default function Insights() {
       {!isLoading && !error && !report && (
         <div className="empty-state">
           <div className="empty-state-icon">🧠</div>
-          <p className="empty-state-text">No report available yet.</p>
+          <p className="empty-state-text">{t("insights.empty")}</p>
         </div>
       )}
     </div>

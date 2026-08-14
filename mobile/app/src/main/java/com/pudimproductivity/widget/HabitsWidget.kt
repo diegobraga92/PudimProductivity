@@ -21,6 +21,7 @@ import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.unit.ColorProvider
+import com.pudimproductivity.i18n.Localization
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -56,6 +57,7 @@ object HabitsWidget : GlanceAppWidget() {
     override val sizeMode: SizeMode = SizeMode.Responsive(HABITS_SIZES)
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
+        Localization.init(context)
         val snapshot = withContext(Dispatchers.IO) { WidgetData.loadHabits(context) }
         provideContent {
             GlanceTheme(colors = WidgetColors.providers) {
@@ -103,8 +105,8 @@ private fun HabitsBody(snapshot: HabitsSnapshot, height: Dp, compact: Boolean) {
     if (snapshot.habits.isEmpty()) {
         WidgetEmptyState(
             emoji = "🌱",
-            message = "No habits scheduled today",
-            actionLabel = "Open habits",
+            message = Localization.text("widgets.habits.empty"),
+            actionLabel = Localization.text("widgets.habits.open"),
             onAction = openHabitsAction()
         )
         return
@@ -139,11 +141,11 @@ private fun HabitsHeader(snapshot: HabitsSnapshot, showRing: Boolean) {
     // text is redundant — hide it to leave room for the ring in narrow widgets.
     val ringShown = showRing && snapshot.scheduledToday > 0
     val countText = when {
-        snapshot.scheduledToday == 0 -> "none today"
+        snapshot.scheduledToday == 0 -> Localization.text("widgets.habits.noneToday")
         else -> "${snapshot.doneToday}/${snapshot.scheduledToday}"
     }
     WidgetHeader(
-        title = "Today's Habits",
+        title = Localization.text("widgets.habits.title"),
         countText = countText,
         onOpen = openHabitsAction(),
         showCount = !ringShown,
@@ -161,9 +163,9 @@ private fun HabitRowItem(row: HabitRow, compact: Boolean) {
         checked = row.completedToday,
         onToggle = toggleHabitAction(row.id),
         toggleDescription = if (row.completedToday) {
-            "Uncomplete ${row.title} for today"
+            Localization.text("widgets.habits.uncomplete", "title" to row.title)
         } else {
-            "Complete ${row.title} for today"
+            Localization.text("widgets.habits.complete", "title" to row.title)
         },
         title = row.title,
         onOpen = openHabitsAction(),
@@ -171,7 +173,7 @@ private fun HabitRowItem(row: HabitRow, compact: Boolean) {
     ) {
         if (row.streak > 0) {
             val badge = if (row.bestStreak > row.streak) {
-                "🔥 ${row.streak} · best ${row.bestStreak}"
+                "🔥 ${row.streak} · " + Localization.text("streak.best", "count" to row.bestStreak)
             } else {
                 "🔥 ${row.streak}"
             }

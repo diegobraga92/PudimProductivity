@@ -1,4 +1,5 @@
 import { ALARM_OPTIONS, COLOR_PALETTE } from "../utils/constants";
+import { useI18n } from "../i18n";
 
 interface ScheduleFieldsProps {
   showSchedule: boolean;
@@ -31,6 +32,7 @@ export default function ScheduleFields({
   onScheduledDateChange,
   onAlarmMinutesChange,
 }: ScheduleFieldsProps) {
+  const { t } = useI18n();
   return (
     <>
       {/* Schedule toggle */}
@@ -42,7 +44,7 @@ export default function ScheduleFields({
             onChange={(e) => onToggleSchedule(e.target.checked)}
             className="toggle-checkbox"
           />
-          Schedule on Planner 📅
+          {t("tasks.schedulePlanner")}
         </label>
       </div>
 
@@ -66,7 +68,7 @@ export default function ScheduleFields({
           >
             <div>
               <label className="form-label-xs">
-                Start
+                {t("tasks.start")}
               </label>
               <input
                 className="input"
@@ -77,7 +79,7 @@ export default function ScheduleFields({
             </div>
             <div>
               <label className="form-label-xs">
-                End
+                {t("tasks.end")}
               </label>
               <input
                 className="input"
@@ -92,7 +94,7 @@ export default function ScheduleFields({
           {!isHabit && (
             <div style={{ marginBottom: "var(--space-md)" }}>
               <label className="form-label-xs">
-                Date
+                {t("tasks.date")}
               </label>
               <input
                 className="input"
@@ -107,7 +109,7 @@ export default function ScheduleFields({
           {isHabit && (
             <div style={{ marginBottom: "var(--space-md)" }}>
               <label className="form-label-xs">
-                Alarm ⏰
+                {t("tasks.alarm")}
               </label>
               <select
                 className="select"
@@ -116,7 +118,7 @@ export default function ScheduleFields({
               >
                 {ALARM_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
-                    {opt.label}
+                    {opt.value === "" ? t("alarm.none") : t("alarm.minutesBefore", { minutes: opt.value })}
                   </option>
                 ))}
               </select>
@@ -126,7 +128,7 @@ export default function ScheduleFields({
           {/* Color picker */}
           <div style={{ marginBottom: 0 }}>
             <label className="form-label-xs">
-              Color
+              {t("tasks.color")}
             </label>
             <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
               {COLOR_PALETTE.map((c) => (
@@ -144,7 +146,7 @@ export default function ScheduleFields({
                     transition: "all var(--transition-fast)",
                     padding: 0,
                   }}
-                  aria-label={`Select color ${c}`}
+                  aria-label={t("tasks.selectColor", { color: c })}
                 />
               ))}
             </div>

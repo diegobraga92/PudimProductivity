@@ -8,6 +8,7 @@ import {
   updateRecipe,
   uploadToPresignedUrl,
 } from "../api/recipes";
+import { useI18n } from "../i18n";
 
 type IngredientRow = { name: string; quantity: string; unit: string };
 type StepRow = { instruction: string };
@@ -15,6 +16,7 @@ type StepRow = { instruction: string };
 export default function RecipeDetail({ recipeId, onBack }: { recipeId: string; onBack: () => void }) {
   const isNew = recipeId === "__new__";
   const queryClient = useQueryClient();
+  const { t } = useI18n();
 
   const { data: recipe } = useQuery({
     queryKey: ["recipe", recipeId],
@@ -122,52 +124,52 @@ export default function RecipeDetail({ recipeId, onBack }: { recipeId: string; o
   return (
     <div className="animate-fade-in">
       <button className="btn btn-ghost btn-sm" onClick={onBack} style={{ marginBottom: "var(--space-md)" }}>
-        ← Back
+        ← {t("common.back")}
       </button>
       <h2 className="page-heading" style={{ marginBottom: "var(--space-md)" }}>
-        {isNew ? "🍳 New recipe" : "✏️ Edit recipe"}
+        {isNew ? t("recipes.newTitle") : t("recipes.editTitle")}
       </h2>
 
       <div className="card" style={{ maxWidth: 640, padding: "var(--space-lg)" }}>
         <div className="flex-center" style={{ gap: "var(--space-md)", marginBottom: "var(--space-md)" }}>
-          <input className="input" style={{ flex: 2 }} placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} />
+          <input className="input" style={{ flex: 2 }} placeholder={t("common.title")} value={title} onChange={(e) => setTitle(e.target.value)} />
           <select className="select" value={difficulty} onChange={(e) => setDifficulty(e.target.value as "easy" | "medium" | "hard")}>
-            <option value="easy">Easy</option>
-            <option value="medium">Medium</option>
-            <option value="hard">Hard</option>
+            <option value="easy">{t("recipes.easy")}</option>
+            <option value="medium">{t("recipes.medium")}</option>
+            <option value="hard">{t("recipes.hard")}</option>
           </select>
         </div>
         <input
           className="input" style={{ width: "100%", marginBottom: "var(--space-md)" }}
-          placeholder="Description (optional)" value={description} onChange={(e) => setDescription(e.target.value)}
+          placeholder={t("recipes.description")} value={description} onChange={(e) => setDescription(e.target.value)}
         />
         <div className="flex-center" style={{ gap: "var(--space-md)", marginBottom: "var(--space-md)" }}>
           <label className="form-label-xs" style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
-            Prep (min) <input className="input" type="number" style={{ width: 70 }} value={prep} onChange={(e) => setPrep(Number(e.target.value))} />
+            {t("recipes.prep")} <input className="input" type="number" style={{ width: 70 }} value={prep} onChange={(e) => setPrep(Number(e.target.value))} />
           </label>
           <label className="form-label-xs" style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
-            Cook (min) <input className="input" type="number" style={{ width: 70 }} value={cook} onChange={(e) => setCook(Number(e.target.value))} />
+            {t("recipes.cook")} <input className="input" type="number" style={{ width: 70 }} value={cook} onChange={(e) => setCook(Number(e.target.value))} />
           </label>
           <label className="form-label-xs" style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
-            Servings <input className="input" type="number" style={{ width: 70 }} value={servings} onChange={(e) => setServings(Number(e.target.value))} />
+            {t("recipes.servings")} <input className="input" type="number" style={{ width: 70 }} value={servings} onChange={(e) => setServings(Number(e.target.value))} />
           </label>
         </div>
         <input
           className="input" style={{ width: "100%", marginBottom: "var(--space-md)" }}
-          placeholder="Tags (comma separated)" value={tags} onChange={(e) => setTags(e.target.value)}
+          placeholder={t("recipes.tags")} value={tags} onChange={(e) => setTags(e.target.value)}
         />
         <input
           className="input" style={{ width: "100%", marginBottom: "var(--space-md)" }}
-          placeholder="Source link (optional)" value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)}
+          placeholder={t("recipes.sourceLink")} value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)}
         />
 
         {/* Image */}
-        <label className="form-label">Image</label>
+        <label className="form-label">{t("recipes.image")}</label>
         <div className="flex-center" style={{ gap: "var(--space-md)", marginBottom: "var(--space-sm)" }}>
           {currentImage ? (
             <img
               src={currentImage}
-              alt="Recipe preview"
+              alt={t("recipes.previewAlt")}
               style={{ width: 96, height: 72, objectFit: "cover", borderRadius: "8px", flexShrink: 0 }}
             />
           ) : (
@@ -186,7 +188,7 @@ export default function RecipeDetail({ recipeId, onBack }: { recipeId: string; o
               e.target.value = "";
               if (!file) return;
               if (file.size > 10 * 1024 * 1024) {
-                setUploadError("Image must be 10 MB or smaller.");
+                setUploadError(t("recipes.imageTooLarge"));
                 return;
               }
               setUploadError(null);
@@ -196,11 +198,11 @@ export default function RecipeDetail({ recipeId, onBack }: { recipeId: string; o
         </div>
         <input
           className="input" style={{ width: "100%", marginBottom: "var(--space-sm)" }}
-          placeholder="Or paste an image URL (optional)" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)}
+          placeholder={t("recipes.imageUrl")} value={imageUrl} onChange={(e) => setImageUrl(e.target.value)}
         />
         {pendingImage && (
           <p className="text-sm text-secondary" style={{ marginBottom: "var(--space-sm)" }}>
-            A new image will be uploaded when you save ({pendingImage.name}).
+            {t("recipes.pendingImage", { name: pendingImage.name })}
           </p>
         )}
         {uploadError && (
@@ -209,27 +211,27 @@ export default function RecipeDetail({ recipeId, onBack }: { recipeId: string; o
           </p>
         )}
 
-        <label className="form-label" style={{ marginTop: "var(--space-md)" }}>Ingredients</label>
+        <label className="form-label" style={{ marginTop: "var(--space-md)" }}>{t("recipes.ingredients")}</label>
         {ingredients.map((ing, i) => (
           <div key={i} className="flex-center" style={{ gap: "0.4rem", marginBottom: "0.35rem" }}>
-            <input className="input" placeholder="Name" value={ing.name} onChange={(e) => updateRow("ingredients", i, "name", e.target.value)} />
-            <input className="input" style={{ width: 80 }} placeholder="Qty" value={ing.quantity} onChange={(e) => updateRow("ingredients", i, "quantity", e.target.value)} />
-            <input className="input" style={{ width: 90 }} placeholder="Unit" value={ing.unit} onChange={(e) => updateRow("ingredients", i, "unit", e.target.value)} />
+            <input className="input" placeholder={t("recipes.ingName")} value={ing.name} onChange={(e) => updateRow("ingredients", i, "name", e.target.value)} />
+            <input className="input" style={{ width: 80 }} placeholder={t("recipes.ingQty")} value={ing.quantity} onChange={(e) => updateRow("ingredients", i, "quantity", e.target.value)} />
+            <input className="input" style={{ width: 90 }} placeholder={t("recipes.ingUnit")} value={ing.unit} onChange={(e) => updateRow("ingredients", i, "unit", e.target.value)} />
             <button className="btn btn-danger btn-sm" onClick={() => removeRow("ingredients", i)}>✕</button>
           </div>
         ))}
         <button className="btn btn-sm" onClick={() => setIngredients([...ingredients, { name: "", quantity: "", unit: "" }])}>
-          + Add ingredient
+          {t("recipes.addIngredient")}
         </button>
 
-        <label className="form-label" style={{ marginTop: "var(--space-md)" }}>Steps</label>
+        <label className="form-label" style={{ marginTop: "var(--space-md)" }}>{t("recipes.steps")}</label>
         {steps.map((s, i) => (
           <div key={i} className="flex-center" style={{ gap: "0.4rem", marginBottom: "0.35rem" }}>
-            <input className="input" style={{ flex: 1 }} placeholder={`Step ${i + 1}`} value={s.instruction} onChange={(e) => updateRow("steps", i, "instruction", e.target.value)} />
+            <input className="input" style={{ flex: 1 }} placeholder={t("recipes.stepPlaceholder", { number: i + 1 })} value={s.instruction} onChange={(e) => updateRow("steps", i, "instruction", e.target.value)} />
             <button className="btn btn-danger btn-sm" onClick={() => removeRow("steps", i)}>✕</button>
           </div>
         ))}
-        <button className="btn btn-sm" onClick={() => setSteps([...steps, { instruction: "" }])}>+ Add step</button>
+        <button className="btn btn-sm" onClick={() => setSteps([...steps, { instruction: "" }])}>{t("recipes.addStep")}</button>
 
         <div style={{ marginTop: "var(--space-lg)" }}>
           {saveError && (
@@ -238,7 +240,7 @@ export default function RecipeDetail({ recipeId, onBack }: { recipeId: string; o
             </p>
           )}
           <button className="btn btn-primary" disabled={saveMut.isPending} onClick={() => saveMut.mutate()}>
-            {saveMut.isPending ? "Saving…" : isNew ? "Create recipe" : "Save changes"}
+            {saveMut.isPending ? t("common.saving") : isNew ? t("recipes.create") : t("recipes.saveChanges")}
           </button>
         </div>
       </div>

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { deleteRecipe, listRecipes, resolveMediaUrl, type Recipe } from "../api/recipes";
+import { useI18n } from "../i18n";
 
 const ALL_TAGS = ["quick", "vegan", "vegetarian", "breakfast", "dinner", "dessert", "soup", "salad"];
 
@@ -23,6 +24,7 @@ function recipeEmoji(r: Recipe): string {
 
 export default function RecipeList({ onOpen }: { onOpen: (recipe: Recipe) => void }) {
   const queryClient = useQueryClient();
+  const { t } = useI18n();
   const [search, setSearch] = useState("");
   const [tag, setTag] = useState<string | null>(null);
   const [difficulty, setDifficulty] = useState<string | null>(null);
@@ -41,9 +43,9 @@ export default function RecipeList({ onOpen }: { onOpen: (recipe: Recipe) => voi
   return (
     <div className="animate-fade-in">
       <div className="flex-center" style={{ justifyContent: "space-between", marginBottom: "var(--space-md)" }}>
-        <h2 className="page-heading" style={{ marginBottom: 0 }}>🍳 Recipes</h2>
+        <h2 className="page-heading" style={{ marginBottom: 0 }}>{t("recipes.title")}</h2>
         <button className="btn btn-primary" onClick={() => onOpen({ id: "__new__" } as Recipe)}>
-          + New recipe
+          {t("recipes.new")}
         </button>
       </div>
 
@@ -51,15 +53,15 @@ export default function RecipeList({ onOpen }: { onOpen: (recipe: Recipe) => voi
       <div style={{ display: "flex", gap: "var(--space-sm)", flexWrap: "wrap", marginBottom: "var(--space-md)" }}>
         <input
           className="input"
-          placeholder="Search recipes…"
+          placeholder={t("recipes.search")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
         <select className="select" value={difficulty ?? ""} onChange={(e) => setDifficulty(e.target.value || null)}>
-          <option value="">All difficulties</option>
-          <option value="easy">Easy</option>
-          <option value="medium">Medium</option>
-          <option value="hard">Hard</option>
+          <option value="">{t("recipes.allDifficulties")}</option>
+          <option value="easy">{t("recipes.easy")}</option>
+          <option value="medium">{t("recipes.medium")}</option>
+          <option value="hard">{t("recipes.hard")}</option>
         </select>
       </div>
 
@@ -76,12 +78,12 @@ export default function RecipeList({ onOpen }: { onOpen: (recipe: Recipe) => voi
         ))}
       </div>
 
-      {isLoading && <p style={{ color: "var(--color-text-secondary)" }}>Loading recipes…</p>}
+      {isLoading && <p style={{ color: "var(--color-text-secondary)" }}>{t("recipes.loading")}</p>}
 
       {recipes.length === 0 && !isLoading && (
         <div className="empty-state">
           <div className="empty-state-icon">🍳</div>
-          <p className="empty-state-text">No recipes yet. Create your first one!</p>
+          <p className="empty-state-text">{t("recipes.empty")}</p>
         </div>
       )}
 
@@ -103,8 +105,8 @@ export default function RecipeList({ onOpen }: { onOpen: (recipe: Recipe) => voi
             </div>
             {r.description && <p style={{ color: "var(--color-text-secondary)", fontSize: "var(--font-size-sm)", margin: "0.35rem 0" }}>{r.description}</p>}
             <p style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)" }}>
-              ⏱ {r.prep_time_minutes + r.cook_time_minutes} min · 🍽 {r.servings} serv
-              {r.tags?.length ? ` · ${r.tags.map((t) => `#${t}`).join(" ")}` : ""}
+              ⏱ {t("recipes.meta", { minutes: r.prep_time_minutes + r.cook_time_minutes, servings: r.servings })}
+              {r.tags?.length ? ` · ${r.tags.map((t2) => `#${t2}`).join(" ")}` : ""}
             </p>
             <button
               className="btn btn-danger btn-sm"
@@ -113,7 +115,7 @@ export default function RecipeList({ onOpen }: { onOpen: (recipe: Recipe) => voi
                 deleteMut.mutate(r.id);
               }}
             >
-              Delete
+              {t("common.delete")}
             </button>
           </div>
         ))}

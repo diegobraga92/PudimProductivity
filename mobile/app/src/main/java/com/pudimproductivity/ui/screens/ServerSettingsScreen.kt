@@ -22,6 +22,8 @@ import com.pudimproductivity.api.HealthResponse
 import com.pudimproductivity.api.HealthService
 import com.pudimproductivity.api.ServerConfig
 import com.pudimproductivity.api.SyncClient
+import com.pudimproductivity.i18n.AppLanguage
+import com.pudimproductivity.i18n.Localization
 import kotlinx.coroutines.launch
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -46,19 +48,17 @@ fun ServerSettingsScreen(onBack: () -> Unit) {
 
     Column(modifier = Modifier.padding(24.dp)) {
         Text(
-            text = "Server Settings",
+            text = Localization.text("settings.server.title"),
             style = MaterialTheme.typography.headlineLarge
         )
 
         Text(
-            text = "Backend URL",
+            text = Localization.text("settings.server.backendUrl"),
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(top = 16.dp)
         )
         Text(
-            text = "Point the app at your PudimProductivity backend " +
-                "(e.g. http://192.168.1.50:8087/api/v1). The change applies " +
-                "immediately — no rebuild required.",
+            text = Localization.text("settings.server.description"),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 4.dp)
@@ -74,7 +74,7 @@ fun ServerSettingsScreen(onBack: () -> Unit) {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 12.dp),
-            label = { Text("API base URL") },
+            label = { Text(Localization.text("settings.server.apiBaseUrl")) },
             placeholder = { Text(ServerConfig.defaultUrl) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
@@ -99,7 +99,7 @@ fun ServerSettingsScreen(onBack: () -> Unit) {
             ) {
                 Icon(Icons.Filled.Save, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
-                Text("Save")
+                Text(Localization.text("common.save"))
             }
 
             OutlinedButton(
@@ -110,9 +110,9 @@ fun ServerSettingsScreen(onBack: () -> Unit) {
                         // Test against the value currently typed (not yet saved).
                         try {
                             val resp = testConnection(urlInput)
-                            testResult = TestResult(true, "Status: ${resp.status} · DB: ${resp.db} · v${resp.version}")
+                            testResult = TestResult(true, "${Localization.text("nav.status")}: ${resp.status} · ${Localization.text("status.database")}: ${resp.db} · v${resp.version}")
                         } catch (e: Exception) {
-                            testResult = TestResult(false, e.message ?: "Connection failed")
+                            testResult = TestResult(false, e.message ?: Localization.text("settings.server.testFailed"))
                         } finally {
                             testing = false
                         }
@@ -126,7 +126,7 @@ fun ServerSettingsScreen(onBack: () -> Unit) {
                     Icon(Icons.Filled.WifiTethering, contentDescription = null)
                 }
                 Spacer(Modifier.width(8.dp))
-                Text("Test Connection")
+                Text(Localization.text("settings.server.test"))
             }
         }
 
@@ -144,7 +144,7 @@ fun ServerSettingsScreen(onBack: () -> Unit) {
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    "Saved. API client and sync reconnected.",
+                    Localization.text("settings.server.saved"),
                     color = MaterialTheme.colorScheme.primary
                 )
             }
@@ -172,7 +172,7 @@ fun ServerSettingsScreen(onBack: () -> Unit) {
 
         // Currently active URL.
         Text(
-            text = "Active URL:",
+            text = Localization.text("settings.server.activeUrl"),
             style = MaterialTheme.typography.titleSmall,
             modifier = Modifier.padding(top = 24.dp)
         )
@@ -196,14 +196,39 @@ fun ServerSettingsScreen(onBack: () -> Unit) {
         ) {
             Icon(Icons.Filled.RestartAlt, contentDescription = null)
             Spacer(Modifier.width(8.dp))
-            Text("Reset to default (${ServerConfig.defaultUrl})")
+            Text(Localization.text("settings.server.reset", "url" to ServerConfig.defaultUrl))
+        }
+
+        // Language toggle.
+        Text(
+            text = Localization.text("lang.language"),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(top = 24.dp)
+        )
+        Row(
+            modifier = Modifier.padding(top = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            AppLanguage.entries.forEach { lang ->
+                FilterChip(
+                    selected = Localization.language == lang,
+                    onClick = {
+                        if (Localization.language != lang) {
+                            Localization.setLanguage(context, lang)
+                            // Refresh home-screen widgets so they pick up the new language.
+                            scope.launch { com.pudimproductivity.widget.WidgetUpdater.updateAll(context) }
+                        }
+                    },
+                    label = { Text(Localization.text(Localization.LANGUAGE_KEYS.getValue(lang))) }
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
         Button(onClick = onBack) {
             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
             Spacer(Modifier.width(8.dp))
-            Text("Back to Tasks")
+            Text(Localization.text("common.backToTasks"))
         }
     }
 }

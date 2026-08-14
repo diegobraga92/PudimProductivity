@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import type { RecurrenceDay } from "../api/tasks";
 import { getRollingWindowDates, getToday, formatWeekRange } from "../utils/dates";
+import { useI18n, useMonthNames } from "../i18n";
 
 const DAY_ORDER: RecurrenceDay[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 const DAY_SHORT: Record<RecurrenceDay, string> = {
@@ -36,6 +37,8 @@ export default function WeekHeatmap({
   weekOffset = 0,
   onWeekOffsetChange,
 }: WeekHeatmapProps) {
+  const { t } = useI18n();
+  const monthNames = useMonthNames();
   const weekDates = getRollingWindowDates(weekOffset);
   const completedSet = new Set(completions);
   const today = getToday();
@@ -78,9 +81,9 @@ export default function WeekHeatmap({
             className="btn btn-ghost"
             style={{ padding: "0.2rem 0.5rem", fontSize: "var(--font-size-sm)" }}
             onClick={() => onWeekOffsetChange(weekOffset - 1)}
-            aria-label="Previous week"
+            aria-label={t("a11y.previousWeek")}
           >
-            &larr; Prev
+            &larr; {t("week.prev")}
           </button>
           <span
             style={{
@@ -89,21 +92,21 @@ export default function WeekHeatmap({
               color: "var(--color-text-secondary)",
             }}
           >
-            {isCurrentWeek ? "This Week" : formatWeekRange(weekDates)}
+            {isCurrentWeek ? t("week.thisWeek") : formatWeekRange(weekDates, monthNames)}
           </span>
           <button
             className="btn btn-ghost"
             style={{ padding: "0.2rem 0.5rem", fontSize: "var(--font-size-sm)" }}
             onClick={() => onWeekOffsetChange(weekOffset + 1)}
             disabled={weekOffset >= 0}
-            aria-label="Next week"
+            aria-label={t("a11y.nextWeek")}
           >
-            Next &rarr;
+            {t("week.next")} &rarr;
           </button>
         </div>
       )}
 
-      <div className="week-heatmap" role="group" aria-label="Weekly habit completion tracker">
+      <div className="week-heatmap" role="group" aria-label={t("a11y.weeklyTracker")}>
         {weekDates.map((date) => {
           const dayName = getDayName(date);
           const isScheduled = recurrenceDays.includes(dayName);
@@ -116,7 +119,12 @@ export default function WeekHeatmap({
           if (isToday) className += " today";
           if (animatingDate === date) className += " animate-complete";
 
-          const label = `${dayName} ${date}${isCompleted ? " — completed" : isScheduled ? " — scheduled" : " — not scheduled"}`;
+          const statusKey = isCompleted
+            ? "heatmap.completed"
+            : isScheduled
+            ? "heatmap.scheduled"
+            : "heatmap.notScheduled";
+          const label = t(statusKey, { day: t(`days.${dayName}`), date });
 
           return (
             <button

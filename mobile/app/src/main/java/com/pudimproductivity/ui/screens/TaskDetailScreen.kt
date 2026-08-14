@@ -13,6 +13,7 @@ import com.pudimproductivity.api.Task
 import com.pudimproductivity.api.TaskCompletion
 import com.pudimproductivity.api.UpdateTaskRequest
 import com.pudimproductivity.api.taskService
+import com.pudimproductivity.i18n.Localization
 import com.pudimproductivity.ui.components.ProgressBar
 import com.pudimproductivity.ui.components.ProgressVariant
 import com.pudimproductivity.ui.components.StreakBadge
@@ -24,10 +25,6 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 
 private val DAY_ORDER = listOf("mon", "tue", "wed", "thu", "fri", "sat", "sun")
-private val DAY_LABELS = mapOf(
-    "mon" to "Monday", "tue" to "Tuesday", "wed" to "Wednesday",
-    "thu" to "Thursday", "fri" to "Friday", "sat" to "Saturday", "sun" to "Sunday"
-)
 
 private fun getDayName(dateStr: String): String {
     val date = LocalDate.parse(dateStr)
@@ -66,7 +63,7 @@ fun TaskDetailScreen(
                     )
                 }
             } catch (e: Exception) {
-                error = e.message ?: "Failed to load task"
+                error = e.message ?: Localization.text("mobile.task.load.failed")
             } finally {
                 isLoading = false
             }
@@ -112,22 +109,22 @@ fun TaskDetailScreen(
         error != null -> {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
-                    text = "Error: $error",
+                    text = Localization.text("common.error") + ": $error",
                     color = MaterialTheme.colorScheme.error
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Button(onClick = { loadTask() }) {
-                    Text("Retry")
+                    Text(Localization.text("common.retry"))
                 }
                 OutlinedButton(onClick = onBack) {
-                    Text("Back")
+                    Text(Localization.text("common.back"))
                 }
             }
         }
         task != null && isEditing -> {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
-                    text = "Edit Task",
+                    text = Localization.text("mobile.task.editTitle"),
                     style = MaterialTheme.typography.headlineMedium
                 )
                 Spacer(modifier = Modifier.height(16.dp))
@@ -135,7 +132,7 @@ fun TaskDetailScreen(
                 OutlinedTextField(
                     value = editTitle,
                     onValueChange = { editTitle = it },
-                    label = { Text("Title") },
+                    label = { Text(Localization.text("common.title")) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -159,10 +156,10 @@ fun TaskDetailScreen(
                             }
                         }
                     ) {
-                        Text("Save")
+                        Text(Localization.text("common.save"))
                     }
                     OutlinedButton(onClick = { isEditing = false }) {
-                        Text("Cancel")
+                        Text(Localization.text("common.cancel"))
                     }
                 }
             }
@@ -180,7 +177,7 @@ fun TaskDetailScreen(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     OutlinedButton(onClick = onBack) {
-                        Text("← Back")
+                        Text("← " + Localization.text("common.back"))
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(
@@ -189,7 +186,7 @@ fun TaskDetailScreen(
                                 isEditing = true
                             }
                         ) {
-                            Text("Edit")
+                            Text(Localization.text("common.edit"))
                         }
                         Button(
                             onClick = {
@@ -204,7 +201,7 @@ fun TaskDetailScreen(
                                 containerColor = MaterialTheme.colorScheme.error
                             )
                         ) {
-                            Text("Delete")
+                            Text(Localization.text("common.delete"))
                         }
                     }
                 }
@@ -234,7 +231,10 @@ fun TaskDetailScreen(
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Text(
-                            text = "Habit · ${t.recurrence_days?.joinToString(", ") { DAY_LABELS[it] ?: it }}",
+                            text = Localization.text(
+                                "mobile.task.detail.habit",
+                                "days" to (t.recurrence_days?.joinToString(", ") { Localization.text("days.$it") } ?: "")
+                            ),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -242,7 +242,7 @@ fun TaskDetailScreen(
                     }
                 } else {
                     Text(
-                        text = if (t.status == "done") "Done" else "To Do",
+                        text = if (t.status == "done") Localization.text("common.done") else Localization.text("common.notDone"),
                         style = MaterialTheme.typography.bodySmall,
                         color = if (t.status == "done")
                             MaterialTheme.colorScheme.primary
@@ -285,7 +285,7 @@ fun TaskDetailScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = if (t.status == "done") "Mark as todo" else "Mark as done"
+                                text = if (t.status == "done") Localization.text("tasks.markTodo") else Localization.text("tasks.markDone")
                             )
                         }
                     }
@@ -306,7 +306,7 @@ fun TaskDetailScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "Weekly progress",
+                                    text = Localization.text("mobile.task.detail.weeklyProgress"),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -359,12 +359,12 @@ fun TaskDetailScreen(
                 // Timestamps
                 Column {
                     Text(
-                        text = "Created: ${t.created_at}",
+                        text = Localization.text("mobile.task.detail.created", "date" to t.created_at),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = "Updated: ${t.updated_at}",
+                        text = Localization.text("mobile.task.detail.updated", "date" to t.updated_at),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

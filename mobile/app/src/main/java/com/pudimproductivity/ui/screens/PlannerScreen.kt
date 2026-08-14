@@ -17,13 +17,13 @@ import androidx.compose.ui.unit.dp
 import com.pudimproductivity.api.ApiClient
 import com.pudimproductivity.api.Task
 import com.pudimproductivity.api.taskService
+import com.pudimproductivity.i18n.Localization
 import com.pudimproductivity.utils.formatWeekRange
 import com.pudimproductivity.utils.getWeekDates
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
 private val DAY_NAMES = listOf("mon", "tue", "wed", "thu", "fri", "sat", "sun")
-private val DAY_LABELS = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
 private val DEFAULT_COLOR = Color(0xFF3B82F6)
 
 /** Weekday key (mon..sun) for an ISO date. */
@@ -71,7 +71,7 @@ fun PlannerScreen(onOpenTask: (String) -> Unit) {
             try {
                 tasks = ApiClient.taskService.listScheduledTasks()
             } catch (e: Exception) {
-                error = e.message ?: "Failed to load planner"
+                error = e.message ?: Localization.text("mobile.planner.load.failed")
             } finally {
                 loading = false
             }
@@ -83,7 +83,7 @@ fun PlannerScreen(onOpenTask: (String) -> Unit) {
     val weekDates = getWeekDates(weekOffset)
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Planner") }) }
+        topBar = { TopAppBar(title = { Text(Localization.text("nav.planner")) }) }
     ) { padding ->
         Column(
             modifier = Modifier
@@ -96,22 +96,23 @@ fun PlannerScreen(onOpenTask: (String) -> Unit) {
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                TextButton(onClick = { weekOffset -= 1 }) { Text("‹ Prev") }
+                TextButton(onClick = { weekOffset -= 1 }) { Text("‹ " + Localization.text("week.prev")) }
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.weight(1f)
                 ) {
                     Text(
-                        text = if (weekOffset == 0) "This Week" else "Week $weekOffset",
+                        text = if (weekOffset == 0) Localization.text("week.thisWeek")
+                        else Localization.text("mobile.planner.weekOffset", "offset" to weekOffset),
                         style = MaterialTheme.typography.titleSmall
                     )
                     Text(
-                        text = formatWeekRange(weekDates),
+                        text = formatWeekRange(weekDates, Localization.months()),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                TextButton(onClick = { weekOffset += 1 }) { Text("Next ›") }
+                TextButton(onClick = { weekOffset += 1 }) { Text(Localization.text("week.next") + " ›") }
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -129,7 +130,7 @@ fun PlannerScreen(onOpenTask: (String) -> Unit) {
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "No scheduled tasks yet. Schedule tasks from the Planner on the web to see them here.",
+                        text = Localization.text("mobile.planner.empty"),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -140,7 +141,7 @@ fun PlannerScreen(onOpenTask: (String) -> Unit) {
                             .filter { appliesOn(it, day) }
                             .sortedBy { it.start_time ?: "99:99" }
                         DayCard(
-                            label = DAY_LABELS[index],
+                            label = Localization.text("days.$day"),
                             date = date,
                             tasks = dayTasks,
                             onOpenTask = onOpenTask
@@ -180,7 +181,7 @@ private fun DayCard(
             Spacer(modifier = Modifier.height(6.dp))
             if (tasks.isEmpty()) {
                 Text(
-                    text = "No scheduled tasks",
+                    text = Localization.text("mobile.planner.noScheduled"),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -228,7 +229,7 @@ private fun TaskRow(task: Task, onClick: () -> Unit) {
         }
         if (!task.recurrence_days.isNullOrEmpty()) {
             Text(
-                text = "habit",
+                text = Localization.text("mobile.planner.habitBadge"),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

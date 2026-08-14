@@ -11,6 +11,7 @@ import com.pudimproductivity.api.CreateTaskRequest
 import com.pudimproductivity.api.ParseTaskRequest
 import com.pudimproductivity.api.TaskList
 import com.pudimproductivity.api.taskService
+import com.pudimproductivity.i18n.Localization
 import kotlinx.coroutines.launch
 
 private val DAYS = listOf(
@@ -52,7 +53,7 @@ fun TaskCreateScreen(
             .padding(16.dp)
     ) {
         Text(
-            text = "New Task",
+            text = Localization.text("mobile.task.newTitle"),
             style = MaterialTheme.typography.headlineMedium
         )
 
@@ -71,19 +72,19 @@ fun TaskCreateScreen(
                         selectedDays = it.toSet()
                     }
                     parseHint = buildString {
-                        result.title?.let { append("Title: $it\n") }
-                        result.due_date?.let { append("Due: $it\n") }
-                        result.start_time?.let { append("At: $it") }
+                        result.title?.let { append(Localization.text("mobile.task.parseTitle", "value" to it) + "\n") }
+                        result.due_date?.let { append(Localization.text("mobile.task.parseDue", "value" to it) + "\n") }
+                        result.start_time?.let { append(Localization.text("mobile.task.parseAt", "value" to it)) }
                     }.trim().ifEmpty { null }
                 } catch (e: Exception) {
-                    parseHint = e.message ?: "Could not parse"
+                    parseHint = e.message ?: Localization.text("mobile.parse.failed")
                 }
             }
-        }, enabled = parseInput.isNotBlank()) { Text("✨ Smart add") }
+        }, enabled = parseInput.isNotBlank()) { Text(Localization.text("mobile.task.smartAdd")) }
         OutlinedTextField(
             value = parseInput,
             onValueChange = { parseInput = it },
-            label = { Text("e.g. Buy milk tomorrow at 9am") },
+            label = { Text(Localization.text("mobile.task.parseLabel")) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
@@ -94,8 +95,8 @@ fun TaskCreateScreen(
         OutlinedTextField(
             value = title,
             onValueChange = { title = it },
-            label = { Text("What do you need to do?") },
-            placeholder = { Text("e.g. Have hair cut") },
+            label = { Text(Localization.text("tasks.whatToDo")) },
+            placeholder = { Text(Localization.text("tasks.titlePlaceholder")) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
@@ -112,14 +113,14 @@ fun TaskCreateScreen(
                 }
             )
             Spacer(modifier = Modifier.width(4.dp))
-            Text("Make this a habit (repeats weekly)")
+            Text(Localization.text("tasks.makeHabit"))
         }
 
         // Day picker
         if (isHabit) {
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Repeat on:",
+                text = Localization.text("tasks.repeatOn"),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -128,7 +129,7 @@ fun TaskCreateScreen(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                DAYS.forEach { (value, label) ->
+                DAYS.forEach { (value, _) ->
                     val isSelected = value in selectedDays
                     FilterChip(
                         selected = isSelected,
@@ -139,7 +140,7 @@ fun TaskCreateScreen(
                                 selectedDays + value
                             }
                         },
-                        label = { Text(label) }
+                        label = { Text(Localization.text("days.$value")) }
                     )
                 }
             }
@@ -149,7 +150,7 @@ fun TaskCreateScreen(
         if (taskLists.isNotEmpty()) {
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = "Add to list (optional):",
+                text = Localization.text("mobile.task.listOptional"),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -160,7 +161,7 @@ fun TaskCreateScreen(
                 onExpandedChange = { listDropdownExpanded = it }
             ) {
                 OutlinedTextField(
-                    value = taskLists.find { it.id == selectedListId }?.name ?: "None",
+                    value = taskLists.find { it.id == selectedListId }?.name ?: Localization.text("common.none"),
                     onValueChange = {},
                     readOnly = true,
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = listDropdownExpanded) },
@@ -174,7 +175,7 @@ fun TaskCreateScreen(
                 ) {
                     // Option to clear selection
                     DropdownMenuItem(
-                        text = { Text("None") },
+                        text = { Text(Localization.text("common.none")) },
                         onClick = {
                             selectedListId = null
                             listDropdownExpanded = false
@@ -207,11 +208,11 @@ fun TaskCreateScreen(
             Button(
                 onClick = {
                     if (title.isBlank()) {
-                        error = "Title is required"
+                        error = Localization.text("tasks.validation.titleRequired")
                         return@Button
                     }
                     if (isHabit && selectedDays.isEmpty()) {
-                        error = "Select at least one day for the habit"
+                        error = Localization.text("tasks.validation.dayRequired")
                         return@Button
                     }
                     isSubmitting = true
@@ -227,7 +228,7 @@ fun TaskCreateScreen(
                             )
                             onCreated()
                         } catch (e: Exception) {
-                            error = e.message ?: "Failed to create task"
+                            error = e.message ?: Localization.text("mobile.task.create.failed")
                         } finally {
                             isSubmitting = false
                         }
@@ -235,11 +236,11 @@ fun TaskCreateScreen(
                 },
                 enabled = !isSubmitting
             ) {
-                Text(if (isSubmitting) "Adding..." else "Add Task")
+                Text(if (isSubmitting) Localization.text("tasks.adding") else Localization.text("mobile.task.addTask"))
             }
 
             OutlinedButton(onClick = onCancel) {
-                Text("Cancel")
+                Text(Localization.text("common.cancel"))
             }
         }
     }

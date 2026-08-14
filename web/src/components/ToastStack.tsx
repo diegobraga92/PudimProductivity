@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useToast } from "./toastContext";
+import { useI18n } from "../i18n";
 
 /**
  * Renders the in-app toast stack (real-time task notifications). Reuses the
@@ -7,6 +8,7 @@ import { useToast } from "./toastContext";
  */
 export function ToastStack() {
   const { toasts, dismissToast } = useToast();
+  const { t } = useI18n();
   // Toast IDs currently playing their exit animation (fade/slide out).
   const [leaving, setLeaving] = useState<Set<string>>(new Set());
 
@@ -43,7 +45,7 @@ export function ToastStack() {
   }
 
   return (
-    <div className="alarm-toast-container" role="region" aria-label="Notifications">
+    <div className="alarm-toast-container" role="region" aria-label={t("a11y.notifications")}>
       {toasts.map((toast) => (
         <div
           key={toast.id}
@@ -57,7 +59,7 @@ export function ToastStack() {
           <button
             className="alarm-toast-dismiss"
             onClick={() => dismiss(toast.id)}
-            aria-label={`Dismiss notification: ${toast.title}`}
+            aria-label={t("toast.dismiss", { title: toast.title })}
           >
             ✕
           </button>

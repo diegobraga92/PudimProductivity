@@ -10,6 +10,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.work.Worker
 import androidx.work.WorkerParameters
+import com.pudimproductivity.i18n.Localization
 import com.pudimproductivity.local.LocalDatabase
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -26,6 +27,7 @@ class HabitReminderWorker(
 
     override fun doWork(): Result {
         val appContext = applicationContext
+        Localization.init(appContext)
         val db = LocalDatabase(appContext)
         val today = LocalDate.now().format(DateTimeFormatter.ISO_DATE)
 
@@ -38,8 +40,8 @@ class HabitReminderWorker(
             }
 
         if (pendingHabits.isNotEmpty()) {
-            val title = "🌅 Good morning!"
-            val text = "${pendingHabits.size} habit${if (pendingHabits.size == 1) "" else "s"} not done yet today: " +
+            val title = Localization.text("notifications.goodMorning")
+            val text = Localization.text("notifications.pendingHabits", "count" to pendingHabits.size) +
                 pendingHabits.take(3).joinToString(", ") { it.title } +
                 if (pendingHabits.size > 3) "…" else ""
 
@@ -55,9 +57,9 @@ class HabitReminderWorker(
         private fun ensureChannel(context: Context) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "Habit reminders",
+                Localization.text("notifications.channel.habits"),
                 NotificationManager.IMPORTANCE_DEFAULT
-            ).apply { description = "Local daily reminders for habits not yet completed" }
+            ).apply { description = Localization.text("notifications.channel.habitsDesc") }
             context.getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         }
 

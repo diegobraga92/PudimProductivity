@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import com.pudimproductivity.api.ApiClient
 import com.pudimproductivity.api.Recipe
 import com.pudimproductivity.api.recipeService
+import com.pudimproductivity.i18n.Localization
 import kotlinx.coroutines.launch
 
 /**
@@ -42,7 +43,7 @@ fun RecipeDetailScreen(
             try {
                 recipe = ApiClient.recipeService.getRecipe(recipeId)
             } catch (e: Exception) {
-                error = e.message ?: "Failed to load recipe"
+                error = e.message ?: Localization.text("mobile.recipe.load.failed")
             }
             isLoading = false
         }
@@ -53,16 +54,16 @@ fun RecipeDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(recipe?.title ?: "Recipe") },
+                title = { Text(recipe?.title ?: Localization.text("mobile.recipe.title")) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = Localization.text("common.back"))
                     }
                 },
                 actions = {
                     if (recipe != null) {
                         TextButton(onClick = { showDeleteConfirm = true }) {
-                            Text("Delete", color = MaterialTheme.colorScheme.error)
+                            Text(Localization.text("common.delete"), color = MaterialTheme.colorScheme.error)
                         }
                     }
                 }
@@ -90,7 +91,7 @@ fun RecipeDetailScreen(
                 ) {
                     item {
                         Text(
-                            text = "${r.difficulty} · ${r.prep_time_minutes + r.cook_time_minutes} min · ${r.servings} serv",
+                            text = "${r.difficulty} · " + Localization.text("recipes.meta", "minutes" to (r.prep_time_minutes + r.cook_time_minutes), "servings" to r.servings),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -116,7 +117,7 @@ fun RecipeDetailScreen(
                     if (ingredients.isNotEmpty()) {
                         item {
                             Text(
-                                "Ingredients",
+                                Localization.text("recipes.ingredients"),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold
                             )
@@ -135,7 +136,7 @@ fun RecipeDetailScreen(
                     if (steps.isNotEmpty()) {
                         item {
                             Text(
-                                "Steps",
+                                Localization.text("recipes.steps"),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold
                             )
@@ -165,8 +166,8 @@ fun RecipeDetailScreen(
     if (showDeleteConfirm) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
-            title = { Text("Delete recipe?") },
-            text = { Text("This cannot be undone.") },
+            title = { Text(Localization.text("mobile.recipe.deleteConfirm")) },
+            text = { Text(Localization.text("library.cannotUndo")) },
             confirmButton = {
                 TextButton(onClick = {
                     showDeleteConfirm = false
@@ -179,12 +180,12 @@ fun RecipeDetailScreen(
                         onDeleted()
                     }
                 }) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                    Text(Localization.text("common.delete"), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteConfirm = false }) {
-                    Text("Cancel")
+                    Text(Localization.text("common.cancel"))
                 }
             }
         )

@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { syncClient, type WsEvent } from "../api/sync";
 import { useToast } from "../components/toastContext";
+import { useI18n } from "../i18n";
 import type { Task } from "../api/tasks";
 
 interface TaskPayload {
@@ -9,34 +10,36 @@ interface TaskPayload {
   completed_date?: string;
 }
 
-function fmt(event: WsEvent): { icon: string; title: string; body?: string } | null {
+type Translate = (key: string, vars?: Record<string, string | number>) => string;
+
+function fmt(event: WsEvent, t: Translate): { icon: string; title: string; body?: string } | null {
   const payload = (event.payload ?? {}) as unknown as TaskPayload;
   switch (event.type) {
     case "task.created": {
       const task = payload as Task;
       if (!task.title) return null;
-      return { icon: "📝", title: "New task", body: task.title };
+      return { icon: "📝", title: t("toast.newTask"), body: task.title };
     }
     case "task.updated": {
       const task = payload as Task;
       if (!task.title) return null;
-      return { icon: "✏️", title: "Task updated", body: task.title };
+      return { icon: "✏️", title: t("toast.taskUpdated"), body: task.title };
     }
     case "task.merged": {
       // Phase 8: a CRDT merge resolved. The payload is the winning task; this
       // is the "someone else changed it" signal for collaborative edits.
       const task = payload as Task;
       if (!task.title) return null;
-      return { icon: "🔄", title: "Concurrent edit merged", body: `"${task.title}" was updated by another editor.` };
+      return { icon: "🔄", title: t("toast.merged"), body: t("toast.mergedBody", { title: task.title }) };
     }
     case "task.deleted":
-      return { icon: "🗑️", title: "Task deleted", body: "A task was removed." };
+      return { icon: "🗑️", title: t("toast.taskDeleted"), body: t("toast.taskDeletedBody") };
     case "task.completed":
       if (!payload.title) return null;
-      return { icon: "🎉", title: "Habit completed", body: payload.title };
+      return { icon: "🎉", title: t("toast.habitCompleted"), body: payload.title };
     case "task.uncompleted":
       if (!payload.title) return null;
-      return { icon: "↩️", title: "Completion removed", body: payload.title };
+      return { icon: "↩️", title: t("toast.completionRemoved"), body: payload.title };
     default:
       return null;
   }
@@ -49,6 +52,7 @@ function fmt(event: WsEvent): { icon: string; title: string; body?: string } | n
  */
 export function useTaskNotifier(): void {
   const { pushToast } = useToast();
+  const { t } = useI18n();
 
   useEffect(() => {
     const notifiable: Array<Parameters<typeof syncClient.on>[0]> = [
@@ -62,11 +66,11 @@ export function useTaskNotifier(): void {
 
     const offs = notifiable.map((type) =>
       syncClient.on(type, (event) => {
-        const t = fmt(event);
-        if (t) pushToast(t);
+        const toast = fmt(event, t);
+        if (toast) pushToast(toast);
       })
     );
 
     return () => offs.forEach((off) => off());
-  }, [pushToast]);
+  }, [pushToast, t]);
 }

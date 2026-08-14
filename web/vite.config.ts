@@ -16,6 +16,9 @@ export default defineConfig(({ mode }) => {
     plugins: [react(), ...(analyze ? [visualizer({ filename: "dist/stats.html", gzipSize: true, open: false })] : [])],
     server: {
       port: frontendPort,
+      // The shared i18n dictionary lives one level above the web project
+      // root; allow the dev server to serve it.
+      fs: { allow: [".."] },
       proxy: {
         "/api": {
           target: `http://localhost:${backendPort}`,

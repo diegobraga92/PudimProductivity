@@ -13,6 +13,7 @@ import com.pudimproductivity.api.ApiClient
 import com.pudimproductivity.api.CreateRecipeRequest
 import com.pudimproductivity.api.RecipeIngredient
 import com.pudimproductivity.api.recipeService
+import com.pudimproductivity.i18n.Localization
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -27,22 +28,22 @@ fun RecipeCreateScreen(onDone: () -> Unit) {
     var error by remember { mutableStateOf<String?>(null) }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("New recipe") }, navigationIcon = { IconButton(onClick = onDone) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") } }) }
+        topBar = { TopAppBar(title = { Text(Localization.text("recipes.newTitle")) }, navigationIcon = { IconButton(onClick = onDone) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = Localization.text("common.back")) } }) }
     ) { padding ->
         Column(Modifier.padding(padding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("Title") }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text(Localization.text("common.title")) }, modifier = Modifier.fillMaxWidth())
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Difficulty: ", style = MaterialTheme.typography.labelLarge)
+                Text(Localization.text("mobile.recipes.difficultyLabel"), style = MaterialTheme.typography.labelLarge)
                 listOf("easy", "medium", "hard").forEach { d ->
                     FilterChip(
                         selected = difficulty == d,
                         onClick = { difficulty = d },
-                        label = { Text(d) },
+                        label = { Text(Localization.text("recipes.$d")) },
                         modifier = Modifier.padding(end = 4.dp)
                     )
                 }
             }
-            OutlinedTextField(value = ingredient, onValueChange = { ingredient = it }, label = { Text("Ingredient: name, qty, unit") }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = ingredient, onValueChange = { ingredient = it }, label = { Text(Localization.text("mobile.recipes.ingredientLabel")) }, modifier = Modifier.fillMaxWidth())
             Button(
                 onClick = {
                     val parts = ingredient.split(",").map { it.trim() }
@@ -52,9 +53,9 @@ fun RecipeCreateScreen(onDone: () -> Unit) {
                     }
                 },
                 modifier = Modifier.fillMaxWidth()
-            ) { Text("+ Add ingredient") }
+            ) { Text(Localization.text("recipes.addIngredient")) }
             if (ingredients.isNotEmpty()) {
-                Text("Ingredients: ${ingredients.joinToString("; ") { "${it.name} ${it.quantity} ${it.unit}".trim() }}", style = MaterialTheme.typography.bodySmall)
+                Text(Localization.text("recipes.ingredients") + ": " + ingredients.joinToString("; ") { "${it.name} ${it.quantity} ${it.unit}".trim() }, style = MaterialTheme.typography.bodySmall)
             }
             error?.let { Text(it, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center) }
             Button(
@@ -73,13 +74,13 @@ fun RecipeCreateScreen(onDone: () -> Unit) {
                             )
                             onDone()
                         } catch (e: Exception) {
-                            error = e.message ?: "Failed to create recipe"
+                            error = e.message ?: Localization.text("mobile.recipes.create.failed")
                         }
                         saving = false
                     }
                 },
                 modifier = Modifier.fillMaxWidth()
-            ) { Text(if (saving) "Saving…" else "Create recipe") }
+            ) { Text(if (saving) Localization.text("common.saving") else Localization.text("recipes.create")) }
         }
     }
 }

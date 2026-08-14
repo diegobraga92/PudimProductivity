@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import com.pudimproductivity.i18n.Localization
 import com.pudimproductivity.utils.formatWeekRange
 import com.pudimproductivity.utils.getWeekDates
 
@@ -31,11 +32,12 @@ fun WeekNavigator(
         verticalAlignment = Alignment.CenterVertically
     ) {
         TextButton(onClick = { onWeekOffsetChange(weekOffset - 1) }) {
-            Text("← Prev", style = MaterialTheme.typography.labelSmall)
+            Text("← " + Localization.text("week.prev"), style = MaterialTheme.typography.labelSmall)
         }
 
         Text(
-            text = if (isCurrentWeek) "This Week" else formatWeekRange(weekDates),
+            text = if (isCurrentWeek) Localization.text("week.thisWeek")
+            else formatWeekRange(weekDates, Localization.months()),
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -46,7 +48,7 @@ fun WeekNavigator(
             enabled = weekOffset < 0
         ) {
             Text(
-                "Next →",
+                Localization.text("week.next") + " →",
                 style = MaterialTheme.typography.labelSmall,
                 color = if (weekOffset < 0) MaterialTheme.colorScheme.primary
                 else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)

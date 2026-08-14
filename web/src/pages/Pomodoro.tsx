@@ -8,6 +8,7 @@ import {
   stopSession,
 } from "../api/pomodoro";
 import { getSoundscape, type SoundID } from "../utils/audio";
+import { useI18n } from "../i18n";
 
 const FOCUS_PRESETS = [15, 25, 30, 45, 60];
 const BREAK_PRESETS = [5, 10, 15];
@@ -22,6 +23,7 @@ function formatTime(seconds: number): string {
 
 function Pomodoro() {
   const queryClient = useQueryClient();
+  const { t } = useI18n();
   const [focusMinutes, setFocusMinutes] = useState(25);
   const [breakMinutes, setBreakMinutes] = useState(5);
   const [localRemaining, setLocalRemaining] = useState<number | null>(null);
@@ -166,7 +168,7 @@ function Pomodoro() {
           marginBottom: "var(--space-lg)",
         }}
       >
-        <h2 className="page-heading" style={{ marginBottom: 0 }}>🍅 Pomodoro Timer</h2>
+        <h2 className="page-heading" style={{ marginBottom: 0 }}>{t("pomodoro.title")}</h2>
       </div>
 
       <div
@@ -187,7 +189,7 @@ function Pomodoro() {
             margin: "0 auto var(--space-lg)",
           }}
         >
-          <svg width="220" height="220" viewBox="0 0 220 220" role="img" aria-label={`${formatTime(displayTime)} remaining`}>
+          <svg width="220" height="220" viewBox="0 0 220 220" role="img" aria-label={t("pomodoro.remainingAria", { time: formatTime(displayTime) })}>
             <circle
               cx="110"
               cy="110"
@@ -243,7 +245,7 @@ function Pomodoro() {
               {formatTime(displayTime)}
             </span>
             <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)", letterSpacing: "1px" }}>
-              {isActive ? "FOCUS" : "READY"}
+              {isActive ? t("pomodoro.focus") : t("pomodoro.ready")}
             </span>
           </div>
         </div>
@@ -257,16 +259,16 @@ function Pomodoro() {
           }}
         >
           {isLoading
-            ? "Loading..."
+            ? t("common.loadingDot")
             : isRunning
-            ? "🔴 Focus time"
+            ? t("pomodoro.focusTime")
             : isPaused
-            ? "⏸️ Paused"
+            ? t("pomodoro.paused")
             : session?.status === "completed"
-            ? "✅ Session completed!"
+            ? t("pomodoro.completed")
             : session?.status === "cancelled"
-            ? "⏹️ Session cancelled"
-            : "Ready to start"}
+            ? t("pomodoro.cancelled")
+            : t("pomodoro.readyToStart")}
         </div>
 
         {/* Controls */}
@@ -285,7 +287,7 @@ function Pomodoro() {
               disabled={startMutate.isPending}
               style={{ minWidth: "120px" }}
             >
-              {startMutate.isPending ? "⏳" : "▶️ Start"}
+              {startMutate.isPending ? "⏳" : t("pomodoro.start")}
             </button>
           )}
 
@@ -300,7 +302,7 @@ function Pomodoro() {
                 minWidth: "120px",
               }}
             >
-              {pauseMutate.isPending ? "⏳" : "⏸️ Pause"}
+              {pauseMutate.isPending ? "⏳" : t("pomodoro.pause")}
             </button>
           )}
 
@@ -311,7 +313,7 @@ function Pomodoro() {
               disabled={resumeMutate.isPending}
               style={{ minWidth: "120px" }}
             >
-              {resumeMutate.isPending ? "⏳" : "▶️ Resume"}
+              {resumeMutate.isPending ? "⏳" : t("pomodoro.resume")}
             </button>
           )}
 
@@ -326,7 +328,7 @@ function Pomodoro() {
                 minWidth: "120px",
               }}
             >
-              {stopMutate.isPending ? "⏳" : "⏹️ Stop"}
+              {stopMutate.isPending ? "⏳" : t("pomodoro.stop")}
             </button>
           )}
         </div>
@@ -349,7 +351,7 @@ function Pomodoro() {
               marginBottom: "var(--space-md)",
             }}
           >
-            ⚙️ Settings
+            {t("pomodoro.settings")}
           </h3>
 
           <div
@@ -371,7 +373,7 @@ function Pomodoro() {
                   color: "var(--color-text-secondary)",
                 }}
               >
-                Focus (min)
+                {t("pomodoro.focusMinutes")}
               </label>
               <div style={{ display: "flex", gap: "0.25rem", flexWrap: "wrap" }}>
                 {FOCUS_PRESETS.map((m) => (
@@ -398,7 +400,7 @@ function Pomodoro() {
                   color: "var(--color-text-secondary)",
                 }}
               >
-                Break (min)
+                {t("pomodoro.breakMinutes")}
               </label>
               <div style={{ display: "flex", gap: "0.25rem", flexWrap: "wrap" }}>
                 {BREAK_PRESETS.map((m) => (

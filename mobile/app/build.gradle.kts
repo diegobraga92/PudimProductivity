@@ -90,6 +90,27 @@ android {
     }
 }
 
+// i18n: copy the shared English/pt-BR dictionaries (single source of truth in
+// `shared/i18n/`) into the app assets so the Android UI and widgets use the
+// exact same strings as the web app. Runs before every build.
+tasks.register("syncI18nAssets") {
+    val sharedDir = rootProject.file("../shared/i18n")
+    val assetsDir = file("src/main/assets/i18n")
+    inputs.dir(sharedDir)
+    outputs.dir(assetsDir)
+    doLast {
+        assetsDir.mkdirs()
+        copy {
+            from(sharedDir)
+            into(assetsDir)
+            include("en.json", "pt-BR.json")
+        }
+    }
+}
+tasks.named("preBuild") {
+    dependsOn("syncI18nAssets")
+}
+
 // OWASP dependency-check tuning (task: ./gradlew dependencyCheckAnalyze).
 // - OSS Index analyzer requires a Sonatype PAT and is unreliable in CI (remote
 //   errors per jar) — disabled; NVD + CISA KEV remain the coverage sources.

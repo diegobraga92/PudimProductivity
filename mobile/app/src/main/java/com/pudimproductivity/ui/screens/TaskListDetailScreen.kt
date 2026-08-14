@@ -21,6 +21,7 @@ import com.pudimproductivity.api.TaskList
 import com.pudimproductivity.api.UpdateTaskListRequest
 import com.pudimproductivity.api.UpdateTaskRequest
 import com.pudimproductivity.api.taskService
+import com.pudimproductivity.i18n.Localization
 import com.pudimproductivity.ui.components.ProgressBar
 import com.pudimproductivity.ui.components.ProgressVariant
 import kotlinx.coroutines.launch
@@ -49,7 +50,7 @@ fun TaskListDetailScreen(
                 taskList = ApiClient.taskService.getTaskList(listId)
                 tasks = ApiClient.taskService.listTasksByListID(listId)
             } catch (e: Exception) {
-                error = e.message ?: "Failed to load list"
+                error = e.message ?: Localization.text("mobile.list.load.failed")
             } finally {
                 isLoading = false
             }
@@ -66,10 +67,10 @@ fun TaskListDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(taskList?.name ?: "Loading...") },
+                title = { Text(taskList?.name ?: Localization.text("common.loadingDot")) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = Localization.text("common.back"))
                     }
                 },
                 actions = {
@@ -79,7 +80,7 @@ fun TaskListDetailScreen(
                             editingName = true
                         }
                     }) {
-                        Text("Rename")
+                        Text(Localization.text("mobile.list.rename"))
                     }
                     TextButton(onClick = {
                         scope.launch {
@@ -89,7 +90,7 @@ fun TaskListDetailScreen(
                             } catch (_: Exception) { }
                         }
                     }) {
-                        Text("Delete", color = MaterialTheme.colorScheme.error)
+                        Text(Localization.text("common.delete"), color = MaterialTheme.colorScheme.error)
                     }
                 }
             )
@@ -116,7 +117,7 @@ fun TaskListDetailScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Progress",
+                                text = Localization.text("mobile.list.progress"),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -160,10 +161,10 @@ fun TaskListDetailScreen(
                             } catch (_: Exception) { }
                         }
                     }) {
-                        Text("Save")
+                        Text(Localization.text("common.save"))
                     }
                     TextButton(onClick = { editingName = false }) {
-                        Text("Cancel")
+                        Text(Localization.text("common.cancel"))
                     }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
@@ -179,7 +180,7 @@ fun TaskListDetailScreen(
                     value = newTitle,
                     onValueChange = { newTitle = it },
                     modifier = Modifier.weight(1f),
-                    placeholder = { Text("Add a task...") },
+                    placeholder = { Text(Localization.text("mobile.list.quickAdd")) },
                     singleLine = true
                 )
                 Button(
@@ -196,7 +197,7 @@ fun TaskListDetailScreen(
                     },
                     enabled = newTitle.isNotBlank()
                 ) {
-                    Text("Add")
+                    Text(Localization.text("common.add"))
                 }
             }
 
@@ -212,10 +213,10 @@ fun TaskListDetailScreen(
                     }
                 }
                 error != null -> {
-                    Text("Error: $error", color = MaterialTheme.colorScheme.error)
+                    Text(Localization.text("common.error") + ": $error", color = MaterialTheme.colorScheme.error)
                     Spacer(modifier = Modifier.height(8.dp))
                     Button(onClick = { loadData() }) {
-                        Text("Retry")
+                        Text(Localization.text("common.retry"))
                     }
                 }
                 tasks.isEmpty() -> {
@@ -224,7 +225,7 @@ fun TaskListDetailScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "No tasks in this list yet.",
+                            text = Localization.text("mobile.list.noTasks"),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

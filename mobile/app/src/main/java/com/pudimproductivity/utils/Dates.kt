@@ -25,28 +25,27 @@ fun getToday(): String {
 
 /**
  * Given a list of 7 ISO date strings (Mon–Sun), returns a human-friendly
- * range like "Mar 15–21".
+ * range like "Mar 15–21". Month abbreviations can be localized via [monthNames]
+ * (defaults to English).
  */
-fun formatWeekRange(dates: List<String>): String {
+fun formatWeekRange(
+    dates: List<String>,
+    monthNames: List<String> = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+): String {
     if (dates.size < 2) return ""
-    val start = formatShortDate(dates.first())
-    val end = formatShortDate(dates.last())
+    val start = formatShortDate(dates.first(), monthNames)
+    val end = formatShortDate(dates.last(), monthNames)
     // Same month → "Mar 15–21", different months → "Mar 28–Apr 3"
     val startMonth = dates.first().substring(5, 7)
     val endMonth = dates.last().substring(5, 7)
     return if (startMonth == endMonth) {
-        "${formatMonth(dates.first())} ${start.substringAfter(" ")}–${end.substringAfter(" ")}"
+        "${monthNames[startMonth.toInt() - 1]} ${start.substringAfter(" ")}–${end.substringAfter(" ")}"
     } else {
         "$start – $end"
     }
 }
 
-private fun formatShortDate(isoDate: String): String {
+private fun formatShortDate(isoDate: String, monthNames: List<String>): String {
     val date = LocalDate.parse(isoDate)
-    return date.format(DateTimeFormatter.ofPattern("MMM d"))
-}
-
-private fun formatMonth(isoDate: String): String {
-    val date = LocalDate.parse(isoDate)
-    return date.format(DateTimeFormatter.ofPattern("MMM"))
+    return "${monthNames[date.monthValue - 1]} ${date.dayOfMonth}"
 }
