@@ -13,9 +13,31 @@ export interface paths {
         };
         /**
          * List library items
-         * @description Returns items newest-first, optionally filtered by media type and/or done status.
+         * @description Returns items newest-first, optionally filtered by media type, done status and/or subtype (genre/console).
          */
         get: operations["listLibraryItems"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/library/subtypes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List distinct subtypes for the filter dropdown
+         * @description Returns the distinct non-empty genre/console values present in the
+         *     library, sorted alphabetically. Optionally scoped to a media type so
+         *     games show consoles and movies/series/books show genres.
+         */
+        get: operations["listLibrarySubtypes"];
         put?: never;
         /**
          * Add an item to the library
@@ -45,6 +67,30 @@ export interface paths {
         get: operations["searchLibraryScores"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/library/score/batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Look up scores for many titles at once
+         * @description Used by the CSV import auto-scoring flow. Each item is looked up against
+         *     the configured provider independently with bounded concurrency; per-item
+         *     failures are reported inline (in the result's error field) rather than
+         *     failing the whole request. Up to 100 items per call. Returns 503 when
+         *     the feature is disabled or no provider is configured.
+         */
+        post: operations["searchLibraryScoresBatch"];
         delete?: never;
         options?: never;
         head?: never;
@@ -151,6 +197,26 @@ export interface components {
             /** @description Link to the provider's page for the title. */
             url?: string;
         };
+        ScoreBatchItem: {
+            /** @description Title to look up. */
+            name: string;
+            type: components["schemas"]["MediaType"];
+            /** @description Optional release year to narrow the search. */
+            year?: number | null;
+        };
+        ScoreBatchRequest: {
+            items: components["schemas"]["ScoreBatchItem"][];
+        };
+        ScoreBatchResult: {
+            /** @description Echo of the item's position in the request, so results map to rows. */
+            index: number;
+            candidates: components["schemas"]["ScoreCandidate"][];
+            /** @description Present when the row or its lookup failed (e.g. invalid type, provider error). */
+            error?: string;
+        };
+        ScoreBatchResponse: {
+            results: components["schemas"]["ScoreBatchResult"][];
+        };
         CreateLibraryItemRequest: {
             name: string;
             media_type: components["schemas"]["MediaType"];
@@ -215,6 +281,7 @@ export interface operations {
             query?: {
                 type?: components["schemas"]["MediaType"];
                 done?: boolean;
+                subtype?: string;
             };
             header?: never;
             path?: never;
@@ -232,6 +299,37 @@ export interface operations {
                 };
             };
             /** @description Invalid filter value. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    listLibrarySubtypes: {
+        parameters: {
+            query?: {
+                type?: components["schemas"]["MediaType"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Distinct subtype values. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string[];
+                };
+            };
+            /** @description Invalid type filter. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -298,6 +396,57 @@ export interface operations {
                 };
             };
             /** @description Missing or invalid parameters. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The rating provider could not be reached. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Score lookup is disabled or not configured. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    searchLibraryScoresBatch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScoreBatchRequest"];
+            };
+        };
+        responses: {
+            /** @description Per-item lookup results, in request order. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScoreBatchResponse"];
+                };
+            };
+            /** @description Empty, malformed or oversized payload. */
             400: {
                 headers: {
                     [name: string]: unknown;

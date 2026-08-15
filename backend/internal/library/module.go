@@ -12,17 +12,20 @@ import (
 )
 
 // RegisterLibraryRoutes wires the Library module (media tracking). lookup is
-// the score-lookup client (pass NoopScoreLookup{} to disable); flags gates the
+// the score-lookup provider (pass NoopScoreLookup{} to disable); flags gates the
 // score-search feature at runtime.
-func RegisterLibraryRoutes(r chi.Router, pool *pgxpool.Pool, auditLogger audit.Logger, bus eventbus.Bus, lookup ScoreLookupClient, flags *featureflag.Service) *LibraryService {
+func RegisterLibraryRoutes(r chi.Router, pool *pgxpool.Pool, auditLogger audit.Logger, bus eventbus.Bus, lookup ScoreLookupProvider, flags *featureflag.Service) *LibraryService {
 	repo := NewPostgresRepository(pool)
 	service := NewLibraryService(repo, auditLogger, bus)
 	handler := NewHandler(service, lookup, flags)
 
 	r.Route("/api/v1/library", func(r chi.Router) {
-		// Read-only endpoints — anonymous access allowed.
+		// Read-only endpoints — anonymous access allowed. Batch score lookup is
+		// read-only (only queries external providers) so it sits with the reads.
 		r.Get("/", handler.List)
+		r.Get("/subtypes", handler.Subtypes)
 		r.Get("/score/search", handler.SearchScores)
+		r.Post("/score/batch", handler.SearchScoresBatch)
 		r.Get("/{itemId}", handler.Get)
 
 		// Mutations require an authenticated user (dev identity headers).

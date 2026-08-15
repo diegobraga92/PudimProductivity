@@ -116,8 +116,12 @@ func (s *LibraryService) Get(ctx context.Context, id string) (*Item, error) {
 	return s.repo.GetByID(ctx, id)
 }
 
-func (s *LibraryService) List(ctx context.Context, mediaType string, done *bool) ([]*Item, error) {
-	return s.repo.List(ctx, mediaType, done)
+func (s *LibraryService) List(ctx context.Context, filter ListFilter) ([]*Item, error) {
+	return s.repo.List(ctx, filter)
+}
+
+func (s *LibraryService) DistinctSubtypes(ctx context.Context, mediaType string) ([]string, error) {
+	return s.repo.DistinctSubtypes(ctx, mediaType)
 }
 
 // Update merges the editable fields and persists the result, returning the

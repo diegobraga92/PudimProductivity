@@ -1,0 +1,173 @@
+# Check latest: https://github.com/OAI/OpenAPI-Specification/releases
+openapi: "3.2.0"
+info:
+  title: PudimProductivity Admin API
+  description: |
+    Runtime server configuration for administrators. Today this covers the
+    library's score providers: which rating provider serves each media type,
+    plus per-provider API keys and base URLs. API keys are write-only — reads
+    return a masked api_key_set boolean and never the secret. All endpoints
+    require the admin role (dev identity header X-User-Role: admin).
+  version: "0.1.0"
+  contact:
+    name: PudimProductivity Team
+    url: https://github.com/diegobraga92/PudimProductivity
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+
+paths:
+  /api/v1/admin/score-providers:
+    get:
+      operationId: getScoreProviders
+      summary: Read the score provider configuration
+      description: |
+        Returns the effective media-type → provider mapping (environment
+        bootstrap values until the config is saved in the UI), the lookup
+        feature-flag state, and the masked provider list (never the API keys).
+        Requires the admin role.
+      security: []
+      tags:
+        - Admin
+      responses:
+        "200":
+          description: Effective score provider configuration.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScoreProvidersConfig"
+        "403":
+          description: Missing admin role.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    put:
+      operationId: updateScoreProviders
+      summary: Save the score provider configuration
+      description: |
+        Validates and applies a new configuration: provider/media-type
+        capability checks, API-key requirements, then activates the runtime
+        lookup immediately (no restart) and persists. A provider entry with a
+        nil api_key / base_url keeps the stored value; an empty string clears
+        it. lookup_enabled optionally toggles the library.score_lookup_enabled
+        feature flag. Requires the admin role.
+      security: []
+      tags:
+        - Admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScoreProvidersUpdate"
+      responses:
+        "200":
+          description: The resulting effective configuration (masked).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScoreProvidersConfig"
+        "400":
+          description: Validation error (unknown provider, unsupported assignment, missing key).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Missing admin role.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  schemas:
+    MediaType:
+      type: string
+      enum: [movie, series, book, game]
+
+    ScoreProvider:
+      type: object
+      required: [name, base_url, api_key_set, supported_types]
+      properties:
+        name:
+          type: string
+          description: Registered provider name (e.g. "omdb", "rawg").
+        base_url:
+          type: string
+          description: Override base URL, or empty to use the provider default.
+        api_key_set:
+          type: boolean
+          description: Whether an API key is stored. The key itself is never returned.
+        supported_types:
+          type: array
+          items:
+            $ref: "#/components/schemas/MediaType"
+
+    ScoreProvidersConfig:
+      type: object
+      required: [movie_provider, series_provider, game_provider, book_provider, lookup_enabled, providers]
+      properties:
+        movie_provider:
+          type: string
+          description: Provider for movies ("" or "none" = disabled).
+        series_provider:
+          type: string
+          description: Provider for series ("" or "none" = disabled).
+        game_provider:
+          type: string
+          description: Provider for games ("" or "none" = disabled).
+        book_provider:
+          type: string
+          description: Provider for books ("" or "none" = disabled).
+        lookup_enabled:
+          type: boolean
+          description: State of the library.score_lookup_enabled feature flag.
+        providers:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScoreProvider"
+
+    ScoreProviderUpdate:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          description: Registered provider name to update.
+        api_key:
+          type: [string, "null"]
+          description: nil = keep the stored key; "" = clear it.
+        base_url:
+          type: [string, "null"]
+          description: nil = keep the stored value; "" = use the provider default.
+
+    ScoreProvidersUpdate:
+      type: object
+      required: [movie_provider, series_provider, game_provider, book_provider]
+      properties:
+        movie_provider:
+          type: string
+        series_provider:
+          type: string
+        game_provider:
+          type: string
+        book_provider:
+          type: string
+        lookup_enabled:
+          type: boolean
+          description: Optional — omit to leave the feature flag unchanged.
+        providers:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScoreProviderUpdate"
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string

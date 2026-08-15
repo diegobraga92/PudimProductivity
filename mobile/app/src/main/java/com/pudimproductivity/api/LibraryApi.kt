@@ -15,6 +15,7 @@ data class LibraryItem(
     val release_year: Int? = null,
     val done: Boolean = false,
     val notes: String = "",
+    val subtype: String = "",
     val score: Double? = null,
     val score_source: String = ""
 )
@@ -25,6 +26,7 @@ data class CreateLibraryItemRequest(
     val release_year: Int? = null,
     val done: Boolean = false,
     val notes: String = "",
+    val subtype: String = "",
     val score: Double? = null,
     val score_source: String = ""
 )
@@ -35,6 +37,7 @@ data class UpdateLibraryItemRequest(
     val release_year: Int? = null,
     val done: Boolean? = null,
     val notes: String? = null,
+    val subtype: String? = null,
     val score: Double? = null,
     val score_source: String? = null
 )
@@ -52,8 +55,12 @@ interface LibraryService {
     @GET("library")
     suspend fun listItems(
         @Query("type") mediaType: String? = null,
-        @Query("done") done: Boolean? = null
+        @Query("done") done: Boolean? = null,
+        @Query("subtype") subtype: String? = null
     ): List<LibraryItem>
+
+    @GET("library/subtypes")
+    suspend fun subtypes(@Query("type") mediaType: String? = null): List<String>
 
     @POST("library")
     suspend fun createItem(@Body request: CreateLibraryItemRequest): LibraryItem

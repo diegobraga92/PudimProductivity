@@ -56,10 +56,15 @@ fun LibraryScreen(onBack: () -> Unit) {
     var notes by remember { mutableStateOf("") }
     var score by remember { mutableStateOf("") }
     var scoreSource by remember { mutableStateOf("") }
+    var subtype by remember { mutableStateOf("") }
+    var subtypeOptions by remember { mutableStateOf<List<String>>(emptyList()) }
+    var subtypeFilter by remember { mutableStateOf<String?>(null) }
+    var filterMenuOpen by remember { mutableStateOf(false) }
 
     suspend fun refresh() {
         try {
-            items = ApiClient.libraryService.listItems()
+            items = ApiClient.libraryService.listItems(subtype = subtypeFilter)
+            subtypeOptions = ApiClient.libraryService.subtypes()
             error = null
         } catch (e: Exception) {
             error = e.message ?: Localization.text("mobile.library.load.failed")
@@ -79,6 +84,7 @@ fun LibraryScreen(onBack: () -> Unit) {
         notes = ""
         score = ""
         scoreSource = ""
+        subtype = ""
         formOpen = true
     }
 
@@ -91,6 +97,7 @@ fun LibraryScreen(onBack: () -> Unit) {
         notes = item.notes
         score = item.score?.toString() ?: ""
         scoreSource = item.score_source
+        subtype = item.subtype
         formOpen = true
     }
 
@@ -153,6 +160,19 @@ fun LibraryScreen(onBack: () -> Unit) {
                             modifier = Modifier.fillMaxWidth()
                         )
                         OutlinedTextField(
+                            value = subtype,
+                            onValueChange = { subtype = it },
+                            label = { Text(Localization.text("common.subtype")) },
+                            placeholder = {
+                                Text(
+                                    Localization.text(
+                                        if (mediaType == "game") "library.consolePlaceholder" else "library.genrePlaceholder"
+                                    )
+                                )
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
                             value = notes,
                             onValueChange = { notes = it },
                             label = { Text(Localization.text("common.notes")) },
@@ -178,6 +198,7 @@ fun LibraryScreen(onBack: () -> Unit) {
                                                     release_year = yearValue,
                                                     done = done,
                                                     notes = notes,
+                                                    subtype = subtype.trim(),
                                                     score = scoreValue,
                                                     score_source = scoreSource.trim()
                                                 )
@@ -190,6 +211,7 @@ fun LibraryScreen(onBack: () -> Unit) {
                                                     release_year = yearValue,
                                                     done = done,
                                                     notes = notes,
+                                                    subtype = subtype.trim(),
                                                     score = scoreValue,
                                                     score_source = scoreSource.trim()
                                                 )
@@ -215,6 +237,36 @@ fun LibraryScreen(onBack: () -> Unit) {
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
                 )
+            }
+
+            // Subtype (genre/console) filter.
+            Box(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                OutlinedButton(
+                    onClick = { filterMenuOpen = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(subtypeFilter ?: Localization.text("library.filterSubtypeAll"))
+                }
+                DropdownMenu(expanded = filterMenuOpen, onDismissRequest = { filterMenuOpen = false }) {
+                    DropdownMenuItem(
+                        text = { Text(Localization.text("library.filterSubtypeAll")) },
+                        onClick = {
+                            subtypeFilter = null
+                            filterMenuOpen = false
+                            scope.launch { refresh() }
+                        }
+                    )
+                    subtypeOptions.forEach { option ->
+                        DropdownMenuItem(
+                            text = { Text(option) },
+                            onClick = {
+                                subtypeFilter = option
+                                filterMenuOpen = false
+                                scope.launch { refresh() }
+                            }
+                        )
+                    }
+                }
             }
 
             Button(
@@ -281,7 +333,7 @@ private fun LibraryRowList(
     val borderColor = MaterialTheme.colorScheme.outlineVariant
     val shape = RoundedCornerShape(8.dp)
     // Fixed table width so columns line up; scrolls horizontally on narrow screens.
-    val tableWidth = 620.dp
+    val tableWidth = 780.dp
 
     Row(
         modifier = Modifier
@@ -312,6 +364,12 @@ private fun LibraryRowList(
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.width(110.dp)
+                    )
+                    Text(
+                        text = Localization.text("common.subtype"),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.width(140.dp)
                     )
                     Text(
                         text = Localization.text("common.year"),
@@ -376,6 +434,14 @@ private fun LibraryRowList(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.width(110.dp)
+                    )
+                    Text(
+                        text = item.subtype.ifBlank { "—" },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.width(140.dp)
                     )
                     Text(
                         text = item.release_year?.toString() ?: "—",

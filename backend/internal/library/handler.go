@@ -124,13 +124,40 @@ func toScoreResponses(cands []ScoreCandidate) []ScoreCandidateResponse {
 	return out
 }
 
+// ScoreBatchItemRequest is a single title to look up in a batch.
+type ScoreBatchItemRequest struct {
+	Name      string `json:"name"`
+	MediaType string `json:"type"`
+	Year      *int   `json:"year"`
+}
+
+// ScoreBatchRequest is the payload for POST /library/score/batch.
+type ScoreBatchRequest struct {
+	Items []ScoreBatchItemRequest `json:"items"`
+}
+
+// ScoreBatchResult is the outcome for one requested item. Index echoes the
+// input order so clients can match results to rows. Error is present when the
+// provider (or the request row) failed; otherwise candidates holds the matches.
+type ScoreBatchResult struct {
+	Index      int                      `json:"index"`
+	Candidates []ScoreCandidateResponse `json:"candidates"`
+	Error      string                   `json:"error,omitempty"`
+}
+
+// ScoreBatchResponse is the result of a batch lookup.
+type ScoreBatchResponse struct {
+	Results []ScoreBatchResult `json:"results"`
+}
+
 // --- Service interface (consumer-side, handler level) ---
 
 type Service interface {
 	Create(ctx context.Context, in CreateInput) (*Item, error)
 	Import(ctx context.Context, in []CreateInput) (*ImportResult, error)
 	Get(ctx context.Context, id string) (*Item, error)
-	List(ctx context.Context, mediaType string, done *bool) ([]*Item, error)
+	List(ctx context.Context, filter ListFilter) ([]*Item, error)
+	DistinctSubtypes(ctx context.Context, mediaType string) ([]string, error)
 	Update(ctx context.Context, id string, in UpdateInput) (*Item, error)
 	Delete(ctx context.Context, id string) error
 }

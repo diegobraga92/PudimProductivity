@@ -9,17 +9,33 @@ export type HealthResponse = components["schemas"]["HealthResponse"];
  * these headers; in production they would be replaced by a JWT/session credential.
  *
  * Mutating endpoints (POST/PUT/DELETE) are protected by `RequireRole("admin", "user")`,
- * so clients must present these headers to create/update/delete tasks.
+ * so clients must present these headers to create/update/delete tasks. Admin-only
+ * endpoints (feature-flag toggles, score-provider settings) additionally require
+ * role "admin" — the dev role is stored in localStorage so the admin UI can switch
+ * it (see `setDevRole`).
  */
 export const DEV_USER_ID = "dev-user";
 export const DEV_USER_ROLE = "user";
+
+const DEV_ROLE_KEY = "devRole";
+
+/** Returns the active dev role ("user" | "admin"), defaulting to "user". */
+export function getDevRole(): string {
+  const role = localStorage.getItem(DEV_ROLE_KEY);
+  return role === "admin" || role === "user" ? role : DEV_USER_ROLE;
+}
+
+/** Persists the dev identity role used in the X-User-Role header. */
+export function setDevRole(role: "admin" | "user") {
+  localStorage.setItem(DEV_ROLE_KEY, role);
+}
 
 /** Returns headers for API calls, defaulting to the dev user identity. */
 export function apiHeaders(extra?: Record<string, string>): Record<string, string> {
   return {
     "Content-Type": "application/json",
     "X-User-ID": DEV_USER_ID,
-    "X-User-Role": DEV_USER_ROLE,
+    "X-User-Role": getDevRole(),
     ...extra,
   };
 }

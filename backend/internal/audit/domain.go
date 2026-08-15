@@ -32,6 +32,9 @@ const (
 	ActionRecipeCreated = "recipe.created"
 	ActionRecipeUpdated = "recipe.updated"
 	ActionRecipeDeleted = "recipe.deleted"
+
+	// Runtime score-provider configuration (admin UI).
+	ActionScoreProviderUpdated = "score_provider.updated"
 )
 
 // Resource constants.
@@ -46,6 +49,9 @@ const (
 
 	// Phase 5a: recipes.
 	ResourceRecipes = "recipes"
+
+	// Runtime score-provider configuration (admin UI).
+	ResourceScoreProviders = "score_providers"
 )
 
 // Entry represents a single audit log record.

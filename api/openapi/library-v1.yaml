@@ -20,7 +20,7 @@ paths:
     get:
       operationId: listLibraryItems
       summary: List library items
-      description: Returns items newest-first, optionally filtered by media type and/or done status.
+      description: Returns items newest-first, optionally filtered by media type, done status and/or subtype (genre/console).
       security: []
       tags:
         - Library
@@ -36,6 +36,12 @@ paths:
           schema:
             type: boolean
             description: When true, only done items; when false, only unfinished.
+        - name: subtype
+          in: query
+          required: false
+          schema:
+            type: string
+            description: Exact genre/console match, case-insensitive (e.g. "Nintendo Switch", "Sci-fi").
       responses:
         "200":
           description: A list of library items.
@@ -47,6 +53,39 @@ paths:
                   $ref: "#/components/schemas/LibraryItem"
         "400":
           description: Invalid filter value.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/library/subtypes:
+    get:
+      operationId: listLibrarySubtypes
+      summary: List distinct subtypes for the filter dropdown
+      description: |
+        Returns the distinct non-empty genre/console values present in the
+        library, sorted alphabetically. Optionally scoped to a media type so
+        games show consoles and movies/series/books show genres.
+      security: []
+      tags:
+        - Library
+      parameters:
+        - name: type
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/MediaType"
+      responses:
+        "200":
+          description: Distinct subtype values.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+        "400":
+          description: Invalid type filter.
           content:
             application/json:
               schema:
@@ -120,6 +159,51 @@ paths:
                   $ref: "#/components/schemas/ScoreCandidate"
         "400":
           description: Missing or invalid parameters.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: The rating provider could not be reached.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Score lookup is disabled or not configured.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/library/score/batch:
+    post:
+      operationId: searchLibraryScoresBatch
+      summary: Look up scores for many titles at once
+      description: |
+        Used by the CSV import auto-scoring flow. Each item is looked up against
+        the configured provider independently with bounded concurrency; per-item
+        failures are reported inline (in the result's error field) rather than
+        failing the whole request. Up to 100 items per call. Returns 503 when
+        the feature is disabled or no provider is configured.
+      security: []
+      tags:
+        - Library
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScoreBatchRequest"
+      responses:
+        "200":
+          description: Per-item lookup results, in request order.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScoreBatchResponse"
+        "400":
+          description: Empty, malformed or oversized payload.
           content:
             application/json:
               schema:
@@ -324,6 +408,55 @@ components:
         url:
           type: string
           description: Link to the provider's page for the title.
+
+    ScoreBatchItem:
+      type: object
+      required: [name, type]
+      properties:
+        name:
+          type: string
+          description: Title to look up.
+        type:
+          $ref: "#/components/schemas/MediaType"
+        year:
+          type: integer
+          nullable: true
+          description: Optional release year to narrow the search.
+
+    ScoreBatchRequest:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/ScoreBatchItem"
+
+    ScoreBatchResult:
+      type: object
+      required: [index, candidates]
+      properties:
+        index:
+          type: integer
+          description: Echo of the item's position in the request, so results map to rows.
+        candidates:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScoreCandidate"
+        error:
+          type: string
+          description: Present when the row or its lookup failed (e.g. invalid type, provider error).
+
+    ScoreBatchResponse:
+      type: object
+      required: [results]
+      properties:
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScoreBatchResult"
 
     CreateLibraryItemRequest:
       type: object

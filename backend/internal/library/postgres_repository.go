@@ -56,20 +56,24 @@ func (r *PostgresRepository) GetByID(ctx context.Context, id string) (*Item, err
 	return item, nil
 }
 
-func (r *PostgresRepository) List(ctx context.Context, mediaType string, done *bool) ([]*Item, error) {
+func (r *PostgresRepository) List(ctx context.Context, filter ListFilter) ([]*Item, error) {
 	query := `SELECT ` + itemColumns + ` FROM library_items`
 	var args []any
 	var conds []string
-	if mediaType != "" {
+	if filter.MediaType != "" {
 		conds = append(conds, fmt.Sprintf(`media_type = $%d`, len(args)+1))
-		args = append(args, mediaType)
+		args = append(args, filter.MediaType)
 	}
-	if done != nil {
+	if filter.Done != nil {
 		conds = append(conds, fmt.Sprintf(`done = $%d`, len(args)+1))
-		args = append(args, *done)
+		args = append(args, *filter.Done)
+	}
+	if filter.Subtype != "" {
+		conds = append(conds, fmt.Sprintf(`LOWER(subtype) = LOWER($%d)`, len(args)+1))
+		args = append(args, filter.Subtype)
 	}
 	if len(conds) > 0 {
-		query += ` WHERE ` + strings.Join(conds, " AND ")
+		query += ` WHERE ` + strings.Join(conds, ` AND `)
 	}
 	query += ` ORDER BY created_at DESC`
 
@@ -88,6 +92,38 @@ func (r *PostgresRepository) List(ctx context.Context, mediaType string, done *b
 		out = append(out, item)
 	}
 	return out, rows.Err()
+}
+
+func (r *PostgresRepository) DistinctSubtypes(ctx context.Context, mediaType string) ([]string, error) {
+	query := `SELECT DISTINCT subtype FROM library_items WHERE subtype <> ''`
+	args := []any{}
+	if mediaType != "" {
+		query += ` AND media_type = $1`
+		args = append(args, mediaType)
+	}
+	query += ` ORDER BY subtype ASC`
+
+	rows, err := r.pool.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("distinct library subtypes: %w", err)
+	}
+	defer rows.Close()
+
+	var out []string
+	for rows.Next() {
+		var s string
+		if err := rows.Scan(&s); err != nil {
+			return nil, err
+		}
+		out = append(out, s)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if out == nil {
+		out = make([]string, 0)
+	}
+	return out, nil
 }
 
 func (r *PostgresRepository) Update(ctx context.Context, item *Item) error {

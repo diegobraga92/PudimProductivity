@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { parseCsv, parseDoneValue, normalizeMediaType, parseYearValue, parseScoreValue } from "./csv";
+import {
+  parseCsv,
+  parseDoneValue,
+  normalizeMediaType,
+  parseYearValue,
+  parseScoreValue,
+  applyAutoScoreResults,
+} from "./csv";
 
 describe("parseCsv", () => {
   it("parses simple comma-separated rows", () => {
@@ -93,5 +100,46 @@ describe("parseScoreValue", () => {
     expect(parseScoreValue("n/a")).toBeNull();
     expect(parseScoreValue("-1")).toBeNull();
     expect(parseScoreValue("101")).toBeNull();
+  });
+});
+
+describe("applyAutoScoreResults", () => {
+  it("fills rows from the top candidate and counts matches", () => {
+    const { fill, found, noRating } = applyAutoScoreResults(
+      [
+        { requestIndex: 0, row: 2 },
+        { requestIndex: 1, row: 5 },
+      ],
+      [
+        { index: 0, candidates: [{ score: 96, score_source: "metacritic" }] },
+        { index: 1, candidates: [{ score: 84, score_source: "metacritic" }] },
+      ],
+    );
+    expect(fill).toEqual({ 2: { score: 96, score_source: "metacritic" }, 5: { score: 84, score_source: "metacritic" } });
+    expect(found).toBe(2);
+    expect(noRating).toBe(0);
+  });
+
+  it("counts rows without matches separately from failed lookups", () => {
+    const { fill, found, noRating } = applyAutoScoreResults(
+      [{ requestIndex: 0, row: 1 }],
+      [
+        { index: 0, candidates: [] },
+        { index: 1, error: "provider boom" },
+      ],
+    );
+    expect(fill).toEqual({});
+    expect(found).toBe(0);
+    expect(noRating).toBe(1); // request 0 → no candidates; request 1 isn't a requested row
+  });
+
+  it("ignores unknown request indices", () => {
+    const { fill, found, noRating } = applyAutoScoreResults(
+      [{ requestIndex: 3, row: 9 }],
+      [{ index: 0, candidates: [{ score: 90, score_source: "imdb" }] }],
+    );
+    expect(fill).toEqual({});
+    expect(found).toBe(0);
+    expect(noRating).toBe(0);
   });
 });

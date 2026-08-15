@@ -18,6 +18,8 @@
 | [010](010-crdt-collaboration.md) | CRDT-Based Collaboration | Accepted | 2026-08-10 | Document-level LWW register for task merges; owner/editor/viewer shares; WS presence + membership scoping |
 | [011](011-ai-coach-insights.md) | AI Coach — Template-First Reports | Accepted | 2026-08-10 | Go-template weekly reports from domain events; optional LLM summary behind a feature flag |
 | [012](012-offline-sync.md) | Offline-First Sync Protocol | Accepted | 2026-08-10 | Timestamp-based incremental pull; optimistic push + Phase 8 LWW merge; soft-delete tombstones; SQLite local layer (Room deferred) |
+| [013](013-widgets.md) | Home-Screen Widgets for Tasks & Habits | Accepted | 2026-08-13 | Companion-widget roadmap; data sourced from the offline-sync store |
+| [014](014-runtime-score-provider-config.md) | Runtime Score-Provider Config & Auto-Scoring | Accepted | 2026-08-15 | DB-backed provider config (env = one-time bootstrap), reloadable lookup manager, admin UI, batch score endpoint for CSV auto-scoring |
 
 ## Cross-Links
 

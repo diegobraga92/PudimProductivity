@@ -85,3 +85,44 @@ export function parseScoreValue(value: string): number | null {
   if (!Number.isFinite(n) || n < 0 || n > 100) return null;
   return n;
 }
+
+// --- Auto-score batch application (CSV import) ---
+
+export interface AutoScoredValue {
+  score: number;
+  score_source: string;
+}
+
+export interface BatchScoreResult {
+  index: number;
+  candidates?: { score: number; score_source: string }[] | null;
+  error?: string | null;
+}
+
+/**
+ * Applies one batch score-lookup response to the requested rows. `targets`
+ * maps each batch request index to a data-row index (the batch endpoint echoes
+ * the request position). The top candidate fills the row; rows with no match
+ * (no error, empty candidates) are counted separately from failed lookups.
+ */
+export function applyAutoScoreResults(
+  targets: { requestIndex: number; row: number }[],
+  results: BatchScoreResult[],
+): { fill: Record<number, AutoScoredValue>; found: number; noRating: number } {
+  const byIndex = new Map(targets.map((t) => [t.requestIndex, t.row]));
+  const fill: Record<number, AutoScoredValue> = {};
+  let found = 0;
+  let noRating = 0;
+  for (const res of results) {
+    const row = byIndex.get(res.index);
+    if (row === undefined) continue;
+    if (res.error || !res.candidates || res.candidates.length === 0) {
+      if (!res.error) noRating++;
+      continue;
+    }
+    const top = res.candidates[0];
+    fill[row] = { score: top.score, score_source: top.score_source };
+    found++;
+  }
+  return { fill, found, noRating };
+}

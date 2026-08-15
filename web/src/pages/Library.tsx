@@ -4,6 +4,7 @@ import {
   createLibraryItem,
   deleteLibraryItem,
   listLibraryItems,
+  listLibrarySubtypes,
   searchLibraryScores,
   updateLibraryItem,
   type CreateLibraryItemRequest,
@@ -53,6 +54,7 @@ export default function Library() {
   const { t } = useI18n();
   const [typeFilter, setTypeFilter] = useState("");
   const [doneFilter, setDoneFilter] = useState("");
+  const [subtypeFilter, setSubtypeFilter] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<LibraryItem | null>(null);
   const [form, setForm] = useState<CreateLibraryItemRequest>(EMPTY_FORM);
@@ -68,12 +70,20 @@ export default function Library() {
   const scoreLookupEnabled = useFeatureFlag("library.score_lookup_enabled");
 
   const { data: items = [], isLoading, error: listError } = useQuery({
-    queryKey: ["library", typeFilter, doneFilter],
+    queryKey: ["library", typeFilter, doneFilter, subtypeFilter],
     queryFn: () =>
       listLibraryItems(
         (typeFilter || undefined) as MediaType | undefined,
         doneFilter === "" ? undefined : doneFilter === "true",
+        subtypeFilter || undefined,
       ),
+  });
+
+  // Genre/console options for the subtype filter, scoped by the type filter so
+  // games show consoles and movies/series/books show genres.
+  const { data: subtypeOptions = [] } = useQuery({
+    queryKey: ["library-subtypes", typeFilter],
+    queryFn: () => listLibrarySubtypes((typeFilter || undefined) as MediaType | undefined),
   });
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["library"] });
@@ -212,7 +222,12 @@ export default function Library() {
         <select
           className="select"
           value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value)}
+          onChange={(e) => {
+            setTypeFilter(e.target.value);
+            // The subtype list is scoped by media type; drop a stale value
+            // (e.g. a console filter while browsing movies).
+            setSubtypeFilter("");
+          }}
           aria-label={t("library.filterType")}
         >
           <option value="">{t("library.allTypes")}</option>
@@ -231,6 +246,19 @@ export default function Library() {
           <option value="">{t("common.all")}</option>
           <option value="true">{t("common.done")}</option>
           <option value="false">{t("common.notDone")}</option>
+        </select>
+        <select
+          className="select"
+          value={subtypeFilter}
+          onChange={(e) => setSubtypeFilter(e.target.value)}
+          aria-label={t("library.filterSubtype")}
+        >
+          <option value="">{t("library.filterSubtypeAll")}</option>
+          {subtypeOptions.map((subtype) => (
+            <option key={subtype} value={subtype}>
+              {subtype}
+            </option>
+          ))}
         </select>
       </div>
 

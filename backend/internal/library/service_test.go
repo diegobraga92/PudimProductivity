@@ -35,11 +35,21 @@ func (f *fakeRepo) GetByID(ctx context.Context, id string) (*Item, error) {
 	}
 	return f.saved, nil
 }
-func (f *fakeRepo) List(ctx context.Context, mediaType string, done *bool) ([]*Item, error) {
+func (f *fakeRepo) List(ctx context.Context, filter ListFilter) ([]*Item, error) {
 	if f.saved == nil {
 		return nil, nil
 	}
 	return []*Item{f.saved}, nil
+}
+
+func (f *fakeRepo) DistinctSubtypes(ctx context.Context, mediaType string) ([]string, error) {
+	if f.saved == nil || f.saved.Subtype == "" {
+		return []string{}, nil
+	}
+	if mediaType != "" && string(f.saved.MediaType) != mediaType {
+		return []string{}, nil
+	}
+	return []string{f.saved.Subtype}, nil
 }
 func (f *fakeRepo) Update(ctx context.Context, item *Item) error {
 	if f.updateErr != nil {

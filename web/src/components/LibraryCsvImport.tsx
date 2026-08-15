@@ -2,15 +2,17 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import {
   importLibraryItems,
+  searchLibraryScoresBatch,
   type CreateLibraryItemRequest,
   type ImportResult,
 } from "../api/library";
-import { parseCsv, parseDoneValue, parseScoreValue, normalizeMediaType, parseYearValue } from "../utils/csv";
+import { applyAutoScoreResults, parseCsv, parseDoneValue, parseScoreValue, normalizeMediaType, parseYearValue, type MediaTypeValue } from "../utils/csv";
+import { useFeatureFlag } from "../hooks/useFeatureFlag";
 import { useI18n } from "../i18n";
 
 const MEDIA_TYPES = ["movie", "series", "book", "game"] as const;
 
-type FieldKey = "name" | "media_type" | "release_year" | "done" | "notes" | "score" | "score_source";
+type FieldKey = "name" | "media_type" | "release_year" | "done" | "notes" | "score" | "score_source" | "subtype";
 
 const FIELDS: { key: FieldKey; labelKey: string; hintKey: string }[] = [
   { key: "name", labelKey: "csv.fieldName", hintKey: "csv.fieldNameHint" },
@@ -19,6 +21,7 @@ const FIELDS: { key: FieldKey; labelKey: string; hintKey: string }[] = [
   { key: "done", labelKey: "csv.fieldDone", hintKey: "csv.fieldDoneHint" },
   { key: "score", labelKey: "csv.fieldScore", hintKey: "csv.fieldScoreHint" },
   { key: "score_source", labelKey: "csv.fieldSource", hintKey: "csv.fieldSourceHint" },
+  { key: "subtype", labelKey: "csv.fieldSubtype", hintKey: "csv.fieldSubtypeHint" },
   { key: "notes", labelKey: "csv.fieldNotes", hintKey: "csv.fieldNotesHint" },
 ];
 
@@ -32,6 +35,7 @@ const EMPTY_MAPPING: Record<FieldKey, string> = {
   notes: "",
   score: "",
   score_source: "",
+  subtype: "",
 };
 
 const DEFAULT_FIXED: Record<FieldKey, string> = {
@@ -42,6 +46,7 @@ const DEFAULT_FIXED: Record<FieldKey, string> = {
   notes: "",
   score: "",
   score_source: "",
+  subtype: "",
 };
 
 /** Header-based auto-mapping: matches common column names case-insensitively. */
@@ -59,6 +64,7 @@ function suggestMapping(headers: string[]): Record<FieldKey, string> {
     score: find(["score", "rating", "metascore", "metacritic", "imdbrating"]),
     score_source: find(["scoresource", "ratingsource", "source", "site"]),
     notes: find(["notes", "note", "comments", "comment"]),
+    subtype: find(["subtype", "genre", "console", "platform", "category"]),
   };
 }
 
@@ -84,6 +90,16 @@ export function LibraryCsvImport({ onClose, onImported }: LibraryCsvImportProps)
   const [fixed, setFixed] = useState<Record<FieldKey, string>>(DEFAULT_FIXED);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ImportResult | null>(null);
+
+  // Auto-scoring (critic score lookup during import).
+  type AutoFill = { score: number; score_source: string };
+  const [autoFilled, setAutoFilled] = useState<Record<number, AutoFill>>({});
+  const [autoScoring, setAutoScoring] = useState(false);
+  const [autoScoreError, setAutoScoreError] = useState<string | null>(null);
+  const [autoScoredCount, setAutoScoredCount] = useState(0);
+  const [noRatingCount, setNoRatingCount] = useState(0);
+  const [skipReview, setSkipReview] = useState(false);
+  const scoreLookupEnabled = useFeatureFlag("library.score_lookup_enabled");
 
   const headers = hasHeader && rows.length > 0 ? rows[0] : rows[0]?.map((_, i) => `Column ${i + 1}`);
   const dataRows = hasHeader && rows.length > 0 ? rows.slice(1) : rows;
@@ -122,8 +138,12 @@ export function LibraryCsvImport({ onClose, onImported }: LibraryCsvImportProps)
     reader.readAsText(file);
   }
 
-  /** Resolves the effective value for a field at a data-row index. */
+  /** Resolves the effective value for a field at a data-row index. Auto-scored
+   *  values override whatever the column mapping produced. */
   function resolve(field: FieldKey, rowIndex: number): string {
+    const filled = autoFilled[rowIndex];
+    if (field === "score" && filled?.score != null) return String(filled.score);
+    if (field === "score_source" && filled?.score_source) return filled.score_source;
     const m = mapping[field];
     if (m === FIXED_VALUE) return fixed[field];
     if (m === "" || m === null) return "";
@@ -132,18 +152,30 @@ export function LibraryCsvImport({ onClose, onImported }: LibraryCsvImportProps)
     return cell === undefined ? "" : cell;
   }
 
-  /** Builds the import payload, collecting per-row validation errors. */
-  function buildItems(): { items: CreateLibraryItemRequest[]; rowErrors: string[] } {
+  /**
+   * Builds the import payload, collecting per-row validation errors. `fill` lets
+   * callers supply auto-scored values for the skip-review flow before React has
+   * committed the autoFilled state.
+   */
+  function buildItems(
+    fill: Record<number, AutoFill> = {},
+  ): { items: CreateLibraryItemRequest[]; rowErrors: string[] } {
     const items: CreateLibraryItemRequest[] = [];
     const rowErrors: string[] = [];
     dataRows.forEach((_, i) => {
       const rowNum = i + 1;
-      const name = resolve("name", i).trim();
+      const effective = (field: FieldKey): string => {
+        const f = fill[i];
+        if (field === "score" && f?.score != null) return String(f.score);
+        if (field === "score_source" && f?.score_source) return f.score_source;
+        return resolve(field, i);
+      };
+      const name = effective("name").trim();
       if (!name) {
         rowErrors.push(t("csv.rowMissingName", { row: rowNum }));
         return;
       }
-      const mediaRaw = resolve("media_type", i);
+      const mediaRaw = effective("media_type");
       const mediaType = normalizeMediaType(mediaRaw);
       if (!mediaType) {
         rowErrors.push(t("csv.rowInvalidType", { row: rowNum, type: mediaRaw.trim() }));
@@ -152,14 +184,99 @@ export function LibraryCsvImport({ onClose, onImported }: LibraryCsvImportProps)
       items.push({
         name,
         media_type: mediaType,
-        release_year: parseYearValue(resolve("release_year", i)),
-        done: parseDoneValue(resolve("done", i)),
-        score: parseScoreValue(resolve("score", i)),
-        score_source: resolve("score_source", i).trim(),
-        notes: resolve("notes", i),
+        release_year: parseYearValue(effective("release_year")),
+        done: parseDoneValue(effective("done")),
+        score: parseScoreValue(effective("score")),
+        score_source: effective("score_source").trim(),
+        subtype: effective("subtype").trim(),
+        notes: effective("notes"),
       });
     });
     return { items, rowErrors };
+  }
+
+  /**
+   * Looks up critic scores for every row that has no score yet, using the batch
+   * score endpoint in chunks of 100. Returns the auto-fill map (data-row index
+   * → score + source) plus simple stats for the UI.
+   */
+  async function runAutoScore(): Promise<{ fill: Record<number, AutoFill>; found: number; noRating: number }> {
+    const targets: { row: number; name: string; type: MediaTypeValue; year?: number }[] = [];
+    dataRows.forEach((_, i) => {
+      const name = resolve("name", i).trim();
+      const mediaRaw = resolve("media_type", i);
+      const mediaType = normalizeMediaType(mediaRaw);
+      if (!name || !mediaType) return;
+      if (resolve("score", i) !== "") return; // already has a score — keep it
+      const year = parseYearValue(resolve("release_year", i));
+      targets.push({ row: i, name, type: mediaType, year: year ?? undefined });
+    });
+
+    const fill: Record<number, AutoFill> = {};
+    let found = 0;
+    let noRating = 0;
+    for (let start = 0; start < targets.length; start += 100) {
+      const chunk = targets.slice(start, start + 100);
+      const resp = await searchLibraryScoresBatch(
+        chunk.map((c) => ({ name: c.name, type: c.type, year: c.year })),
+      );
+      const applied = applyAutoScoreResults(
+        chunk.map((_, idx) => ({ requestIndex: idx, row: chunk[idx].row })),
+        resp.results,
+      );
+      Object.assign(fill, applied.fill);
+      found += applied.found;
+      noRating += applied.noRating;
+    }
+    return { fill, found, noRating };
+  }
+
+  /** Auto-scores the preview so the user can review before importing. */
+  async function autoScoreAndApply() {
+    if (!scoreLookupEnabled) {
+      setAutoScoreError(t("csv.autoScoreUnavailable"));
+      return;
+    }
+    setAutoScoring(true);
+    setAutoScoreError(null);
+    try {
+      const out = await runAutoScore();
+      setAutoFilled(out.fill);
+      setAutoScoredCount(out.found);
+      setNoRatingCount(out.noRating);
+    } catch (e) {
+      setAutoScoreError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setAutoScoring(false);
+    }
+  }
+
+  /** Imports — running the auto-score first when "skip review" is checked. */
+  async function handleImport() {
+    setError(null);
+    let fill = autoFilled;
+    if (skipReview) {
+      if (!scoreLookupEnabled) {
+        setError(t("csv.autoScoreUnavailable"));
+        return;
+      }
+      setAutoScoring(true);
+      try {
+        const out = await runAutoScore();
+        fill = out.fill;
+        setAutoFilled(out.fill);
+        setAutoScoredCount(out.found);
+        setNoRatingCount(out.noRating);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : String(e));
+        return;
+      } finally {
+        setAutoScoring(false);
+      }
+    }
+    const { items } = buildItems(fill);
+    if (items.length === 0) return;
+    mutation.mutate(items);
   }
 
   const preview = buildItems();
@@ -281,6 +398,40 @@ export function LibraryCsvImport({ onClose, onImported }: LibraryCsvImportProps)
               ))}
             </div>
 
+            {/* Auto-score: batch critic-score lookup for rows without a score */}
+            <div className="flex-center" style={{ gap: "0.5rem", marginBottom: "var(--space-sm)", flexWrap: "wrap" }}>
+              <button
+                className="btn"
+                disabled={autoScoring || preview.items.length === 0}
+                onClick={autoScoreAndApply}
+              >
+                {autoScoring ? t("csv.autoScoring") : t("csv.autoScore")}
+              </button>
+              <label className="flex-center" style={{ gap: "0.3rem" }}>
+                <input
+                  type="checkbox"
+                  checked={skipReview}
+                  onChange={(e) => setSkipReview(e.target.checked)}
+                />
+                <span className="text-sm">{t("csv.skipReview")}</span>
+              </label>
+              {autoScoredCount > 0 && (
+                <span className="text-sm" style={{ color: "var(--color-done)" }}>
+                  {t("csv.autoScored", { count: autoScoredCount })}
+                </span>
+              )}
+              {noRatingCount > 0 && (
+                <span className="text-sm text-secondary">
+                  {noRatingCount}× {t("csv.noRating")}
+                </span>
+              )}
+              {autoScoreError && (
+                <span className="text-sm" style={{ color: "var(--color-danger)" }}>
+                  {autoScoreError}
+                </span>
+              )}
+            </div>
+
 
             {/* Preview */}
             {previewRows.length > 0 && (
@@ -342,12 +493,16 @@ export function LibraryCsvImport({ onClose, onImported }: LibraryCsvImportProps)
               </button>
               <button
                 className="btn btn-primary"
-                disabled={mutation.isPending || preview.items.length === 0}
-                onClick={() => mutation.mutate(preview.items)}
+                disabled={mutation.isPending || autoScoring || preview.items.length === 0}
+                onClick={handleImport}
               >
                 {mutation.isPending
                   ? t("common.importing")
-                  : t("csv.importCount", { count: preview.items.length })}
+                  : autoScoring
+                    ? t("csv.autoScoring")
+                    : skipReview
+                      ? `${t("csv.skipReview")} · ${t("csv.importCount", { count: preview.items.length })}`
+                      : t("csv.importCount", { count: preview.items.length })}
               </button>
             </div>
           </>

@@ -87,24 +87,51 @@ func TestLibraryRepository_CRUDAndFilters(t *testing.T) {
 	}
 	if got.Name != "The Matrix" || got.MediaType != MediaTypeMovie ||
 		got.ReleaseYear == nil || *got.ReleaseYear != 1999 || got.Done || got.Notes != "Sci-fi classic" ||
-		got.Score == nil || *got.Score != 8.7 || got.ScoreSource != "imdb" {
+		got.Subtype != "Sci-fi" || got.Score == nil || *got.Score != 8.7 || got.ScoreSource != "imdb" {
 		t.Fatalf("GetByID incomplete: %+v", got)
 	}
 
 	// List filters.
-	movies, err := repo.List(ctx, "movie", nil)
+	movies, err := repo.List(ctx, ListFilter{MediaType: "movie"})
 	if err != nil || len(movies) != 1 {
 		t.Fatalf("List(movie) = %v (err %v)", movies, err)
 	}
 	undone := false
-	undoneList, err := repo.List(ctx, "", &undone)
+	undoneList, err := repo.List(ctx, ListFilter{Done: &undone})
 	if err != nil || len(undoneList) != 1 {
 		t.Fatalf("List(done=false) = %v (err %v)", undoneList, err)
 	}
 	done := true
-	noneDone, err := repo.List(ctx, "", &done)
+	noneDone, err := repo.List(ctx, ListFilter{Done: &done})
 	if err != nil || len(noneDone) != 0 {
 		t.Fatalf("List(done=true) = %v (err %v), want empty", noneDone, err)
+	}
+	// Subtype filter is exact and case-insensitive.
+	scifi, err := repo.List(ctx, ListFilter{Subtype: "sci-fi"})
+	if err != nil || len(scifi) != 1 {
+		t.Fatalf("List(subtype=sci-fi) = %v (err %v), want 1", scifi, err)
+	}
+	scifiMovies, err := repo.List(ctx, ListFilter{MediaType: "movie", Subtype: "Sci-fi"})
+	if err != nil || len(scifiMovies) != 1 {
+		t.Fatalf("List(movie, subtype) = %v (err %v), want 1", scifiMovies, err)
+	}
+	noMatch, err := repo.List(ctx, ListFilter{MediaType: "game", Subtype: "Sci-fi"})
+	if err != nil || len(noMatch) != 0 {
+		t.Fatalf("List(game, subtype) = %v (err %v), want empty", noMatch, err)
+	}
+
+	// Distinct subtypes (genres/consoles) for the filter dropdown.
+	subtypes, err := repo.DistinctSubtypes(ctx, "")
+	if err != nil || len(subtypes) != 1 || subtypes[0] != "Sci-fi" {
+		t.Fatalf("DistinctSubtypes = %v (err %v), want [Sci-fi]", subtypes, err)
+	}
+	movieSubtypes, err := repo.DistinctSubtypes(ctx, "movie")
+	if err != nil || len(movieSubtypes) != 1 {
+		t.Fatalf("DistinctSubtypes(movie) = %v (err %v), want [Sci-fi]", movieSubtypes, err)
+	}
+	gameSubtypes, err := repo.DistinctSubtypes(ctx, "game")
+	if err != nil || len(gameSubtypes) != 0 {
+		t.Fatalf("DistinctSubtypes(game) = %v (err %v), want empty", gameSubtypes, err)
 	}
 
 	// Update.
@@ -145,7 +172,7 @@ func TestLibraryRepository_ImportBatch(t *testing.T) {
 		t.Fatalf("Import: %v", err)
 	}
 
-	all, err := repo.List(ctx, "", nil)
+	all, err := repo.List(ctx, ListFilter{})
 	if err != nil {
 		t.Fatalf("List: %v", err)
 	}
@@ -184,7 +211,7 @@ func TestLibraryRepository_ImportRollsBackOnError(t *testing.T) {
 	}
 
 	// The valid row before the failure must have been rolled back.
-	all, err := repo.List(ctx, "", nil)
+	all, err := repo.List(ctx, ListFilter{})
 	if err != nil {
 		t.Fatalf("List: %v", err)
 	}
@@ -198,7 +225,7 @@ func TestLibraryRepository_ImportRollsBackOnError(t *testing.T) {
 // score_source): cannot scan NULL into *string"). Migration 022 declared
 // score_source TEXT NULL while the Go domain models it as a non-nullable string
 // (empty = no source), so rows written before migration 022 broke the list
-// query. Migration 025 backfills NULLs and enforces NOT NULL DEFAULT ''.
+// query. Migration 025 backfills NULLs and enforces NOT NULL DEFAULT ”.
 func TestLibraryRepository_ScoreSourceNotNull(t *testing.T) {
 	if testing.Short() {
 		t.Skip("integration test requires Docker")

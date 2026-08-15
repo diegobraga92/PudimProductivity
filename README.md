@@ -178,7 +178,11 @@ down. Notifications are best-effort convenience; they never change your data.
 ### Security & privacy posture
 
 - All sensitive configuration (database passwords, messaging credentials) lives
-  in environment variables — never in the code or the repo.
+  in environment variables — never in the code or the repo. The one exception
+  is the library rating-provider API keys (OMDb/RAWG), which can be configured
+  at runtime via the admin UI (Server Settings); they are stored server-side,
+  never returned by the API (masked `api_key_set` only), and excluded from
+  backups (see [ADR 014](docs/adr/014-runtime-score-provider-config.md)).
 - The current build uses **development-only identity headers** instead of real
   user accounts. This is the single most important known gap: before any
   multi-user or public deployment, authentication (JWT/session) and per-user

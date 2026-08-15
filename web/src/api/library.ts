@@ -15,14 +15,23 @@ async function handleError(response: Response, fallback: string): Promise<never>
   throw new Error(body?.error || fallback);
 }
 
-export async function listLibraryItems(type?: MediaType, done?: boolean): Promise<LibraryItem[]> {
+export async function listLibraryItems(type?: MediaType, done?: boolean, subtype?: string): Promise<LibraryItem[]> {
   const params = new URLSearchParams();
   if (type) params.set("type", type);
   if (done !== undefined) params.set("done", String(done));
+  if (subtype) params.set("subtype", subtype);
   const qs = params.toString();
   const res = await fetch(`${config.apiBaseUrl}/library${qs ? `?${qs}` : ""}`);
   if (!res.ok) await handleError(res, `Failed to list library: ${res.status}`);
   return res.json() as Promise<LibraryItem[]>;
+}
+
+/** Distinct genre/console values for the subtype filter, optionally by type. */
+export async function listLibrarySubtypes(type?: MediaType): Promise<string[]> {
+  const qs = type ? `?type=${encodeURIComponent(type)}` : "";
+  const res = await fetch(`${config.apiBaseUrl}/library/subtypes${qs}`);
+  if (!res.ok) await handleError(res, `Failed to list subtypes: ${res.status}`);
+  return res.json() as Promise<string[]>;
 }
 
 export async function createLibraryItem(req: CreateLibraryItemRequest): Promise<LibraryItem> {
@@ -83,4 +92,21 @@ export async function searchLibraryScores(
   const res = await fetch(`${config.apiBaseUrl}/library/score/search?${params}`);
   if (!res.ok) await handleError(res, `Failed to look up score: ${res.status}`);
   return res.json() as Promise<ScoreCandidate[]>;
+}
+
+export type ScoreBatchItem = components["schemas"]["ScoreBatchItem"];
+export type ScoreBatchResponse = components["schemas"]["ScoreBatchResponse"];
+
+/**
+ * Looks up scores for many titles at once (used by the CSV import auto-scoring
+ * flow). Per-item failures come back inline in each result's error field.
+ */
+export async function searchLibraryScoresBatch(items: ScoreBatchItem[]): Promise<ScoreBatchResponse> {
+  const res = await fetch(`${config.apiBaseUrl}/library/score/batch`, {
+    method: "POST",
+    headers: apiHeaders(),
+    body: JSON.stringify({ items }),
+  });
+  if (!res.ok) await handleError(res, `Failed to look up scores: ${res.status}`);
+  return res.json() as Promise<ScoreBatchResponse>;
 }

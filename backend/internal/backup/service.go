@@ -48,6 +48,9 @@ func (t backupTable) columnNames() string {
 //   - audit_log        — old_values/new_values JSONB may hold sensitive fields
 //   - notifications    — ephemeral delivery tracking, not user data
 //   - schema_migrations — infra bookkeeping owned by db.RunMigrations
+//   - score_providers / score_provider_config — rating-provider config; the
+//     providers table holds API keys (secrets), and the mapping is server config
+//     that is intentionally re-created from env/the admin UI, not restored
 var backupTables = []backupTable{
 	{
 		name:     "feature_flags",

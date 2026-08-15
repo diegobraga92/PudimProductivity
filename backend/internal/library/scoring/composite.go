@@ -22,6 +22,10 @@ func (c *composite) Search(ctx context.Context, query library.ScoreQuery) ([]lib
 	return client.Search(ctx, query)
 }
 
+// Configured reports whether at least one media type has a live provider
+// client. Satisfies library.ScoreLookupProvider.
+func (c *composite) Configured() bool { return len(c.clients) > 0 }
+
 // NewComposite builds the per-media-type client set from config. Media types
 // mapped to "" or "none" are left disabled. Configurations that name an
 // unknown provider, assign a provider to a media type it cannot serve, or

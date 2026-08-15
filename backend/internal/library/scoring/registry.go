@@ -67,3 +67,9 @@ func supports(name string, mt library.MediaType) bool {
 	}
 	return false
 }
+
+// Supports is the exported form of supports, used by the score-provider
+// settings module to validate media-type → provider assignments at save time.
+func Supports(name string, mt library.MediaType) bool {
+	return supports(name, mt)
+}

@@ -28,9 +28,11 @@ const RecipeList = lazy(() => import("./pages/RecipeList"));
 const RecipeDetail = lazy(() => import("./pages/RecipeDetail"));
 const Library = lazy(() => import("./pages/Library"));
 const Insights = lazy(() => import("./pages/Insights"));
+const ServerSettings = lazy(() => import("./pages/ServerSettings"));
 
-type Page = "dashboard" | "tasks" | "lists" | "planner" | "pomodoro" | "soundscape" | "recipes" | "library" | "insights" | "health";
+type Page = "dashboard" | "tasks" | "lists" | "planner" | "pomodoro" | "soundscape" | "recipes" | "library" | "insights" | "health" | "settings";
 
+// Primary tabs always visible on the desktop nav bar.
 const NAV_ITEMS: { id: Page; labelKey: string; icon: string }[] = [
   { id: "dashboard", labelKey: "nav.dashboard", icon: "🏠" },
   { id: "tasks", labelKey: "nav.tasks", icon: "📋" },
@@ -41,7 +43,13 @@ const NAV_ITEMS: { id: Page; labelKey: string; icon: string }[] = [
   { id: "recipes", labelKey: "nav.recipes", icon: "🍳" },
   { id: "library", labelKey: "nav.library", icon: "🎬" },
   { id: "insights", labelKey: "nav.insights", icon: "🧠" },
-  { id: "health", labelKey: "nav.status", icon: "💚" },
+];
+
+// Secondary pages tucked into the desktop "More" dropdown so the top bar does
+// not overflow (the health/status item was previously pushed off-screen).
+const MORE_ITEMS: { id: Page; labelKey: string; icon: string }[] = [
+  { id: "health", labelKey: "nav.health", icon: "💚" },
+  { id: "settings", labelKey: "nav.serverSettings", icon: "⚙️" },
 ];
 
 function PageFallback() {
@@ -84,6 +92,7 @@ function AppInner() {
   const [page, setPage] = useState<Page>("dashboard");
   const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const { theme, toggleTheme } = useTheme();
   const { t, lang, toggleLang } = useI18n();
 
@@ -119,6 +128,7 @@ function AppInner() {
   const go = (view: Page) => {
     setPage(view);
     setMenuOpen(false);
+    setMoreOpen(false);
     if (view !== "recipes") setSelectedRecipeId(null);
   };
 
@@ -152,6 +162,37 @@ function AppInner() {
               </button>
             ))}
           </nav>
+
+          {/* Desktop "More" overflow menu (health/status + server settings) */}
+          <div className="more-wrap">
+            <button
+              className={`nav-tab more-button ${moreOpen ? "active" : ""}`}
+              onClick={() => setMoreOpen((o) => !o)}
+              aria-haspopup="true"
+              aria-expanded={moreOpen}
+            >
+              <span>⋯</span>
+              <span>{t("nav.more")}</span>
+            </button>
+            {moreOpen && (
+              <>
+                <div className="more-backdrop" onClick={() => setMoreOpen(false)} />
+                <div className="more-menu" role="menu" aria-label={t("nav.more")}>
+                  {MORE_ITEMS.map((item) => (
+                    <button
+                      key={item.id}
+                      role="menuitem"
+                      className={`more-menu-item ${page === item.id ? "active" : ""}`}
+                      onClick={() => go(item.id)}
+                    >
+                      <span className="more-menu-icon">{item.icon}</span>
+                      <span>{t(item.labelKey)}</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
 
           {/* Status Badge + Language/Theme Toggles + Alarm Badge */}
           <div className="header-right">
@@ -206,6 +247,16 @@ function AppInner() {
                 <span>{t(item.labelKey)}</span>
               </button>
             ))}
+            {MORE_ITEMS.map((item) => (
+              <button
+                key={item.id}
+                className={`nav-drawer-item ${page === item.id ? "active" : ""}`}
+                onClick={() => go(item.id)}
+              >
+                <span className="nav-icon">{item.icon}</span>
+                <span>{t(item.labelKey)}</span>
+              </button>
+            ))}
           </aside>
         </div>
       )}
@@ -236,6 +287,8 @@ function AppInner() {
             {page === "library" && <Library />}
 
             {page === "insights" && <Insights />}
+
+            {page === "settings" && <ServerSettings />}
           </Suspense>
 
           {page === "health" && (
