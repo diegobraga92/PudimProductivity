@@ -1099,6 +1099,9 @@ h1, h2, h3, h4, h5, h6 {
 /* Desktop tab bar */
 .nav-tabs {
   display: flex;
+  /* Take exactly the remaining width and scroll its own overflow, so the
+     "More" button and status area are never pushed off-screen. */
+  flex: 1 1 0;
   gap: 0.15rem;
   height: 100%;
   align-items: stretch;
@@ -1328,6 +1331,11 @@ h1, h2, h3, h4, h5, h6 {
 /* --- Responsive breakpoints for nav --- */
 @media (max-width: 1150px) {
   .nav-tabs {
+    display: none;
+  }
+  /* The hamburger drawer already lists every item (incl. Health + Settings),
+     so the desktop overflow menu is redundant here and only adds width. */
+  .more-wrap {
     display: none;
   }
   .menu-button {
