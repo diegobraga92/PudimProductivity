@@ -166,6 +166,22 @@ class TaskRepository(private val context: Context, scope: CoroutineScope) {
         }
     }
 
+    /**
+     * Pulls server changes into the local database and re-emits the flows,
+     * without pushing local dirty rows. Used when a remote change is signaled
+     * (WebSocket event) so changes made on other clients are reflected right
+     * away; the push path is covered by [refresh] on reconnect.
+     */
+    suspend fun pullAndRefresh() {
+        try {
+            sync.pullChanges()
+            refreshFromLocal()
+            _online.value = true
+        } catch (_: Exception) {
+            _online.value = false
+        }
+    }
+
     /** Fire-and-forget server flush; pulls + re-emits on success. */
     private fun triggerSync() {
         appScope.launch {

@@ -1,8 +1,11 @@
 package com.pudimproductivity
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.ConnectivityManager
+import android.net.Network
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -29,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.lifecycleScope
 import com.pudimproductivity.api.ApiClient
 import com.pudimproductivity.api.HealthResponse
 import com.pudimproductivity.api.ServerConfig
@@ -53,7 +57,10 @@ import com.pudimproductivity.ui.screens.TaskListScreen
 import com.pudimproductivity.ui.theme.PudimProductivityTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 
 enum class Screen {
@@ -64,6 +71,10 @@ class MainActivity : ComponentActivity() {
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private lateinit var repository: TaskRepository
+
+    // Phase 9c: watched while the activity lives; flushes local dirty rows on
+    // reconnect (deregistered in onDestroy).
+    private var networkCallback: ConnectivityManager.NetworkCallback? = null
 
     // Phase 10: deep link targets from home-screen widget taps (see
     // widget/TasksWidget.kt, widget/HabitsWidget.kt and [parseLaunch]).
@@ -97,6 +108,11 @@ class MainActivity : ComponentActivity() {
         HabitReminderScheduler.schedule(applicationContext)
         requestNotificationPermissionIfNeeded()
 
+        // Phase 9c: reconnect hooks — flush offline edits the moment the device
+        // regains a network and again when the real-time WebSocket reconnects.
+        registerConnectivityCallback()
+        observeSyncClientConnected()
+
         // Widget taps arrive as extras on the launch intent (singleTop makes
         // onNewIntent deliver them when the activity is already resumed).
         launchTarget.value = parseLaunch(intent)
@@ -121,6 +137,52 @@ class MainActivity : ComponentActivity() {
         ) {
             requestNotificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
+    }
+
+    /**
+     * Phase 9c: flushes local dirty rows and pulls server changes the moment the
+     * device regains a default network (airplane mode off, Wi-Fi back). Without
+     * this, work done offline would sit `dirty` in SQLite until the 15-minute
+     * periodic sync or a manual pull-to-refresh.
+     */
+    private fun registerConnectivityCallback() {
+        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val callback = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                // refresh() is safe to call repeatedly (idempotent push + pull)
+                // and swallows failures, setting the online flag instead.
+                appScope.launch { repository.refresh() }
+            }
+        }
+        cm.registerDefaultNetworkCallback(callback)
+        networkCallback = callback
+    }
+
+    /**
+     * Phase 9c: also sync when the real-time WebSocket (re)connects — this covers
+     * "the server became reachable again" without any device-network change
+     * (e.g. the LAN backend restarts while Wi-Fi stays up). Debounced to
+     * coalesce flapping before the connection settles. Runs on [lifecycleScope]
+     * so the collector is cancelled with the activity (no accumulation across
+     * recreations).
+     */
+    @OptIn(FlowPreview::class)
+    private fun observeSyncClientConnected() {
+        lifecycleScope.launch {
+            SyncClient.connected
+                .filter { it }
+                .debounce(500)
+                .collect { repository.refresh() }
+        }
+    }
+
+    override fun onDestroy() {
+        networkCallback?.let {
+            val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            cm.unregisterNetworkCallback(it)
+        }
+        networkCallback = null
+        super.onDestroy()
     }
 
     override fun onNewIntent(intent: Intent) {

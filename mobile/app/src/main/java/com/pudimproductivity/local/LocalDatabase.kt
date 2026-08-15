@@ -23,15 +23,17 @@ class LocalDatabase(context: Context) : SQLiteOpenHelper(context.applicationCont
 
     companion object {
         const val DB_NAME = "pudim_offline.db"
-        const val DB_VERSION = 1
+        // v2: added `synced` (exists-on-server) flag to tasks + task_lists so a
+        // push picks create vs update correctly for offline-created rows.
+        const val DB_VERSION = 2
 
         const val META_KEY_LAST_SYNC = "last_sync_ts"
     }
 
     override fun onCreate(db: SQLiteDatabase) {
-        db.execSQL("CREATE TABLE IF NOT EXISTS tasks (id TEXT PRIMARY KEY, title TEXT NOT NULL, status TEXT NOT NULL, recurrence_days TEXT, list_id TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, dirty INTEGER NOT NULL DEFAULT 0, deleted INTEGER NOT NULL DEFAULT 0)")
+        db.execSQL("CREATE TABLE IF NOT EXISTS tasks (id TEXT PRIMARY KEY, title TEXT NOT NULL, status TEXT NOT NULL, recurrence_days TEXT, list_id TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, dirty INTEGER NOT NULL DEFAULT 0, deleted INTEGER NOT NULL DEFAULT 0, synced INTEGER NOT NULL DEFAULT 0)")
         db.execSQL("CREATE TABLE IF NOT EXISTS completions (id TEXT PRIMARY KEY, task_id TEXT NOT NULL, completed_date TEXT NOT NULL, created_at TEXT NOT NULL, dirty INTEGER NOT NULL DEFAULT 0, deleted INTEGER NOT NULL DEFAULT 0)")
-        db.execSQL("CREATE TABLE IF NOT EXISTS task_lists (id TEXT PRIMARY KEY, name TEXT NOT NULL, description TEXT NOT NULL DEFAULT '', owner_id TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL, updated_at TEXT NOT NULL, dirty INTEGER NOT NULL DEFAULT 0, deleted INTEGER NOT NULL DEFAULT 0)")
+        db.execSQL("CREATE TABLE IF NOT EXISTS task_lists (id TEXT PRIMARY KEY, name TEXT NOT NULL, description TEXT NOT NULL DEFAULT '', owner_id TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL, updated_at TEXT NOT NULL, dirty INTEGER NOT NULL DEFAULT 0, deleted INTEGER NOT NULL DEFAULT 0, synced INTEGER NOT NULL DEFAULT 0)")
         db.execSQL("CREATE TABLE IF NOT EXISTS shares (list_id TEXT NOT NULL, shared_with TEXT NOT NULL, role TEXT NOT NULL, created_at TEXT NOT NULL, deleted INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (list_id, shared_with))")
         db.execSQL("CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)")
         db.execSQL("CREATE INDEX IF NOT EXISTS idx_tasks_deleted ON tasks (deleted)")
@@ -40,9 +42,15 @@ class LocalDatabase(context: Context) : SQLiteOpenHelper(context.applicationCont
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        // No migrations yet (version 1). Room-style fallback for future bumps.
         if (oldVersion < 2) {
-            // Reserved for future schema changes.
+            // v2: synced flag distinguishes "exists on the server" so pushes pick
+            // create vs update correctly. Existing rows are treated as synced
+            // (they were pulled or previously pushed) — DEFAULT 0 would make them
+            // look like never-created rows, so backfill with 1.
+            db.execSQL("ALTER TABLE tasks ADD COLUMN synced INTEGER NOT NULL DEFAULT 0")
+            db.execSQL("ALTER TABLE task_lists ADD COLUMN synced INTEGER NOT NULL DEFAULT 0")
+            db.execSQL("UPDATE tasks SET synced = 1")
+            db.execSQL("UPDATE task_lists SET synced = 1")
         }
     }
 
@@ -82,6 +90,7 @@ class LocalDatabase(context: Context) : SQLiteOpenHelper(context.applicationCont
                     put("updated_at", t.updated_at)
                     put("dirty", if (t.dirty) 1 else 0)
                     put("deleted", if (t.deleted) 1 else 0)
+                    put("synced", if (t.synced) 1 else 0)
                 }
                 db.insertWithOnConflict("tasks", null, cv, SQLiteDatabase.CONFLICT_REPLACE)
             }
@@ -111,6 +120,16 @@ class LocalDatabase(context: Context) : SQLiteOpenHelper(context.applicationCont
         writableDatabase.update("tasks", ContentValues().apply { put("dirty", if (dirty) 1 else 0) }, "id = ?", arrayOf(id))
     }
 
+    /** Marks a task as confirmed on the server (a later edit should UPDATE). */
+    fun markTaskSynced(id: String) {
+        writableDatabase.update("tasks", ContentValues().apply { put("synced", 1) }, "id = ?", arrayOf(id))
+    }
+
+    /** Hard-deletes a local row (used for never-synced tombstones). */
+    fun deleteLocalTask(id: String) {
+        writableDatabase.delete("tasks", "id = ?", arrayOf(id))
+    }
+
     fun markTaskDeleted(id: String) {
         writableDatabase.update("tasks", ContentValues().apply {
             put("deleted", 1)
@@ -136,7 +155,8 @@ class LocalDatabase(context: Context) : SQLiteOpenHelper(context.applicationCont
         created_at = c.getString(c.getColumnIndexOrThrow("created_at")),
         updated_at = c.getString(c.getColumnIndexOrThrow("updated_at")),
         dirty = c.getInt(c.getColumnIndexOrThrow("dirty")) == 1,
-        deleted = c.getInt(c.getColumnIndexOrThrow("deleted")) == 1
+        deleted = c.getInt(c.getColumnIndexOrThrow("deleted")) == 1,
+        synced = c.getInt(c.getColumnIndexOrThrow("synced")) == 1
     )
 
 
@@ -238,6 +258,7 @@ class LocalDatabase(context: Context) : SQLiteOpenHelper(context.applicationCont
                         put("updated_at", l.updated_at)
                         put("dirty", if (l.dirty) 1 else 0)
                         put("deleted", if (l.deleted) 1 else 0)
+                        put("synced", if (l.synced) 1 else 0)
                     },
                     SQLiteDatabase.CONFLICT_REPLACE
                 )
@@ -261,7 +282,8 @@ class LocalDatabase(context: Context) : SQLiteOpenHelper(context.applicationCont
                     created_at = c.getString(c.getColumnIndexOrThrow("created_at")),
                     updated_at = c.getString(c.getColumnIndexOrThrow("updated_at")),
                     dirty = c.getInt(c.getColumnIndexOrThrow("dirty")) == 1,
-                    deleted = c.getInt(c.getColumnIndexOrThrow("deleted")) == 1
+                    deleted = c.getInt(c.getColumnIndexOrThrow("deleted")) == 1,
+                    synced = c.getInt(c.getColumnIndexOrThrow("synced")) == 1
                 )
             }
         }
@@ -270,6 +292,16 @@ class LocalDatabase(context: Context) : SQLiteOpenHelper(context.applicationCont
 
     fun markTaskListDirty(id: String, dirty: Boolean = true) {
         writableDatabase.update("task_lists", ContentValues().apply { put("dirty", if (dirty) 1 else 0) }, "id = ?", arrayOf(id))
+    }
+
+    /** Marks a task list as confirmed on the server (a later edit should UPDATE). */
+    fun markTaskListSynced(id: String) {
+        writableDatabase.update("task_lists", ContentValues().apply { put("synced", 1) }, "id = ?", arrayOf(id))
+    }
+
+    /** Hard-deletes a local row (used for never-synced tombstones). */
+    fun deleteLocalTaskList(id: String) {
+        writableDatabase.delete("task_lists", "id = ?", arrayOf(id))
     }
 
     fun markTaskListDeleted(id: String) {

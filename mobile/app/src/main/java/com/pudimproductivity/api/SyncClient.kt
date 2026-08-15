@@ -9,8 +9,11 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import okhttp3.Request
 import okhttp3.Response
@@ -52,6 +55,16 @@ object SyncClient {
     private val _events = MutableSharedFlow<WsEvent>(extraBufferCapacity = 64)
     val events: SharedFlow<WsEvent> = _events.asSharedFlow()
 
+    private val _connected = MutableStateFlow(false)
+
+    /**
+     * Whether the WebSocket is currently connected to the backend. The app
+     * watches this to flush local dirty rows and pull server changes the moment
+     * the connection is (re)established — the "reconnect to the server" hook for
+     * Phase 9c offline sync.
+     */
+    val connected: StateFlow<Boolean> = _connected.asStateFlow()
+
     private var prefs: SharedPreferences? = null
     private var webSocket: WebSocket? = null
     private var reconnectJob: Job? = null
@@ -73,6 +86,7 @@ object SyncClient {
     @Synchronized
     fun stop() {
         stopped = true
+        _connected.value = false
         reconnectJob?.cancel()
         reconnectJob = null
         webSocket?.close(1000, "bye")
@@ -95,6 +109,7 @@ object SyncClient {
         object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
                 reconnectDelayMs = INITIAL_RECONNECT_MS
+                _connected.value = true
             }
 
             override fun onMessage(webSocket: WebSocket, text: String) {
@@ -118,10 +133,12 @@ object SyncClient {
             }
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+                _connected.value = false
                 scheduleReconnect(preferences)
             }
 
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+                _connected.value = false
                 scheduleReconnect(preferences)
             }
         }

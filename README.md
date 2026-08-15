@@ -170,10 +170,13 @@ down. Notifications are best-effort convenience; they never change your data.
 
 - **Data is stored on the server**, not just on your phone. A fresh install
   pulls everything back from the database.
-- **The Android app works offline for the focus timer** (a foreground service
-  keeps the countdown accurate), but task *changes* made offline are queued in
-  memory and require a connection to sync. Full offline editing (changes saved
-  locally and merged later) is planned but not yet shipped.
+- **The Android app is local-first (Phase 9c):** tasks, habits and completions
+  are read from a local SQLite copy, so adding/editing/ticking works offline and
+  the change is saved immediately on the device. The change is pushed to the
+  server as soon as connectivity returns (network regain or WebSocket reconnect)
+  or on the next periodic sync; the server wins on timestamp conflicts (ADR 012).
+- **The focus timer also works fully offline** (a foreground service keeps the
+  countdown accurate).
 
 ### Security & privacy posture
 

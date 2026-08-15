@@ -2,7 +2,10 @@ package com.pudimproductivity.local
 
 /**
  * Local entity mirroring the API `Task` shape, plus offline-sync bookkeeping:
- * `dirty` (1 = local change not yet pushed) and `deleted` (1 = local tombstone).
+ * `dirty` (1 = local change not yet pushed), `deleted` (1 = local tombstone) and
+ * `synced` (1 = this id already exists on the server, so a push should UPDATE
+ * rather than CREATE — an offline-created row that is also edited before its
+ * first push keeps synced=0 until a create succeeds).
  */
 data class LocalTask(
     val id: String,
@@ -13,7 +16,8 @@ data class LocalTask(
     val created_at: String,
     val updated_at: String,
     val dirty: Boolean = false,
-    val deleted: Boolean = false
+    val deleted: Boolean = false,
+    val synced: Boolean = false
 )
 
 data class LocalCompletion(
@@ -33,7 +37,8 @@ data class LocalTaskList(
     val created_at: String,
     val updated_at: String,
     val dirty: Boolean = false,
-    val deleted: Boolean = false
+    val deleted: Boolean = false,
+    val synced: Boolean = false
 )
 
 data class LocalShare(

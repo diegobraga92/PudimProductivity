@@ -90,14 +90,15 @@ fun TaskListScreen(
         completions.groupBy({ it.task_id }, { it.completed_date })
     }
 
-    // Phase 9c: WS events still arrive (Phase 2) — refresh local state so a
-    // change made on another client is reflected immediately.
+    // Phase 9c: WS events still arrive (Phase 2) — pull the server's incremental
+    // changes into the local DB so a change made on another client (e.g. web)
+    // is reflected immediately, not just re-read from the stale local snapshot.
     @OptIn(FlowPreview::class)
     LaunchedEffect(Unit) {
         SyncClient.events
             .debounce(300)
             .collect {
-                repository.refreshFromLocal()
+                repository.pullAndRefresh()
             }
     }
 

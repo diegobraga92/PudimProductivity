@@ -12,6 +12,8 @@ import com.pudimproductivity.local.LocalShare
 import com.pudimproductivity.local.LocalTask
 import com.pudimproductivity.local.LocalTaskList
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 /**
@@ -28,18 +30,31 @@ import kotlinx.coroutines.withContext
  */
 class SyncManager(private val context: Context) {
 
+    companion object {
+        // Serializes syncs across every SyncManager instance — the app repository,
+        // the WorkManager worker and the reconnect hooks all create their own —
+        // so push/pull never run concurrently against the same SQLite database.
+        private val syncMutex = Mutex()
+    }
+
     private val db by lazy { LocalDatabase(context) }
 
     /** Full sync: push local changes, then pull the server's. */
     suspend fun sync() {
-        withContext(Dispatchers.IO) {
-            pushLocalChanges()
-            pullChanges()
+        syncMutex.withLock {
+            withContext(Dispatchers.IO) {
+                pushLocalChanges()
+                pullChangesLocked()
+            }
         }
     }
 
     /** Only fetch server changes (after connect or WS event). */
     suspend fun pullChanges() {
+        syncMutex.withLock { pullChangesLocked() }
+    }
+
+    private suspend fun pullChangesLocked() {
         withContext(Dispatchers.IO) {
             val since = db.getLastSyncTs()
             val bundle = ApiClient.syncService.getChanges(since)
@@ -49,7 +64,9 @@ class SyncManager(private val context: Context) {
                 LocalTask(
                     id = t.id, title = t.title, status = t.status,
                     recurrence_days = t.recurrence_days, list_id = t.list_id,
-                    created_at = t.created_at, updated_at = t.updated_at
+                    created_at = t.created_at, updated_at = t.updated_at,
+                    // Server rows exist remotely, so a later local edit is an UPDATE.
+                    synced = true
                 )
             })
             db.upsertCompletions(bundle.completions.map { c ->
@@ -61,7 +78,8 @@ class SyncManager(private val context: Context) {
             db.upsertTaskLists(bundle.task_lists.map { l ->
                 LocalTaskList(
                     id = l.id, name = l.name, description = l.description,
-                    owner_id = l.owner_id, created_at = l.created_at, updated_at = l.updated_at
+                    owner_id = l.owner_id, created_at = l.created_at, updated_at = l.updated_at,
+                    synced = true
                 )
             })
             db.upsertShares(bundle.shares.map { s ->
@@ -82,20 +100,38 @@ class SyncManager(private val context: Context) {
     private suspend fun pushLocalChanges() {
         val api = ApiClient.taskService
 
-        // Deleted tasks first (tombstones).
+        // Deleted tasks first (tombstones). A tombstone whose id was never
+        // created on the server (offline create then delete) is just dropped
+        // locally — there is nothing to delete remotely.
         db.dirtyTasks().filter { it.deleted }.forEach { t ->
             try {
-                api.deleteTask(t.id)
-                db.markTaskDirty(t.id, dirty = false)
+                if (t.synced) {
+                    api.deleteTask(t.id)
+                    db.markTaskDirty(t.id, dirty = false)
+                } else {
+                    db.deleteLocalTask(t.id)
+                }
             } catch (_: Exception) {
                 // Retry next sync.
             }
         }
-        // Created/updated tasks.
+        // Created/updated tasks. `synced` (not a timestamp comparison) decides
+        // whether the row already exists on the server: an offline-created task
+        // that was also edited before its first push must CREATE first, then
+        // re-apply the full local state (create can't carry status).
         db.dirtyTasks().filter { !it.deleted }.forEach { t ->
             try {
-                val existing = db.queryTaskById(t.id)
-                if (existing == null || existing.updated_at == t.created_at) {
+                if (t.synced) {
+                    api.updateTask(
+                        t.id,
+                        UpdateTaskRequest(
+                            title = t.title,
+                            status = t.status,
+                            recurrence_days = t.recurrence_days,
+                            list_id = t.list_id
+                        )
+                    )
+                } else {
                     api.createTask(
                         CreateTaskRequest(
                             id = t.id,
@@ -104,7 +140,8 @@ class SyncManager(private val context: Context) {
                             list_id = t.list_id
                         )
                     )
-                } else {
+                    // Re-apply the full local state (status, etc.) so edits made
+                    // offline before the first push are not lost.
                     api.updateTask(
                         t.id,
                         UpdateTaskRequest(
@@ -115,6 +152,7 @@ class SyncManager(private val context: Context) {
                         )
                     )
                 }
+                db.markTaskSynced(t.id)
                 db.markTaskDirty(t.id, dirty = false)
             } catch (_: Exception) {
                 // Offline or conflict — keep dirty and retry; the pull pass will
@@ -139,19 +177,25 @@ class SyncManager(private val context: Context) {
             }
         }
 
-        // Dirty task lists.
+        // Dirty task lists (same create-then-apply pattern as tasks).
         db.queryTaskLists().filter { it.dirty }.forEach { l ->
             try {
                 if (l.deleted) {
-                    api.deleteTaskList(l.id)
-                    db.markTaskListDirty(l.id)
-                } else {
-                    val existing = db.queryTaskLists().firstOrNull { it.id == l.id }
-                    if (existing?.updated_at == l.created_at) {
-                        api.createTaskList(com.pudimproductivity.api.CreateTaskListRequest(id = l.id, name = l.name))
+                    if (l.synced) {
+                        api.deleteTaskList(l.id)
+                        // Clean the tombstone so the pull pass hard-deletes it
+                        // (mirrors the tasks path).
+                        db.markTaskListDirty(l.id, dirty = false)
                     } else {
-                        api.updateTaskList(l.id, com.pudimproductivity.api.UpdateTaskListRequest(name = l.name, description = l.description))
+                        db.deleteLocalTaskList(l.id)
                     }
+                } else if (l.synced) {
+                    api.updateTaskList(l.id, com.pudimproductivity.api.UpdateTaskListRequest(name = l.name, description = l.description))
+                    db.markTaskListDirty(l.id, dirty = false)
+                } else {
+                    api.createTaskList(com.pudimproductivity.api.CreateTaskListRequest(id = l.id, name = l.name))
+                    api.updateTaskList(l.id, com.pudimproductivity.api.UpdateTaskListRequest(name = l.name, description = l.description))
+                    db.markTaskListSynced(l.id)
                     db.markTaskListDirty(l.id, dirty = false)
                 }
             } catch (_: Exception) {
