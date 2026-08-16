@@ -51,9 +51,14 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
-          cache-dependency-path: desktop/package-lock.json
+          cache-dependency-path: |
+            desktop/package-lock.json
+            web/package-lock.json
       - name: Install desktop dependencies
         working-directory: desktop
+        run: npm ci
+      - name: Install web dependencies (vite + build toolchain)
+        working-directory: web
         run: npm ci
       - name: Build web (desktop mode), shell and icons
         # The web build reads shared/i18n from the repo (checkout includes it).
@@ -77,9 +82,14 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
-          cache-dependency-path: desktop/package-lock.json
+          cache-dependency-path: |
+            desktop/package-lock.json
+            web/package-lock.json
       - name: Install desktop dependencies
         working-directory: desktop
+        run: npm ci
+      - name: Install web dependencies (vite + build toolchain)
+        working-directory: web
         run: npm ci
       - name: Build unpacked app (smoke test of packaging config)
         working-directory: desktop
