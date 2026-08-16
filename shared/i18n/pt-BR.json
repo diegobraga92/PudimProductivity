@@ -452,6 +452,7 @@
   "alarm.startsAt": "Começa às {time} • {relative}",
   "alarm.dismiss": "Dispensar alarme de {title}",
   "alarm.activeBadge": "{count} {count, plural, one {alarme ativo} other {alarmes ativos}}",
+  "alarm.desktopTime": "Começa às {time}",
 
   "share.title": "👥 Compartilhar \"{name}\"",
   "share.userId": "ID do usuário para convidar",

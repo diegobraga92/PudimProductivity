@@ -13,7 +13,8 @@
     "test:watch": "vitest",
     "generate:api": "node scripts/generate-api-types.mjs",
     "check:api": "npm run generate:api && git diff --exit-code -- src/api/generated",
-    "build:analyze": "ANALYZE=1 npm run build"
+    "build:analyze": "ANALYZE=1 npm run build",
+  "build:desktop": "vite build --mode desktop"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.62.0",

@@ -158,6 +158,14 @@ function Pomodoro() {
     };
   }, []);
 
+  // Desktop: prevent the OS from suspending while the focus timer runs so the
+  // countdown and audio stay accurate (Electron powerSaveBlocker; no-op in the
+  // plain browser).
+  useEffect(() => {
+    window.desktop?.setPowerSaveBlocker?.(localStatus === "running");
+    return () => window.desktop?.setPowerSaveBlocker?.(false);
+  }, [localStatus]);
+
   return (
     <div className="animate-fade-in">
       <div

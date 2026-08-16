@@ -114,6 +114,11 @@ func main() {
 	// r.RemoteAddr, and production sits behind nginx which sets those headers.
 	r.Use(middleware.Recoverer)
 	r.Use(requestLogger)
+	// CORS for cross-origin clients (e.g. the Electron desktop app served from
+	// the app://bundle origin). Must run before AuthMiddleware so preflight
+	// OPTIONS requests are answered without identity headers. No-op when
+	// CORS_ALLOWED_ORIGINS is empty (same-origin web deployment).
+	r.Use(shared.CorsMiddleware(cfg.Server.CORSAllowedOrigins))
 	r.Use(shared.AuthMiddleware)
 	r.Use(middleware.Timeout(cfg.Server.RequestTimeout))
 

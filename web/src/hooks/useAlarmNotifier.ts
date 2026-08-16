@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { listScheduledTasks, type Task } from "../api/tasks";
 import { useAlarm } from "../components/useAlarm";
+import { useI18n } from "../i18n";
 import { playAlarmSound } from "../utils/sounds";
 import { getToday } from "../utils/dates";
 
@@ -47,7 +48,12 @@ function saveFiredAlarms(keys: Set<string>): void {
 export function useAlarmNotifier(): void {
   const queryClient = useQueryClient();
   const { fireAlarm } = useAlarm();
+  const { t } = useI18n();
   const firedRef = useRef<Set<string>>(new Set());
+  // Stable ref so the polling effect doesn't restart when the translation
+  // function identity changes (and to satisfy exhaustive-deps).
+  const tRef = useRef(t);
+  tRef.current = t;
 
   useEffect(() => {
     firedRef.current = loadFiredAlarms();
@@ -107,6 +113,12 @@ export function useAlarmNotifier(): void {
             console.debug(`[alarm] Firing alarm for "${task.title}" (${task.id}) at ${nowMinutes} min, alarm was ${alarmMinutes} min`);
             await playAlarmSound();
             fireAlarm(task);
+            // Native OS notification when running inside the Electron desktop
+            // app (no-op in the browser — the in-app toast still fires).
+            window.desktop?.notify?.({
+              title: task.title,
+              body: task.start_time ? tRef.current("alarm.desktopTime", { time: task.start_time }) : undefined,
+            });
             firedAny = true;
           }
         }

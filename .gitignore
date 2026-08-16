@@ -25,6 +25,12 @@ web/dist/
 web/.env.local
 web/.env.*.local
 
+# Desktop (Electron)
+desktop/node_modules/
+desktop/dist-electron/
+desktop/dist-web/
+desktop/release/
+
 # Android / Mobile
 mobile/.gradle/
 mobile/.kotlin/

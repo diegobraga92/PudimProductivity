@@ -1,0 +1,96 @@
+name: Desktop CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "desktop/**"
+      - "web/**"
+      - "shared/**"
+      - "api/**"
+      - ".github/workflows/desktop-ci.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "desktop/**"
+      - "web/**"
+      - "shared/**"
+      - "api/**"
+      - ".github/workflows/desktop-ci.yml"
+
+env:
+  NODE_VERSION: "20"
+
+jobs:
+  typecheck:
+    name: Type Check (Electron shell)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      # Check latest: https://github.com/actions/checkout/releases
+      - uses: actions/checkout@v6
+      # Check latest: https://github.com/actions/setup-node/releases
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: desktop/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Type check the Electron shell (main + preload)
+        run: npm run typecheck
+
+  build:
+    name: Build (web + shell)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: desktop/package-lock.json
+      - name: Install desktop dependencies
+        working-directory: desktop
+        run: npm ci
+      - name: Build web (desktop mode), shell and icons
+        # The web build reads shared/i18n from the repo (checkout includes it).
+        working-directory: desktop
+        run: npm run build:web && npm run build:shell && npm run icons
+
+  package:
+    name: Package (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      # Don't attempt code signing in CI (no certificates installed). Without
+      # this, the macOS runner tries to auto-discover a signing identity.
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: desktop/package-lock.json
+      - name: Install desktop dependencies
+        working-directory: desktop
+        run: npm ci
+      - name: Build unpacked app (smoke test of packaging config)
+        working-directory: desktop
+        run: npm run package:dir
+      - name: Upload artifacts
+        # Check latest: https://github.com/actions/upload-artifact/releases
+        uses: actions/upload-artifact@v4
+        with:
+          name: pudim-desktop-${{ matrix.os }}
+          path: |
+            desktop/release/linux-unpacked/**
+            desktop/release/win-unpacked/**
+            desktop/release/mac/**
+          if-no-files-found: ignore

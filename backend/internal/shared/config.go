@@ -21,6 +21,11 @@ type ServerConfig struct {
 	WriteTimeout    time.Duration
 	IdleTimeout     time.Duration
 	RequestTimeout  time.Duration
+	// CORSAllowedOrigins is the set of cross-origin request Origins allowed to
+	// call the API (e.g. "app://bundle" for the Electron desktop app). Empty
+	// means same-origin only, which preserves the web/nginx deployment
+	// behavior. See cors_middleware.go.
+	CORSAllowedOrigins map[string]bool
 }
 
 type DatabaseConfig struct {
@@ -47,12 +52,13 @@ type ScoreProviderConfig struct {
 func LoadConfig() Config {
 	return Config{
 		Server: ServerConfig{
-			Port:            getEnvInt("PORT", 8080),
-			ShutdownTimeout: getEnvDuration("SHUTDOWN_TIMEOUT", 15*time.Second),
-			ReadTimeout:     getEnvDuration("READ_TIMEOUT", 10*time.Second),
-			WriteTimeout:    getEnvDuration("WRITE_TIMEOUT", 30*time.Second),
-			IdleTimeout:     getEnvDuration("IDLE_TIMEOUT", 60*time.Second),
-			RequestTimeout:  getEnvDuration("REQUEST_TIMEOUT", 15*time.Second),
+			Port:               getEnvInt("PORT", 8080),
+			ShutdownTimeout:    getEnvDuration("SHUTDOWN_TIMEOUT", 15*time.Second),
+			ReadTimeout:        getEnvDuration("READ_TIMEOUT", 10*time.Second),
+			WriteTimeout:       getEnvDuration("WRITE_TIMEOUT", 30*time.Second),
+			IdleTimeout:        getEnvDuration("IDLE_TIMEOUT", 60*time.Second),
+			RequestTimeout:     getEnvDuration("REQUEST_TIMEOUT", 15*time.Second),
+			CORSAllowedOrigins: ParseAllowedOrigins(getEnv("CORS_ALLOWED_ORIGINS", "")),
 		},
 		Database: DatabaseConfig{
 			URL:             getEnv("DATABASE_URL", "postgres://pudim:change_me_in_production@localhost:5433/pudimproductivity?sslmode=disable"),

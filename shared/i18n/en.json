@@ -452,6 +452,7 @@
   "alarm.startsAt": "Starts at {time} • {relative}",
   "alarm.dismiss": "Dismiss alarm for {title}",
   "alarm.activeBadge": "{count} active {count, plural, one {alarm} other {alarms}}",
+  "alarm.desktopTime": "Starts at {time}",
 
   "share.title": "👥 Share \"{name}\"",
   "share.userId": "User ID to invite",

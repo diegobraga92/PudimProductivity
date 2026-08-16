@@ -69,6 +69,10 @@ services:
     restart: unless-stopped
     environment:
       PORT: "8080"
+      # Comma-separated CORS allow-list for cross-origin clients. The Electron
+      # desktop app serves the SPA from app://bundle — allow it to use the
+      # desktop app against this LAN deployment (see web/.env.desktop).
+      CORS_ALLOWED_ORIGINS: "${CORS_ALLOWED_ORIGINS:-}"
       DATABASE_URL: "postgres://${POSTGRES_USER:-pudim}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-pudimproductivity}?sslmode=disable"
       REDIS_URL: "redis://redis:6379/0"
       LOG_LEVEL: "${LOG_LEVEL:-debug}"

@@ -71,6 +71,38 @@ All host ports are **configurable via `.env`** — see `.env.example` for defaul
 | Mailpit    | 1025       | Local SMTP (email capture)         |
 |            | 8025       | Mailpit web UI (sent-mail preview) |
 
+### Desktop app (Electron)
+
+There's also a native desktop app (`desktop/`) that reuses the same React web
+client. Full instructions live in [`desktop/README.md`](desktop/README.md).
+Short version — to deploy it on another Linux machine and point it at this LAN
+server:
+
+1. **On the server** — the desktop app serves its UI from the `app://bundle`
+   origin, so allow it to call the API cross-origin and rebuild the backend:
+
+   ```bash
+   echo 'CORS_ALLOWED_ORIGINS=app://bundle' >> .env
+   docker compose up -d --build backend
+   ```
+
+2. **On the desktop machine** — build with the server URL baked in, then
+   install the generated package:
+
+   ```bash
+   # web/.env.desktop:
+   VITE_API_BASE_URL=http://<server-lan-ip>:8080/api/v1   # or :3000 via nginx
+
+   cd desktop
+   npm install && npm run package
+   sudo apt install ./release/pudimproductivity-desktop_*_amd64.deb   # or run the .AppImage
+   ```
+
+The desktop app then talks to the server over HTTP + WebSocket (real-time sync
+with the browser/Android included). A runtime override
+(`window.desktop.setApiBaseUrl(...)` or the `PUDIM_API_BASE_URL` env var) wins
+over the baked URL — see `desktop/README.md`.
+
 ## API
 
 Using API-first, `api/openapi/` should be the source of truth.
@@ -147,7 +179,7 @@ A personal productivity suite: **tasks & habits**, a **weekly planner**, a
 a **media library** (movies, series, books and games — with CSV import, plus
 optional score ratings auto-looked-up from configurable rating providers such
 as IMDb (OMDb) for film and Metacritic (RAWG) for games).
-Web, Android, and a Go API backend.
+Web, Desktop (Electron), Android, and a Go API backend.
 
 ### The data model: one source of truth
 
