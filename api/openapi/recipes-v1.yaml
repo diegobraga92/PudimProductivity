@@ -1,18 +1,10 @@
-# Check latest: https://github.com/OAI/OpenAPI-Specification/releases
 openapi: "3.2.0"
 info:
-  title: PudimProductivity Recipes API
-  description: |
-    Recipe manager with ingredients, steps, tags, search, and optional image
-    upload via presigned S3 URLs. Recipes are the composable unit for the
-    meal-planning module (meal-plan slots reference a recipe).
+  title: Recipes API
   version: "0.1.0"
   license:
     name: MIT
     url: https://github.com/diegobraga92/PudimProductivity/blob/main/LICENSE
-  contact:
-    name: PudimProductivity Team
-    url: https://github.com/diegobraga92/PudimProductivity
 
 servers:
   - url: /
@@ -23,9 +15,6 @@ paths:
     get:
       operationId: listRecipes
       summary: List recipes
-      description: |
-        Returns recipes filtered by search text, tags and difficulty. Results
-        are ordered newest-first and paginated with an opaque keyset cursor.
       security: []
       tags:
         - Recipes
@@ -39,7 +28,7 @@ paths:
         - name: tags
           in: query
           required: false
-          description: Comma-separated tags; recipes must have at least one of them.
+          description: Comma-separated tags.
           schema:
             type: string
         - name: difficulty
@@ -50,7 +39,7 @@ paths:
         - name: cursor
           in: query
           required: false
-          description: Opaque keyset cursor returned in a previous page.
+          description: Opaque keyset cursor.
           schema:
             type: string
         - name: limit
@@ -110,7 +99,6 @@ paths:
     get:
       operationId: getRecipe
       summary: Get a recipe
-      description: Returns the full recipe including ingredients, steps and tags.
       security: []
       tags:
         - Recipes
@@ -170,6 +158,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  # TODO: Check about replacing it with a simple reference URL
   /api/v1/recipes/{recipeId}/upload-url:
     parameters:
       - $ref: "#/components/parameters/recipeId"
@@ -179,7 +168,6 @@ paths:
       description: |
         Returns a short-lived presigned PUT URL the client uploads the image to
         directly, plus the object key to store as the recipe's `image_url`.
-        Returns 503 when the storage backend is not configured.
       security: []
       tags:
         - Recipes

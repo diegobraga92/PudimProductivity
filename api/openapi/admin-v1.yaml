@@ -5,9 +5,6 @@ info:
   license:
     name: MIT
     url: https://github.com/diegobraga92/PudimProductivity/blob/main/LICENSE
-  contact:
-    name: PudimProductivity Team
-    url: https://github.com/diegobraga92/PudimProductivity
 
 servers:
   - url: /
@@ -19,16 +16,14 @@ paths:
       operationId: getScoreProviders
       summary: Read the score provider configuration
       description: |
-        Returns the effective media-type → provider mapping (environment
-        bootstrap values until the config is saved in the UI), the lookup
-        feature-flag state, and the masked provider list (never the API keys).
-        Requires the admin role.
+        Returns the mapping of score providers per media type, and enabled state.
+        Requires admin role.
       security: []
       tags:
         - Admin
       responses:
         "200":
-          description: Effective score provider configuration.
+          description: Score provider configuration.
           content:
             application/json:
               schema:
@@ -44,12 +39,8 @@ paths:
       operationId: updateScoreProviders
       summary: Save the score provider configuration
       description: |
-        Validates and applies a new configuration: provider/media-type
-        capability checks, API-key requirements, then activates the runtime
-        lookup immediately (no restart) and persists. A provider entry with a
-        nil api_key / base_url keeps the stored value; an empty string clears
-        it. lookup_enabled optionally toggles the library.score_lookup_enabled
-        feature flag. Requires the admin role.
+        Validates and applies a new score provider config. 
+        Requires the admin role.
       security: []
       tags:
         - Admin
@@ -61,7 +52,7 @@ paths:
               $ref: "#/components/schemas/ScoreProvidersUpdate"
       responses:
         "200":
-          description: The resulting effective configuration (masked).
+          description: Resulting config (masked).
           content:
             application/json:
               schema:
@@ -94,10 +85,10 @@ components:
           description: Registered provider name (e.g. "omdb", "rawg").
         base_url:
           type: string
-          description: Override base URL, or empty to use the provider default.
+          description: Override base URL, or empty to use default.
         api_key_set:
           type: boolean
-          description: Whether an API key is stored. The key itself is never returned.
+          description: If an API key is stored.
         supported_types:
           type: array
           items:
@@ -121,7 +112,7 @@ components:
           description: Provider for books ("" or "none" = disabled).
         lookup_enabled:
           type: boolean
-          description: State of the library.score_lookup_enabled feature flag.
+          description: Value of library.score_lookup_enabled feature flag.
         providers:
           type: array
           items:
@@ -133,13 +124,13 @@ components:
       properties:
         name:
           type: string
-          description: Registered provider name to update.
+          description: Provider to update.
         api_key:
           type: [string, "null"]
-          description: nil = keep the stored key; "" = clear it.
+          description: nil = keep stored; "" = clear it.
         base_url:
           type: [string, "null"]
-          description: nil = keep the stored value; "" = use the provider default.
+          description: nil = keep stored; "" = use default.
 
     ScoreProvidersUpdate:
       type: object
@@ -155,7 +146,7 @@ components:
           type: string
         lookup_enabled:
           type: boolean
-          description: Optional — omit to leave the feature flag unchanged.
+          description: Optional. Omit to leave unchanged.
         providers:
           type: array
           items:

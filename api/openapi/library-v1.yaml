@@ -1,18 +1,10 @@
-# Check latest: https://github.com/OAI/OpenAPI-Specification/releases
 openapi: "3.2.0"
 info:
-  title: PudimProductivity Library API
-  description: |
-    Track media you consume — movies, series, books and games — with a simple
-    done flag, a release year and optional notes. Replaces the book-specific
-    tracking API (booktrack-v1.yaml).
+  title: Library API
   version: "0.1.0"
   license:
     name: MIT
     url: https://github.com/diegobraga92/PudimProductivity/blob/main/LICENSE
-  contact:
-    name: PudimProductivity Team
-    url: https://github.com/diegobraga92/PudimProductivity
 
 servers:
   - url: /
@@ -23,7 +15,7 @@ paths:
     get:
       operationId: listLibraryItems
       summary: List library items
-      description: Returns items newest-first, optionally filtered by media type, done status and/or subtype (genre/console).
+      description: Returns items newest-first, optionally filtered.
       security: []
       tags:
         - Library
@@ -38,16 +30,15 @@ paths:
           required: false
           schema:
             type: boolean
-            description: When true, only done items; when false, only unfinished.
         - name: subtype
           in: query
           required: false
           schema:
             type: string
-            description: Exact genre/console match, case-insensitive (e.g. "Nintendo Switch", "Sci-fi").
+            description: Case-insensitive match (e.g. "Nintendo Switch", "Sci-fi").
       responses:
         "200":
-          description: A list of library items.
+          description: List of library items.
           content:
             application/json:
               schema:
@@ -64,11 +55,7 @@ paths:
   /api/v1/library/subtypes:
     get:
       operationId: listLibrarySubtypes
-      summary: List distinct subtypes for the filter dropdown
-      description: |
-        Returns the distinct non-empty genre/console values present in the
-        library, sorted alphabetically. Optionally scoped to a media type so
-        games show consoles and movies/series/books show genres.
+      summary: List distinct subtypes
       security: []
       tags:
         - Library
@@ -80,7 +67,7 @@ paths:
             $ref: "#/components/schemas/MediaType"
       responses:
         "200":
-          description: Distinct subtype values.
+          description: Subtype values.
           content:
             application/json:
               schema:
@@ -97,7 +84,6 @@ paths:
     post:
       operationId: createLibraryItem
       summary: Add an item to the library
-      description: Adds a single item from client-provided fields.
       security: []
       tags:
         - Library
@@ -126,10 +112,8 @@ paths:
       operationId: searchLibraryScores
       summary: Search for a media score
       description: |
-        Looks up ratings for a title from the configured score provider (OMDb/IMDb
-        for films and series, RAWG/Metacritic for games). Returns a small list of
-        candidates so the client can confirm the right title before saving its
-        score. Returns 503 when the feature is disabled or no provider is configured.
+        Looks up ratings for a title from the configured score provider. 
+        Returns a short list of candidates for confirmation before saving.
       security: []
       tags:
         - Library
@@ -150,7 +134,7 @@ paths:
           required: false
           schema:
             type: integer
-            description: Optional release year to narrow the search.
+            description: Optional release year.
       responses:
         "200":
           description: Matching titles with their ratings.
@@ -184,11 +168,9 @@ paths:
       operationId: searchLibraryScoresBatch
       summary: Look up scores for many titles at once
       description: |
-        Used by the CSV import auto-scoring flow. Each item is looked up against
-        the configured provider independently with bounded concurrency; per-item
-        failures are reported inline (in the result's error field) rather than
-        failing the whole request. Up to 100 items per call. Returns 503 when
-        the feature is disabled or no provider is configured.
+        Each item is looked up independently with bounded concurrency. 
+        Per-item failures are reported inline (in the result's error field). 
+        Up to 100 items per call.
       security: []
       tags:
         - Library
@@ -229,9 +211,8 @@ paths:
       operationId: importLibraryItems
       summary: Bulk import library items
       description: |
-        Creates multiple items in a single transaction (used by the CSV import
-        flow). Valid rows are inserted; invalid rows are skipped and reported
-        with their 1-based row number.
+        Creates multiple items in a single transaction. Valid rows are inserted; 
+        invalid rows are skipped and reported with their 1-based row number.
       security: []
       tags:
         - Library
@@ -281,9 +262,7 @@ paths:
     put:
       operationId: updateLibraryItem
       summary: Update a library item
-      description: |
-        Partial update — omitted fields are left unchanged. Send {"done": true}
-        to mark an item as consumed/read/watched/played.
+      description: Omitted fields are left unchanged.
       security: []
       tags:
         - Library
@@ -335,7 +314,6 @@ components:
       name: itemId
       in: path
       required: true
-      description: The library item UUID.
       schema:
         type: string
         format: uuid
@@ -344,7 +322,6 @@ components:
     MediaType:
       type: string
       enum: [movie, series, book, game]
-      description: Kind of media the item represents.
 
     LibraryItem:
       type: object
@@ -355,21 +332,17 @@ components:
           format: uuid
         name:
           type: string
-          description: The title of the item.
         media_type:
           $ref: "#/components/schemas/MediaType"
         release_year:
           type: [integer, "null"]
-          description: Year the media was released; null when unknown.
         done:
           type: boolean
-          description: True when the item has been consumed/read/watched/played.
         notes:
           type: string
-          description: Optional free-text notes or comments.
         subtype:
           type: string
-          description: Optional free-text sub-category (e.g. "Console" for games, "Genre" for movies/series/books).
+          description: Optional free-text sub-category.
         score:
           type: [number, "null"]
           description: |
@@ -440,14 +413,14 @@ components:
       properties:
         index:
           type: integer
-          description: Echo of the item's position in the request, so results map to rows.
+          description: Item's position in the request, for mapping.
         candidates:
           type: array
           items:
             $ref: "#/components/schemas/ScoreCandidate"
         error:
           type: string
-          description: Present when the row or its lookup failed (e.g. invalid type, provider error).
+          description: e.g. invalid type, provider error.
 
     ScoreBatchResponse:
       type: object
@@ -475,7 +448,7 @@ components:
           type: string
         subtype:
           type: string
-          description: Optional free-text sub-category (e.g. "Console" for games, "Genre" for movies/series/books).
+          description: Optional free-text sub-category.
         score:
           type: [number, "null"]
           description: Optional rating on a 0-100 scale.
@@ -498,12 +471,10 @@ components:
           type: string
         subtype:
           type: string
-          description: Optional free-text sub-category. Omit to keep the current value; send "" to clear it.
+          description: Omit to keep the current value; send "" to clear it.
         score:
           type: [number, "null"]
-          description: |
-            Optional rating on a 0-100 scale. Omit to keep the current value;
-            send null to clear it.
+          description: Omit to keep the current value; send null to clear it.
         score_source:
           type: string
           description: Where the score came from. Send "" to clear it.

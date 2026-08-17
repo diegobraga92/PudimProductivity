@@ -1,16 +1,11 @@
 # Check latest: https://github.com/OAI/OpenAPI-Specification/releases
 openapi: "3.2.0"
 info:
-  title: PudimProductivity Offline Sync API
-  description: |
-    Phase 9c — incremental sync for offline-first mobile clients. The client
-    persists the `timestamp` returned in each response and sends it back as
-    `since` on the next pull. Soft-deleted rows appear in the `deleted_*`
-    arrays so clients can apply tombstones (migration 019).
+  title: Offline Sync API
+  version: "0.1.0"
   license:
     name: MIT
     url: https://github.com/diegobraga92/PudimProductivity/blob/main/LICENSE
-  version: "0.1.0"
 
 servers:
   - url: /
@@ -21,6 +16,7 @@ paths:
     get:
       operationId: getSyncChanges
       summary: Fetch incremental changes since a timestamp
+      # TODO: Check logic
       description: |
         Returns tasks, completions, task lists and shares created/updated after
         `since`, plus the IDs of rows soft-deleted after `since`. Omit `since`

@@ -1,15 +1,10 @@
-# Check latest: https://github.com/OAI/OpenAPI-Specification/releases
 openapi: "3.2.0"
 info:
-  title: PudimProductivity Health API
-  description: Health check endpoint for the PudimProductivity platform.
+  title: Health API
+  version: "0.1.0"
   license:
     name: MIT
     url: https://github.com/diegobraga92/PudimProductivity/blob/main/LICENSE
-  version: "0.0.1"
-  contact:
-    name: PudimProductivity Team
-    url: https://github.com/diegobraga92/PudimProductivity
 
 servers:
   - url: /
@@ -17,11 +12,11 @@ servers:
 
 paths:
   /api/v1/health:
-    # redocly-disable-next-line operation-4xx-response
     get:
       operationId: getHealth
       summary: Health check
-      description: Returns the health status of the backend service, including database connectivity.
+      # TODO: Include other services, like RabbitMQ
+      description: Returns the health status of the backend service, including DB and other connectivity.
       security: []
       tags:
         - Health

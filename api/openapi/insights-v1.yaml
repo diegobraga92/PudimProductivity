@@ -1,16 +1,11 @@
-# Check latest: https://github.com/OAI/OpenAPI-Specification/releases
+# TODO: Check about removing insights
 openapi: "3.2.0"
 info:
-  title: PudimProductivity Insights API
-  description: |
-    Phase 9a AI coach — weekly productivity reports derived from domain events
-    (task completions, pomodoro focus sessions, recipe creations). Reports are
-    template-rendered server-side with an optional LLM summary behind the
-    `insights.llm_enabled` feature flag (see docs/adr/011).
+  title: Insights API
+  version: "0.1.0"
   license:
     name: MIT
     url: https://github.com/diegobraga92/PudimProductivity/blob/main/LICENSE
-  version: "0.1.0"
 
 servers:
   - url: /
@@ -20,11 +15,12 @@ paths:
   /api/v1/insights/weekly:
     get:
       operationId: getWeeklyInsights
-      summary: Get the weekly productivity report
+      summary: Get weekly productivity report
       description: |
         Returns the report for the Monday-starting week containing `date`
         (defaults to today). The report is computed once and cached in
         `insight_reports`.
+      # TODO: Check 'security:' of all openapi yaml
       security: []
       tags:
         - Insights
@@ -105,10 +101,10 @@ components:
           $ref: "#/components/schemas/WeeklyStats"
         report_text:
           type: string
-          description: Template-rendered weekly summary (human-readable prose).
+          description: Template-rendered weekly summary.
         llm_summary:
           type: [string, "null"]
-          description: Optional LLM-generated paragraph; present only when the insights.llm_enabled flag is on and a summary was produced.
+          description: Optional LLM-generated paragraph. Only when the insights.llm_enabled flag is on.
         generated_at:
           type: string
           format: date-time

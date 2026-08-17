@@ -21,7 +21,7 @@ const outDir = join(here, "..", "src", "api", "generated");
 mkdirSync(outDir, { recursive: true });
 
 const SPECS = [
-  ["health.yaml", "health-v1.ts"],
+  ["health-v1.yaml", "health-v1.ts"],
   ["pomodoro-v1.yaml", "pomodoro-v1.ts"],
   ["tasks-v1.yaml", "tasks-v1.ts"],
   ["recipes-v1.yaml", "recipes-v1.ts"],

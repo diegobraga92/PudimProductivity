@@ -1,18 +1,13 @@
-# Check latest: https://github.com/OAI/OpenAPI-Specification/releases
 openapi: "3.2.0"
 info:
-  title: PudimProductivity Pomodoro API
+  title: Pomodoro API
   description: |
     Simple in-memory Pomodoro timer. Only one session can be active at a time.
-    Starting a new session cancels any existing one.
-    No database persistence — sessions are lost on server restart.
+    Starting a new session cancels any existing one. No persistence.
+  version: "0.1.0"
   license:
     name: MIT
     url: https://github.com/diegobraga92/PudimProductivity/blob/main/LICENSE
-  version: "0.1.0"
-  contact:
-    name: PudimProductivity Team
-    url: https://github.com/diegobraga92/PudimProductivity
 
 servers:
   - url: /
@@ -24,8 +19,7 @@ paths:
       operationId: startPomodoroSession
       summary: Start a new pomodoro session
       description: |
-        Creates a new pomodoro session. If a session is already running, it is
-        automatically cancelled first. The session lives in memory only.
+        If a session is already running, it is automatically cancelled first.
       security: []
       tags:
         - Pomodoro
@@ -94,7 +88,6 @@ paths:
     post:
       operationId: pauseSession
       summary: Pause the current session
-      description: Pauses the running timer. Returns an error if no session is active or it's not running.
       security: []
       tags:
         - Pomodoro
@@ -116,7 +109,6 @@ paths:
     post:
       operationId: resumeSession
       summary: Resume the current session
-      description: Resumes a paused timer. Returns an error if no session is active or it's not paused.
       security: []
       tags:
         - Pomodoro
@@ -138,10 +130,6 @@ paths:
     post:
       operationId: stopSession
       summary: Stop the current session
-      description: |
-        Completes or cancels the current session. If the session is running or
-        paused, it is marked as completed. If already completed/cancelled, it
-        stays cancelled.
       security: []
       tags:
         - Pomodoro
@@ -167,6 +155,7 @@ components:
       description: Current state of the pomodoro session.
       example: running
 
+    # TODO: Add WhiteNoise to backend
     NoiseConfig:
       type: object
       description: |
@@ -197,7 +186,6 @@ components:
         id:
           type: string
           format: uuid
-          description: Unique identifier for the session.
           example: "550e8400-e29b-41d4-a716-446655440000"
         status:
           $ref: "#/components/schemas/SessionStatus"

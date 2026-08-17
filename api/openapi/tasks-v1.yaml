@@ -1,20 +1,15 @@
-# Check latest: https://github.com/OAI/OpenAPI-Specification/releases
 openapi: "3.2.0"
 info:
   title: PudimProductivity Tasks API
   description: |
-    Simple task management — supports both one-off tasks and recurring habits.
     - One-off tasks have a simple todo/done status.
     - Habits (tasks with `recurrence_days`) track daily completions via a separate completions resource.
     - Tasks can be scheduled on the weekly planner by setting `start_time`, `end_time`, and `color`.
     - Task lists allow grouping tasks into named collections (e.g. "Shopping List", "Project Ideas").
+  version: "0.1.0"
   license:
     name: MIT
     url: https://github.com/diegobraga92/PudimProductivity/blob/main/LICENSE
-  version: "0.5.0"
-  contact:
-    name: PudimProductivity Team
-    url: https://github.com/diegobraga92/PudimProductivity
 
 servers:
   - url: /
@@ -25,10 +20,6 @@ paths:
     post:
       operationId: parseTask
       summary: Parse a natural-language task input
-      description: |
-        Accepts free text such as "Buy milk tomorrow at 9am" and returns the
-        structured fields a client can pre-fill into its creation form.
-        Rule-based (Phase 7) — unsupported patterns return partial results.
       security: []
       tags:
         - Tasks
@@ -57,7 +48,6 @@ paths:
     get:
       operationId: listScheduledTasks
       summary: List all scheduled tasks
-      description: Returns all tasks that have time-blocking info (start_time IS NOT NULL), ordered by start time. Used by the Planner view.
       security: []
       tags:
         - Tasks
@@ -117,7 +107,6 @@ paths:
     post:
       operationId: createTask
       summary: Create a new task
-      description: Creates a new task with the given title and optional recurrence days and list assignment.
       security: []
       tags:
         - Tasks
@@ -145,7 +134,6 @@ paths:
     get:
       operationId: getTask
       summary: Get a task by ID
-      description: Returns a single task by its unique identifier.
       security: []
       tags:
         - Tasks
@@ -168,7 +156,6 @@ paths:
     put:
       operationId: updateTask
       summary: Update a task
-      description: Updates the title, status, or recurrence days of an existing task.
       security: []
       tags:
         - Tasks
@@ -203,7 +190,6 @@ paths:
     delete:
       operationId: deleteTask
       summary: Delete a task
-      description: Deletes a task by its unique identifier.
       security: []
       tags:
         - Tasks
@@ -223,14 +209,9 @@ paths:
     patch:
       operationId: mergeTask
       summary: Merge a concurrent task update (CRDT LWW)
+      # TODO: Test if this works
       description: |
-        Phase 8 collaboration endpoint. Applies a client-authored update using
-        document-level last-writer-wins semantics: the write with the newest
-        `updated_at` wins; on exact timestamp ties the greater `updated_by`
-        wins. Clients send the timestamp of their edit so concurrent writers
-        converge on a single state (ADR 010).
-        Returns 200 with the merged task when this write won, or 409 with the
-        winning task state when it lost.
+        Use last-writer-wins semantics. Clients send the timestamp of their edit.
       security: []
       tags:
         - Tasks
@@ -272,10 +253,6 @@ paths:
     get:
       operationId: getAllTaskCompletions
       summary: Get all habit completions (batch)
-      description: |
-        Returns all completions across every habit task within an optional date range.
-        Use this endpoint to fetch weekly completion data for all habits in a single
-        request instead of issuing one request per task.
       security: []
       tags:
         - Tasks
@@ -314,8 +291,6 @@ paths:
     post:
       operationId: completeTask
       summary: Complete a habit for a specific date
-      description: |
-        Marks a habit task as completed for the specified date, or today if no date is provided.
       security: []
       tags:
         - Tasks
@@ -332,6 +307,7 @@ paths:
         - name: id
           in: query
           required: false
+          # TODO: Check other approaches
           description: Optional client-generated UUID for the completion row. When supplied, the server
             uses it as the completion ID, making complete idempotent for offline-first clients that
             re-push a locally-recorded completion (e.g. after a lost response).
@@ -361,8 +337,6 @@ paths:
     delete:
       operationId: uncompleteTask
       summary: Uncomplete a habit for a specific date
-      description: |
-        Removes a habit task's completion for the specified date, or today if no date is provided.
       security: []
       tags:
         - Tasks
@@ -390,7 +364,6 @@ paths:
     get:
       operationId: getTaskCompletions
       summary: Get habit completions
-      description: Returns all completions for a habit task within an optional date range.
       security: []
       tags:
         - Tasks
@@ -426,12 +399,10 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  # --- Task Lists ---
   /api/v1/task-lists:
     get:
       operationId: listTaskLists
       summary: List all task lists
-      description: Returns a list of all task lists.
       security: []
       tags:
         - Task Lists
@@ -454,7 +425,6 @@ paths:
     post:
       operationId: createTaskList
       summary: Create a new task list
-      description: Creates a new named task list.
       security: []
       tags:
         - Task Lists
@@ -482,7 +452,6 @@ paths:
     get:
       operationId: getTaskList
       summary: Get a task list by ID
-      description: Returns a single task list by its unique identifier.
       security: []
       tags:
         - Task Lists
@@ -505,7 +474,6 @@ paths:
     put:
       operationId: updateTaskList
       summary: Update a task list
-      description: Updates the name or description of a task list.
       security: []
       tags:
         - Task Lists
@@ -540,6 +508,7 @@ paths:
     delete:
       operationId: deleteTaskList
       summary: Delete a task list
+      # TODO: Check this. Tasks in the list should be deleted
       description: Deletes a task list by its unique identifier. Tasks in the list are not deleted.
       security: []
       tags:
@@ -560,7 +529,6 @@ paths:
     get:
       operationId: listTasksByListID
       summary: List tasks in a task list
-      description: Returns all tasks belonging to a specific task list.
       security: []
       tags:
         - Task Lists
@@ -569,6 +537,7 @@ paths:
         - name: type
           in: query
           required: false
+          # TODO: Check this. Does it make sense for lists to contain habits?
           description: Filter by task type. "one-off" for tasks without recurrence, "habit" for tasks with recurrence days.
           schema:
             $ref: "#/components/schemas/TaskType"
@@ -588,14 +557,11 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  # TODO: Add multiple users, to make these share features make sense
   /api/v1/task-lists/{listId}/share:
     post:
       operationId: shareTaskList
       summary: Share a task list with another user
-      description: |
-        Phase 8 collaboration. Grants the target user editor or viewer access
-        to the list. Only the owner (or an admin) may share. Broadcasting a
-        tasklist.shared event to connected members.
       security: []
       tags:
         - Task Lists
@@ -639,9 +605,6 @@ paths:
     delete:
       operationId: unshareTaskList
       summary: Revoke a user's access to a task list
-      description: |
-        Phase 8 collaboration. Removes the target user's membership. Only the
-        owner (or an admin) may unshare.
       security: []
       tags:
         - Task Lists
@@ -673,9 +636,6 @@ paths:
     get:
       operationId: listTaskListMembers
       summary: List the shared members of a task list
-      description: |
-        Phase 8 collaboration. Returns the non-owner members (editor/viewer)
-        of a list. Any member can read the member list.
       security: []
       tags:
         - Task Lists
@@ -709,7 +669,6 @@ components:
       name: taskId
       in: path
       required: true
-      description: The UUID of the task
       schema:
         type: string
         format: uuid
@@ -718,7 +677,6 @@ components:
       name: listId
       in: path
       required: true
-      description: The UUID of the task list
       schema:
         type: string
         format: uuid
@@ -727,18 +685,15 @@ components:
     TaskStatus:
       type: string
       enum: [todo, done]
-      description: Whether the task is still to do or already done.
       example: todo
 
     TaskType:
       type: string
       enum: [one-off, habit]
-      description: Filter by task type. "one-off" for tasks without recurrence, "habit" for tasks with recurrence days.
 
     RecurrenceDay:
       type: string
       enum: [mon, tue, wed, thu, fri, sat, sun]
-      description: Day of the week abbreviation for habit recurrence.
       example: mon
 
     Task:
@@ -753,11 +708,9 @@ components:
         id:
           type: string
           format: uuid
-          description: Unique identifier for the task.
           example: "550e8400-e29b-41d4-a716-446655440000"
         title:
           type: string
-          description: The task title.
           example: "Have hair cut"
         status:
           $ref: "#/components/schemas/TaskStatus"
@@ -798,12 +751,10 @@ components:
         created_at:
           type: string
           format: date-time
-          description: Timestamp when the task was created.
           example: "2026-05-07T10:00:00Z"
         updated_at:
           type: string
           format: date-time
-          description: Timestamp when the task was last updated.
           example: "2026-05-07T10:30:00Z"
 
     TaskCompletion:
@@ -817,22 +768,18 @@ components:
         id:
           type: string
           format: uuid
-          description: Unique identifier for the completion.
           example: "660e8400-e29b-41d4-a716-446655440001"
         task_id:
           type: string
           format: uuid
-          description: The UUID of the completed task.
           example: "550e8400-e29b-41d4-a716-446655440000"
         completed_date:
           type: string
           format: date
-          description: The date this completion is for.
           example: "2026-05-07"
         created_at:
           type: string
           format: date-time
-          description: Timestamp when the completion was recorded.
           example: "2026-05-07T10:00:00Z"
 
     CreateTaskRequest:
@@ -848,7 +795,6 @@ components:
             clients that push a locally-created task more than once.
         title:
           type: string
-          description: The task title.
           example: "Have hair cut"
         recurrence_days:
           type: [array, "null"]
@@ -859,7 +805,6 @@ components:
         list_id:
           type: [string, "null"]
           format: uuid
-          description: The UUID of the task list to assign this task to.
           example: "770e8400-e29b-41d4-a716-446655440002"
         start_time:
           type: [string, "null"]
@@ -898,7 +843,6 @@ components:
           example: "2026-08-10T12:30:00Z"
         title:
           type: string
-          description: The new task title.
           example: "Have hair cut and beard trim"
         status:
           $ref: "#/components/schemas/TaskStatus"
@@ -912,7 +856,6 @@ components:
           type: [string, "null"]
           format: uuid
           description: |
-            Assign or unassign the task from a list.
             Omit this field to leave the current list assignment unchanged.
             Set to a valid UUID to assign to that list.
             Set to null to unassign the task from any list.
@@ -964,29 +907,23 @@ components:
         id:
           type: string
           format: uuid
-          description: Unique identifier for the task list.
           example: "770e8400-e29b-41d4-a716-446655440002"
         name:
           type: string
-          description: The name of the task list.
           example: "Shopping List"
         description:
           type: string
-          description: An optional description of the task list.
           example: "Items I need to buy"
         owner_id:
           type: string
-          description: The user who owns the list (Phase 8). Members are granted editor/viewer via shares.
           example: "dev-user"
         created_at:
           type: string
           format: date-time
-          description: Timestamp when the task list was created.
           example: "2026-05-07T10:00:00Z"
         updated_at:
           type: string
           format: date-time
-          description: Timestamp when the task list was last updated.
           example: "2026-05-07T10:30:00Z"
 
     CreateTaskListRequest:
@@ -997,7 +934,11 @@ components:
         id:
           type: string
           format: uuid
-          description: Optional client-generated UUID. When supplied, the server uses it as the task list ID, making create idempotent for offline-first clients that push a locally-created list more than once.
+          description: |
+            Optional client-generated UUID. 
+            When supplied, the server uses it as the task list ID, 
+            making create idempotent for offline-first clients that push 
+            a locally-created list more than once.
           example: 770e8400-e29b-41d4-a716-446655440002
         name:
           type: string
@@ -1009,11 +950,9 @@ components:
       properties:
         name:
           type: string
-          description: The new name for the task list.
           example: "Grocery List"
         description:
           type: string
-          description: The new description for the task list.
           example: "Weekly groceries"
 
     ShareTaskListRequest:
@@ -1024,12 +963,10 @@ components:
       properties:
         shared_with:
           type: string
-          description: The user ID to grant access to.
           example: "alice"
         role:
           type: string
           enum: [editor, viewer]
-          description: Permission level. Editors can mutate tasks in the list; viewers are read-only.
           example: editor
 
     TaskListMember:
@@ -1044,16 +981,14 @@ components:
           format: uuid
         shared_with:
           type: string
-          description: The member user ID.
         role:
           type: string
           enum: [editor, viewer]
-          description: The member's permission level.
         created_at:
           type: string
           format: date-time
-          description: When the share was created.
 
+    # TODO: Check how it's used
     ParseTaskRequest:
       type: object
       required: [input]
@@ -1062,6 +997,7 @@ components:
           type: string
           example: "Buy milk tomorrow at 9am for 30 minutes"
 
+    # TODO: Check how it's used
     ParseTaskResponse:
       type: object
       properties:
