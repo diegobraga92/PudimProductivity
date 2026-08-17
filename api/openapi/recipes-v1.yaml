@@ -7,13 +7,16 @@ info:
     upload via presigned S3 URLs. Recipes are the composable unit for the
     meal-planning module (meal-plan slots reference a recipe).
   version: "0.1.0"
+  license:
+    name: MIT
+    url: https://github.com/diegobraga92/PudimProductivity/blob/main/LICENSE
   contact:
     name: PudimProductivity Team
     url: https://github.com/diegobraga92/PudimProductivity
 
 servers:
-  - url: http://localhost:8080
-    description: Local development server
+  - url: /
+    description: Current server
 
 paths:
   /api/v1/recipes:

@@ -1,21 +1,17 @@
-# Check latest: https://github.com/OAI/OpenAPI-Specification/releases
 openapi: "3.2.0"
 info:
-  title: PudimProductivity Admin API
-  description: |
-    Runtime server configuration for administrators. Today this covers the
-    library's score providers: which rating provider serves each media type,
-    plus per-provider API keys and base URLs. API keys are write-only — reads
-    return a masked api_key_set boolean and never the secret. All endpoints
-    require the admin role (dev identity header X-User-Role: admin).
+  title: Admin API
   version: "0.1.0"
+  license:
+    name: MIT
+    url: https://github.com/diegobraga92/PudimProductivity/blob/main/LICENSE
   contact:
     name: PudimProductivity Team
     url: https://github.com/diegobraga92/PudimProductivity
 
 servers:
-  - url: http://localhost:8080
-    description: Local development server
+  - url: /
+    description: Current server
 
 paths:
   /api/v1/admin/score-providers:

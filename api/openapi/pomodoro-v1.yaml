@@ -15,8 +15,8 @@ info:
     url: https://github.com/diegobraga92/PudimProductivity
 
 servers:
-  - url: http://localhost:8080
-    description: Local development server
+  - url: /
+    description: Current server
 
 paths:
   /api/v1/pomodoro/start:

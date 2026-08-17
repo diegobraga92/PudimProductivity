@@ -7,13 +7,16 @@ info:
     done flag, a release year and optional notes. Replaces the book-specific
     tracking API (booktrack-v1.yaml).
   version: "0.1.0"
+  license:
+    name: MIT
+    url: https://github.com/diegobraga92/PudimProductivity/blob/main/LICENSE
   contact:
     name: PudimProductivity Team
     url: https://github.com/diegobraga92/PudimProductivity
 
 servers:
-  - url: http://localhost:8080
-    description: Local development server
+  - url: /
+    description: Current server
 
 paths:
   /api/v1/library:

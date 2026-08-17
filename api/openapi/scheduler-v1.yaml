@@ -7,13 +7,16 @@ info:
     history and suggests a daily plan that fits pending work into free time
     blocks, respecting existing planner entries and recurring habits.
   version: "0.1.0"
+  license:
+    name: MIT
+    url: https://github.com/diegobraga92/PudimProductivity/blob/main/LICENSE
   contact:
     name: PudimProductivity Team
     url: https://github.com/diegobraga92/PudimProductivity
 
 servers:
-  - url: http://localhost:8080
-    description: Local development server
+  - url: /
+    description: Current server
 
 paths:
   /api/v1/schedule:

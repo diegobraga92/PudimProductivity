@@ -7,11 +7,14 @@ info:
     persists the `timestamp` returned in each response and sends it back as
     `since` on the next pull. Soft-deleted rows appear in the `deleted_*`
     arrays so clients can apply tombstones (migration 019).
+  license:
+    name: MIT
+    url: https://github.com/diegobraga92/PudimProductivity/blob/main/LICENSE
   version: "0.1.0"
 
 servers:
-  - url: http://localhost:8080
-    description: Local development server
+  - url: /
+    description: Current server
 
 paths:
   /api/v1/sync:

@@ -17,8 +17,8 @@ info:
     url: https://github.com/diegobraga92/PudimProductivity
 
 servers:
-  - url: http://localhost:8080
-    description: Local development server
+  - url: /
+    description: Current server
 
 paths:
   /api/v1/tasks/parse:
@@ -776,12 +776,12 @@ components:
           type: [string, "null"]
           format: time
           description: Start time for planner scheduling (HH:MM). null for unscheduled tasks.
-          example: "09:00:00"
+          example: "09:00:00Z"
         end_time:
           type: [string, "null"]
           format: time
           description: End time for planner scheduling (HH:MM). null for unscheduled tasks.
-          example: "10:00:00"
+          example: "10:00:00Z"
         color:
           type: [string, "null"]
           description: Hex color for planner visualization. null for unscheduled tasks.
@@ -865,12 +865,12 @@ components:
           type: [string, "null"]
           format: time
           description: Start time for planner scheduling (HH:MM). Set to null for unscheduled.
-          example: "09:00:00"
+          example: "09:00:00Z"
         end_time:
           type: [string, "null"]
           format: time
           description: End time for planner scheduling (HH:MM). Must be after start_time.
-          example: "10:00:00"
+          example: "10:00:00Z"
         color:
           type: [string, "null"]
           description: Hex color for planner visualization. Defaults to blue if omitted.
@@ -923,14 +923,14 @@ components:
           description: |
             Start time for planner scheduling (HH:MM).
             Omit to leave unchanged. Set to null to unschedule.
-          example: "09:00:00"
+          example: "09:00:00Z"
         end_time:
           type: [string, "null"]
           format: time
           description: |
             End time for planner scheduling (HH:MM).
             Omit to leave unchanged. Set to null to unschedule.
-          example: "10:00:00"
+          example: "10:00:00Z"
         color:
           type: [string, "null"]
           description: |
