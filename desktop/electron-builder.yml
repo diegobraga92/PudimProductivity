@@ -25,6 +25,10 @@ linux:
     - deb
   category: Utility
   icon: assets/icon.png
+  # Match the window WM_CLASS that Electron actually sets (package.json "name"),
+  # so Plasma/GNOME group the running window with this launcher entry.
+  desktop:
+    StartupWMClass: pudimproductivity-desktop
 mac:
   target:
     - dmg
