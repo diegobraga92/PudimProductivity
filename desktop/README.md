@@ -106,5 +106,5 @@ Without rebuilding, an installed app can point at another backend:
 | `src/preload.ts`           | contextBridge API (`window.desktop`)           |
 | `../web/src/desktop.d.ts`  | Renderer-side types for the bridge             |
 | `electron-builder.yml`     | Packaging / auto-update config                 |
-| `scripts/generate-icons.mjs` | Regenerates `assets/*.png` (placeholder art) |
+| `scripts/generate-icons.mjs` | Rasterizes `assets/*.svg` into `assets/*.png` (app + tray icons) |
 | `scripts/copy-web.mjs`     | Copies `web/dist` into the package             |

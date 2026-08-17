@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- PudimProductivity app icon: flan/pudding + "P" (matches web/public/favicon.svg) -->
+  <defs>
+    <linearGradient id="domeGradient" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFD54F"/>
+      <stop offset="100%" stop-color="#FFB300"/>
+    </linearGradient>
+    <clipPath id="domeClip">
+      <path d="M128 192 C128 112 384 112 384 192 L352 320 L160 320 Z"/>
+    </clipPath>
+    <filter id="dropShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="14" result="blur"/>
+      <feOffset dx="0" dy="12" result="offsetBlur"/>
+      <feFlood flood-color="#7C2D12" flood-opacity="0.35" result="color"/>
+      <feComposite in="color" in2="offsetBlur" operator="in" result="shadow"/>
+      <feMerge>
+        <feMergeNode in="shadow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Caramel dish + pudding dome (with a soft warm drop shadow) -->
+  <g filter="url(#dropShadow)">
+    <ellipse cx="256" cy="320" rx="160" ry="112" fill="#D08A3C"/>
+    <path d="M128 192 C128 112 384 112 384 192 L352 320 L160 320 Z" fill="url(#domeGradient)"/>
+    <ellipse cx="256" cy="176" rx="150" ry="36" fill="#FFFFFF" opacity="0.35" clip-path="url(#domeClip)"/>
+  </g>
+
+  <!-- Productivity "P" -->
+  <g stroke="#5D4037" stroke-width="40" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M208 144 V368"/>
+    <path d="M208 144 H304 A56 56 0 0 1 304 256 H208"/>
+  </g>
+</svg>
