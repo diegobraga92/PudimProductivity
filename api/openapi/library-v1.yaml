@@ -356,8 +356,7 @@ components:
         media_type:
           $ref: "#/components/schemas/MediaType"
         release_year:
-          type: integer
-          nullable: true
+          type: [integer, "null"]
           description: Year the media was released; null when unknown.
         done:
           type: boolean
@@ -369,8 +368,7 @@ components:
           type: string
           description: Optional free-text sub-category (e.g. "Console" for games, "Genre" for movies/series/books).
         score:
-          type: number
-          nullable: true
+          type: [number, "null"]
           description: |
             Optional rating on a 0-100 scale (IMDb 8.7, Metacritic 95, ...).
             Null when no score has been recorded.
@@ -419,8 +417,7 @@ components:
         type:
           $ref: "#/components/schemas/MediaType"
         year:
-          type: integer
-          nullable: true
+          type: [integer, "null"]
           description: Optional release year to narrow the search.
 
     ScoreBatchRequest:
@@ -467,8 +464,7 @@ components:
         media_type:
           $ref: "#/components/schemas/MediaType"
         release_year:
-          type: integer
-          nullable: true
+          type: [integer, "null"]
         done:
           type: boolean
           default: false
@@ -478,8 +474,7 @@ components:
           type: string
           description: Optional free-text sub-category (e.g. "Console" for games, "Genre" for movies/series/books).
         score:
-          type: number
-          nullable: true
+          type: [number, "null"]
           description: Optional rating on a 0-100 scale.
         score_source:
           type: string
@@ -493,8 +488,7 @@ components:
         media_type:
           $ref: "#/components/schemas/MediaType"
         release_year:
-          type: integer
-          nullable: true
+          type: [integer, "null"]
         done:
           type: boolean
         notes:
@@ -503,8 +497,7 @@ components:
           type: string
           description: Optional free-text sub-category. Omit to keep the current value; send "" to clear it.
         score:
-          type: number
-          nullable: true
+          type: [number, "null"]
           description: |
             Optional rating on a 0-100 scale. Omit to keep the current value;
             send null to clear it.
