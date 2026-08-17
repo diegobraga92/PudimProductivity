@@ -23,6 +23,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-java-gradle
 
       - name: Build debug APK
@@ -36,6 +37,7 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-java-gradle
 
       - name: Decode release keystore
@@ -80,9 +82,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-java-gradle
       - name: Cache NVD data
-        # Check latest: https://github.com/actions/cache/releases
         uses: actions/cache@v6
         with:
           path: ~/.gradle/dependency-check-data

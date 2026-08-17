@@ -31,6 +31,7 @@ jobs:
       run:
         working-directory: desktop
     steps:
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-node
         with:
           cache-dependency-path: desktop/package-lock.json
@@ -43,6 +44,7 @@ jobs:
     name: Build (web + shell)
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-node
         with:
           cache-dependency-path: |
@@ -70,6 +72,7 @@ jobs:
       # this, the macOS runner tries to auto-discover a signing identity.
       CSC_IDENTITY_AUTO_DISCOVERY: "false"
     steps:
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-node
         with:
           cache-dependency-path: |
@@ -85,7 +88,6 @@ jobs:
         working-directory: desktop
         run: npm run package:dir
       - name: Upload artifacts
-        # Check latest: https://github.com/actions/upload-artifact/releases
         uses: actions/upload-artifact@v7
         with:
           name: pudim-desktop-${{ matrix.os }}

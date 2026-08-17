@@ -28,7 +28,6 @@ jobs:
       - name: Build Docker image
         run: docker build -t ${{ inputs.image-name }}:ci -f ${{ inputs.dockerfile }} ${{ inputs.build-context }}
       - name: Run Trivy
-        # Check latest: https://github.com/aquasecurity/trivy-action/releases
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ inputs.image-name }}:ci
