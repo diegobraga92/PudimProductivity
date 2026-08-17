@@ -1,0 +1,23 @@
+name: Checkout + Setup Node
+description: >
+  Check latest versions: 
+  https://github.com/actions/checkout/releases
+  https://github.com/actions/setup-node/releases
+  https://nodejs.org/en/about/previous-releases
+
+inputs:
+  node-version-file:
+    required: false
+    default: .nvmrc
+  cache-dependency-path:
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@v7
+    - uses: actions/setup-node@v7
+      with:
+        node-version-file: ${{ inputs.node-version-file }}
+        cache: npm
+        cache-dependency-path: ${{ inputs.cache-dependency-path }}

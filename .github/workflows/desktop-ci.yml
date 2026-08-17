@@ -9,6 +9,7 @@ on:
       - "shared/**"
       - "api/**"
       - ".github/workflows/desktop-ci.yml"
+      - ".github/actions/setup-node/action.yml"
   pull_request:
     branches: [main]
     paths:
@@ -17,9 +18,10 @@ on:
       - "shared/**"
       - "api/**"
       - ".github/workflows/desktop-ci.yml"
+      - ".github/actions/setup-node/action.yml"
 
-env:
-  NODE_VERSION: "20"
+permissions:
+  contents: read
 
 jobs:
   typecheck:
@@ -29,13 +31,8 @@ jobs:
       run:
         working-directory: desktop
     steps:
-      # Check latest: https://github.com/actions/checkout/releases
-      - uses: actions/checkout@v6
-      # Check latest: https://github.com/actions/setup-node/releases
-      - uses: actions/setup-node@v6
+      - uses: ./.github/actions/setup-node
         with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
           cache-dependency-path: desktop/package-lock.json
       - name: Install dependencies
         run: npm ci
@@ -46,11 +43,8 @@ jobs:
     name: Build (web + shell)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: ./.github/actions/setup-node
         with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
           cache-dependency-path: |
             desktop/package-lock.json
             web/package-lock.json
@@ -61,7 +55,6 @@ jobs:
         working-directory: web
         run: npm ci
       - name: Build web (desktop mode), shell and icons
-        # The web build reads shared/i18n from the repo (checkout includes it).
         working-directory: desktop
         run: npm run build:web && npm run build:shell && npm run icons
 
@@ -77,11 +70,8 @@ jobs:
       # this, the macOS runner tries to auto-discover a signing identity.
       CSC_IDENTITY_AUTO_DISCOVERY: "false"
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: ./.github/actions/setup-node
         with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
           cache-dependency-path: |
             desktop/package-lock.json
             web/package-lock.json
@@ -96,7 +86,7 @@ jobs:
         run: npm run package:dir
       - name: Upload artifacts
         # Check latest: https://github.com/actions/upload-artifact/releases
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: pudim-desktop-${{ matrix.os }}
           path: |

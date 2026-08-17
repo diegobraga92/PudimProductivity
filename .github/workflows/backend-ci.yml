@@ -6,17 +6,18 @@ on:
     paths:
       - "backend/**"
       - ".github/workflows/backend-ci.yml"
+      - ".github/workflows/container-scan.yml"
+      - ".github/actions/setup-go/action.yml"
   pull_request:
     branches: [main]
     paths:
       - "backend/**"
       - ".github/workflows/backend-ci.yml"
+      - ".github/workflows/container-scan.yml"
+      - ".github/actions/setup-go/action.yml"
 
-env:
-  # 1.26.6 ships the stdlib fixes for the GOVULNCHECK/Trivy findings in 1.26.5
-  # (net/url, crypto/tls, net/http, encoding/xml, encoding/asn1, html/template).
-  GO_VERSION: "1.26.6"
-
+permissions:
+  contents: read
 
 jobs:
   lint:
@@ -26,17 +27,12 @@ jobs:
       run:
         working-directory: backend
     steps:
-      # Check latest: https://github.com/actions/checkout/releases
-      - uses: actions/checkout@v6
-      # Check latest: https://github.com/actions/setup-go/releases
-      - uses: actions/setup-go@v6
-        with:
-          go-version: ${{ env.GO_VERSION }}
+      - uses: ./.github/actions/setup-go
       - name: golangci-lint
-        # Action latest: https://github.com/golangci/golangci-lint-action/releases
-        # Linter latest: https://github.com/golangci/golangci-lint/releases
+        # Check latest: https://github.com/golangci/golangci-lint-action/releases
         uses: golangci/golangci-lint-action@v9
         with:
+          # Check latest: https://github.com/golangci/golangci-lint/releases
           version: v2.12.2
           working-directory: backend
 
@@ -47,10 +43,7 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-go@v6
-        with:
-          go-version: ${{ env.GO_VERSION }}
+      - uses: ./.github/actions/setup-go
       - name: Download dependencies
         run: go mod download
       - name: Run tests
@@ -69,15 +62,10 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-go@v6
-        with:
-          go-version: ${{ env.GO_VERSION }}
+      - uses: ./.github/actions/setup-go
       - name: Download dependencies
         run: go mod download
       - name: Run govulncheck
-        # Scans the module graph + source for known vulnerabilities in Go stdlib
-        # and dependencies. Fails the build on any finding.
         run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 
   build:
@@ -87,10 +75,7 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-go@v6
-        with:
-          go-version: ${{ env.GO_VERSION }}
+      - uses: ./.github/actions/setup-go
       - name: Download dependencies
         run: go mod download
       - name: Build
@@ -98,51 +83,36 @@ jobs:
 
   container-scan:
     name: Container Scan (Trivy)
-    runs-on: ubuntu-latest
-    steps:
-      # Check latest: https://github.com/actions/checkout/releases
-      - uses: actions/checkout@v6
-      - name: Build Docker image
-        run: docker build -t pudim-backend:ci -f backend/Dockerfile backend/
-      - name: Run Trivy
-        # Action latest: https://github.com/aquasecurity/trivy-action/releases
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          image-ref: pudim-backend:ci
-          format: table
-          exit-code: "1"
-          severity: CRITICAL,HIGH
+    uses: ./.github/workflows/container-scan.yml
+    with:
+      image-name: pudim-backend
+      dockerfile: backend/Dockerfile
+      build-context: backend/
 
   load-smoke:
     name: Load Smoke Test (k6)
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:16-alpine
+        # Check latest: https://hub.docker.com/_/postgres
+        image: postgres:18.6-alpine
         env:
           POSTGRES_USER: pudim
           POSTGRES_PASSWORD: t
           POSTGRES_DB: pudimproductivity
         ports:
           - 5432:5432
-        # Check latest: https://hub.docker.com/_/postgres
         options: >-
           --health-cmd "pg_isready -U pudim -d pudimproductivity"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 12
     steps:
-      # Check latest: https://github.com/actions/checkout/releases
-      - uses: actions/checkout@v6
-      # Check latest: https://github.com/actions/setup-go/releases
-      - uses: actions/setup-go@v6
-        with:
-          go-version: ${{ env.GO_VERSION }}
+      - uses: ./.github/actions/setup-go
       - name: Build backend binary
         run: go build -o /tmp/pudim-backend ./cmd/server/
         working-directory: backend
       - name: Start backend against the CI Postgres
-        # Migrations run automatically on startup against the fresh CI database.
         env:
           DATABASE_URL: postgres://pudim:t@localhost:5432/pudimproductivity?sslmode=disable
           PORT: "18080"
@@ -163,8 +133,11 @@ jobs:
       - name: Install k6
         # Check latest: https://github.com/grafana/k6/releases
         run: |
-          curl -sSL https://github.com/grafana/k6/releases/download/v2.1.0/k6-v2.1.0-linux-amd64.tar.gz | tar -xz -C /tmp
-          echo "/tmp/k6-v2.1.0-linux-amd64" >> "$GITHUB_PATH"
+          K6_VERSION=2.2.0
+          curl --fail --silent --show-error --location \
+            "https://github.com/grafana/k6/releases/download/v${K6_VERSION}/k6-v${K6_VERSION}-linux-amd64.tar.gz" \
+            | tar -xz -C /tmp
+          echo "/tmp/k6-v${K6_VERSION}-linux-amd64" >> "$GITHUB_PATH"
       - name: Run smoke load test
         env:
           BASE_URL: http://localhost:18080/api/v1

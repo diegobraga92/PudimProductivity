@@ -1,0 +1,22 @@
+name: Checkout + Setup Java + Gradle
+description: >
+  Check latest versions:
+  https://github.com/actions/checkout/releases
+  https://github.com/actions/setup-java/releases
+  https://github.com/gradle/actions/releases
+  https://adoptium.net/temurin/releases/
+
+inputs:
+  java-version:
+    required: false
+    default: "21"
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@v7
+    - uses: actions/setup-java@v5
+      with:
+        distribution: temurin
+        java-version: ${{ inputs.java-version }}
+    - uses: gradle/actions/setup-gradle@v6

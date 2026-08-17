@@ -1,0 +1,19 @@
+name: Checkout + Setup Go
+description: >
+  Check latest versions:
+  https://github.com/actions/checkout/releases
+  https://github.com/actions/setup-go/releases
+
+inputs:
+  go-version-file:
+    required: false
+    default: backend/go.mod
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@v7
+    - uses: actions/setup-go@v7
+      with:
+        go-version-file: ${{ inputs.go-version-file }}
+        cache: true
