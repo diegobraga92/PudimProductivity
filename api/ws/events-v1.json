@@ -3,10 +3,14 @@
   "$id": "https://github.com/diegobraga92/PudimProductivity/blob/main/api/ws/events-v1.json",
   "title": "PudimProductivity WebSocket Events v1",
   "description": "Envelope and payload shapes pushed by the backend sync hub over the WebSocket endpoint GET /api/v1/ws. The client MAY pass ?last_seq=N to resume after a disconnect; events with seq > N are replayed, or a 'stale' event is sent if the client is too far behind.",
-  "definitions": {
+  "$defs": {
     "envelope": {
       "type": "object",
-      "required": ["type", "seq", "timestamp"],
+      "required": [
+        "type",
+        "seq",
+        "timestamp"
+      ],
       "properties": {
         "type": {
           "type": "string",
@@ -30,250 +34,631 @@
             "recipe.deleted",
             "stale"
           ],
-          "description": "Event discriminator. 'stale' is a server signal: the client missed too many events and must refetch via REST."
+          "description": "Event discriminator. 'stale' is a server signal indicating that the client missed too many events and must refetch via REST."
         },
         "seq": {
           "type": "integer",
           "minimum": 0,
-          "description": "Monotonically increasing per-process sequence number. Clients persist the last seen value and send it back as ?last_seq on reconnect."
+          "description": "Monotonically increasing sequence number for the sync event stream. Clients persist the last seen value and send it as ?last_seq when reconnecting."
         },
         "timestamp": {
           "type": "string",
           "format": "date-time",
-          "description": "UTC event time (RFC3339)."
+          "description": "UTC event time in RFC3339 format."
         },
         "payload": {
-          "description": "Event-specific payload; absent for 'stale'. Shape depends on 'type' (see payloads below)."
+          "description": "Event-specific payload. Required for all events except 'stale'."
         }
       }
     },
+
     "task": {
       "type": "object",
-      "required": ["id", "title", "status", "created_at", "updated_at"],
+      "required": [
+        "id",
+        "title",
+        "status",
+        "created_at",
+        "updated_at"
+      ],
       "properties": {
-        "id": { "type": "string", "format": "uuid" },
-        "title": { "type": "string" },
-        "status": { "type": "string", "enum": ["todo", "done"] },
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "title": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "todo",
+            "done"
+          ]
+        },
         "recurrence_days": {
           "type": "array",
-          "items": { "type": "string", "enum": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] }
+          "items": {
+            "type": "string",
+            "enum": [
+              "mon",
+              "tue",
+              "wed",
+              "thu",
+              "fri",
+              "sat",
+              "sun"
+            ]
+          }
         },
-        "list_id": { "type": ["string", "null"] },
-        "start_time": { "type": ["string", "null"] },
-        "end_time": { "type": ["string", "null"] },
-        "color": { "type": ["string", "null"] },
-        "scheduled_date": { "type": ["string", "null"] },
-        "alarm_minutes": { "type": ["integer", "null"] },
-        "created_at": { "type": "string", "format": "date-time" },
-        "updated_at": { "type": "string", "format": "date-time" }
+        "list_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "uuid"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "start_time": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "end_time": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "color": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "scheduled_date": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "alarm_minutes": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
       }
     },
+
     "taskRef": {
       "type": "object",
-      "required": ["id"],
-      "properties": { "id": { "type": "string", "format": "uuid" } }
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "description": "Minimal task reference used by deletion events."
     },
+
     "completion": {
       "type": "object",
-      "required": ["id", "task_id", "completed_date"],
+      "required": [
+        "id",
+        "task_id",
+        "completed_date"
+      ],
       "properties": {
-        "id": { "type": "string", "format": "uuid" },
-        "task_id": { "type": "string", "format": "uuid" },
-        "title": { "type": "string", "description": "Task title, included since Phase 3 so notification consumers don't need a follow-up lookup." },
-        "completed_date": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" }
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "task_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "title": {
+          "type": "string",
+          "description": "Task title included so notification consumers do not need a follow-up lookup."
+        },
+        "completed_date": {
+          "type": "string",
+          "format": "date",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        }
       }
     },
+
     "uncompletion": {
       "type": "object",
-      "required": ["id", "completed_date"],
+      "required": [
+        "id",
+        "completed_date"
+      ],
       "properties": {
-        "id": { "type": "string", "format": "uuid" },
-        "title": { "type": "string" },
-        "completed_date": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" }
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "title": {
+          "type": "string",
+          "description": "Task title included so notification consumers do not need a follow-up lookup."
+        },
+        "completed_date": {
+          "type": "string",
+          "format": "date",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        }
       }
     },
+
     "recipe": {
       "type": "object",
-      "required": ["id", "title"],
+      "required": [
+        "id",
+        "title"
+      ],
       "properties": {
-        "id": { "type": "string", "format": "uuid" },
-        "title": { "type": "string" },
-        "difficulty": { "type": "string", "enum": ["easy", "medium", "hard"] }
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "title": {
+          "type": "string"
+        },
+        "difficulty": {
+          "type": "string",
+          "enum": [
+            "easy",
+            "medium",
+            "hard"
+          ]
+        }
       },
-      "description": "Recipe event payload (Phase 5a). Minimal shape — consumers needing the full recipe fetch it via REST."
+      "description": "Minimal recipe representation used by WebSocket events. Consumers needing the full recipe should fetch it via REST."
     },
+
+    "recipeRef": {
+      "type": "object",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "description": "Minimal recipe reference used by deletion events."
+    },
+
     "libraryItem": {
       "type": "object",
-      "required": ["id", "name", "media_type"],
+      "required": [
+        "id",
+        "name",
+        "media_type"
+      ],
       "properties": {
-        "id": { "type": "string", "format": "uuid" },
-        "name": { "type": "string" },
-        "media_type": { "type": "string", "enum": ["movie", "series", "book", "game"] },
-        "release_year": { "type": ["integer", "null"] },
-        "done": { "type": "boolean" },
-        "notes": { "type": "string" }
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "name": {
+          "type": "string"
+        },
+        "media_type": {
+          "type": "string",
+          "enum": [
+            "movie",
+            "series",
+            "book",
+            "game"
+          ]
+        },
+        "release_year": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "done": {
+          "type": "boolean"
+        },
+        "notes": {
+          "type": "string"
+        }
       },
-      "description": "Library item event payload. Minimal shape — consumers needing the full item fetch it via REST."
+      "description": "Minimal library item representation used by WebSocket events. Consumers needing the full item should fetch it via REST."
     },
+
     "libraryItemRef": {
       "type": "object",
-      "required": ["id"],
+      "required": [
+        "id"
+      ],
       "properties": {
-        "id": { "type": "string", "format": "uuid" }
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        }
       },
-      "description": "Minimal library item reference (deletion events)."
+      "description": "Minimal library item reference used by deletion events."
     },
+
     "libraryImport": {
       "type": "object",
-      "required": ["imported"],
+      "required": [
+        "imported"
+      ],
       "properties": {
-        "imported": { "type": "integer", "description": "Items persisted by the import." },
-        "skipped": { "type": "integer", "description": "Rows rejected during the import." }
+        "imported": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of items persisted by the import."
+        },
+        "skipped": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of rows rejected during the import."
+        }
       },
-      "description": "Library bulk-import summary payload."
+      "description": "Summary of a library bulk import."
     },
+
     "taskListShare": {
       "type": "object",
-      "required": ["list_id", "shared_with"],
+      "required": [
+        "list_id",
+        "shared_with"
+      ],
       "properties": {
-        "list_id": { "type": "string", "format": "uuid" },
-        "shared_with": { "type": "string", "description": "User ID the list was shared with or revoked from." },
-        "role": { "type": "string", "enum": ["editor", "viewer"] },
-        "shared_by": { "type": "string", "description": "User who created the share (present on tasklist.shared)." },
-        "removed_by": { "type": "string", "description": "User who revoked the share (present on tasklist.unshared)." }
+        "list_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "shared_with": {
+          "type": "string",
+          "description": "User ID the list was shared with or revoked from."
+        },
+        "role": {
+          "type": "string",
+          "enum": [
+            "editor",
+            "viewer"
+          ]
+        },
+        "shared_by": {
+          "type": "string",
+          "description": "User who created the share. Present on tasklist.shared events."
+        },
+        "removed_by": {
+          "type": "string",
+          "description": "User who revoked the share. Present on tasklist.unshared events."
+        }
       },
-      "description": "Phase 8 task-list share/unshare payload."
+      "description": "Task-list share or unshare payload."
     },
+
     "presenceOnline": {
       "type": "object",
-      "required": ["user_id", "list_ids"],
+      "required": [
+        "user_id",
+        "list_ids"
+      ],
       "properties": {
-        "user_id": { "type": "string" },
+        "user_id": {
+          "type": "string"
+        },
         "list_ids": {
           "type": "array",
-          "items": { "type": "string", "format": "uuid" },
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
           "description": "Task lists the user can access at connect time."
         }
       },
-      "description": "Phase 8 presence payload: a user came online."
+      "description": "Presence payload indicating that a user came online."
     },
+
     "presenceOffline": {
       "type": "object",
-      "required": ["user_id"],
-      "properties": { "user_id": { "type": "string" } },
-      "description": "Phase 8 presence payload: a user went offline."
+      "required": [
+        "user_id"
+      ],
+      "properties": {
+        "user_id": {
+          "type": "string"
+        }
+      },
+      "description": "Presence payload indicating that a user went offline."
     }
   },
+
   "allOf": [
-    { "$ref": "#/definitions/envelope" },
+    {
+      "$ref": "#/$defs/envelope"
+    },
     {
       "oneOf": [
         {
           "properties": {
-            "type": { "const": "task.created" },
-            "payload": { "$ref": "#/definitions/task" }
-          }
+            "type": {
+              "const": "task.created"
+            },
+            "payload": {
+              "$ref": "#/$defs/task"
+            }
+          },
+          "required": [
+            "payload"
+          ]
         },
         {
           "properties": {
-            "type": { "const": "task.updated" },
-            "payload": { "$ref": "#/definitions/task" }
-          }
+            "type": {
+              "const": "task.updated"
+            },
+            "payload": {
+              "$ref": "#/$defs/task"
+            }
+          },
+          "required": [
+            "payload"
+          ]
         },
         {
           "properties": {
-            "type": { "const": "task.deleted" },
-            "payload": { "$ref": "#/definitions/taskRef" }
-          }
+            "type": {
+              "const": "task.deleted"
+            },
+            "payload": {
+              "$ref": "#/$defs/taskRef"
+            }
+          },
+          "required": [
+            "payload"
+          ]
         },
         {
           "properties": {
-            "type": { "const": "task.completed" },
-            "payload": { "$ref": "#/definitions/completion" }
-          }
+            "type": {
+              "const": "task.completed"
+            },
+            "payload": {
+              "$ref": "#/$defs/completion"
+            }
+          },
+          "required": [
+            "payload"
+          ]
         },
         {
           "properties": {
-            "type": { "const": "task.uncompleted" },
-            "payload": { "$ref": "#/definitions/uncompletion" }
-          }
+            "type": {
+              "const": "task.uncompleted"
+            },
+            "payload": {
+              "$ref": "#/$defs/uncompletion"
+            }
+          },
+          "required": [
+            "payload"
+          ]
         },
         {
-          "description": "A CRDT merge resolved (Phase 8). Payload is the winning task state so clients can reconcile.",
+          "description": "A CRDT merge has been resolved. The payload contains the winning task state so clients can reconcile.",
           "properties": {
-            "type": { "const": "task.merged" },
-            "payload": { "$ref": "#/definitions/task" }
-          }
-        },
-        {
-          "properties": {
-            "type": { "const": "tasklist.shared" },
-            "payload": { "$ref": "#/definitions/taskListShare" }
-          }
-        },
-        {
-          "properties": {
-            "type": { "const": "tasklist.unshared" },
-            "payload": { "$ref": "#/definitions/taskListShare" }
-          }
-        },
-        {
-          "properties": {
-            "type": { "const": "presence.online" },
-            "payload": { "$ref": "#/definitions/presenceOnline" }
-          }
+            "type": {
+              "const": "task.merged"
+            },
+            "payload": {
+              "$ref": "#/$defs/task"
+            }
+          },
+          "required": [
+            "payload"
+          ]
         },
         {
           "properties": {
-            "type": { "const": "presence.offline" },
-            "payload": { "$ref": "#/definitions/presenceOffline" }
-          }
+            "type": {
+              "const": "tasklist.shared"
+            },
+            "payload": {
+              "$ref": "#/$defs/taskListShare"
+            }
+          },
+          "required": [
+            "payload"
+          ]
         },
         {
           "properties": {
-            "type": { "const": "library.item.added" },
-            "payload": { "$ref": "#/definitions/libraryItem" }
-          }
+            "type": {
+              "const": "tasklist.unshared"
+            },
+            "payload": {
+              "$ref": "#/$defs/taskListShare"
+            }
+          },
+          "required": [
+            "payload"
+          ]
         },
         {
           "properties": {
-            "type": { "const": "library.item.updated" },
-            "payload": { "$ref": "#/definitions/libraryItem" }
-          }
+            "type": {
+              "const": "presence.online"
+            },
+            "payload": {
+              "$ref": "#/$defs/presenceOnline"
+            }
+          },
+          "required": [
+            "payload"
+          ]
         },
         {
           "properties": {
-            "type": { "const": "library.item.deleted" },
-            "payload": { "$ref": "#/definitions/libraryItemRef" }
-          }
+            "type": {
+              "const": "presence.offline"
+            },
+            "payload": {
+              "$ref": "#/$defs/presenceOffline"
+            }
+          },
+          "required": [
+            "payload"
+          ]
         },
         {
           "properties": {
-            "type": { "const": "library.items.imported" },
-            "payload": { "$ref": "#/definitions/libraryImport" }
-          }
+            "type": {
+              "const": "library.item.added"
+            },
+            "payload": {
+              "$ref": "#/$defs/libraryItem"
+            }
+          },
+          "required": [
+            "payload"
+          ]
         },
         {
           "properties": {
-            "type": { "const": "recipe.created" },
-            "payload": { "$ref": "#/definitions/recipe" }
-          }
+            "type": {
+              "const": "library.item.updated"
+            },
+            "payload": {
+              "$ref": "#/$defs/libraryItem"
+            }
+          },
+          "required": [
+            "payload"
+          ]
         },
         {
           "properties": {
-            "type": { "const": "recipe.updated" },
-            "payload": { "$ref": "#/definitions/recipe" }
-          }
+            "type": {
+              "const": "library.item.deleted"
+            },
+            "payload": {
+              "$ref": "#/$defs/libraryItemRef"
+            }
+          },
+          "required": [
+            "payload"
+          ]
         },
         {
           "properties": {
-            "type": { "const": "recipe.deleted" },
-            "payload": { "$ref": "#/definitions/taskRef" }
-          }
+            "type": {
+              "const": "library.items.imported"
+            },
+            "payload": {
+              "$ref": "#/$defs/libraryImport"
+            }
+          },
+          "required": [
+            "payload"
+          ]
         },
         {
           "properties": {
-            "type": { "const": "stale" }
+            "type": {
+              "const": "recipe.created"
+            },
+            "payload": {
+              "$ref": "#/$defs/recipe"
+            }
+          },
+          "required": [
+            "payload"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "recipe.updated"
+            },
+            "payload": {
+              "$ref": "#/$defs/recipe"
+            }
+          },
+          "required": [
+            "payload"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "recipe.deleted"
+            },
+            "payload": {
+              "$ref": "#/$defs/recipeRef"
+            }
+          },
+          "required": [
+            "payload"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "stale"
+            }
+          },
+          "not": {
+            "required": [
+              "payload"
+            ]
           }
         }
       ]
