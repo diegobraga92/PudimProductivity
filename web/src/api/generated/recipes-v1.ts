@@ -11,11 +11,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * List recipes
-         * @description Returns recipes filtered by search text, tags and difficulty. Results
-         *     are ordered newest-first and paginated with an opaque keyset cursor.
-         */
+        /** List recipes */
         get: operations["listRecipes"];
         put?: never;
         /**
@@ -39,10 +35,7 @@ export interface paths {
             };
             cookie?: never;
         };
-        /**
-         * Get a recipe
-         * @description Returns the full recipe including ingredients, steps and tags.
-         */
+        /** Get a recipe */
         get: operations["getRecipe"];
         /**
          * Update a recipe
@@ -76,7 +69,6 @@ export interface paths {
          * Get a presigned image upload URL
          * @description Returns a short-lived presigned PUT URL the client uploads the image to
          *     directly, plus the object key to store as the recipe's `image_url`.
-         *     Returns 503 when the storage backend is not configured.
          */
         post: operations["generateRecipeUploadURL"];
         delete?: never;
@@ -186,10 +178,10 @@ export interface operations {
             query?: {
                 /** @description Free-text search over title and description. */
                 search?: string;
-                /** @description Comma-separated tags; recipes must have at least one of them. */
+                /** @description Comma-separated tags. */
                 tags?: string;
                 difficulty?: components["schemas"]["Difficulty"];
-                /** @description Opaque keyset cursor returned in a previous page. */
+                /** @description Opaque keyset cursor. */
                 cursor?: string;
                 limit?: number;
             };

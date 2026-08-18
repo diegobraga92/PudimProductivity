@@ -13,7 +13,7 @@ export interface paths {
         };
         /**
          * List library items
-         * @description Returns items newest-first, optionally filtered by media type, done status and/or subtype (genre/console).
+         * @description Returns items newest-first, optionally filtered.
          */
         get: operations["listLibraryItems"];
         put?: never;
@@ -31,18 +31,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * List distinct subtypes for the filter dropdown
-         * @description Returns the distinct non-empty genre/console values present in the
-         *     library, sorted alphabetically. Optionally scoped to a media type so
-         *     games show consoles and movies/series/books show genres.
-         */
+        /** List distinct subtypes */
         get: operations["listLibrarySubtypes"];
         put?: never;
-        /**
-         * Add an item to the library
-         * @description Adds a single item from client-provided fields.
-         */
+        /** Add an item to the library */
         post: operations["createLibraryItem"];
         delete?: never;
         options?: never;
@@ -59,10 +51,8 @@ export interface paths {
         };
         /**
          * Search for a media score
-         * @description Looks up ratings for a title from the configured score provider (OMDb/IMDb
-         *     for films and series, RAWG/Metacritic for games). Returns a small list of
-         *     candidates so the client can confirm the right title before saving its
-         *     score. Returns 503 when the feature is disabled or no provider is configured.
+         * @description Looks up ratings for a title from the configured score provider.
+         *     Returns a short list of candidates for confirmation before saving.
          */
         get: operations["searchLibraryScores"];
         put?: never;
@@ -84,11 +74,9 @@ export interface paths {
         put?: never;
         /**
          * Look up scores for many titles at once
-         * @description Used by the CSV import auto-scoring flow. Each item is looked up against
-         *     the configured provider independently with bounded concurrency; per-item
-         *     failures are reported inline (in the result's error field) rather than
-         *     failing the whole request. Up to 100 items per call. Returns 503 when
-         *     the feature is disabled or no provider is configured.
+         * @description Each item is looked up independently with bounded concurrency.
+         *     Per-item failures are reported inline (in the result's error field).
+         *     Up to 100 items per call.
          */
         post: operations["searchLibraryScoresBatch"];
         delete?: never;
@@ -108,9 +96,8 @@ export interface paths {
         put?: never;
         /**
          * Bulk import library items
-         * @description Creates multiple items in a single transaction (used by the CSV import
-         *     flow). Valid rows are inserted; invalid rows are skipped and reported
-         *     with their 1-based row number.
+         * @description Creates multiple items in a single transaction. Valid rows are inserted;
+         *     invalid rows are skipped and reported with their 1-based row number.
          */
         post: operations["importLibraryItems"];
         delete?: never;
@@ -124,7 +111,6 @@ export interface paths {
             query?: never;
             header?: never;
             path: {
-                /** @description The library item UUID. */
                 itemId: components["parameters"]["itemId"];
             };
             cookie?: never;
@@ -133,8 +119,7 @@ export interface paths {
         get: operations["getLibraryItem"];
         /**
          * Update a library item
-         * @description Partial update — omitted fields are left unchanged. Send {"done": true}
-         *     to mark an item as consumed/read/watched/played.
+         * @description Omitted fields are left unchanged.
          */
         put: operations["updateLibraryItem"];
         post?: never;
@@ -149,24 +134,17 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /**
-         * @description Kind of media the item represents.
-         * @enum {string}
-         */
+        /** @enum {string} */
         MediaType: "movie" | "series" | "book" | "game";
         LibraryItem: {
             /** Format: uuid */
             id: string;
-            /** @description The title of the item. */
             name: string;
             media_type: components["schemas"]["MediaType"];
-            /** @description Year the media was released; null when unknown. */
             release_year?: number | null;
-            /** @description True when the item has been consumed/read/watched/played. */
             done: boolean;
-            /** @description Optional free-text notes or comments. */
             notes?: string;
-            /** @description Optional free-text sub-category (e.g. "Console" for games, "Genre" for movies/series/books). */
+            /** @description Optional free-text sub-category. */
             subtype?: string;
             /**
              * @description Optional rating on a 0-100 scale (IMDb 8.7, Metacritic 95, ...).
@@ -208,10 +186,10 @@ export interface components {
             items: components["schemas"]["ScoreBatchItem"][];
         };
         ScoreBatchResult: {
-            /** @description Echo of the item's position in the request, so results map to rows. */
+            /** @description Item's position in the request, for mapping. */
             index: number;
             candidates: components["schemas"]["ScoreCandidate"][];
-            /** @description Present when the row or its lookup failed (e.g. invalid type, provider error). */
+            /** @description e.g. invalid type, provider error. */
             error?: string;
         };
         ScoreBatchResponse: {
@@ -224,7 +202,7 @@ export interface components {
             /** @default false */
             done: boolean;
             notes?: string;
-            /** @description Optional free-text sub-category (e.g. "Console" for games, "Genre" for movies/series/books). */
+            /** @description Optional free-text sub-category. */
             subtype?: string;
             /** @description Optional rating on a 0-100 scale. */
             score?: number | null;
@@ -237,12 +215,9 @@ export interface components {
             release_year?: number | null;
             done?: boolean;
             notes?: string;
-            /** @description Optional free-text sub-category. Omit to keep the current value; send "" to clear it. */
+            /** @description Omit to keep the current value; send "" to clear it. */
             subtype?: string;
-            /**
-             * @description Optional rating on a 0-100 scale. Omit to keep the current value;
-             *     send null to clear it.
-             */
+            /** @description Omit to keep the current value; send null to clear it. */
             score?: number | null;
             /** @description Where the score came from. Send "" to clear it. */
             score_source?: string;
@@ -267,7 +242,6 @@ export interface components {
     };
     responses: never;
     parameters: {
-        /** @description The library item UUID. */
         itemId: string;
     };
     requestBodies: never;
@@ -289,7 +263,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description A list of library items. */
+            /** @description List of library items. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -320,7 +294,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Distinct subtype values. */
+            /** @description Subtype values. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -513,7 +487,6 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description The library item UUID. */
                 itemId: components["parameters"]["itemId"];
             };
             cookie?: never;
@@ -545,7 +518,6 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description The library item UUID. */
                 itemId: components["parameters"]["itemId"];
             };
             cookie?: never;
@@ -590,7 +562,6 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description The library item UUID. */
                 itemId: components["parameters"]["itemId"];
             };
             cookie?: never;

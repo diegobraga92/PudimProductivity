@@ -13,20 +13,14 @@ export interface paths {
         };
         /**
          * Read the score provider configuration
-         * @description Returns the effective media-type → provider mapping (environment
-         *     bootstrap values until the config is saved in the UI), the lookup
-         *     feature-flag state, and the masked provider list (never the API keys).
-         *     Requires the admin role.
+         * @description Returns the mapping of score providers per media type, and enabled state.
+         *     Requires admin role.
          */
         get: operations["getScoreProviders"];
         /**
          * Save the score provider configuration
-         * @description Validates and applies a new configuration: provider/media-type
-         *     capability checks, API-key requirements, then activates the runtime
-         *     lookup immediately (no restart) and persists. A provider entry with a
-         *     nil api_key / base_url keeps the stored value; an empty string clears
-         *     it. lookup_enabled optionally toggles the library.score_lookup_enabled
-         *     feature flag. Requires the admin role.
+         * @description Validates and applies a new score provider config.
+         *     Requires the admin role.
          */
         put: operations["updateScoreProviders"];
         post?: never;
@@ -45,9 +39,9 @@ export interface components {
         ScoreProvider: {
             /** @description Registered provider name (e.g. "omdb", "rawg"). */
             name: string;
-            /** @description Override base URL, or empty to use the provider default. */
+            /** @description Override base URL, or empty to use default. */
             base_url: string;
-            /** @description Whether an API key is stored. The key itself is never returned. */
+            /** @description If an API key is stored. */
             api_key_set: boolean;
             supported_types: components["schemas"]["MediaType"][];
         };
@@ -60,16 +54,16 @@ export interface components {
             game_provider: string;
             /** @description Provider for books ("" or "none" = disabled). */
             book_provider: string;
-            /** @description State of the library.score_lookup_enabled feature flag. */
+            /** @description Value of library.score_lookup_enabled feature flag. */
             lookup_enabled: boolean;
             providers: components["schemas"]["ScoreProvider"][];
         };
         ScoreProviderUpdate: {
-            /** @description Registered provider name to update. */
+            /** @description Provider to update. */
             name: string;
-            /** @description nil = keep the stored key; "" = clear it. */
+            /** @description nil = keep stored; "" = clear it. */
             api_key?: string | null;
-            /** @description nil = keep the stored value; "" = use the provider default. */
+            /** @description nil = keep stored; "" = use default. */
             base_url?: string | null;
         };
         ScoreProvidersUpdate: {
@@ -77,7 +71,7 @@ export interface components {
             series_provider: string;
             game_provider: string;
             book_provider: string;
-            /** @description Optional — omit to leave the feature flag unchanged. */
+            /** @description Optional. Omit to leave unchanged. */
             lookup_enabled?: boolean;
             providers?: components["schemas"]["ScoreProviderUpdate"][];
         };
@@ -102,7 +96,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Effective score provider configuration. */
+            /** @description Score provider configuration. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -135,7 +129,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description The resulting effective configuration (masked). */
+            /** @description Resulting config (masked). */
             200: {
                 headers: {
                     [name: string]: unknown;

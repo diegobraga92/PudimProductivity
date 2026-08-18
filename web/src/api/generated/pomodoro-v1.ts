@@ -15,8 +15,7 @@ export interface paths {
         put?: never;
         /**
          * Start a new pomodoro session
-         * @description Creates a new pomodoro session. If a session is already running, it is
-         *     automatically cancelled first. The session lives in memory only.
+         * @description If a session is already running, it is automatically cancelled first.
          */
         post: operations["startPomodoroSession"];
         delete?: never;
@@ -55,10 +54,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Pause the current session
-         * @description Pauses the running timer. Returns an error if no session is active or it's not running.
-         */
+        /** Pause the current session */
         post: operations["pauseSession"];
         delete?: never;
         options?: never;
@@ -75,10 +71,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Resume the current session
-         * @description Resumes a paused timer. Returns an error if no session is active or it's not paused.
-         */
+        /** Resume the current session */
         post: operations["resumeSession"];
         delete?: never;
         options?: never;
@@ -95,12 +88,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Stop the current session
-         * @description Completes or cancels the current session. If the session is running or
-         *     paused, it is marked as completed. If already completed/cancelled, it
-         *     stays cancelled.
-         */
+        /** Stop the current session */
         post: operations["stopSession"];
         delete?: never;
         options?: never;
@@ -137,7 +125,6 @@ export interface components {
         PomodoroSession: {
             /**
              * Format: uuid
-             * @description Unique identifier for the session.
              * @example 550e8400-e29b-41d4-a716-446655440000
              */
             id: string;

@@ -11,12 +11,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * Get the suggested plan for a date
-         * @description Returns the auto-scheduled plan for the given date (defaults to today):
-         *     suggested time blocks for habits (recurring commitments first) and
-         *     pending todos, plus derived productivity metrics.
-         */
+        /** Get task plan */
         get: operations["getDailySchedule"];
         put?: never;
         post?: never;
@@ -68,7 +63,6 @@ export interface operations {
     getDailySchedule: {
         parameters: {
             query?: {
-                /** @description Date to plan (YYYY-MM-DD). Defaults to today. */
                 date?: string;
             };
             header?: never;
@@ -77,7 +71,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description The suggested daily plan. */
+            /** @description The daily plan. */
             200: {
                 headers: {
                     [name: string]: unknown;

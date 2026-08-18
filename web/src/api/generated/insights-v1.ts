@@ -12,7 +12,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get the weekly productivity report
+         * Get weekly productivity report
          * @description Returns the report for the Monday-starting week containing `date`
          *     (defaults to today). The report is computed once and cached in
          *     `insight_reports`.
@@ -54,9 +54,9 @@ export interface components {
             /** Format: date */
             week_start: string;
             stats: components["schemas"]["WeeklyStats"];
-            /** @description Template-rendered weekly summary (human-readable prose). */
+            /** @description Template-rendered weekly summary. */
             report_text: string;
-            /** @description Optional LLM-generated paragraph; present only when the insights.llm_enabled flag is on and a summary was produced. */
+            /** @description Optional LLM-generated paragraph. Only when the insights.llm_enabled flag is on. */
             llm_summary?: string | null;
             /** Format: date-time */
             generated_at: string;

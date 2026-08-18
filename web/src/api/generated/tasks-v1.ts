@@ -13,12 +13,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Parse a natural-language task input
-         * @description Accepts free text such as "Buy milk tomorrow at 9am" and returns the
-         *     structured fields a client can pre-fill into its creation form.
-         *     Rule-based (Phase 7) — unsupported patterns return partial results.
-         */
+        /** Parse a natural-language task input */
         post: operations["parseTask"];
         delete?: never;
         options?: never;
@@ -33,10 +28,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * List all scheduled tasks
-         * @description Returns all tasks that have time-blocking info (start_time IS NOT NULL), ordered by start time. Used by the Planner view.
-         */
+        /** List all scheduled tasks */
         get: operations["listScheduledTasks"];
         put?: never;
         post?: never;
@@ -59,10 +51,7 @@ export interface paths {
          */
         get: operations["listTasks"];
         put?: never;
-        /**
-         * Create a new task
-         * @description Creates a new task with the given title and optional recurrence days and list assignment.
-         */
+        /** Create a new task */
         post: operations["createTask"];
         delete?: never;
         options?: never;
@@ -77,21 +66,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * Get a task by ID
-         * @description Returns a single task by its unique identifier.
-         */
+        /** Get a task by ID */
         get: operations["getTask"];
-        /**
-         * Update a task
-         * @description Updates the title, status, or recurrence days of an existing task.
-         */
+        /** Update a task */
         put: operations["updateTask"];
         post?: never;
-        /**
-         * Delete a task
-         * @description Deletes a task by its unique identifier.
-         */
+        /** Delete a task */
         delete: operations["deleteTask"];
         options?: never;
         head?: never;
@@ -113,13 +93,7 @@ export interface paths {
         head?: never;
         /**
          * Merge a concurrent task update (CRDT LWW)
-         * @description Phase 8 collaboration endpoint. Applies a client-authored update using
-         *     document-level last-writer-wins semantics: the write with the newest
-         *     `updated_at` wins; on exact timestamp ties the greater `updated_by`
-         *     wins. Clients send the timestamp of their edit so concurrent writers
-         *     converge on a single state (ADR 010).
-         *     Returns 200 with the merged task when this write won, or 409 with the
-         *     winning task state when it lost.
+         * @description Use last-writer-wins semantics. Clients send the timestamp of their edit.
          */
         patch: operations["mergeTask"];
         trace?: never;
@@ -131,12 +105,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * Get all habit completions (batch)
-         * @description Returns all completions across every habit task within an optional date range.
-         *     Use this endpoint to fetch weekly completion data for all habits in a single
-         *     request instead of issuing one request per task.
-         */
+        /** Get all habit completions (batch) */
         get: operations["getAllTaskCompletions"];
         put?: never;
         post?: never;
@@ -155,15 +124,9 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Complete a habit for a specific date
-         * @description Marks a habit task as completed for the specified date, or today if no date is provided.
-         */
+        /** Complete a habit for a specific date */
         post: operations["completeTask"];
-        /**
-         * Uncomplete a habit for a specific date
-         * @description Removes a habit task's completion for the specified date, or today if no date is provided.
-         */
+        /** Uncomplete a habit for a specific date */
         delete: operations["uncompleteTask"];
         options?: never;
         head?: never;
@@ -177,10 +140,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * Get habit completions
-         * @description Returns all completions for a habit task within an optional date range.
-         */
+        /** Get habit completions */
         get: operations["getTaskCompletions"];
         put?: never;
         post?: never;
@@ -197,16 +157,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * List all task lists
-         * @description Returns a list of all task lists.
-         */
+        /** List all task lists */
         get: operations["listTaskLists"];
         put?: never;
-        /**
-         * Create a new task list
-         * @description Creates a new named task list.
-         */
+        /** Create a new task list */
         post: operations["createTaskList"];
         delete?: never;
         options?: never;
@@ -221,15 +175,9 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * Get a task list by ID
-         * @description Returns a single task list by its unique identifier.
-         */
+        /** Get a task list by ID */
         get: operations["getTaskList"];
-        /**
-         * Update a task list
-         * @description Updates the name or description of a task list.
-         */
+        /** Update a task list */
         put: operations["updateTaskList"];
         post?: never;
         /**
@@ -249,10 +197,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * List tasks in a task list
-         * @description Returns all tasks belonging to a specific task list.
-         */
+        /** List tasks in a task list */
         get: operations["listTasksByListID"];
         put?: never;
         post?: never;
@@ -271,12 +216,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Share a task list with another user
-         * @description Phase 8 collaboration. Grants the target user editor or viewer access
-         *     to the list. Only the owner (or an admin) may share. Broadcasting a
-         *     tasklist.shared event to connected members.
-         */
+        /** Share a task list with another user */
         post: operations["shareTaskList"];
         delete?: never;
         options?: never;
@@ -294,11 +234,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /**
-         * Revoke a user's access to a task list
-         * @description Phase 8 collaboration. Removes the target user's membership. Only the
-         *     owner (or an admin) may unshare.
-         */
+        /** Revoke a user's access to a task list */
         delete: operations["unshareTaskList"];
         options?: never;
         head?: never;
@@ -312,11 +248,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * List the shared members of a task list
-         * @description Phase 8 collaboration. Returns the non-owner members (editor/viewer)
-         *     of a list. Any member can read the member list.
-         */
+        /** List the shared members of a task list */
         get: operations["listTaskListMembers"];
         put?: never;
         post?: never;
@@ -331,18 +263,13 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /**
-         * @description Whether the task is still to do or already done.
          * @example todo
          * @enum {string}
          */
         TaskStatus: "todo" | "done";
-        /**
-         * @description Filter by task type. "one-off" for tasks without recurrence, "habit" for tasks with recurrence days.
-         * @enum {string}
-         */
+        /** @enum {string} */
         TaskType: "one-off" | "habit";
         /**
-         * @description Day of the week abbreviation for habit recurrence.
          * @example mon
          * @enum {string}
          */
@@ -350,14 +277,10 @@ export interface components {
         Task: {
             /**
              * Format: uuid
-             * @description Unique identifier for the task.
              * @example 550e8400-e29b-41d4-a716-446655440000
              */
             id: string;
-            /**
-             * @description The task title.
-             * @example Have hair cut
-             */
+            /** @example Have hair cut */
             title: string;
             status: components["schemas"]["TaskStatus"];
             /**
@@ -379,13 +302,13 @@ export interface components {
             /**
              * Format: time
              * @description Start time for planner scheduling (HH:MM). null for unscheduled tasks.
-             * @example 09:00:00
+             * @example 09:00:00Z
              */
             start_time?: string | null;
             /**
              * Format: time
              * @description End time for planner scheduling (HH:MM). null for unscheduled tasks.
-             * @example 10:00:00
+             * @example 10:00:00Z
              */
             end_time?: string | null;
             /**
@@ -406,13 +329,11 @@ export interface components {
             alarm_minutes?: number | null;
             /**
              * Format: date-time
-             * @description Timestamp when the task was created.
              * @example 2026-05-07T10:00:00Z
              */
             created_at: string;
             /**
              * Format: date-time
-             * @description Timestamp when the task was last updated.
              * @example 2026-05-07T10:30:00Z
              */
             updated_at: string;
@@ -420,25 +341,21 @@ export interface components {
         TaskCompletion: {
             /**
              * Format: uuid
-             * @description Unique identifier for the completion.
              * @example 660e8400-e29b-41d4-a716-446655440001
              */
             id: string;
             /**
              * Format: uuid
-             * @description The UUID of the completed task.
              * @example 550e8400-e29b-41d4-a716-446655440000
              */
             task_id: string;
             /**
              * Format: date
-             * @description The date this completion is for.
              * @example 2026-05-07
              */
             completed_date: string;
             /**
              * Format: date-time
-             * @description Timestamp when the completion was recorded.
              * @example 2026-05-07T10:00:00Z
              */
             created_at: string;
@@ -449,10 +366,7 @@ export interface components {
              * @description Optional client-generated UUID. When supplied, the server uses it as the task ID, making create idempotent for offline-first clients that push a locally-created task more than once.
              */
             id?: string;
-            /**
-             * @description The task title.
-             * @example Have hair cut
-             */
+            /** @example Have hair cut */
             title: string;
             /**
              * @description Days of the week for habit recurrence. Omit or set to null for one-off tasks.
@@ -465,20 +379,19 @@ export interface components {
             recurrence_days?: components["schemas"]["RecurrenceDay"][] | null;
             /**
              * Format: uuid
-             * @description The UUID of the task list to assign this task to.
              * @example 770e8400-e29b-41d4-a716-446655440002
              */
             list_id?: string | null;
             /**
              * Format: time
              * @description Start time for planner scheduling (HH:MM). Set to null for unscheduled.
-             * @example 09:00:00
+             * @example 09:00:00Z
              */
             start_time?: string | null;
             /**
              * Format: time
              * @description End time for planner scheduling (HH:MM). Must be after start_time.
-             * @example 10:00:00
+             * @example 10:00:00Z
              */
             end_time?: string | null;
             /**
@@ -507,10 +420,7 @@ export interface components {
              * @example 2026-08-10T12:30:00Z
              */
             updated_at?: string;
-            /**
-             * @description The new task title.
-             * @example Have hair cut and beard trim
-             */
+            /** @example Have hair cut and beard trim */
             title?: string;
             status?: components["schemas"]["TaskStatus"];
             /**
@@ -525,8 +435,7 @@ export interface components {
             recurrence_days?: components["schemas"]["RecurrenceDay"][] | null;
             /**
              * Format: uuid
-             * @description Assign or unassign the task from a list.
-             *     Omit this field to leave the current list assignment unchanged.
+             * @description Omit this field to leave the current list assignment unchanged.
              *     Set to a valid UUID to assign to that list.
              *     Set to null to unassign the task from any list.
              * @example 770e8400-e29b-41d4-a716-446655440002
@@ -536,14 +445,14 @@ export interface components {
              * Format: time
              * @description Start time for planner scheduling (HH:MM).
              *     Omit to leave unchanged. Set to null to unschedule.
-             * @example 09:00:00
+             * @example 09:00:00Z
              */
             start_time?: string | null;
             /**
              * Format: time
              * @description End time for planner scheduling (HH:MM).
              *     Omit to leave unchanged. Set to null to unschedule.
-             * @example 10:00:00
+             * @example 10:00:00Z
              */
             end_time?: string | null;
             /**
@@ -571,34 +480,22 @@ export interface components {
         TaskList: {
             /**
              * Format: uuid
-             * @description Unique identifier for the task list.
              * @example 770e8400-e29b-41d4-a716-446655440002
              */
             id: string;
-            /**
-             * @description The name of the task list.
-             * @example Shopping List
-             */
+            /** @example Shopping List */
             name: string;
-            /**
-             * @description An optional description of the task list.
-             * @example Items I need to buy
-             */
+            /** @example Items I need to buy */
             description?: string;
-            /**
-             * @description The user who owns the list (Phase 8). Members are granted editor/viewer via shares.
-             * @example dev-user
-             */
+            /** @example dev-user */
             owner_id?: string;
             /**
              * Format: date-time
-             * @description Timestamp when the task list was created.
              * @example 2026-05-07T10:00:00Z
              */
             created_at: string;
             /**
              * Format: date-time
-             * @description Timestamp when the task list was last updated.
              * @example 2026-05-07T10:30:00Z
              */
             updated_at: string;
@@ -606,7 +503,10 @@ export interface components {
         CreateTaskListRequest: {
             /**
              * Format: uuid
-             * @description Optional client-generated UUID. When supplied, the server uses it as the task list ID, making create idempotent for offline-first clients that push a locally-created list more than once.
+             * @description Optional client-generated UUID.
+             *     When supplied, the server uses it as the task list ID,
+             *     making create idempotent for offline-first clients that push
+             *     a locally-created list more than once.
              * @example 770e8400-e29b-41d4-a716-446655440002
              */
             id?: string;
@@ -617,25 +517,15 @@ export interface components {
             name: string;
         };
         UpdateTaskListRequest: {
-            /**
-             * @description The new name for the task list.
-             * @example Grocery List
-             */
+            /** @example Grocery List */
             name?: string;
-            /**
-             * @description The new description for the task list.
-             * @example Weekly groceries
-             */
+            /** @example Weekly groceries */
             description?: string;
         };
         ShareTaskListRequest: {
-            /**
-             * @description The user ID to grant access to.
-             * @example alice
-             */
+            /** @example alice */
             shared_with: string;
             /**
-             * @description Permission level. Editors can mutate tasks in the list; viewers are read-only.
              * @example editor
              * @enum {string}
              */
@@ -644,17 +534,10 @@ export interface components {
         TaskListMember: {
             /** Format: uuid */
             list_id: string;
-            /** @description The member user ID. */
             shared_with: string;
-            /**
-             * @description The member's permission level.
-             * @enum {string}
-             */
+            /** @enum {string} */
             role: "editor" | "viewer";
-            /**
-             * Format: date-time
-             * @description When the share was created.
-             */
+            /** Format: date-time */
             created_at?: string;
         };
         ParseTaskRequest: {
@@ -683,9 +566,7 @@ export interface components {
     };
     responses: never;
     parameters: {
-        /** @description The UUID of the task */
         taskId: string;
-        /** @description The UUID of the task list */
         listId: string;
     };
     requestBodies: never;
@@ -828,7 +709,6 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description The UUID of the task */
                 taskId: components["parameters"]["taskId"];
             };
             cookie?: never;
@@ -860,7 +740,6 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description The UUID of the task */
                 taskId: components["parameters"]["taskId"];
             };
             cookie?: never;
@@ -905,7 +784,6 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description The UUID of the task */
                 taskId: components["parameters"]["taskId"];
             };
             cookie?: never;
@@ -935,7 +813,6 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description The UUID of the task */
                 taskId: components["parameters"]["taskId"];
             };
             cookie?: never;
@@ -1028,7 +905,6 @@ export interface operations {
             };
             header?: never;
             path: {
-                /** @description The UUID of the task */
                 taskId: components["parameters"]["taskId"];
             };
             cookie?: never;
@@ -1072,7 +948,6 @@ export interface operations {
             };
             header?: never;
             path: {
-                /** @description The UUID of the task */
                 taskId: components["parameters"]["taskId"];
             };
             cookie?: never;
@@ -1107,7 +982,6 @@ export interface operations {
             };
             header?: never;
             path: {
-                /** @description The UUID of the task */
                 taskId: components["parameters"]["taskId"];
             };
             cookie?: never;
@@ -1201,7 +1075,6 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description The UUID of the task list */
                 listId: components["parameters"]["listId"];
             };
             cookie?: never;
@@ -1233,7 +1106,6 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description The UUID of the task list */
                 listId: components["parameters"]["listId"];
             };
             cookie?: never;
@@ -1278,7 +1150,6 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description The UUID of the task list */
                 listId: components["parameters"]["listId"];
             };
             cookie?: never;
@@ -1311,7 +1182,6 @@ export interface operations {
             };
             header?: never;
             path: {
-                /** @description The UUID of the task list */
                 listId: components["parameters"]["listId"];
             };
             cookie?: never;
@@ -1343,7 +1213,6 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description The UUID of the task list */
                 listId: components["parameters"]["listId"];
             };
             cookie?: never;
@@ -1404,7 +1273,6 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description The UUID of the task list */
                 listId: components["parameters"]["listId"];
                 /** @description The user ID to revoke. */
                 userId: string;
@@ -1445,7 +1313,6 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description The UUID of the task list */
                 listId: components["parameters"]["listId"];
             };
             cookie?: never;

@@ -13,7 +13,7 @@ export interface paths {
         };
         /**
          * Health check
-         * @description Returns the health status of the backend service, including database connectivity.
+         * @description Returns the health status of the backend service, including DB and other connectivity.
          */
         get: operations["getHealth"];
         put?: never;
