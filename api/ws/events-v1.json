@@ -2,18 +2,17 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/diegobraga92/PudimProductivity/blob/main/api/ws/events-v1.json",
   "title": "PudimProductivity WebSocket Events v1",
-  "description": "Envelope and payload shapes pushed by the backend sync hub over the WebSocket endpoint GET /api/v1/ws. The client MAY pass ?last_seq=N to resume after a disconnect; events with seq > N are replayed, or a 'stale' event is sent if the client is too far behind.",
+  "description": "Endpoint: GET /api/v1/ws. Use 'seq' for reconnection via ?last_seq=N.",
+
   "$defs": {
     "envelope": {
       "type": "object",
-      "required": [
-        "type",
-        "seq",
-        "timestamp"
-      ],
+      "description": "Common envelope for all WebSocket events.",
+      "required": ["type", "seq", "timestamp"],
       "properties": {
         "type": {
           "type": "string",
+          "description": "Event type, determines payload shape.",
           "enum": [
             "task.created",
             "task.updated",
@@ -33,633 +32,397 @@
             "recipe.updated",
             "recipe.deleted",
             "stale"
-          ],
-          "description": "Event discriminator. 'stale' is a server signal indicating that the client missed too many events and must refetch via REST."
+          ]
         },
         "seq": {
           "type": "integer",
           "minimum": 0,
-          "description": "Monotonically increasing sequence number for the sync event stream. Clients persist the last seen value and send it as ?last_seq when reconnecting."
+          "description": "Event stream position. Use for reconnection."
         },
         "timestamp": {
           "type": "string",
           "format": "date-time",
-          "description": "UTC event time in RFC3339 format."
+          "description": "UTC timestamp in RFC3339."
         },
         "payload": {
-          "description": "Event-specific payload. Required for all events except 'stale'."
+          "description": "Event payload. Omitted for 'stale'."
         }
       }
     },
 
     "task": {
       "type": "object",
-      "required": [
-        "id",
-        "title",
-        "status",
-        "created_at",
-        "updated_at"
-      ],
+      "description": "Task data for create/update/merge events.",
+      "required": ["id", "title", "status", "created_at", "updated_at"],
       "properties": {
-        "id": {
-          "type": "string",
-          "format": "uuid"
-        },
-        "title": {
-          "type": "string"
-        },
+        "id": { "type": "string", "format": "uuid" },
+        "title": { "type": "string" },
         "status": {
           "type": "string",
-          "enum": [
-            "todo",
-            "done"
-          ]
+          "enum": ["todo", "done"]
         },
         "recurrence_days": {
           "type": "array",
+          "description": "Recurring days (mon-sun). Omitted if not recurring.",
           "items": {
             "type": "string",
-            "enum": [
-              "mon",
-              "tue",
-              "wed",
-              "thu",
-              "fri",
-              "sat",
-              "sun"
-            ]
+            "enum": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
           }
         },
         "list_id": {
-          "anyOf": [
-            {
-              "type": "string",
-              "format": "uuid"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "anyOf": [{ "type": "string", "format": "uuid" }, { "type": "null" }],
+          "description": "Task list ID, or null."
         },
         "start_time": {
-          "anyOf": [
-            {
-              "type": "string",
-              "format": "date-time"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "anyOf": [{ "type": "string", "format": "date-time" }, { "type": "null" }],
+          "description": "Scheduled start time, or null."
         },
         "end_time": {
-          "anyOf": [
-            {
-              "type": "string",
-              "format": "date-time"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "anyOf": [{ "type": "string", "format": "date-time" }, { "type": "null" }],
+          "description": "Scheduled end time, or null."
         },
         "color": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "anyOf": [{ "type": "string" }, { "type": "null" }],
+          "description": "Optional color, or null."
         },
         "scheduled_date": {
-          "anyOf": [
-            {
-              "type": "string",
-              "format": "date",
-              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "anyOf": [{ "type": "string", "format": "date", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" }, { "type": "null" }],
+          "description": "Scheduled date (YYYY-MM-DD), or null."
         },
         "alarm_minutes": {
-          "anyOf": [
-            {
-              "type": "integer",
-              "minimum": 0
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "anyOf": [{ "type": "integer", "minimum": 0 }, { "type": "null" }],
+          "description": "Alarm offset in minutes, or null."
         },
-        "created_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "updated_at": {
-          "type": "string",
-          "format": "date-time"
-        }
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" }
       }
     },
 
     "taskRef": {
       "type": "object",
-      "required": [
-        "id"
-      ],
+      "description": "Minimal reference for deleted tasks.",
+      "required": ["id"],
       "properties": {
-        "id": {
-          "type": "string",
-          "format": "uuid"
-        }
-      },
-      "description": "Minimal task reference used by deletion events."
+        "id": { "type": "string", "format": "uuid" }
+      }
     },
 
     "completion": {
       "type": "object",
-      "required": [
-        "id",
-        "task_id",
-        "completed_date"
-      ],
+      "description": "Completed task info, includes title for notification.",
+      "required": ["id", "task_id", "completed_date"],
       "properties": {
-        "id": {
-          "type": "string",
-          "format": "uuid"
-        },
-        "task_id": {
-          "type": "string",
-          "format": "uuid"
-        },
+        "id": { "type": "string", "format": "uuid" },
+        "task_id": { "type": "string", "format": "uuid" },
         "title": {
           "type": "string",
-          "description": "Task title included so notification consumers do not need a follow-up lookup."
+          "description": "Task title (for notification)."
         },
         "completed_date": {
           "type": "string",
           "format": "date",
-          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "description": "Completion date (YYYY-MM-DD)."
         }
       }
     },
 
     "uncompletion": {
       "type": "object",
-      "required": [
-        "id",
-        "completed_date"
-      ],
+      "description": "Task marked incomplete.",
+      "required": ["id", "completed_date"],
       "properties": {
         "id": {
           "type": "string",
-          "format": "uuid"
+          "format": "uuid",
+          "description": "Completion record ID removed."
         },
         "title": {
           "type": "string",
-          "description": "Task title included so notification consumers do not need a follow-up lookup."
+          "description": "Task title (for display)."
         },
         "completed_date": {
           "type": "string",
           "format": "date",
-          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "description": "Completion date undone."
         }
       }
     },
 
     "recipe": {
       "type": "object",
-      "required": [
-        "id",
-        "title"
-      ],
+      "description": "Basic recipe info for sync. Fetch full via REST API.",
+      "required": ["id", "title"],
       "properties": {
-        "id": {
-          "type": "string",
-          "format": "uuid"
-        },
-        "title": {
-          "type": "string"
-        },
+        "id": { "type": "string", "format": "uuid" },
+        "title": { "type": "string" },
         "difficulty": {
           "type": "string",
-          "enum": [
-            "easy",
-            "medium",
-            "hard"
-          ]
+          "enum": ["easy", "medium", "hard"]
         }
-      },
-      "description": "Minimal recipe representation used by WebSocket events. Consumers needing the full recipe should fetch it via REST."
+      }
     },
 
     "recipeRef": {
       "type": "object",
-      "required": [
-        "id"
-      ],
+      "description": "Minimal reference for deleted recipe.",
+      "required": ["id"],
       "properties": {
-        "id": {
-          "type": "string",
-          "format": "uuid"
-        }
-      },
-      "description": "Minimal recipe reference used by deletion events."
+        "id": { "type": "string", "format": "uuid" }
+      }
     },
 
     "libraryItem": {
       "type": "object",
-      "required": [
-        "id",
-        "name",
-        "media_type"
-      ],
+      "description": "Library item info for sync.",
+      "required": ["id", "name", "media_type"],
       "properties": {
-        "id": {
-          "type": "string",
-          "format": "uuid"
-        },
-        "name": {
-          "type": "string"
-        },
+        "id": { "type": "string", "format": "uuid" },
+        "name": { "type": "string" },
         "media_type": {
           "type": "string",
-          "enum": [
-            "movie",
-            "series",
-            "book",
-            "game"
-          ]
+          "enum": ["movie", "series", "book", "game"]
         },
         "release_year": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "anyOf": [{ "type": "integer" }, { "type": "null" }],
+          "description": "Release year, or null."
         },
         "done": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Marked as done."
         },
-        "notes": {
-          "type": "string"
-        }
-      },
-      "description": "Minimal library item representation used by WebSocket events. Consumers needing the full item should fetch it via REST."
+        "notes": { "type": "string" }
+      }
     },
 
     "libraryItemRef": {
       "type": "object",
-      "required": [
-        "id"
-      ],
+      "description": "Minimal reference for deleted item.",
+      "required": ["id"],
       "properties": {
-        "id": {
-          "type": "string",
-          "format": "uuid"
-        }
-      },
-      "description": "Minimal library item reference used by deletion events."
+        "id": { "type": "string", "format": "uuid" }
+      }
     },
 
     "libraryImport": {
       "type": "object",
-      "required": [
-        "imported"
-      ],
+      "description": "Import summary: saved and skipped.",
+      "required": ["imported"],
       "properties": {
         "imported": {
           "type": "integer",
           "minimum": 0,
-          "description": "Number of items persisted by the import."
+          "description": "Items saved."
         },
         "skipped": {
           "type": "integer",
           "minimum": 0,
-          "description": "Number of rows rejected during the import."
+          "description": "Rows skipped."
         }
-      },
-      "description": "Summary of a library bulk import."
+      }
     },
 
     "taskListShare": {
       "type": "object",
-      "required": [
-        "list_id",
-        "shared_with"
-      ],
+      "description": "Share/unshare task list info.",
+      "required": ["list_id", "shared_with"],
       "properties": {
         "list_id": {
           "type": "string",
-          "format": "uuid"
+          "format": "uuid",
+          "description": "Task list ID."
         },
         "shared_with": {
           "type": "string",
-          "description": "User ID the list was shared with or revoked from."
+          "description": "User ID involved."
         },
         "role": {
           "type": "string",
-          "enum": [
-            "editor",
-            "viewer"
-          ]
+          "enum": ["editor", "viewer"],
+          "description": "Permission (editor/viewer)."
         },
         "shared_by": {
           "type": "string",
-          "description": "User who created the share. Present on tasklist.shared events."
+          "description": "Sharer ID (for shared)."
         },
         "removed_by": {
           "type": "string",
-          "description": "User who revoked the share. Present on tasklist.unshared events."
+          "description": "Remover ID (for unshared)."
         }
-      },
-      "description": "Task-list share or unshare payload."
+      }
     },
 
     "presenceOnline": {
       "type": "object",
-      "required": [
-        "user_id",
-        "list_ids"
-      ],
+      "description": "User online presence.",
+      "required": ["user_id", "list_ids"],
       "properties": {
-        "user_id": {
-          "type": "string"
-        },
+        "user_id": { "type": "string" },
         "list_ids": {
           "type": "array",
-          "items": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "description": "Task lists the user can access at connect time."
+          "description": "Accessible task list IDs.",
+          "items": { "type": "string", "format": "uuid" }
         }
-      },
-      "description": "Presence payload indicating that a user came online."
+      }
     },
 
     "presenceOffline": {
       "type": "object",
-      "required": [
-        "user_id"
-      ],
+      "description": "User offline presence.",
+      "required": ["user_id"],
       "properties": {
-        "user_id": {
-          "type": "string"
-        }
-      },
-      "description": "Presence payload indicating that a user went offline."
+        "user_id": { "type": "string" }
+      }
     }
   },
 
   "allOf": [
-    {
-      "$ref": "#/$defs/envelope"
-    },
+    { "$ref": "#/$defs/envelope" },
     {
       "oneOf": [
         {
+          "description": "New task created. Payload: complete task.",
           "properties": {
-            "type": {
-              "const": "task.created"
-            },
-            "payload": {
-              "$ref": "#/$defs/task"
-            }
+            "type": { "const": "task.created" },
+            "payload": { "$ref": "#/$defs/task" }
           },
-          "required": [
-            "payload"
-          ]
+          "required": ["payload"]
         },
         {
+          "description": "Existing task changed. Payload: complete task.",
           "properties": {
-            "type": {
-              "const": "task.updated"
-            },
-            "payload": {
-              "$ref": "#/$defs/task"
-            }
+            "type": { "const": "task.updated" },
+            "payload": { "$ref": "#/$defs/task" }
           },
-          "required": [
-            "payload"
-          ]
+          "required": ["payload"]
         },
         {
+          "description": "Task deleted. Payload: taskRef.",
           "properties": {
-            "type": {
-              "const": "task.deleted"
-            },
-            "payload": {
-              "$ref": "#/$defs/taskRef"
-            }
+            "type": { "const": "task.deleted" },
+            "payload": { "$ref": "#/$defs/taskRef" }
           },
-          "required": [
-            "payload"
-          ]
+          "required": ["payload"]
         },
         {
+          "description": "Task marked completed. Payload: completion.",
           "properties": {
-            "type": {
-              "const": "task.completed"
-            },
-            "payload": {
-              "$ref": "#/$defs/completion"
-            }
+            "type": { "const": "task.completed" },
+            "payload": { "$ref": "#/$defs/completion" }
           },
-          "required": [
-            "payload"
-          ]
+          "required": ["payload"]
         },
         {
+          "description": "Task marked incomplete. Payload: uncompletion.",
           "properties": {
-            "type": {
-              "const": "task.uncompleted"
-            },
-            "payload": {
-              "$ref": "#/$defs/uncompletion"
-            }
+            "type": { "const": "task.uncompleted" },
+            "payload": { "$ref": "#/$defs/uncompletion" }
           },
-          "required": [
-            "payload"
-          ]
+          "required": ["payload"]
         },
         {
-          "description": "A CRDT merge has been resolved. The payload contains the winning task state so clients can reconcile.",
+          "description": "Conflict resolved. Payload: final task.",
           "properties": {
-            "type": {
-              "const": "task.merged"
-            },
-            "payload": {
-              "$ref": "#/$defs/task"
-            }
+            "type": { "const": "task.merged" },
+            "payload": { "$ref": "#/$defs/task" }
           },
-          "required": [
-            "payload"
-          ]
+          "required": ["payload"]
         },
         {
+          "description": "Task list shared. Payload: taskListShare.",
           "properties": {
-            "type": {
-              "const": "tasklist.shared"
-            },
-            "payload": {
-              "$ref": "#/$defs/taskListShare"
-            }
+            "type": { "const": "tasklist.shared" },
+            "payload": { "$ref": "#/$defs/taskListShare" }
           },
-          "required": [
-            "payload"
-          ]
+          "required": ["payload"]
         },
         {
+          "description": "Task list unshared. Payload: taskListShare.",
           "properties": {
-            "type": {
-              "const": "tasklist.unshared"
-            },
-            "payload": {
-              "$ref": "#/$defs/taskListShare"
-            }
+            "type": { "const": "tasklist.unshared" },
+            "payload": { "$ref": "#/$defs/taskListShare" }
           },
-          "required": [
-            "payload"
-          ]
+          "required": ["payload"]
         },
         {
+          "description": "User online. Payload: presenceOnline.",
           "properties": {
-            "type": {
-              "const": "presence.online"
-            },
-            "payload": {
-              "$ref": "#/$defs/presenceOnline"
-            }
+            "type": { "const": "presence.online" },
+            "payload": { "$ref": "#/$defs/presenceOnline" }
           },
-          "required": [
-            "payload"
-          ]
+          "required": ["payload"]
         },
         {
+          "description": "User offline. Payload: presenceOffline.",
           "properties": {
-            "type": {
-              "const": "presence.offline"
-            },
-            "payload": {
-              "$ref": "#/$defs/presenceOffline"
-            }
+            "type": { "const": "presence.offline" },
+            "payload": { "$ref": "#/$defs/presenceOffline" }
           },
-          "required": [
-            "payload"
-          ]
+          "required": ["payload"]
         },
         {
+          "description": "Library item added. Payload: libraryItem.",
           "properties": {
-            "type": {
-              "const": "library.item.added"
-            },
-            "payload": {
-              "$ref": "#/$defs/libraryItem"
-            }
+            "type": { "const": "library.item.added" },
+            "payload": { "$ref": "#/$defs/libraryItem" }
           },
-          "required": [
-            "payload"
-          ]
+          "required": ["payload"]
         },
         {
+          "description": "Library item updated. Payload: libraryItem.",
           "properties": {
-            "type": {
-              "const": "library.item.updated"
-            },
-            "payload": {
-              "$ref": "#/$defs/libraryItem"
-            }
+            "type": { "const": "library.item.updated" },
+            "payload": { "$ref": "#/$defs/libraryItem" }
           },
-          "required": [
-            "payload"
-          ]
+          "required": ["payload"]
         },
         {
+          "description": "Library item deleted. Payload: libraryItemRef.",
           "properties": {
-            "type": {
-              "const": "library.item.deleted"
-            },
-            "payload": {
-              "$ref": "#/$defs/libraryItemRef"
-            }
+            "type": { "const": "library.item.deleted" },
+            "payload": { "$ref": "#/$defs/libraryItemRef" }
           },
-          "required": [
-            "payload"
-          ]
+          "required": ["payload"]
         },
         {
+          "description": "Library import finished. Payload: libraryImport.",
           "properties": {
-            "type": {
-              "const": "library.items.imported"
-            },
-            "payload": {
-              "$ref": "#/$defs/libraryImport"
-            }
+            "type": { "const": "library.items.imported" },
+            "payload": { "$ref": "#/$defs/libraryImport" }
           },
-          "required": [
-            "payload"
-          ]
+          "required": ["payload"]
         },
         {
+          "description": "Recipe created. Payload: recipe.",
           "properties": {
-            "type": {
-              "const": "recipe.created"
-            },
-            "payload": {
-              "$ref": "#/$defs/recipe"
-            }
+            "type": { "const": "recipe.created" },
+            "payload": { "$ref": "#/$defs/recipe" }
           },
-          "required": [
-            "payload"
-          ]
+          "required": ["payload"]
         },
         {
+          "description": "Recipe updated. Payload: recipe.",
           "properties": {
-            "type": {
-              "const": "recipe.updated"
-            },
-            "payload": {
-              "$ref": "#/$defs/recipe"
-            }
+            "type": { "const": "recipe.updated" },
+            "payload": { "$ref": "#/$defs/recipe" }
           },
-          "required": [
-            "payload"
-          ]
+          "required": ["payload"]
         },
         {
+          "description": "Recipe deleted. Payload: recipeRef.",
           "properties": {
-            "type": {
-              "const": "recipe.deleted"
-            },
-            "payload": {
-              "$ref": "#/$defs/recipeRef"
-            }
+            "type": { "const": "recipe.deleted" },
+            "payload": { "$ref": "#/$defs/recipeRef" }
           },
-          "required": [
-            "payload"
-          ]
+          "required": ["payload"]
         },
         {
+          "description": "Too many events missed. Fetch full state via REST API.",
           "properties": {
-            "type": {
-              "const": "stale"
-            }
+            "type": { "const": "stale" }
           },
-          "not": {
-            "required": [
-              "payload"
-            ]
-          }
+          "not": { "required": ["payload"] }
         }
       ]
     }
