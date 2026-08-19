@@ -1,11 +1,3 @@
-# golangci-lint configuration — v2 format (golangci-lint-action@v9 pins v2.12.2).
-# Lint pipeline: https://github.com/golangci/golangci-lint/releases
-#
-# `default: standard` is the golangci-lint v2 standard set (errcheck, gosimple,
-# govet, ineffassign, staticcheck, unused). Extra linters + formatters below
-# match what the project has always been clean under, so CI behavior is
-# reproducible.
-
 version: "2"
 
 linters:

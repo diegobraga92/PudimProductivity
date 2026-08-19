@@ -15,16 +15,12 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Port            int
-	ShutdownTimeout time.Duration
-	ReadTimeout     time.Duration
-	WriteTimeout    time.Duration
-	IdleTimeout     time.Duration
-	RequestTimeout  time.Duration
-	// CORSAllowedOrigins is the set of cross-origin request Origins allowed to
-	// call the API (e.g. "app://bundle" for the Electron desktop app). Empty
-	// means same-origin only, which preserves the web/nginx deployment
-	// behavior. See cors_middleware.go.
+	Port               int
+	ShutdownTimeout    time.Duration
+	ReadTimeout        time.Duration
+	WriteTimeout       time.Duration
+	IdleTimeout        time.Duration
+	RequestTimeout     time.Duration
 	CORSAllowedOrigins map[string]bool
 }
 
@@ -37,9 +33,7 @@ type DatabaseConfig struct {
 	MaxConnIdleTime time.Duration
 }
 
-// ScoreProviderConfig selects which rating provider serves each library media
-// type. An empty/"none" value disables score lookup for that media type. Keys
-// and base URLs are indexed by provider name (e.g. "omdb", "rawg").
+// TODO: Check if this makes sense after migrating Providers to DB
 type ScoreProviderConfig struct {
 	Movie    string
 	Series   string
