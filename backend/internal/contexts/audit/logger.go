@@ -2,8 +2,7 @@ package audit
 
 import "context"
 
-// Logger is the interface used by domain services to record audit events.
-// This allows injecting a no-op implementation for tests or when audit is disabled.
+// Logger is the interface to be used by services to record audit events.
 type Logger interface {
 	// Log records an audit event asynchronously.
 	Log(ctx context.Context, action, resource, resourceID string, oldValues, newValues any)

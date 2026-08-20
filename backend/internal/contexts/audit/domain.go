@@ -1,3 +1,4 @@
+// Package audit provides structured audit logging for events.
 package audit
 
 import (
@@ -5,7 +6,10 @@ import (
 	"time"
 )
 
+// TODO: Check for completeness
+
 // Action constants for audit log entries.
+// Follows the pattern "<resource>.<verb>".
 const (
 	ActionTaskCreated     = "task.created"
 	ActionTaskUpdated     = "task.updated"
@@ -22,35 +26,26 @@ const (
 	ActionFocusStarted   = "focus.started"
 	ActionFocusCompleted = "focus.completed"
 
-	// Library media tracking (replaces Phase 5 book tracking).
 	ActionLibraryItemAdded     = "library.item.added"
 	ActionLibraryItemUpdated   = "library.item.updated"
 	ActionLibraryItemDeleted   = "library.item.deleted"
 	ActionLibraryItemsImported = "library.items.imported"
 
-	// Phase 5a: recipes.
 	ActionRecipeCreated = "recipe.created"
 	ActionRecipeUpdated = "recipe.updated"
 	ActionRecipeDeleted = "recipe.deleted"
 
-	// Runtime score-provider configuration (admin UI).
 	ActionScoreProviderUpdated = "score_provider.updated"
 )
 
-// Resource constants.
+// Resource constants to identify event domain.
 const (
-	ResourceTasks     = "tasks"
-	ResourceTaskLists = "task_lists"
-	ResourceFeatures  = "feature_flags"
-	ResourcePomodoro  = "pomodoro"
-
-	// Library media tracking (replaces Phase 5 book tracking).
-	ResourceLibraryItems = "library_items"
-
-	// Phase 5a: recipes.
-	ResourceRecipes = "recipes"
-
-	// Runtime score-provider configuration (admin UI).
+	ResourceTasks          = "tasks"
+	ResourceTaskLists      = "task_lists"
+	ResourceFeatures       = "feature_flags"
+	ResourcePomodoro       = "pomodoro"
+	ResourceLibraryItems   = "library_items"
+	ResourceRecipes        = "recipes"
 	ResourceScoreProviders = "score_providers"
 )
 

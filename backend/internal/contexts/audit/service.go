@@ -19,13 +19,14 @@ const (
 	defaultAuditRecentDays   = 1
 )
 
+// Service provides the core audit logging functionality.
 type Service struct {
 	repo   Repository
 	events chan *Entry
 }
 
+// NewService creates a new audit Service instance.
 func NewService(repo Repository, bufferSize int) *Service {
-	// bufferSize controls the maximum number of queued audit entries before blocking.
 	s := &Service{
 		repo:   repo,
 		events: make(chan *Entry, bufferSize),
@@ -36,6 +37,9 @@ func NewService(repo Repository, bufferSize int) *Service {
 	return s
 }
 
+// Log records an audit entry async.
+// Data is retrieve from context and comparison between old and new.
+// If the internal buffer is full, the entry is dropped and a warning is logged.
 func (s *Service) Log(ctx context.Context, action, resource, resourceID string, oldValues, newValues any) {
 	actorID := httpx.GetUserID(ctx)
 	if actorID == "" {
@@ -98,15 +102,13 @@ func (s *Service) worker() {
 	}
 }
 
+// Query retrieves audit entries based on the provided options.
 func (s *Service) Query(ctx context.Context, opts QueryOptions) ([]Entry, error) {
 	limit := opts.Limit
 	if limit <= 0 || limit > maxAuditQueryLimit {
 		limit = defaultAuditQueryLimit
 	}
-	offset := opts.Offset
-	if offset < 0 {
-		offset = 0
-	}
+	offset := max(opts.Offset, 0)
 
 	switch {
 	case opts.Resource != "" && opts.ResourceID != "":
@@ -128,6 +130,7 @@ func (s *Service) Query(ctx context.Context, opts QueryOptions) ([]Entry, error)
 	}
 }
 
+// QueryOptions defines the filters and pagination parameters for retrieving audit logs.
 type QueryOptions struct {
 	Resource   string
 	ResourceID string

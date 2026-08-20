@@ -5,6 +5,7 @@ import (
 	"time"
 )
 
+// Repository defines the data access layer for audit log entries.
 type Repository interface {
 	// Insert writes a new audit log entry.
 	Insert(ctx context.Context, entry *Entry) error
