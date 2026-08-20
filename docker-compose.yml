@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:16-alpine  # https://hub.docker.com/_/postgres/tags?name=alpine
+    image: postgres:18-alpine  # https://hub.docker.com/_/postgres/tags?name=alpine
     container_name: pudim-postgres
     restart: unless-stopped
     environment:
@@ -17,7 +17,6 @@ services:
       timeout: 3s
       retries: 5
 
-  # RabbitMQ is the Phase 3 event backbone (async notifications). Always on.
   rabbitmq:
     image: rabbitmq:4-management-alpine  # https://hub.docker.com/_/rabbitmq/tags?name=management-alpine
     container_name: pudim-rabbitmq

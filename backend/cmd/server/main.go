@@ -18,32 +18,34 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
-	"github.com/diegobraga92/pudimproductivity/backend/internal/audit"
-	"github.com/diegobraga92/pudimproductivity/backend/internal/backup"
-	"github.com/diegobraga92/pudimproductivity/backend/internal/collab"
-	"github.com/diegobraga92/pudimproductivity/backend/internal/db"
-	"github.com/diegobraga92/pudimproductivity/backend/internal/eventbus"
-	"github.com/diegobraga92/pudimproductivity/backend/internal/featureflag"
-	"github.com/diegobraga92/pudimproductivity/backend/internal/insights"
-	"github.com/diegobraga92/pudimproductivity/backend/internal/library"
-	"github.com/diegobraga92/pudimproductivity/backend/internal/media"
-	"github.com/diegobraga92/pudimproductivity/backend/internal/notification"
-	"github.com/diegobraga92/pudimproductivity/backend/internal/observability"
-	"github.com/diegobraga92/pudimproductivity/backend/internal/pomodoro"
-	"github.com/diegobraga92/pudimproductivity/backend/internal/rabbitmq"
-	"github.com/diegobraga92/pudimproductivity/backend/internal/recipe"
-	"github.com/diegobraga92/pudimproductivity/backend/internal/scheduler"
-	"github.com/diegobraga92/pudimproductivity/backend/internal/scoringsettings"
-	"github.com/diegobraga92/pudimproductivity/backend/internal/shared"
-	"github.com/diegobraga92/pudimproductivity/backend/internal/sync"
-	"github.com/diegobraga92/pudimproductivity/backend/internal/syncstore"
-	"github.com/diegobraga92/pudimproductivity/backend/internal/task"
-	"github.com/diegobraga92/pudimproductivity/backend/internal/tasklist"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/contexts/audit"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/contexts/collaboration/backup"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/contexts/collaboration/membership"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/contexts/collaboration/sync"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/contexts/collaboration/sync/persistence"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/contexts/content/library"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/contexts/content/media"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/contexts/content/recipe"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/contexts/content/scoring"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/contexts/insights"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/contexts/productivity/pomodoro"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/contexts/productivity/scheduler"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/contexts/productivity/task"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/contexts/productivity/tasklist"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/infrastructure/featureflag"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/infrastructure/notification"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/infrastructure/postgres"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/infrastructure/rabbitmq"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/infrastructure/storage"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/platform/config"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/platform/eventbus"
+	httpx "github.com/diegobraga92/pudimproductivity/backend/internal/platform/http"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/platform/observability"
 )
 
 func main() {
 	// Setup logging and config
-	cfg := shared.LoadConfig()
+	cfg := config.LoadConfig()
 	log.Logger = zerolog.New(zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: time.RFC3339}).
 		With().
 		Timestamp().
@@ -75,13 +77,13 @@ func main() {
 
 	// Prometheus metrics registry — created before the DB pool so every query
 	// can be traced (see db.ConnectPoolWithMetrics).
-	metrics := shared.NewMetrics()
+	metrics := observability.NewMetrics()
 
 	// Setup database
 	dbCtx, dbCancel := context.WithTimeout(context.Background(), cfg.Database.ConnectTimeout)
 	defer dbCancel()
 
-	pool, err := db.ConnectPoolWithMetrics(dbCtx, cfg.Database, metrics)
+	pool, err := postgres.ConnectPoolWithMetrics(dbCtx, cfg.Database, metrics)
 	if err != nil {
 		log.Warn().Err(err).Msg("database connection failed — running in degraded mode")
 		pool = nil
@@ -91,7 +93,7 @@ func main() {
 		migrateCtx, migrateCancel := context.WithTimeout(context.Background(), cfg.Server.WriteTimeout)
 		defer migrateCancel()
 
-		if err := db.RunMigrations(migrateCtx, pool); err != nil {
+		if err := postgres.RunMigrations(migrateCtx, pool); err != nil {
 			log.Fatal().Err(err).Msg("failed to run database migrations")
 		}
 	}
@@ -118,8 +120,8 @@ func main() {
 	// the app://bundle origin). Must run before AuthMiddleware so preflight
 	// OPTIONS requests are answered without identity headers. No-op when
 	// CORS_ALLOWED_ORIGINS is empty (same-origin web deployment).
-	r.Use(shared.CorsMiddleware(cfg.Server.CORSAllowedOrigins))
-	r.Use(shared.AuthMiddleware)
+	r.Use(httpx.CorsMiddleware(cfg.Server.CORSAllowedOrigins))
+	r.Use(httpx.AuthMiddleware)
 	r.Use(middleware.Timeout(cfg.Server.RequestTimeout))
 
 	r.Get("/api/v1/health", healthHandler(pool, cfg.Version))
@@ -138,8 +140,8 @@ func main() {
 	// and the presence snapshot endpoint. When the DB pool is unavailable the
 	// hub degrades to broadcast (legacy behavior).
 	if pool != nil {
-		syncHub.SetMembershipResolver(collab.NewPostgresMembershipResolver(pool))
-		collab.RegisterCollabRoutes(r, syncHub)
+		syncHub.SetMembershipResolver(membership.NewPostgresMembershipResolver(pool))
+		membership.RegisterCollabRoutes(r, syncHub)
 	}
 
 	// Phase 3: RabbitMQ becomes the durable backbone for async consumers. If
@@ -193,14 +195,14 @@ func main() {
 
 	var auditService *audit.Service
 	if pool != nil {
-		auditRepo := audit.NewPostgresRepository(pool)
+		auditRepo := postgres.NewAuditRepository(pool)
 		auditService = audit.NewService(auditRepo, 1024)
 	}
 
 	// Setup routes
 	var taskService *task.TaskService
 	if pool != nil {
-		taskService = task.RegisterTaskRoutes(r, pool, auditService, composite)
+		taskService = task.RegisterTaskRoutes(r, postgres.NewTaskRepository(pool), auditService, composite)
 	}
 
 	// Phase 7: auto-scheduler — derives a profile from task data and suggests a
@@ -210,12 +212,12 @@ func main() {
 	}
 
 	if pool != nil {
-		tasklist.RegisterTaskListRoutes(r, pool, composite, taskService)
+		tasklist.RegisterTaskListRoutes(r, postgres.NewTaskListRepository(pool), composite, taskService)
 	}
 
 	var flagService *featureflag.Service
 	if pool != nil {
-		flagService = featureflag.RegisterFeatureFlagRoutes(r, pool, auditService)
+		flagService = featureflag.RegisterFeatureFlagRoutes(r, postgres.NewFeatureFlagRepository(pool), auditService)
 	}
 
 	pomodoro.RegisterPomodoroRoutes(r, nil, auditService, composite)
@@ -225,11 +227,11 @@ func main() {
 	// subscription targets the in-memory bus (CompositeBus.Subscribe is a
 	// no-op by design — see eventbus/composite.go); pomodoro events reach it
 	// because the composite fans out to every child.
-	insights.RegisterInsightsRoutes(r, pool, inMemoryBus, flagService)
+	insights.RegisterInsightsRoutes(r, postgres.NewInsightsRepository(pool), inMemoryBus, flagService)
 
 	// Phase 9c: offline-first sync — GET /api/v1/sync?since=... returns the
 	// incremental changes (active + soft-deleted rows) for mobile Room DBs.
-	syncstore.RegisterSyncStoreRoutes(r, pool)
+	persistence.RegisterSyncStoreRoutes(r, postgres.NewSyncRepository(pool))
 
 	// Backup & Restore — full snapshot of the non-sensitive data as JSON for
 	// disaster recovery (export = download, import = replace backed-up tables).
@@ -248,7 +250,7 @@ func main() {
 		if region == "" {
 			region = "us-east-1"
 		}
-		s3Uploader, err := media.NewS3Uploader(context.Background(), bucket, region)
+		s3Uploader, err := storage.NewS3Uploader(context.Background(), bucket, region)
 		if err != nil {
 			log.Warn().Err(err).Msg("media uploads disabled — S3 not configured")
 		} else {
@@ -259,7 +261,7 @@ func main() {
 		if dir == "" {
 			dir = "./data/media"
 		}
-		localUploader, err := media.NewFilesystemUploader(dir, os.Getenv("MEDIA_PUBLIC_BASE_URL"))
+		localUploader, err := storage.NewFilesystemUploader(dir, os.Getenv("MEDIA_PUBLIC_BASE_URL"))
 		if err != nil {
 			log.Warn().Err(err).Msg("media uploads disabled — local storage not configured")
 		} else {
@@ -272,7 +274,7 @@ func main() {
 
 	// Phase 5a: Recipes — depends on the media uploader (optional) for images.
 	if pool != nil {
-		recipe.RegisterRecipeRoutes(r, pool, auditService, composite, uploads)
+		recipe.RegisterRecipeRoutes(r, postgres.NewRecipeRepository(pool), auditService, composite, uploads)
 	}
 
 	// Library: media tracking (movies, series, books, games) with a done flag,
@@ -284,11 +286,11 @@ func main() {
 	// nothing is configured the feature runs in degraded mode (score search
 	// returns 503), per ADR 007. Replaces the Phase 5 booktrack module.
 	if pool != nil {
-		settingsService, scoreManager := scoringsettings.RegisterScoreProviderRoutes(r, pool, auditService, flagService, shared.LoadScoreProviderConfig())
+		settingsService, scoreManager := scoring.RegisterScoreProviderRoutes(r, postgres.NewScoringRepository(pool), auditService, flagService, config.LoadScoreProviderConfig())
 		if err := settingsService.ApplyConfig(context.Background()); err != nil {
 			log.Warn().Err(err).Msg("library score lookup disabled — invalid provider config")
 		}
-		library.RegisterLibraryRoutes(r, pool, auditService, composite, scoreManager, flagService)
+		library.RegisterLibraryRoutes(r, postgres.NewLibraryRepository(pool), auditService, composite, scoreManager, flagService)
 	}
 
 	// Setup server
@@ -315,7 +317,7 @@ func main() {
 
 	// Start the internal metrics server on a separate, non-public port (:9090).
 	// Prometheus scrapes metrics from here; the public router never exposes /metrics.
-	internalMetricsServer := shared.SetupInternalMetricsServer(metrics)
+	internalMetricsServer := observability.SetupInternalMetricsServer(metrics)
 	go func() {
 		log.Info().Str("addr", internalMetricsServer.Addr).Msg("internal metrics server listening")
 		if err := internalMetricsServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -435,7 +437,7 @@ func healthHandler(pool *pgxpool.Pool, version string) http.HandlerFunc {
 			statusCode = http.StatusServiceUnavailable
 		}
 
-		shared.WriteJSON(w, statusCode, HealthResponse{
+		httpx.WriteJSON(w, statusCode, HealthResponse{
 			Status:  overallStatus,
 			Version: version,
 			DB:      dbStatus,
@@ -459,7 +461,7 @@ func clientErrorHandler(w http.ResponseWriter, r *http.Request) {
 
 	var req clientErrorRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Message == "" {
-		shared.WriteError(w, http.StatusBadRequest, "invalid error payload")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid error payload")
 		return
 	}
 
