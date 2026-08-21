@@ -11,6 +11,8 @@ import (
 	"github.com/diegobraga92/pudimproductivity/backend/pkg/uuid"
 )
 
+// TODO: Add a proper shutdown
+
 const (
 	auditWriteTimeout        = 5 * time.Second
 	maxAuditQueryLimit       = 100

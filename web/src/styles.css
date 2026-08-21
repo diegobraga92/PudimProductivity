@@ -1000,7 +1000,8 @@ h1, h2, h3, h4, h5, h6 {
   align-items: center;
   gap: 0.2rem;
   padding: 0.15rem 0.5rem;
-  background: rgba(255, 255, 255, 0.25);
+  background: var(--color-primary-subtle);
+  color: var(--color-primary-dark);
   border-radius: var(--radius-full);
   font-size: var(--font-size-xs);
   font-weight: 600;
@@ -1055,9 +1056,8 @@ h1, h2, h3, h4, h5, h6 {
 
 /* --- Header --- */
 .app-header {
-  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
-  color: white;
-  box-shadow: 0 2px 12px rgba(234, 88, 12, 0.25);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -1078,7 +1078,7 @@ h1, h2, h3, h4, h5, h6 {
   cursor: pointer;
   border: none;
   background: transparent;
-  color: white;
+  color: var(--color-text);
   font-family: var(--font-family);
   padding: 0;
   flex-shrink: 0;
@@ -1118,25 +1118,23 @@ h1, h2, h3, h4, h5, h6 {
   gap: 0.35rem;
   padding: 0 0.8rem;
   background: transparent;
-  color: white;
+  color: var(--color-text-secondary);
   border: none;
   border-bottom: 3px solid transparent;
   cursor: pointer;
   font-family: var(--font-family);
   font-size: var(--font-size-sm);
   transition: all var(--transition-fast);
-  opacity: 0.82;
   white-space: nowrap;
 }
 .nav-tab:hover {
-  opacity: 1;
-  background: rgba(255, 255, 255, 0.1);
+  color: var(--color-text);
+  background: var(--color-border-light);
 }
 .nav-tab.active {
-  background: rgba(255, 255, 255, 0.2);
-  border-bottom-color: white;
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
   font-weight: 600;
-  opacity: 1;
 }
 
 /* Desktop "More" overflow menu (health/status + server settings) */
@@ -1201,7 +1199,6 @@ h1, h2, h3, h4, h5, h6 {
   align-items: center;
   gap: 0.4rem;
   font-size: var(--font-size-xs);
-  opacity: 0.85;
   flex-shrink: 0;
 }
 .status-dot {
@@ -1212,10 +1209,13 @@ h1, h2, h3, h4, h5, h6 {
   flex-shrink: 0;
 }
 .status-dot.online {
-  background: #00b894;
+  background: var(--color-done);
 }
 .status-dot.offline {
-  background: #d63031;
+  background: var(--color-danger);
+}
+.conn-label {
+  color: var(--color-text-secondary);
 }
 
 /* Mobile hamburger */
@@ -1225,17 +1225,18 @@ h1, h2, h3, h4, h5, h6 {
   justify-content: center;
   width: 40px;
   height: 40px;
-  border: none;
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.15);
-  color: white;
-  font-size: 1.25rem;
+  background: transparent;
+  color: var(--color-text-secondary);
   line-height: 1;
   cursor: pointer;
   flex-shrink: 0;
+  transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
 }
 .menu-button:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: var(--color-border-light);
+  color: var(--color-text);
 }
 
 /* --- Slide-out drawer (mobile nav) --- */
@@ -1486,17 +1487,17 @@ body {
   width: 30px;
   height: 30px;
   border-radius: var(--radius-full);
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  background: rgba(255, 255, 255, 0.15);
-  color: white;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-secondary);
   cursor: pointer;
-  font-size: 0.9rem;
   line-height: 1;
   padding: 0;
-  transition: background var(--transition-fast);
+  transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
 }
 .theme-toggle:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: var(--color-border-light);
+  color: var(--color-text);
 }
 
 

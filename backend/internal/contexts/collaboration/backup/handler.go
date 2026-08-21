@@ -13,9 +13,8 @@ import (
 	httpx "github.com/diegobraga92/pudimproductivity/backend/internal/platform/http"
 )
 
-// maxImportBytes caps the size of an upload so a huge/malicious body can't
-// exhaust server memory. 50 MiB is far beyond the realistic size of a
-// text-only backup for a single-user app.
+// maxImportBytes caps the size of an upload.
+// Used to prevent huge/malicious body from exhausthing server memory
 const maxImportBytes = 50 << 20 // 50 MiB
 
 // Handler is the HTTP transport for the backup module.
@@ -24,12 +23,13 @@ type Handler struct {
 	appVersion string
 }
 
+// NewHandler is the Handler constructor
 func NewHandler(service *Service, appVersion string) *Handler {
 	return &Handler{service: service, appVersion: appVersion}
 }
 
-// Export handles GET /api/v1/backup/export. It streams a full backup of the
-// non-sensitive data as a JSON download.
+// Export handles the GET endpoint.
+// It streams a full backup of the non-sensitive data as a JSON download.
 func (h *Handler) Export(w http.ResponseWriter, r *http.Request) {
 	data, err := h.service.Export(r.Context(), h.appVersion)
 	if err != nil {

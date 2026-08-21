@@ -1,9 +1,31 @@
 import { useQuery } from "@tanstack/react-query";
 import { lazy, Suspense, useEffect, useState } from "react";
+import type { ComponentType } from "react";
 import { getHealth, type HealthResponse } from "./api/client";
 import { AlarmProvider } from "./components/AlarmProvider";
 import { AlarmToast } from "./components/AlarmToast";
 import { ConfirmProvider } from "./components/ConfirmProvider";
+import {
+  BellIcon,
+  CalendarIcon,
+  ChartIcon,
+  ClockIcon,
+  CloseIcon,
+  DashboardIcon,
+  FilmIcon,
+  FolderIcon,
+  GlobeIcon,
+  HeartPulseIcon,
+  MenuIcon,
+  MoonIcon,
+  MoreIcon,
+  MusicIcon,
+  SettingsIcon,
+  SunIcon,
+  TasksIcon,
+  UtensilsIcon,
+  type IconProps,
+} from "./components/icons";
 import { ToastProvider } from "./components/ToastProvider";
 import { ToastStack } from "./components/ToastStack";
 import { useAlarm } from "./components/useAlarm";
@@ -32,24 +54,30 @@ const ServerSettings = lazy(() => import("./pages/ServerSettings"));
 
 type Page = "dashboard" | "tasks" | "lists" | "planner" | "pomodoro" | "soundscape" | "recipes" | "library" | "insights" | "health" | "settings";
 
+type NavItem = {
+  id: Page;
+  labelKey: string;
+  icon: ComponentType<IconProps>;
+};
+
 // Primary tabs always visible on the desktop nav bar.
-const NAV_ITEMS: { id: Page; labelKey: string; icon: string }[] = [
-  { id: "dashboard", labelKey: "nav.dashboard", icon: "🏠" },
-  { id: "tasks", labelKey: "nav.tasks", icon: "📋" },
-  { id: "lists", labelKey: "nav.lists", icon: "📁" },
-  { id: "planner", labelKey: "nav.planner", icon: "📅" },
-  { id: "pomodoro", labelKey: "nav.timer", icon: "🍅" },
-  { id: "soundscape", labelKey: "nav.sounds", icon: "🎵" },
-  { id: "recipes", labelKey: "nav.recipes", icon: "🍳" },
-  { id: "library", labelKey: "nav.library", icon: "🎬" },
-  { id: "insights", labelKey: "nav.insights", icon: "🧠" },
+const NAV_ITEMS: NavItem[] = [
+  { id: "dashboard", labelKey: "nav.dashboard", icon: DashboardIcon },
+  { id: "tasks", labelKey: "nav.tasks", icon: TasksIcon },
+  { id: "lists", labelKey: "nav.lists", icon: FolderIcon },
+  { id: "planner", labelKey: "nav.planner", icon: CalendarIcon },
+  { id: "pomodoro", labelKey: "nav.timer", icon: ClockIcon },
+  { id: "soundscape", labelKey: "nav.sounds", icon: MusicIcon },
+  { id: "recipes", labelKey: "nav.recipes", icon: UtensilsIcon },
+  { id: "library", labelKey: "nav.library", icon: FilmIcon },
+  { id: "insights", labelKey: "nav.insights", icon: ChartIcon },
 ];
 
 // Secondary pages tucked into the desktop "More" dropdown so the top bar does
 // not overflow (the health/status item was previously pushed off-screen).
-const MORE_ITEMS: { id: Page; labelKey: string; icon: string }[] = [
-  { id: "health", labelKey: "nav.health", icon: "💚" },
-  { id: "settings", labelKey: "nav.serverSettings", icon: "⚙️" },
+const MORE_ITEMS: NavItem[] = [
+  { id: "health", labelKey: "nav.health", icon: HeartPulseIcon },
+  { id: "settings", labelKey: "nav.serverSettings", icon: SettingsIcon },
 ];
 
 function PageFallback() {
@@ -83,7 +111,7 @@ function HeaderBadge() {
   if (activeAlarms.length === 0) return null;
   return (
     <span className="alarm-badge" title={t("alarm.activeBadge", { count: activeAlarms.length })}>
-      🔔 {activeAlarms.length}
+      <BellIcon size={13} /> {activeAlarms.length}
     </span>
   );
 }
@@ -157,7 +185,7 @@ function AppInner() {
                 className={`nav-tab ${page === tab.id ? "active" : ""}`}
                 onClick={() => go(tab.id)}
               >
-                <span>{tab.icon}</span>
+                <span className="nav-icon"><tab.icon size={16} /></span>
                 <span>{t(tab.labelKey)}</span>
               </button>
             ))}
@@ -171,7 +199,7 @@ function AppInner() {
               aria-haspopup="true"
               aria-expanded={moreOpen}
             >
-              <span>⋯</span>
+              <span className="nav-icon"><MoreIcon size={16} /></span>
               <span>{t("nav.more")}</span>
             </button>
             {moreOpen && (
@@ -185,7 +213,7 @@ function AppInner() {
                       className={`more-menu-item ${page === item.id ? "active" : ""}`}
                       onClick={() => go(item.id)}
                     >
-                      <span className="more-menu-icon">{item.icon}</span>
+                      <span className="more-menu-icon"><item.icon size={16} /></span>
                       <span>{t(item.labelKey)}</span>
                     </button>
                   ))}
@@ -202,9 +230,8 @@ function AppInner() {
               onClick={toggleLang}
               title={lang === "en" ? t("lang.portuguese") : t("lang.english")}
               aria-label={lang === "en" ? t("lang.portuguese") : t("lang.english")}
-              style={{ fontSize: "0.95rem" }}
             >
-              {lang === "en" ? "🇧🇷" : "🇺🇸"}
+              <GlobeIcon size={15} />
             </button>
             <button
               className="theme-toggle"
@@ -212,7 +239,7 @@ function AppInner() {
               title={theme === "dark" ? t("theme.light") : t("theme.dark")}
               aria-label={theme === "dark" ? t("theme.light") : t("theme.dark")}
             >
-              {theme === "dark" ? "☀️" : "🌙"}
+              {theme === "dark" ? <SunIcon size={15} /> : <MoonIcon size={15} />}
             </button>
             <span className={`status-dot ${isBackendOk ? "online" : "offline"}`} />
             <span className="conn-label">{isBackendOk ? t("status.connected") : t("status.offline")}</span>
@@ -220,7 +247,7 @@ function AppInner() {
 
           {/* Mobile hamburger */}
           <button className="menu-button" onClick={() => setMenuOpen(true)} aria-label={t("a11y.openMenu")}>
-            ☰
+            <MenuIcon size={20} />
           </button>
         </div>
       </header>
@@ -234,7 +261,7 @@ function AppInner() {
                 <span>🍮</span> Pudim
               </span>
               <button className="nav-drawer-close" onClick={() => setMenuOpen(false)} aria-label={t("a11y.closeMenu")}>
-                ✕
+                <CloseIcon size={16} />
               </button>
             </div>
             {NAV_ITEMS.map((item) => (
@@ -243,7 +270,7 @@ function AppInner() {
                 className={`nav-drawer-item ${page === item.id ? "active" : ""}`}
                 onClick={() => go(item.id)}
               >
-                <span className="nav-icon">{item.icon}</span>
+                <span className="nav-icon"><item.icon size={18} /></span>
                 <span>{t(item.labelKey)}</span>
               </button>
             ))}
@@ -253,7 +280,7 @@ function AppInner() {
                 className={`nav-drawer-item ${page === item.id ? "active" : ""}`}
                 onClick={() => go(item.id)}
               >
-                <span className="nav-icon">{item.icon}</span>
+                <span className="nav-icon"><item.icon size={18} /></span>
                 <span>{t(item.labelKey)}</span>
               </button>
             ))}
