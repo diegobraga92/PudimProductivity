@@ -553,6 +553,7 @@
   "widgets.tasks.more": "+{count} more",
   "widgets.tasks.allDoneShort": "all done",
   "widgets.tasks.noTasksShort": "no tasks",
+  "widgets.tasks.doneOfTotal": "{done} of {total} done",
   "widgets.habits.title": "Today's Habits",
   "widgets.habits.empty": "No habits scheduled today",
   "widgets.habits.open": "Open habits",
@@ -560,6 +561,7 @@
   "widgets.habits.uncomplete": "Uncomplete {title} for today",
   "widgets.habits.doneScheduled": "done/scheduled",
   "widgets.habits.noneToday": "none today",
+  "widgets.habits.doneOfScheduled": "{done} of {total} done",
   "widgets.moreInApp": "+{count} more in the app",
   "widgets.openInApp": "{title} — open in app",
 

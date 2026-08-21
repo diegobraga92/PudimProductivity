@@ -1,7 +1,9 @@
 package com.pudimproductivity.widget
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
 import androidx.glance.LocalSize
@@ -41,6 +43,12 @@ internal val ProgressBarHeight = 8.dp
 /** Padding the card applies on each side — used to compute the inner width. */
 internal val CardHorizontalPadding = 12.dp
 
+/** Width of the left progress panel in the 4×2 (and taller) widget layouts. */
+internal val WidgetProgressPanelWidth = 64.dp
+
+/** Gap between the progress panel and the task column in the same layouts. */
+internal val WidgetPanelGap = 8.dp
+
 /**
  * Shared scaffolding for the Tasks and Habits widgets so both cards stay
  * visually identical. Glance 1.1.1 has no `weight`, no `Arrangement`, no
@@ -56,7 +64,7 @@ internal fun WidgetCard(content: @Composable ColumnScope.() -> Unit) {
         modifier = GlanceModifier
             .fillMaxSize()
             .cornerRadius(WidgetCornerRadius)
-            .background(GlanceTheme.colors.background)
+            .background(GlanceTheme.colors.surface)
             .padding(CardHorizontalPadding)
     ) {
         content()
@@ -139,24 +147,68 @@ internal fun WidgetAddButton(onClick: Action) {
 internal fun WidgetProgress(
     progress: Float,
     color: ColorProvider,
-    modifier: GlanceModifier = GlanceModifier
+    modifier: GlanceModifier = GlanceModifier,
+    width: Dp? = null
 ) {
     val fraction = progress.coerceIn(0f, 1f)
-    val innerWidth = (LocalSize.current.width - CardHorizontalPadding * 2).coerceAtLeast(0.dp)
+    val barWidth = width ?: (LocalSize.current.width - CardHorizontalPadding * 2).coerceAtLeast(0.dp)
     Row(
         modifier = modifier
-            .fillMaxWidth()
+            .width(barWidth)
             .height(ProgressBarHeight)
             .cornerRadius(ProgressBarHeight / 2)
             .background(GlanceTheme.colors.surfaceVariant)
     ) {
         Box(
             modifier = GlanceModifier
-                .width(innerWidth * fraction)
+                .width(barWidth * fraction)
                 .fillMaxHeight()
                 .cornerRadius(ProgressBarHeight / 2)
                 .background(color)
         ) { }
+    }
+}
+
+/**
+ * Left-side progress panel: dominant completion number, a small "of N done"
+ * label and the thin pill bar. Used by the 4×2 (and taller) widget layouts so
+ * progress is readable at a glance without opening the app.
+ */
+@Composable
+internal fun WidgetProgressPanel(
+    done: Int,
+    total: Int,
+    color: ColorProvider,
+    ofLabel: String,
+    barWidth: Dp = 56.dp,
+    modifier: GlanceModifier = GlanceModifier
+) {
+    Column(modifier = modifier) {
+        Text(
+            text = done.toString(),
+            maxLines = 1,
+            style = TextStyle(
+                color = GlanceTheme.colors.onSurface,
+                fontWeight = FontWeight.Bold,
+                fontSize = 28.sp
+            )
+        )
+        if (total > 0) {
+            Text(
+                text = ofLabel,
+                maxLines = 2,
+                style = TextStyle(
+                    color = GlanceTheme.colors.onSurfaceVariant,
+                    fontSize = 10.sp
+                )
+            )
+            Spacer(GlanceModifier.height(4.dp))
+            WidgetProgress(
+                progress = done / total.toFloat(),
+                color = color,
+                width = barWidth
+            )
+        }
     }
 }
 
@@ -184,7 +236,7 @@ internal fun WidgetProgressRing(
             modifier = GlanceModifier
                 .size(24.dp)
                 .cornerRadius(12.dp)
-                .background(GlanceTheme.colors.background)
+                .background(GlanceTheme.colors.surface)
         ) { }
         Text(
             text = "$done/$scheduled",

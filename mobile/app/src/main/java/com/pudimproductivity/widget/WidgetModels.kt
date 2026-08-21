@@ -18,11 +18,17 @@ data class TaskRow(val id: String, val title: String, val done: Boolean)
 
 /** Full state for the "Today's Tasks" widget. */
 data class TasksSnapshot(
-    val pending: List<TaskRow>,
+    /**
+     * All rows in display order: pending first, then done (alphabetical within
+     * each group). Done rows stay visible so completed work reinforces
+     * progress — they render with a restrained strikethrough.
+     */
+    val visible: List<TaskRow>,
     val done: Int,
     val total: Int
 ) {
     /** Tasks still to complete — what the widget header should emphasise. */
+    val pending: List<TaskRow> get() = visible.filterNot { it.done }
     val remaining: Int get() = pending.size
 }
 
@@ -44,17 +50,18 @@ data class HabitsSnapshot(
 
 /**
  * Pure mapping for the Tasks widget: only one-off tasks (no recurrence) are
- * shown — recurring habits live in the Habits widget. Pending first, then
- * done, each group ordered by title.
+ * shown — recurring habits live in the Habits widget. Rows are ordered
+ * pending first, then done, each group alphabetically, so the widget can show
+ * completed tasks without hiding the work still to do.
  */
 fun buildTasksSnapshot(tasks: List<LocalTask>): TasksSnapshot {
     val rows = tasks
         .filter { !it.deleted && it.list_id == null && it.recurrence_days.isNullOrEmpty() }
-        .sortedWith(compareBy({ it.status != "done" }, { it.title.lowercase() }))
+        .sortedWith(compareBy({ it.status == "done" }, { it.title.lowercase() }))
         .map { TaskRow(id = it.id, title = it.title, done = it.status == "done") }
 
     return TasksSnapshot(
-        pending = rows.filterNot { it.done },
+        visible = rows,
         done = rows.count { it.done },
         total = rows.size
     )

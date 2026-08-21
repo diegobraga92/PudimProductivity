@@ -60,6 +60,9 @@ class WidgetModelsTest {
         assertEquals(1, snapshot.remaining)
         assertEquals("Buy milk", snapshot.pending.first().title)
         assertFalse(snapshot.pending.any { it.id == "4" })
+        // Done rows stay visible after pending ones (concept: completed work
+        // reinforces progress in the task list too).
+        assertEquals(listOf("Buy milk", "Read"), snapshot.visible.map { it.title })
     }
 
     @Test
@@ -75,6 +78,23 @@ class WidgetModelsTest {
         assertEquals(listOf("Apple", "Banana"), snapshot.pending.map { it.title })
         assertEquals(1, snapshot.done)
         assertEquals(2, snapshot.remaining)
+    }
+
+    @Test
+    fun `tasks snapshot visible lists pending first then done`() {
+        val snapshot = buildTasksSnapshot(
+            listOf(
+                task("1", "Zebra", status = "done"),
+                task("2", "Apple"),
+                task("3", "Banana", status = "done"),
+                task("4", "Yak")
+            )
+        )
+
+        assertEquals(listOf("Apple", "Yak", "Banana", "Zebra"), snapshot.visible.map { it.title })
+        assertEquals(listOf("Apple", "Yak"), snapshot.pending.map { it.title })
+        assertEquals(2, snapshot.done)
+        assertEquals(4, snapshot.total)
     }
 
     @Test
