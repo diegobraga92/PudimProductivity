@@ -31,6 +31,7 @@ func NewHandler(service *Service, appVersion string) *Handler {
 // Export handles the GET endpoint.
 // It streams a full backup of the non-sensitive data as a JSON download.
 func (h *Handler) Export(w http.ResponseWriter, r *http.Request) {
+	// TODO: Check about using io.Writer or similar to avoid putting a gigantic DB in RAM
 	data, err := h.service.Export(r.Context(), h.appVersion)
 	if err != nil {
 		log.Error().Err(err).Msg("backup export failed")
@@ -48,23 +49,25 @@ func (h *Handler) Export(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Import handles POST /api/v1/backup/import. It validates and restores a
-// backup, replacing the current contents of every backed-up table. The restore
-// is transactional — a malformed or incompatible backup changes nothing.
+// Import handles the POST endpoint.
+// It validates and restores a backup, replacing the current contents.
 func (h *Handler) Import(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxImportBytes)
 	data, err := io.ReadAll(r.Body)
 	if err != nil {
+		log.Error().Err(err).Msg("failed to read backup body")
 		httpx.WriteError(w, http.StatusBadRequest, "failed to read backup body")
 		return
 	}
 	if len(data) == 0 {
+		log.Error().Err(err).Msg("backup body is empty")
 		httpx.WriteError(w, http.StatusBadRequest, "backup body is empty")
 		return
 	}
 
 	// Early syntax check so malformed payloads fail before touching the DB.
 	var probe BackupFile
+	// TODO: Check about leaving Unmarshal check to be done on service-side
 	if err := json.Unmarshal(data, &probe); err != nil {
 		httpx.WriteError(w, http.StatusBadRequest, "invalid backup: not a valid backup JSON document")
 		return

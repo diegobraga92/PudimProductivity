@@ -9,11 +9,7 @@ import (
 )
 
 // RegisterBackupRoutes wires the Backup module onto the router.
-//
-// Both endpoints require an authenticated user, matching every other mutating
-// route in the app (the dev identity headers X-User-ID / X-User-Role). Export
-// is idempotent and Import is the destructive counterpart, so the UI prompts
-// for confirmation before posting a file.
+// Endpoints require admin due to the nature of the operations.
 func RegisterBackupRoutes(r chi.Router, pool *pgxpool.Pool, appVersion string) {
 	service := NewService(pool)
 	handler := NewHandler(service, appVersion)

@@ -13,16 +13,12 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// Sentinel errors returned by Service.Import. The handler maps them to HTTP
-// 400 (user error) and everything else to 500 (internal failure).
+// Sentinel errors returned by Service.Import.
 var (
 	ErrInvalidBackup      = errors.New("invalid backup document")
 	ErrUnsupportedVersion = errors.New("unsupported backup version")
 )
 
-// backupTable describes one table included in backups. columns is a
-// "name type, name type, ..." list that shapes the jsonb_to_recordset import
-// alias; the names alone form the INSERT column list.
 type backupTable struct {
 	name     string // table name
 	idColumn string // column used to order rows for deterministic exports
@@ -39,18 +35,10 @@ func (t backupTable) columnNames() string {
 	return strings.Join(names, ", ")
 }
 
-// backupTables lists every table included in a backup, in dependency order —
-// parents before children, so foreign keys hold during import. TRUNCATE ...
-// CASCADE clears all of them before the inserts run.
-//
-// Deliberately excluded (sensitive or non-user data):
-//   - users            — PII (email addresses)
-//   - audit_log        — old_values/new_values JSONB may hold sensitive fields
-//   - notifications    — ephemeral delivery tracking, not user data
-//   - schema_migrations — infra bookkeeping owned by db.RunMigrations
-//   - score_providers / score_provider_config — rating-provider config; the
-//     providers table holds API keys (secrets), and the mapping is server config
-//     that is intentionally re-created from env/the admin UI, not restored
+// TODO: Check tables after migrations are finalized
+
+// backupTables lists every table included in a backup, in dependency order,
+// parents before children, so foreign keys hold during import.
 var backupTables = []backupTable{
 	{
 		name:     "feature_flags",
@@ -124,6 +112,7 @@ type Service struct {
 	pool *pgxpool.Pool
 }
 
+// NewService constructs a Service
 func NewService(pool *pgxpool.Pool) *Service {
 	return &Service{pool: pool}
 }
@@ -156,8 +145,9 @@ func (s *Service) Export(ctx context.Context, appVersion string) ([]byte, error)
 	return data, nil
 }
 
-// readTable returns all rows of a table as a JSON array via row_to_json. Using
-// Postgres-side JSON keeps UUID/timestamptz/array/jsonb values lossless.
+// TODO: Check about using json_array_length to count lines, instead of doing unmarshall in export and import
+
+// readTable returns all rows of a table as a JSON array.
 func (s *Service) readTable(ctx context.Context, table backupTable) (json.RawMessage, error) {
 	q := fmt.Sprintf(
 		`SELECT COALESCE(json_agg(row_to_json(t) ORDER BY t.%s), '[]'::json) FROM %s t`,
@@ -170,10 +160,8 @@ func (s *Service) readTable(ctx context.Context, table backupTable) (json.RawMes
 	return raw, nil
 }
 
-// Import validates a backup and restores it into the database, replacing the
-// current contents of every backed-up table. The whole operation runs in a
-// single transaction: on any error every change is rolled back and the
-// pre-restore data is left untouched.
+// Import validates a backup and restores it into the database, replacing the current contents.
+// On any error every change is rolled back and the pre-restore data is left untouched.
 func (s *Service) Import(ctx context.Context, data []byte) (ImportResult, error) {
 	var backup BackupFile
 	if err := json.Unmarshal(data, &backup); err != nil {
@@ -219,6 +207,8 @@ func (s *Service) Import(ctx context.Context, data []byte) (ImportResult, error)
 	return result, nil
 }
 
+// TODO: Check about adding timeout for contexts, this and any others
+
 func (s *Service) truncateAll(ctx context.Context, tx pgx.Tx) error {
 	names := make([]string, len(backupTables))
 	for i, t := range backupTables {
@@ -230,6 +220,8 @@ func (s *Service) truncateAll(ctx context.Context, tx pgx.Tx) error {
 	}
 	return nil
 }
+
+// TODO: Add log or similar in case jsonb_to_recordset discards additional columns, or nulls missing columns
 
 func (s *Service) insertTable(ctx context.Context, tx pgx.Tx, table backupTable, raw json.RawMessage) (int, error) {
 	names := table.columnNames()
