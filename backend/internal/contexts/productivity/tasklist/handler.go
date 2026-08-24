@@ -20,8 +20,8 @@ func NewHandler(service *TaskListService) *Handler {
 	return &Handler{service: service}
 }
 
-// DTO
-type taskListResponse struct {
+// TaskListResponse is the canonical wire shape for a task list.
+type TaskListResponse struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`
 	Description string `json:"description"`
@@ -45,21 +45,33 @@ type shareTaskListRequest struct {
 	Role       string `json:"role"`
 }
 
-type memberResponse struct {
+// MemberResponse is the canonical wire shape for a task-list share/membership.
+type MemberResponse struct {
 	ListID     string `json:"list_id"`
 	SharedWith string `json:"shared_with"`
 	Role       string `json:"role"`
 	CreatedAt  string `json:"created_at"`
 }
 
-func toTaskListResponse(l *TaskList) taskListResponse {
-	return taskListResponse{
+// ToTaskListResponse maps a list to its canonical wire shape.
+func ToTaskListResponse(l *TaskList) TaskListResponse {
+	return TaskListResponse{
 		ID:          l.ID,
 		Name:        l.Name,
 		Description: l.Description,
 		OwnerID:     l.OwnerID,
 		CreatedAt:   l.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		UpdatedAt:   l.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
+	}
+}
+
+// ToMemberResponse maps a share to its canonical wire shape.
+func ToMemberResponse(s *Share) MemberResponse {
+	return MemberResponse{
+		ListID:     s.ListID,
+		SharedWith: s.SharedWith,
+		Role:       string(s.Role),
+		CreatedAt:  s.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	}
 }
 
@@ -83,9 +95,9 @@ func (h *Handler) ListTaskLists(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	responses := make([]taskListResponse, len(lists))
+	responses := make([]TaskListResponse, len(lists))
 	for i, l := range lists {
-		responses[i] = toTaskListResponse(l)
+		responses[i] = ToTaskListResponse(l)
 	}
 
 	httpx.WriteJSON(w, http.StatusOK, responses)
@@ -111,7 +123,7 @@ func (h *Handler) CreateTaskList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpx.WriteJSON(w, http.StatusCreated, toTaskListResponse(list))
+	httpx.WriteJSON(w, http.StatusCreated, ToTaskListResponse(list))
 }
 
 // GET /api/v1/task-lists/{listId}
@@ -137,7 +149,7 @@ func (h *Handler) GetTaskList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpx.WriteJSON(w, http.StatusOK, toTaskListResponse(list))
+	httpx.WriteJSON(w, http.StatusOK, ToTaskListResponse(list))
 }
 
 // POST /api/v1/task-lists/{listId}/share — invites a user to the list.
@@ -232,14 +244,9 @@ func (h *Handler) ListMembers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	responses := make([]memberResponse, len(shares))
+	responses := make([]MemberResponse, len(shares))
 	for i, s := range shares {
-		responses[i] = memberResponse{
-			ListID:     s.ListID,
-			SharedWith: s.SharedWith,
-			Role:       string(s.Role),
-			CreatedAt:  s.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
-		}
+		responses[i] = ToMemberResponse(s)
 	}
 	httpx.WriteJSON(w, http.StatusOK, responses)
 }
@@ -269,7 +276,7 @@ func (h *Handler) UpdateTaskList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpx.WriteJSON(w, http.StatusOK, toTaskListResponse(list))
+	httpx.WriteJSON(w, http.StatusOK, ToTaskListResponse(list))
 }
 
 // DELETE /api/v1/task-lists/{listId}

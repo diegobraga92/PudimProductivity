@@ -84,7 +84,9 @@ type updateTaskRequest struct {
 	AlarmMinutes   optional.Optional[int]    `json:"alarm_minutes"`
 }
 
-type taskCompletionResponse struct {
+// TaskCompletionResponse is the canonical wire shape for a task completion
+// (see GET /api/v1/tasks/{taskId}/completions and the offline-sync bundle).
+type TaskCompletionResponse struct {
 	ID            string `json:"id"`
 	TaskID        string `json:"task_id"`
 	CompletedDate string `json:"completed_date"`
@@ -108,8 +110,9 @@ func ToTaskResponse(t *Task) TaskResponse {
 	}
 }
 
-func toCompletionResponse(c *TaskCompletion) taskCompletionResponse {
-	return taskCompletionResponse{
+// ToTaskCompletionResponse maps a completion to its canonical wire shape.
+func ToTaskCompletionResponse(c *TaskCompletion) TaskCompletionResponse {
+	return TaskCompletionResponse{
 		ID:            c.ID,
 		TaskID:        c.TaskID,
 		CompletedDate: c.CompletedDate.Format("2006-01-02"),
@@ -324,7 +327,7 @@ func (h *Handler) CompleteTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpx.WriteJSON(w, http.StatusCreated, toCompletionResponse(completion))
+	httpx.WriteJSON(w, http.StatusCreated, ToTaskCompletionResponse(completion))
 }
 
 // DELETE /api/v1/tasks/{taskId}/complete
@@ -388,9 +391,9 @@ func (h *Handler) GetAllCompletions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	responses := make([]taskCompletionResponse, len(completions))
+	responses := make([]TaskCompletionResponse, len(completions))
 	for i, c := range completions {
-		responses[i] = toCompletionResponse(c)
+		responses[i] = ToTaskCompletionResponse(c)
 	}
 
 	httpx.WriteJSON(w, http.StatusOK, responses)
@@ -444,9 +447,9 @@ func (h *Handler) GetTaskCompletions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	responses := make([]taskCompletionResponse, len(completions))
+	responses := make([]TaskCompletionResponse, len(completions))
 	for i, c := range completions {
-		responses[i] = toCompletionResponse(c)
+		responses[i] = ToTaskCompletionResponse(c)
 	}
 
 	httpx.WriteJSON(w, http.StatusOK, responses)

@@ -8,6 +8,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/diegobraga92/pudimproductivity/backend/internal/contexts/collaboration/sync/persistence"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/contexts/productivity/task"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/contexts/productivity/tasklist"
 )
 
 type SyncRepository struct {
@@ -18,50 +20,25 @@ func NewSyncRepository(pool *pgxpool.Pool) *SyncRepository {
 	return &SyncRepository{pool: pool}
 }
 
-func (r *SyncRepository) Bundle(ctx context.Context, since time.Time) (*persistence.Bundle, error) {
-	b := &persistence.Bundle{Timestamp: time.Now().UTC().Format(time.RFC3339)}
+func (r *SyncRepository) Bundle(ctx context.Context, since time.Time) (*persistence.ChangeSet, error) {
+	cs := &persistence.ChangeSet{Timestamp: time.Now().UTC()}
 
-	if err := r.loadTasks(ctx, since, b); err != nil {
+	if err := r.loadTasks(ctx, since, cs); err != nil {
 		return nil, err
 	}
-	if err := r.loadCompletions(ctx, since, b); err != nil {
+	if err := r.loadCompletions(ctx, since, cs); err != nil {
 		return nil, err
 	}
-	if err := r.loadTaskLists(ctx, since, b); err != nil {
+	if err := r.loadTaskLists(ctx, since, cs); err != nil {
 		return nil, err
 	}
-	if err := r.loadShares(ctx, since, b); err != nil {
+	if err := r.loadShares(ctx, since, cs); err != nil {
 		return nil, err
 	}
-
-	if b.Tasks == nil {
-		b.Tasks = make([]persistence.TaskDTO, 0)
-	}
-	if b.DeletedTaskIDs == nil {
-		b.DeletedTaskIDs = make([]string, 0)
-	}
-	if b.Completions == nil {
-		b.Completions = make([]persistence.CompletionDTO, 0)
-	}
-	if b.DeletedCompletionIDs == nil {
-		b.DeletedCompletionIDs = make([]string, 0)
-	}
-	if b.TaskLists == nil {
-		b.TaskLists = make([]persistence.TaskListDTO, 0)
-	}
-	if b.DeletedTaskListIDs == nil {
-		b.DeletedTaskListIDs = make([]string, 0)
-	}
-	if b.Shares == nil {
-		b.Shares = make([]persistence.ShareDTO, 0)
-	}
-	if b.DeletedShareKeys == nil {
-		b.DeletedShareKeys = make([]string, 0)
-	}
-	return b, nil
+	return cs, nil
 }
 
-func (r *SyncRepository) loadTasks(ctx context.Context, since time.Time, b *persistence.Bundle) error {
+func (r *SyncRepository) loadTasks(ctx context.Context, since time.Time, cs *persistence.ChangeSet) error {
 	rows, err := r.pool.Query(ctx, `
 		SELECT id, title, status, recurrence_days, list_id, start_time, end_time,
 		       color, scheduled_date, alarm_minutes, created_at, updated_at
@@ -75,16 +52,15 @@ func (r *SyncRepository) loadTasks(ctx context.Context, since time.Time, b *pers
 	defer rows.Close()
 
 	for rows.Next() {
-		var t persistence.TaskDTO
-		var createdAt, updatedAt time.Time
+		t := &task.Task{}
 		// pgx cannot scan a DATE column into *string directly in binary mode —
 		// mirror task.scanTask and use an intermediate *time.Time for
 		// scheduled_date (start_time/end_time TIME columns scan into *string fine).
 		var scheduledDate *time.Time
 		if err := rows.Scan(
-			&t.ID, &t.Title, &t.Status, &t.RecurrenceDays, &t.ListID,
+			&t.ID, &t.Title, (*string)(&t.Status), &t.RecurrenceDays, &t.ListID,
 			&t.StartTime, &t.EndTime, &t.Color, &scheduledDate, &t.AlarmMinutes,
-			&createdAt, &updatedAt,
+			&t.CreatedAt, &t.UpdatedAt,
 		); err != nil {
 			return fmt.Errorf("scan sync task: %w", err)
 		}
@@ -92,9 +68,7 @@ func (r *SyncRepository) loadTasks(ctx context.Context, since time.Time, b *pers
 			s := scheduledDate.Format("2006-01-02")
 			t.ScheduledDate = &s
 		}
-		t.CreatedAt = createdAt.Format(time.RFC3339)
-		t.UpdatedAt = updatedAt.Format(time.RFC3339)
-		b.Tasks = append(b.Tasks, t)
+		cs.Tasks = append(cs.Tasks, t)
 	}
 	if err := rows.Err(); err != nil {
 		return fmt.Errorf("iterate sync tasks: %w", err)
@@ -112,12 +86,12 @@ func (r *SyncRepository) loadTasks(ctx context.Context, since time.Time, b *pers
 		if err := dRows.Scan(&id); err != nil {
 			return fmt.Errorf("scan deleted task id: %w", err)
 		}
-		b.DeletedTaskIDs = append(b.DeletedTaskIDs, id)
+		cs.DeletedTaskIDs = append(cs.DeletedTaskIDs, id)
 	}
 	return dRows.Err()
 }
 
-func (r *SyncRepository) loadCompletions(ctx context.Context, since time.Time, b *persistence.Bundle) error {
+func (r *SyncRepository) loadCompletions(ctx context.Context, since time.Time, cs *persistence.ChangeSet) error {
 	rows, err := r.pool.Query(ctx, `
 		SELECT id, task_id, completed_date, created_at
 		FROM task_completions
@@ -130,14 +104,11 @@ func (r *SyncRepository) loadCompletions(ctx context.Context, since time.Time, b
 	defer rows.Close()
 
 	for rows.Next() {
-		var c persistence.CompletionDTO
-		var date, createdAt time.Time
-		if err := rows.Scan(&c.ID, &c.TaskID, &date, &createdAt); err != nil {
+		c := &task.TaskCompletion{}
+		if err := rows.Scan(&c.ID, &c.TaskID, &c.CompletedDate, &c.CreatedAt); err != nil {
 			return fmt.Errorf("scan sync completion: %w", err)
 		}
-		c.CompletedDate = date.Format("2006-01-02")
-		c.CreatedAt = createdAt.Format(time.RFC3339)
-		b.Completions = append(b.Completions, c)
+		cs.Completions = append(cs.Completions, c)
 	}
 	if err := rows.Err(); err != nil {
 		return fmt.Errorf("iterate sync completions: %w", err)
@@ -155,12 +126,12 @@ func (r *SyncRepository) loadCompletions(ctx context.Context, since time.Time, b
 		if err := dRows.Scan(&id); err != nil {
 			return fmt.Errorf("scan deleted completion id: %w", err)
 		}
-		b.DeletedCompletionIDs = append(b.DeletedCompletionIDs, id)
+		cs.DeletedCompletionIDs = append(cs.DeletedCompletionIDs, id)
 	}
 	return dRows.Err()
 }
 
-func (r *SyncRepository) loadTaskLists(ctx context.Context, since time.Time, b *persistence.Bundle) error {
+func (r *SyncRepository) loadTaskLists(ctx context.Context, since time.Time, cs *persistence.ChangeSet) error {
 	rows, err := r.pool.Query(ctx, `
 		SELECT id, name, description, owner_id, created_at, updated_at
 		FROM task_lists
@@ -173,11 +144,11 @@ func (r *SyncRepository) loadTaskLists(ctx context.Context, since time.Time, b *
 	defer rows.Close()
 
 	for rows.Next() {
-		var l persistence.TaskListDTO
+		l := &tasklist.TaskList{}
 		if err := rows.Scan(&l.ID, &l.Name, &l.Description, &l.OwnerID, &l.CreatedAt, &l.UpdatedAt); err != nil {
 			return fmt.Errorf("scan sync task list: %w", err)
 		}
-		b.TaskLists = append(b.TaskLists, l)
+		cs.TaskLists = append(cs.TaskLists, l)
 	}
 	if err := rows.Err(); err != nil {
 		return fmt.Errorf("iterate sync task lists: %w", err)
@@ -195,12 +166,12 @@ func (r *SyncRepository) loadTaskLists(ctx context.Context, since time.Time, b *
 		if err := dRows.Scan(&id); err != nil {
 			return fmt.Errorf("scan deleted task list id: %w", err)
 		}
-		b.DeletedTaskListIDs = append(b.DeletedTaskListIDs, id)
+		cs.DeletedTaskListIDs = append(cs.DeletedTaskListIDs, id)
 	}
 	return dRows.Err()
 }
 
-func (r *SyncRepository) loadShares(ctx context.Context, since time.Time, b *persistence.Bundle) error {
+func (r *SyncRepository) loadShares(ctx context.Context, since time.Time, cs *persistence.ChangeSet) error {
 	rows, err := r.pool.Query(ctx, `
 		SELECT list_id, shared_with, role, created_at
 		FROM task_list_shares
@@ -213,11 +184,11 @@ func (r *SyncRepository) loadShares(ctx context.Context, since time.Time, b *per
 	defer rows.Close()
 
 	for rows.Next() {
-		var s persistence.ShareDTO
+		s := &tasklist.Share{}
 		if err := rows.Scan(&s.ListID, &s.SharedWith, &s.Role, &s.CreatedAt); err != nil {
 			return fmt.Errorf("scan sync share: %w", err)
 		}
-		b.Shares = append(b.Shares, s)
+		cs.Shares = append(cs.Shares, s)
 	}
 	if err := rows.Err(); err != nil {
 		return fmt.Errorf("iterate sync shares: %w", err)
@@ -236,7 +207,7 @@ func (r *SyncRepository) loadShares(ctx context.Context, since time.Time, b *per
 		if err := dRows.Scan(&listID, &sharedWith); err != nil {
 			return fmt.Errorf("scan deleted share key: %w", err)
 		}
-		b.DeletedShareKeys = append(b.DeletedShareKeys, listID+":"+sharedWith)
+		cs.DeletedShareKeys = append(cs.DeletedShareKeys, listID+":"+sharedWith)
 	}
 	return dRows.Err()
 }
