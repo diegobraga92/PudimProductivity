@@ -9,7 +9,7 @@ import (
 // MembershipResolver resolves which task lists a user can access. It is used by
 // the hub to (a) scope event dispatch to list members and (b) compute presence.
 //
-// Phase 8: the collab package provides a Postgres-backed implementation.
+// Phase 8: the postgres package provides a Postgres-backed implementation.
 type MembershipResolver interface {
 	// ListIDsForUser returns the IDs of the task lists the user owns or is a
 	// member of (via task_list_shares). role is the user's application role

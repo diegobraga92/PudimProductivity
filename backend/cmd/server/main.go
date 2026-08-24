@@ -140,7 +140,7 @@ func main() {
 	// and the presence snapshot endpoint. When the DB pool is unavailable the
 	// hub degrades to broadcast (legacy behavior).
 	if pool != nil {
-		syncHub.SetMembershipResolver(membership.NewPostgresMembershipResolver(pool))
+		syncHub.SetMembershipResolver(postgres.NewMembershipRepository(pool))
 		membership.RegisterCollabRoutes(r, syncHub)
 	}
 
