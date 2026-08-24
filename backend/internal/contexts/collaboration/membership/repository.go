@@ -3,11 +3,8 @@ package membership
 
 import "context"
 
-// Repository resolves which task lists a user can access. It backs the sync
-// hub's event scoping and presence features.
+// Repository resolves which task lists a user can access.
 type Repository interface {
-	// ListIDsForUser returns the IDs of the task lists the user owns or is a
-	// member of (via task_list_shares). role is the user's application role
-	// ("admin" sees every list).
+	// ListIDsForUser returns the IDs of the task lists the user owns or is a member
 	ListIDsForUser(ctx context.Context, userID, role string) ([]string, error)
 }

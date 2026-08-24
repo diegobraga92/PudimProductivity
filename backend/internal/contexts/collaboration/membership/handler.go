@@ -12,12 +12,12 @@ import (
 
 // TODO: Add proper users, login and auth to make use of membership
 
-// PresenceHandler serves the REST presence snapshot endpoint.
+// PresenceHandler serves the sync presence endpoints.
 type PresenceHandler struct {
 	hub *sync.Hub
 }
 
-// NewPresenceHandler builds a handler backed by the sync hub's presence state.
+// NewPresenceHandler builds a presence handler.
 func NewPresenceHandler(hub *sync.Hub) *PresenceHandler {
 	return &PresenceHandler{hub: hub}
 }
@@ -27,9 +27,8 @@ type presenceResponse struct {
 	Online []string `json:"online"`
 }
 
-// GET /api/v1/presence/{listId} — the user IDs currently connected and able to
-// access the list. Used for the initial presence snapshot; live updates arrive
-// via the presence.online/presence.offline WebSocket events.
+// ListPresence for the GET endpoint /presence/{listId}
+// The user IDs currently connected and able to access the list
 func (h *PresenceHandler) ListPresence(w http.ResponseWriter, r *http.Request) {
 	listID := chi.URLParam(r, "listId")
 	if listID == "" {
@@ -44,9 +43,7 @@ func (h *PresenceHandler) ListPresence(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, presenceResponse{ListID: listID, Online: online})
 }
 
-// RegisterCollabRoutes mounts the Phase 8 collaboration endpoints.
-//
-// GET /api/v1/presence/{listId} — online members snapshot.
+// RegisterCollabRoutes mounts collaboration endpoints.
 func RegisterCollabRoutes(r chi.Router, hub *sync.Hub) {
 	handler := NewPresenceHandler(hub)
 	r.Get("/api/v1/presence/{listId}", handler.ListPresence)
