@@ -9,61 +9,9 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/testcontainers/testcontainers-go"
-	testpg "github.com/testcontainers/testcontainers-go/modules/postgres"
-	"github.com/testcontainers/testcontainers-go/wait"
 
-	"github.com/diegobraga92/pudimproductivity/backend/internal/infrastructure/postgres"
-	"github.com/diegobraga92/pudimproductivity/backend/internal/platform/config"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/infrastructure/postgres/postgrestest"
 )
-
-func setupBackupTestPostgres(t *testing.T) (context.Context, *pgxpool.Pool) {
-	t.Helper()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
-	t.Cleanup(cancel)
-
-	pgContainer, err := testpg.Run(ctx, "postgres:16-alpine",
-		testpg.WithDatabase("pudimproductivity"),
-		testpg.WithUsername("pudim"),
-		testpg.WithPassword("pudim_dev"),
-		testcontainers.WithWaitStrategy(
-			wait.ForLog("database system is ready to accept connections").
-				WithOccurrence(2).
-				WithStartupTimeout(60*time.Second),
-		),
-	)
-	if err != nil {
-		t.Fatalf("failed to start postgres container: %v", err)
-	}
-	t.Cleanup(func() {
-		if err := pgContainer.Terminate(ctx); err != nil {
-			t.Logf("failed to terminate postgres container: %v", err)
-		}
-	})
-
-	connStr, err := pgContainer.ConnectionString(ctx, "sslmode=disable")
-	if err != nil {
-		t.Fatalf("failed to get connection string: %v", err)
-	}
-
-	pool, err := postgres.ConnectPool(ctx, config.DatabaseConfig{
-		URL:             connStr,
-		MaxConns:        5,
-		MinConns:        1,
-		MaxConnLifetime: 30 * time.Minute,
-		MaxConnIdleTime: 10 * time.Minute,
-	})
-	if err != nil {
-		t.Fatalf("ConnectPool: %v", err)
-	}
-	t.Cleanup(pool.Close)
-
-	if err := postgres.RunMigrations(ctx, pool); err != nil {
-		t.Fatalf("RunMigrations: %v", err)
-	}
-	return ctx, pool
-}
 
 // seedBackupTestData inserts one row into every backed-up table so the test
 // exercises the full round-trip (including arrays, jsonb, dates and FKs).
@@ -100,14 +48,11 @@ func seedBackupTestData(t *testing.T, ctx context.Context, pool *pgxpool.Pool) {
 }
 
 func TestBackupService_ExportImportRoundTrip(t *testing.T) {
-	if testing.Short() {
-		t.Skip("integration test requires Docker")
-	}
-	ctx, pool := setupBackupTestPostgres(t)
+	postgrestest.SkipIfShort(t)
+	ctx, pool := postgrestest.SetupPool(t)
 	seedBackupTestData(t, ctx, pool)
 	service := NewService(pool)
 
-	// 1. Export a backup while data exists.
 	data, err := service.Export(ctx, "test-version")
 	if err != nil {
 		t.Fatalf("Export: %v", err)
@@ -208,10 +153,8 @@ func TestBackupService_ExportImportRoundTrip(t *testing.T) {
 }
 
 func TestBackupService_ImportRejectsBadInput(t *testing.T) {
-	if testing.Short() {
-		t.Skip("integration test requires Docker")
-	}
-	ctx, pool := setupBackupTestPostgres(t)
+	postgrestest.SkipIfShort(t)
+	ctx, pool := postgrestest.SetupPool(t)
 	service := NewService(pool)
 
 	// Malformed JSON → ErrInvalidBackup, nothing touched.

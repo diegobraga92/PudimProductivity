@@ -1,4 +1,4 @@
-package postgres
+package postgres_test
 
 import (
 	"context"
@@ -6,60 +6,17 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/modules/postgres"
-	"github.com/testcontainers/testcontainers-go/wait"
 
+	"github.com/diegobraga92/pudimproductivity/backend/internal/infrastructure/postgres"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/infrastructure/postgres/postgrestest"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/platform/config"
 )
 
-func setupTestPostgres(t *testing.T) (context.Context, config.DatabaseConfig) {
-	t.Helper()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
-
-	t.Cleanup(cancel)
-
-	pgContainer, err := postgres.Run(ctx, "postgres:16-alpine",
-		postgres.WithDatabase("pudimproductivity"),
-		postgres.WithUsername("pudim"),
-		postgres.WithPassword("pudim_dev"),
-		testcontainers.WithWaitStrategy(
-			wait.ForLog("database system is ready to accept connections").
-				WithOccurrence(2).
-				WithStartupTimeout(60*time.Second),
-		),
-	)
-	if err != nil {
-		t.Fatalf("failed to start postgres container: %v", err)
-	}
-
-	t.Cleanup(func() {
-		if err := pgContainer.Terminate(ctx); err != nil {
-			t.Logf("failed to terminate postgres container: %v", err)
-		}
-	})
-
-	connStr, err := pgContainer.ConnectionString(ctx, "sslmode=disable")
-	if err != nil {
-		t.Fatalf("failed to get connection string: %v", err)
-	}
-
-	dbCfg := config.DatabaseConfig{
-		URL:             connStr,
-		MaxConns:        5,
-		MinConns:        1,
-		MaxConnLifetime: 30 * time.Minute,
-		MaxConnIdleTime: 10 * time.Minute,
-	}
-
-	return ctx, dbCfg
-}
-
 func TestConnectPool_Select1(t *testing.T) {
-	ctx, dbCfg := setupTestPostgres(t)
+	postgrestest.SkipIfShort(t)
+	ctx, dbCfg := postgrestest.Setup(t)
 
-	pool, err := ConnectPool(ctx, dbCfg)
+	pool, err := postgres.ConnectPool(ctx, dbCfg)
 	if err != nil {
 		t.Fatalf("ConnectPool failed: %v", err)
 	}
@@ -82,7 +39,8 @@ func TestConnectPool_Select1(t *testing.T) {
 }
 
 func TestConnectPool_QueryWithPoolConfig(t *testing.T) {
-	ctx, dbCfg := setupTestPostgres(t)
+	postgrestest.SkipIfShort(t)
+	ctx, dbCfg := postgrestest.Setup(t)
 
 	// Build a pool manually to verify the config parsing works
 	config, err := pgxpool.ParseConfig(dbCfg.URL)
@@ -122,7 +80,7 @@ func TestConnectPool_InvalidConnectionString(t *testing.T) {
 	}
 
 	// An invalid connection string should cause ConnectPool to return an error
-	_, err := ConnectPool(ctx, dbCfg)
+	_, err := postgres.ConnectPool(ctx, dbCfg)
 	if err == nil {
 		t.Fatal("expected an error for an invalid connection string, got nil")
 	}
@@ -139,7 +97,7 @@ func TestConnectPool_ConnectionRefused(t *testing.T) {
 	}
 
 	// A valid-looking URL pointing to a port where nothing is listening
-	_, err := ConnectPool(ctx, dbCfg)
+	_, err := postgres.ConnectPool(ctx, dbCfg)
 	if err == nil {
 		t.Fatal("expected an error when connection is refused, got nil")
 	}

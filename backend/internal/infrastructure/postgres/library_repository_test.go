@@ -1,74 +1,17 @@
 package postgres_test
 
 import (
-	"context"
 	"errors"
 	"testing"
-	"time"
-
-	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/testcontainers/testcontainers-go"
-	testpg "github.com/testcontainers/testcontainers-go/modules/postgres"
-	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/diegobraga92/pudimproductivity/backend/internal/contexts/content/library"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/infrastructure/postgres"
-	"github.com/diegobraga92/pudimproductivity/backend/internal/platform/config"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/infrastructure/postgres/postgrestest"
 )
 
-func setupLibraryTestPostgres(t *testing.T) (context.Context, *pgxpool.Pool) {
-	t.Helper()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
-	t.Cleanup(cancel)
-
-	pgContainer, err := testpg.Run(ctx, "postgres:16-alpine",
-		testpg.WithDatabase("pudimproductivity"),
-		testpg.WithUsername("pudim"),
-		testpg.WithPassword("pudim_dev"),
-		testcontainers.WithWaitStrategy(
-			wait.ForLog("database system is ready to accept connections").
-				WithOccurrence(2).
-				WithStartupTimeout(60*time.Second),
-		),
-	)
-	if err != nil {
-		t.Fatalf("failed to start postgres container: %v", err)
-	}
-	t.Cleanup(func() {
-		if err := pgContainer.Terminate(ctx); err != nil {
-			t.Logf("failed to terminate postgres container: %v", err)
-		}
-	})
-
-	connStr, err := pgContainer.ConnectionString(ctx, "sslmode=disable")
-	if err != nil {
-		t.Fatalf("failed to get connection string: %v", err)
-	}
-
-	pool, err := postgres.ConnectPool(ctx, config.DatabaseConfig{
-		URL:             connStr,
-		MaxConns:        5,
-		MinConns:        1,
-		MaxConnLifetime: 30 * time.Minute,
-		MaxConnIdleTime: 10 * time.Minute,
-	})
-	if err != nil {
-		t.Fatalf("ConnectPool: %v", err)
-	}
-	t.Cleanup(pool.Close)
-
-	if err := postgres.RunMigrations(ctx, pool); err != nil {
-		t.Fatalf("RunMigrations: %v", err)
-	}
-	return ctx, pool
-}
-
 func TestLibraryRepository_CRUDAndFilters(t *testing.T) {
-	if testing.Short() {
-		t.Skip("integration test requires Docker")
-	}
-	ctx, pool := setupLibraryTestPostgres(t)
+	postgrestest.SkipIfShort(t)
+	ctx, pool := postgrestest.SetupPool(t)
 	repo := postgres.NewLibraryRepository(pool)
 
 	item, err := library.NewItem(
@@ -155,10 +98,8 @@ func TestLibraryRepository_CRUDAndFilters(t *testing.T) {
 }
 
 func TestLibraryRepository_ImportBatch(t *testing.T) {
-	if testing.Short() {
-		t.Skip("integration test requires Docker")
-	}
-	ctx, pool := setupLibraryTestPostgres(t)
+	postgrestest.SkipIfShort(t)
+	ctx, pool := postgrestest.SetupPool(t)
 	repo := postgres.NewLibraryRepository(pool)
 
 	items := []*library.Item{
@@ -188,10 +129,8 @@ func TestLibraryRepository_ImportBatch(t *testing.T) {
 }
 
 func TestLibraryRepository_ImportRollsBackOnError(t *testing.T) {
-	if testing.Short() {
-		t.Skip("integration test requires Docker")
-	}
-	ctx, pool := setupLibraryTestPostgres(t)
+	postgrestest.SkipIfShort(t)
+	ctx, pool := postgrestest.SetupPool(t)
 	repo := postgres.NewLibraryRepository(pool)
 
 	// Second item is invalid (empty name would still insert — use a duplicate
@@ -228,10 +167,8 @@ func TestLibraryRepository_ImportRollsBackOnError(t *testing.T) {
 // (empty = no source), so rows written before migration 022 broke the list
 // query. Migration 025 backfills NULLs and enforces NOT NULL DEFAULT ”.
 func TestLibraryRepository_ScoreSourceNotNull(t *testing.T) {
-	if testing.Short() {
-		t.Skip("integration test requires Docker")
-	}
-	ctx, pool := setupLibraryTestPostgres(t)
+	postgrestest.SkipIfShort(t)
+	ctx, pool := postgrestest.SetupPool(t)
 
 	var isNullable string
 	var columnDefault *string

@@ -1,74 +1,16 @@
 package postgres_test
 
 import (
-	"context"
 	"testing"
-	"time"
-
-	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/testcontainers/testcontainers-go"
-	testpg "github.com/testcontainers/testcontainers-go/modules/postgres"
-	"github.com/testcontainers/testcontainers-go/wait"
 
 	recipedomain "github.com/diegobraga92/pudimproductivity/backend/internal/contexts/content/recipe"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/infrastructure/postgres"
-	"github.com/diegobraga92/pudimproductivity/backend/internal/platform/config"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/infrastructure/postgres/postgrestest"
 )
 
-// setupRecipeTestPostgres starts a fresh Postgres and applies all migrations.
-func setupRecipeTestPostgres(t *testing.T) (context.Context, *pgxpool.Pool) {
-	t.Helper()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
-	t.Cleanup(cancel)
-
-	pgContainer, err := testpg.Run(ctx, "postgres:16-alpine",
-		testpg.WithDatabase("pudimproductivity"),
-		testpg.WithUsername("pudim"),
-		testpg.WithPassword("pudim_dev"),
-		testcontainers.WithWaitStrategy(
-			wait.ForLog("database system is ready to accept connections").
-				WithOccurrence(2).
-				WithStartupTimeout(60*time.Second),
-		),
-	)
-	if err != nil {
-		t.Fatalf("failed to start postgres container: %v", err)
-	}
-	t.Cleanup(func() {
-		if err := pgContainer.Terminate(ctx); err != nil {
-			t.Logf("failed to terminate postgres container: %v", err)
-		}
-	})
-
-	connStr, err := pgContainer.ConnectionString(ctx, "sslmode=disable")
-	if err != nil {
-		t.Fatalf("failed to get connection string: %v", err)
-	}
-
-	pool, err := postgres.ConnectPool(ctx, config.DatabaseConfig{
-		URL:             connStr,
-		MaxConns:        5,
-		MinConns:        1,
-		MaxConnLifetime: 30 * time.Minute,
-		MaxConnIdleTime: 10 * time.Minute,
-	})
-	if err != nil {
-		t.Fatalf("ConnectPool: %v", err)
-	}
-	t.Cleanup(pool.Close)
-
-	if err := postgres.RunMigrations(ctx, pool); err != nil {
-		t.Fatalf("RunMigrations: %v", err)
-	}
-	return ctx, pool
-}
-
 func TestRecipeRepository_CRUD(t *testing.T) {
-	if testing.Short() {
-		t.Skip("integration test requires Docker")
-	}
-	ctx, pool := setupRecipeTestPostgres(t)
+	postgrestest.SkipIfShort(t)
+	ctx, pool := postgrestest.SetupPool(t)
 	repo := postgres.NewRecipeRepository(pool)
 
 	recipe, err := recipedomain.NewRecipe(
@@ -127,10 +69,8 @@ func TestRecipeRepository_CRUD(t *testing.T) {
 }
 
 func TestRecipeRepository_ListFiltersAndPagination(t *testing.T) {
-	if testing.Short() {
-		t.Skip("integration test requires Docker")
-	}
-	ctx, pool := setupRecipeTestPostgres(t)
+	postgrestest.SkipIfShort(t)
+	ctx, pool := postgrestest.SetupPool(t)
 	repo := postgres.NewRecipeRepository(pool)
 
 	recipes := []*recipedomain.Recipe{
