@@ -20,9 +20,7 @@ func NewHandler(repo Repository) *Handler {
 	return &Handler{repo: repo}
 }
 
-// Bundle is the full incremental payload of the sync endpoint
-// (api/openapi/sync-v1.yaml). It is composed of the canonical API response
-// types so the offline wire shape always matches the task/tasklist endpoints.
+// Bundle is the full incremental payload of the sync endpoint.
 type Bundle struct {
 	Timestamp            string                        `json:"timestamp"`
 	Tasks                []task.TaskResponse           `json:"tasks"`
@@ -35,10 +33,8 @@ type Bundle struct {
 	DeletedShareKeys     []string                      `json:"deleted_share_keys"`
 }
 
-// toBundle maps the domain ChangeSet to the wire Bundle using the canonical
-// response mappers (task.ToTaskResponse, tasklist.ToTaskListResponse, ...).
-// All slices are normalized to non-nil so the JSON payload emits [] instead of
-// null.
+// toBundle maps the domain ChangeSet to Bundle. All slices are normalized
+// to non-nil so the JSON payload emits [] instead of null.
 func toBundle(cs *ChangeSet) *Bundle {
 	b := &Bundle{
 		Timestamp:            cs.Timestamp.UTC().Format(time.RFC3339),
@@ -66,8 +62,9 @@ func toBundle(cs *ChangeSet) *Bundle {
 	return b
 }
 
-// GET /api/v1/sync?since=2026-08-10T10:00:00Z
-//
+// TODO: Check what can happen if the full snapshot is gigantic
+
+// Sync is the handler for the for the GET endpoint.
 // since is an RFC3339 timestamp (client's last sync time). Defaults to the
 // epoch (full snapshot). The response's `timestamp` should be persisted by the
 // client and sent back as `since` next time.
@@ -92,7 +89,7 @@ func (h *Handler) Sync(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, toBundle(bundle))
 }
 
-// RegisterSyncStoreRoutes mounts the Phase 9c offline-sync endpoint.
+// RegisterSyncStoreRoutes mounts the offline-sync endpoint.
 func RegisterSyncStoreRoutes(r chi.Router, repo Repository) {
 	if repo == nil {
 		return
