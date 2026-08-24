@@ -1,4 +1,4 @@
-package backup
+package postgres_test
 
 import (
 	"context"
@@ -10,6 +10,8 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/diegobraga92/pudimproductivity/backend/internal/contexts/collaboration/backup"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/infrastructure/postgres"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/infrastructure/postgres/postgrestest"
 )
 
@@ -47,44 +49,48 @@ func seedBackupTestData(t *testing.T, ctx context.Context, pool *pgxpool.Pool) {
 	}
 }
 
-func TestBackupService_ExportImportRoundTrip(t *testing.T) {
+func TestBackupRepository_ExportImportRoundTrip(t *testing.T) {
 	postgrestest.SkipIfShort(t)
 	ctx, pool := postgrestest.SetupPool(t)
 	seedBackupTestData(t, ctx, pool)
-	service := NewService(pool)
+	store := postgres.NewBackupRepository(pool)
 
-	data, err := service.Export(ctx, "test-version")
+	data, err := store.Export(ctx, "test-version")
 	if err != nil {
 		t.Fatalf("Export: %v", err)
 	}
 
-	var backup BackupFile
-	if err := json.Unmarshal(data, &backup); err != nil {
+	var bf backup.BackupFile
+	if err := json.Unmarshal(data, &bf); err != nil {
 		t.Fatalf("unmarshal exported backup: %v", err)
 	}
-	if backup.Version != BackupFormatVersion {
-		t.Fatalf("version = %q, want %q", backup.Version, BackupFormatVersion)
+	if bf.Version != backup.BackupFormatVersion {
+		t.Fatalf("version = %q, want %q", bf.Version, backup.BackupFormatVersion)
 	}
-	if backup.AppVersion != "test-version" {
-		t.Fatalf("app_version = %q, want test-version", backup.AppVersion)
+	if bf.AppVersion != "test-version" {
+		t.Fatalf("app_version = %q, want test-version", bf.AppVersion)
 	}
-	expectOne(t, backup.RowCounts, "tasks")
-	expectOne(t, backup.RowCounts, "task_lists")
-	expectOne(t, backup.RowCounts, "task_completions")
-	expectOne(t, backup.RowCounts, "planner_entries")
-	expectOne(t, backup.RowCounts, "library_items")
-	expectOne(t, backup.RowCounts, "recipes")
-	expectOne(t, backup.RowCounts, "recipe_tags")
-	expectOne(t, backup.RowCounts, "recipe_ingredients")
-	expectOne(t, backup.RowCounts, "recipe_steps")
-	expectOne(t, backup.RowCounts, "pomodoro_sessions")
-	expectOne(t, backup.RowCounts, "insight_reports")
-	if backup.RowCounts["feature_flags"] < 1 {
-		t.Fatalf("feature_flags row count = %d, want >= 1 (seeded by migration)", backup.RowCounts["feature_flags"])
+	expectOne(t, bf.RowCounts, "tasks")
+	expectOne(t, bf.RowCounts, "task_lists")
+	expectOne(t, bf.RowCounts, "task_completions")
+	expectOne(t, bf.RowCounts, "planner_entries")
+	expectOne(t, bf.RowCounts, "library_items")
+	expectOne(t, bf.RowCounts, "recipes")
+	expectOne(t, bf.RowCounts, "recipe_tags")
+	expectOne(t, bf.RowCounts, "recipe_ingredients")
+	expectOne(t, bf.RowCounts, "recipe_steps")
+	expectOne(t, bf.RowCounts, "pomodoro_sessions")
+	expectOne(t, bf.RowCounts, "insight_reports")
+	if bf.RowCounts["feature_flags"] < 1 {
+		t.Fatalf("feature_flags row count = %d, want >= 1 (seeded by migration)", bf.RowCounts["feature_flags"])
 	}
 
-	// 2. Simulate a lost database: wipe every backed-up table.
-	if _, err := pool.Exec(ctx, "TRUNCATE TABLE "+strings.Join(tableNames(), ", ")+" CASCADE"); err != nil {
+	// 2. Simulate a lost database: wipe every table the backup contains.
+	names := make([]string, 0, len(bf.Tables))
+	for name := range bf.Tables {
+		names = append(names, name)
+	}
+	if _, err := pool.Exec(ctx, "TRUNCATE TABLE "+strings.Join(names, ", ")+" CASCADE"); err != nil {
 		t.Fatalf("wipe tables: %v", err)
 	}
 	var remaining int
@@ -96,7 +102,7 @@ func TestBackupService_ExportImportRoundTrip(t *testing.T) {
 	}
 
 	// 3. Restore from the backup.
-	result, err := service.Import(ctx, data)
+	result, err := store.Import(ctx, data)
 	if err != nil {
 		t.Fatalf("Import: %v", err)
 	}
@@ -152,19 +158,19 @@ func TestBackupService_ExportImportRoundTrip(t *testing.T) {
 	}
 }
 
-func TestBackupService_ImportRejectsBadInput(t *testing.T) {
+func TestBackupRepository_ImportRejectsBadInput(t *testing.T) {
 	postgrestest.SkipIfShort(t)
 	ctx, pool := postgrestest.SetupPool(t)
-	service := NewService(pool)
+	store := postgres.NewBackupRepository(pool)
 
 	// Malformed JSON → ErrInvalidBackup, nothing touched.
-	if _, err := service.Import(ctx, []byte(`{"tables": [`)); !errors.Is(err, ErrInvalidBackup) {
+	if _, err := store.Import(ctx, []byte(`{"tables": [`)); !errors.Is(err, backup.ErrInvalidBackup) {
 		t.Fatalf("malformed JSON: want ErrInvalidBackup, got %v", err)
 	}
 
 	// Unknown version → ErrUnsupportedVersion, nothing touched.
 	bad := []byte(`{"version":"99","tables":{}}`)
-	if _, err := service.Import(ctx, bad); !errors.Is(err, ErrUnsupportedVersion) {
+	if _, err := store.Import(ctx, bad); !errors.Is(err, backup.ErrUnsupportedVersion) {
 		t.Fatalf("bad version: want ErrUnsupportedVersion, got %v", err)
 	}
 }
@@ -174,12 +180,4 @@ func expectOne(t *testing.T, counts map[string]int, table string) {
 	if got := counts[table]; got != 1 {
 		t.Fatalf("%s row count = %d, want 1", table, got)
 	}
-}
-
-func tableNames() []string {
-	names := make([]string, len(backupTables))
-	for i, t := range backupTables {
-		names[i] = t.name
-	}
-	return names
 }

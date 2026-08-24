@@ -1,9 +1,8 @@
-package backup
+package postgres
 
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -11,12 +10,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog/log"
-)
 
-// Sentinel errors returned by Service.Import.
-var (
-	ErrInvalidBackup      = errors.New("invalid backup document")
-	ErrUnsupportedVersion = errors.New("unsupported backup version")
+	"github.com/diegobraga92/pudimproductivity/backend/internal/contexts/collaboration/backup"
 )
 
 type backupTable struct {
@@ -107,21 +102,22 @@ var backupTables = []backupTable{
 	},
 }
 
-// Service exports and restores the non-sensitive application data.
-type Service struct {
+// BackupRepository exports and restores the non-sensitive application data. It
+// implements backup.Repository.
+type BackupRepository struct {
 	pool *pgxpool.Pool
 }
 
-// NewService constructs a Service
-func NewService(pool *pgxpool.Pool) *Service {
-	return &Service{pool: pool}
+// NewBackupRepository constructs a BackupRepository.
+func NewBackupRepository(pool *pgxpool.Pool) *BackupRepository {
+	return &BackupRepository{pool: pool}
 }
 
-// Export snapshots every backup table into a single BackupFile and returns it
-// serialized as indented JSON.
-func (s *Service) Export(ctx context.Context, appVersion string) ([]byte, error) {
-	backup := BackupFile{
-		Version:    BackupFormatVersion,
+// Export snapshots every backup table into a single backup.BackupFile and
+// returns it serialized as indented JSON.
+func (s *BackupRepository) Export(ctx context.Context, appVersion string) ([]byte, error) {
+	bf := backup.BackupFile{
+		Version:    backup.BackupFormatVersion,
 		ExportedAt: time.Now().UTC(),
 		AppVersion: appVersion,
 		RowCounts:  make(map[string]int, len(backupTables)),
@@ -133,11 +129,11 @@ func (s *Service) Export(ctx context.Context, appVersion string) ([]byte, error)
 		if err != nil {
 			return nil, fmt.Errorf("export table %s: %w", table.name, err)
 		}
-		backup.Tables[table.name] = rows
-		backup.RowCounts[table.name] = jsonArrayLen(rows)
+		bf.Tables[table.name] = rows
+		bf.RowCounts[table.name] = jsonArrayLen(rows)
 	}
 
-	data, err := json.MarshalIndent(backup, "", "  ")
+	data, err := json.MarshalIndent(bf, "", "  ")
 	if err != nil {
 		return nil, fmt.Errorf("marshal backup: %w", err)
 	}
@@ -148,7 +144,7 @@ func (s *Service) Export(ctx context.Context, appVersion string) ([]byte, error)
 // TODO: Check about using json_array_length to count lines, instead of doing unmarshall in export and import
 
 // readTable returns all rows of a table as a JSON array.
-func (s *Service) readTable(ctx context.Context, table backupTable) (json.RawMessage, error) {
+func (s *BackupRepository) readTable(ctx context.Context, table backupTable) (json.RawMessage, error) {
 	q := fmt.Sprintf(
 		`SELECT COALESCE(json_agg(row_to_json(t) ORDER BY t.%s), '[]'::json) FROM %s t`,
 		table.idColumn, table.name,
@@ -162,45 +158,45 @@ func (s *Service) readTable(ctx context.Context, table backupTable) (json.RawMes
 
 // Import validates a backup and restores it into the database, replacing the current contents.
 // On any error every change is rolled back and the pre-restore data is left untouched.
-func (s *Service) Import(ctx context.Context, data []byte) (ImportResult, error) {
-	var backup BackupFile
-	if err := json.Unmarshal(data, &backup); err != nil {
-		return ImportResult{}, fmt.Errorf("%w: %v", ErrInvalidBackup, err)
+func (s *BackupRepository) Import(ctx context.Context, data []byte) (backup.ImportResult, error) {
+	var bf backup.BackupFile
+	if err := json.Unmarshal(data, &bf); err != nil {
+		return backup.ImportResult{}, fmt.Errorf("%w: %v", backup.ErrInvalidBackup, err)
 	}
-	if backup.Version != BackupFormatVersion {
-		return ImportResult{}, fmt.Errorf("%w %q (expected %q)", ErrUnsupportedVersion, backup.Version, BackupFormatVersion)
+	if bf.Version != backup.BackupFormatVersion {
+		return backup.ImportResult{}, fmt.Errorf("%w %q (expected %q)", backup.ErrUnsupportedVersion, bf.Version, backup.BackupFormatVersion)
 	}
 
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return ImportResult{}, fmt.Errorf("begin transaction: %w", err)
+		return backup.ImportResult{}, fmt.Errorf("begin transaction: %w", err)
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	if err := s.truncateAll(ctx, tx); err != nil {
-		return ImportResult{}, err
+		return backup.ImportResult{}, err
 	}
 
-	result := ImportResult{
+	result := backup.ImportResult{
 		RestoredAt: time.Now().UTC(),
 		RowCounts:  make(map[string]int, len(backupTables)),
 	}
 
 	for _, table := range backupTables {
-		raw, ok := backup.Tables[table.name]
+		raw, ok := bf.Tables[table.name]
 		if !ok || len(raw) == 0 {
 			result.RowCounts[table.name] = 0
 			continue
 		}
 		n, err := s.insertTable(ctx, tx, table, raw)
 		if err != nil {
-			return ImportResult{}, fmt.Errorf("restore table %s: %w", table.name, err)
+			return backup.ImportResult{}, fmt.Errorf("restore table %s: %w", table.name, err)
 		}
 		result.RowCounts[table.name] = n
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return ImportResult{}, fmt.Errorf("commit restore: %w", err)
+		return backup.ImportResult{}, fmt.Errorf("commit restore: %w", err)
 	}
 
 	log.Info().Interface("row_counts", result.RowCounts).Msg("backup restore completed")
@@ -209,7 +205,7 @@ func (s *Service) Import(ctx context.Context, data []byte) (ImportResult, error)
 
 // TODO: Check about adding timeout for contexts, this and any others
 
-func (s *Service) truncateAll(ctx context.Context, tx pgx.Tx) error {
+func (s *BackupRepository) truncateAll(ctx context.Context, tx pgx.Tx) error {
 	names := make([]string, len(backupTables))
 	for i, t := range backupTables {
 		names[i] = t.name
@@ -223,7 +219,7 @@ func (s *Service) truncateAll(ctx context.Context, tx pgx.Tx) error {
 
 // TODO: Add log or similar in case jsonb_to_recordset discards additional columns, or nulls missing columns
 
-func (s *Service) insertTable(ctx context.Context, tx pgx.Tx, table backupTable, raw json.RawMessage) (int, error) {
+func (s *BackupRepository) insertTable(ctx context.Context, tx pgx.Tx, table backupTable, raw json.RawMessage) (int, error) {
 	names := table.columnNames()
 	q := fmt.Sprintf(
 		"INSERT INTO %s (%s) SELECT %s FROM jsonb_to_recordset($1::jsonb) AS t(%s)",

@@ -236,7 +236,7 @@ func main() {
 	// Backup & Restore — full snapshot of the non-sensitive data as JSON for
 	// disaster recovery (export = download, import = replace backed-up tables).
 	if pool != nil {
-		backup.RegisterBackupRoutes(r, pool, cfg.Version)
+		backup.RegisterBackupRoutes(r, postgres.NewBackupRepository(pool), cfg.Version)
 	}
 
 	// Phase 5a: Recipes. Media uploads are optional. Storage backend selection

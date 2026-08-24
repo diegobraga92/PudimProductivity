@@ -19,20 +19,20 @@ const maxImportBytes = 50 << 20 // 50 MiB
 
 // Handler is the HTTP transport for the backup module.
 type Handler struct {
-	service    *Service
+	repo       Repository
 	appVersion string
 }
 
 // NewHandler is the Handler constructor
-func NewHandler(service *Service, appVersion string) *Handler {
-	return &Handler{service: service, appVersion: appVersion}
+func NewHandler(repo Repository, appVersion string) *Handler {
+	return &Handler{repo: repo, appVersion: appVersion}
 }
 
 // Export handles the GET endpoint.
 // It streams a full backup of the non-sensitive data as a JSON download.
 func (h *Handler) Export(w http.ResponseWriter, r *http.Request) {
 	// TODO: Check about using io.Writer or similar to avoid putting a gigantic DB in RAM
-	data, err := h.service.Export(r.Context(), h.appVersion)
+	data, err := h.repo.Export(r.Context(), h.appVersion)
 	if err != nil {
 		log.Error().Err(err).Msg("backup export failed")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to export backup")
@@ -73,7 +73,7 @@ func (h *Handler) Import(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := h.service.Import(r.Context(), data)
+	result, err := h.repo.Import(r.Context(), data)
 	if err != nil {
 		if errors.Is(err, ErrInvalidBackup) || errors.Is(err, ErrUnsupportedVersion) {
 			httpx.WriteError(w, http.StatusBadRequest, err.Error())
