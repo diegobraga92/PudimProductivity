@@ -7,14 +7,16 @@ import {
   resumeSession,
   stopSession,
 } from "../api/pomodoro";
-import { getSoundscape, type SoundID } from "../utils/audio";
-import { loadSoundCatalog } from "../utils/soundFiles";
+import type { SoundID } from "../utils/audio";
 import { useI18n } from "../i18n";
+import { usePomodoroSyncSettings } from "../hooks/usePomodoroSyncSettings";
+import { SOUNDS } from "../utils/soundCatalog";
 
 const FOCUS_PRESETS = [15, 25, 30, 45, 60];
 const BREAK_PRESETS = [5, 10, 15];
 const RING_RADIUS = 96;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
+const LS_CONTINUOUS = "pomodoro_continuous";
 
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -22,11 +24,25 @@ function formatTime(seconds: number): string {
   return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
 }
 
-function Pomodoro() {
+interface PomodoroProps {
+  /** Opens the Soundscape page for advanced mixing, presets and volumes. */
+  onOpenSounds?: () => void;
+}
+
+function Pomodoro({ onOpenSounds }: PomodoroProps) {
   const queryClient = useQueryClient();
   const { t } = useI18n();
+  const {
+    enabled: soundEnabled,
+    sound: soundId,
+    setEnabled: setSoundEnabled,
+    setSound: setSoundId,
+  } = usePomodoroSyncSettings();
   const [focusMinutes, setFocusMinutes] = useState(25);
   const [breakMinutes, setBreakMinutes] = useState(5);
+  const [continuous, setContinuous] = useState<boolean>(
+    () => localStorage.getItem(LS_CONTINUOUS) === "true"
+  );
   const [localRemaining, setLocalRemaining] = useState<number | null>(null);
   const [localStatus, setLocalStatus] = useState<string | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -40,8 +56,9 @@ function Pomodoro() {
 
   const session = currentResp?.active ? currentResp.session : null;
 
-  // Sync local state from server — only on session identity or status change,
-  // NOT on every refetch (remaining_seconds changes every poll).
+  // Sync local state from server — only on session identity, status or phase
+  // change (continuous runs flip phase while status stays "running"), NOT on
+  // every refetch (remaining_seconds changes every poll).
   useEffect(() => {
     if (session) {
       setLocalRemaining(session.remaining_seconds);
@@ -51,7 +68,7 @@ function Pomodoro() {
       setLocalStatus(null);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session?.id, session?.status]);
+  }, [session?.id, session?.status, session?.phase]);
 
   const stopMutate = useMutation({
     mutationFn: stopSession,
@@ -87,16 +104,26 @@ function Pomodoro() {
     };
   }, [localStatus]);
 
-  // When timer hits 0 while running, auto-stop
+  // When the timer hits 0 while running, stop in single-shot mode. In
+  // continuous mode the backend auto-advances to the next phase, so refetch the
+  // current session to pick up the new segment instead of stopping.
   useEffect(() => {
     if (localRemaining === 0 && localStatus === "running") {
-      stopMutateRef.current.mutate();
+      if (continuous) {
+        queryClient.invalidateQueries({ queryKey: ["pomodoro"] });
+      } else {
+        stopMutateRef.current.mutate();
+      }
     }
-  }, [localRemaining, localStatus]);
+  }, [localRemaining, localStatus, continuous, queryClient]);
 
   const startMutate = useMutation({
     mutationFn: () =>
-      startSession({ focus_duration: focusMinutes, break_duration: breakMinutes }),
+      startSession({
+        focus_duration: focusMinutes,
+        break_duration: breakMinutes,
+        continuous,
+      }),
     onSuccess: (data) => {
       setLocalRemaining(data.remaining_seconds);
       setLocalStatus(data.status);
@@ -126,42 +153,19 @@ function Pomodoro() {
   const isPaused = localStatus === "paused";
   const isActive = isRunning || isPaused;
   const displayTime = localRemaining !== null ? localRemaining : (session?.remaining_seconds ?? 0);
-  const totalSeconds = session ? session.focus_duration * 60 : focusMinutes * 60;
+  // The progress ring uses the current segment's duration — the break duration
+  // while in a break phase, so continuous runs count down correctly.
+  const currentPhase = session?.phase ?? "focus";
+  const segmentMinutes =
+    currentPhase === "break"
+      ? session?.break_duration ?? breakMinutes
+      : session?.focus_duration ?? focusMinutes;
+  const totalSeconds = segmentMinutes * 60;
   const progress = totalSeconds > 0 ? ((totalSeconds - displayTime) / totalSeconds) * 100 : 0;
 
-  // ── Pomodoro ↔ Soundscape sync ──
-  // Reads the user's preference from localStorage (set in Soundscape page).
-  // Plays the selected sound when the timer runs, stops when paused/stopped/completed.
-  useEffect(() => {
-    const enabled = localStorage.getItem("soundscape_pomodoro_enabled") === "true";
-    if (!enabled) return;
-
-    const soundId = (localStorage.getItem("soundscape_pomodoro_sound") || "white-noise") as SoundID;
-    const soundscape = getSoundscape();
-
-    if (localStatus === "running") {
-      // Only play if not already playing (e.g. from manual toggle)
-      if (!soundscape.isPlaying(soundId)) {
-        soundscape.play(soundId);
-      }
-    } else if (localStatus === "paused" || localStatus === "completed" || localStatus === "cancelled" || localStatus === null) {
-      soundscape.stop(soundId);
-    }
-  }, [localStatus]);
-
-  // Stop sound on unmount
-  useEffect(() => {
-    // Fetch the backend sound catalog once, so the focus sound uses the real
-    // audio loop when available (the engine synthesizes it otherwise).
-    void loadSoundCatalog();
-
-    return () => {
-      const enabled = localStorage.getItem("soundscape_pomodoro_enabled") === "true";
-      if (!enabled) return;
-      const soundId = (localStorage.getItem("soundscape_pomodoro_sound") || "white-noise") as SoundID;
-      getSoundscape().stop(soundId);
-    };
-  }, []);
+  // Note: the pomodoro → sound automation lives in usePomodoroSoundSync (mounted
+  // at the app root), so the sound keeps playing when navigating away from this
+  // page while the timer runs.
 
   // Desktop: prevent the OS from suspending while the focus timer runs so the
   // countdown and audio stay accurate (Electron powerSaveBlocker; no-op in the
@@ -258,7 +262,11 @@ function Pomodoro() {
               {formatTime(displayTime)}
             </span>
             <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)", letterSpacing: "1px" }}>
-              {isActive ? t("pomodoro.focus") : t("pomodoro.ready")}
+              {isActive
+                ? currentPhase === "break"
+                  ? t("pomodoro.break")
+                  : t("pomodoro.focus")
+                : t("pomodoro.ready")}
             </span>
           </div>
         </div>
@@ -274,7 +282,9 @@ function Pomodoro() {
           {isLoading
             ? t("common.loadingDot")
             : isRunning
-            ? t("pomodoro.focusTime")
+            ? currentPhase === "break"
+              ? t("pomodoro.breakTime")
+              : t("pomodoro.focusTime")
             : isPaused
             ? t("pomodoro.paused")
             : session?.status === "completed"
@@ -283,6 +293,19 @@ function Pomodoro() {
             ? t("pomodoro.cancelled")
             : t("pomodoro.readyToStart")}
         </div>
+
+        {/* Cycle indicator (continuous mode) */}
+        {session?.continuous && (
+          <div
+            style={{
+              marginBottom: "var(--space-md)",
+              fontSize: "var(--font-size-xs)",
+              color: "var(--color-text-muted)",
+            }}
+          >
+            {t("pomodoro.cycle", { n: session.current_cycle })}
+          </div>
+        )}
 
         {/* Controls */}
         <div
@@ -345,6 +368,111 @@ function Pomodoro() {
             </button>
           )}
         </div>
+      </div>
+
+      {/* Ambient sound (pomodoro sync) — fully controllable from this page */}
+      <div
+        className="card"
+        style={{
+          maxWidth: "480px",
+          margin: "var(--space-md) auto 0",
+          padding: "var(--space-md) var(--space-lg)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "var(--space-sm)",
+          }}
+        >
+          <div>
+            <div style={{ fontWeight: 600, fontSize: "var(--font-size-sm)" }}>
+              {t("pomodoro.soundSync")}
+            </div>
+            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)" }}>
+              {t("pomodoro.soundSyncDesc")}
+            </div>
+          </div>
+          <label
+            style={{
+              position: "relative",
+              display: "inline-block",
+              width: "44px",
+              height: "24px",
+              cursor: "pointer",
+              flexShrink: 0,
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={soundEnabled}
+              onChange={(e) => setSoundEnabled(e.target.checked)}
+              style={{ display: "none" }}
+            />
+            <span
+              style={{
+                position: "absolute",
+                inset: 0,
+                borderRadius: "24px",
+                background: soundEnabled ? "var(--color-primary)" : "var(--color-border)",
+                transition: "background var(--transition-fast)",
+              }}
+            >
+              <span
+                style={{
+                  position: "absolute",
+                  top: "2px",
+                  left: soundEnabled ? "22px" : "2px",
+                  width: "20px",
+                  height: "20px",
+                  borderRadius: "50%",
+                  background: "white",
+                  transition: "left var(--transition-fast)",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+                }}
+              />
+            </span>
+          </label>
+        </div>
+
+        {soundEnabled && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "var(--space-sm)",
+              marginTop: "var(--space-sm)",
+            }}
+          >
+            <span style={{ fontSize: "var(--font-size-sm)", fontWeight: 500, whiteSpace: "nowrap" }}>
+              {t("soundscape.sound")}
+            </span>
+            <select
+              className="select"
+              value={soundId}
+              onChange={(e) => setSoundId(e.target.value as SoundID)}
+              style={{ flex: 1 }}
+            >
+              {SOUNDS.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.icon} {t(s.labelKey)}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {onOpenSounds && (
+          <button
+            className="btn"
+            onClick={onOpenSounds}
+            style={{ marginTop: "var(--space-sm)", fontSize: "var(--font-size-xs)", width: "100%" }}
+          >
+            {t("pomodoro.manageSounds")}
+          </button>
+        )}
       </div>
 
       {/* Settings (only when no session is active) */}
@@ -428,6 +556,72 @@ function Pomodoro() {
                 ))}
               </div>
             </div>
+          </div>
+
+          {/* Continuous mode */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "var(--space-sm)",
+              marginTop: "var(--space-lg)",
+              paddingTop: "var(--space-md)",
+              borderTop: "1px solid var(--color-border-light)",
+            }}
+          >
+            <div>
+              <div style={{ fontWeight: 600, fontSize: "var(--font-size-sm)" }}>
+                {t("pomodoro.continuous")}
+              </div>
+              <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)" }}>
+                {t("pomodoro.continuousDesc")}
+              </div>
+            </div>
+            <label
+              style={{
+                position: "relative",
+                display: "inline-block",
+                width: "44px",
+                height: "24px",
+                cursor: "pointer",
+                flexShrink: 0,
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={continuous}
+                onChange={(e) => {
+                  const v = e.target.checked;
+                  setContinuous(v);
+                  localStorage.setItem(LS_CONTINUOUS, String(v));
+                }}
+                style={{ display: "none" }}
+              />
+              <span
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  borderRadius: "24px",
+                  background: continuous ? "var(--color-primary)" : "var(--color-border)",
+                  transition: "background var(--transition-fast)",
+                }}
+              >
+                <span
+                  style={{
+                    position: "absolute",
+                    top: "2px",
+                    left: continuous ? "22px" : "2px",
+                    width: "20px",
+                    height: "20px",
+                    borderRadius: "50%",
+                    background: "white",
+                    transition: "left var(--transition-fast)",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+                  }}
+                />
+              </span>
+            </label>
           </div>
         </div>
       )}

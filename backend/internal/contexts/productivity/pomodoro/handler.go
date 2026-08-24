@@ -22,6 +22,8 @@ func NewHandler(service *PomodoroService) *Handler {
 type SessionResponse struct {
 	ID               string       `json:"id"`
 	Status           string       `json:"status"`
+	Phase            string       `json:"phase"`
+	Continuous       bool         `json:"continuous"`
 	FocusDuration    int          `json:"focus_duration"` // minutes
 	BreakDuration    int          `json:"break_duration"` // minutes
 	CurrentCycle     int          `json:"current_cycle"`
@@ -36,6 +38,7 @@ type SessionResponse struct {
 type startSessionRequest struct {
 	FocusDuration int          `json:"focus_duration"` // minutes
 	BreakDuration int          `json:"break_duration"` // minutes
+	Continuous    bool         `json:"continuous"`     // auto-advance focus ↔ break
 	NoiseConfig   *NoiseConfig `json:"noise_config,omitempty"`
 }
 
@@ -47,6 +50,8 @@ func toSessionResponse(s *PomodoroSession) SessionResponse {
 	resp := SessionResponse{
 		ID:               s.ID,
 		Status:           string(s.Status),
+		Phase:            string(s.Phase),
+		Continuous:       s.Continuous,
 		FocusDuration:    int(s.FocusDuration.Minutes()),
 		BreakDuration:    int(s.BreakDuration.Minutes()),
 		CurrentCycle:     s.CurrentCycle,
@@ -74,7 +79,7 @@ func (h *Handler) StartSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session, err := h.service.StartSession(r.Context(), httpx.GetUserID(r.Context()), req.FocusDuration, req.BreakDuration, req.NoiseConfig)
+	session, err := h.service.StartSession(r.Context(), httpx.GetUserID(r.Context()), req.FocusDuration, req.BreakDuration, req.Continuous, req.NoiseConfig)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to start pomodoro session")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to start session")

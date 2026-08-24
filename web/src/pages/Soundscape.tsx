@@ -2,30 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { getSoundscape, type SoundID, type PresetID } from "../utils/audio";
 import { loadSoundCatalog } from "../utils/soundFiles";
 import { useI18n } from "../i18n";
+import { SOUNDS } from "../utils/soundCatalog";
 
-interface SoundDef {
-  id: SoundID;
-  labelKey: string;
-  icon: string;
-  descKey: string;
-}
-
-const SOUNDS: SoundDef[] = [
-  { id: "white-noise", labelKey: "soundscape.whiteNoise", icon: "🌊", descKey: "soundscape.desc.whiteNoise" },
-  { id: "pink-noise", labelKey: "soundscape.pinkNoise", icon: "🌸", descKey: "soundscape.desc.pinkNoise" },
-  { id: "brown-noise", labelKey: "soundscape.brownNoise", icon: "🌫️", descKey: "soundscape.desc.brownNoise" },
-  { id: "rain", labelKey: "soundscape.rainSound", icon: "🌧️", descKey: "soundscape.desc.rain" },
-  { id: "ocean", labelKey: "soundscape.ocean", icon: "🌊", descKey: "soundscape.desc.ocean" },
-  { id: "wind", labelKey: "soundscape.wind", icon: "💨", descKey: "soundscape.desc.wind" },
-  { id: "campfire", labelKey: "soundscape.campfire", icon: "🔥", descKey: "soundscape.desc.campfire" },
-  { id: "binaural-beat", labelKey: "soundscape.binaural", icon: "🎧", descKey: "soundscape.desc.binaural" },
-  { id: "isochronic-tone", labelKey: "soundscape.isochronic", icon: "📳", descKey: "soundscape.desc.isochronic" },
-  { id: "meditation-bowl", labelKey: "soundscape.meditationBowl", icon: "🕉️", descKey: "soundscape.desc.meditationBowl" },
-  { id: "ambient-pad", labelKey: "soundscape.ambientPad", icon: "🎹", descKey: "soundscape.desc.ambientPad" },
-];
-
-const LS_POMODORO_ENABLED = "soundscape_pomodoro_enabled";
-const LS_POMODORO_SOUND = "soundscape_pomodoro_sound";
 const LS_RAIN_INTENSITY = "soundscape_rain_intensity";
 
 // Rain intensity translation keys
@@ -121,14 +99,6 @@ function Soundscape() {
     return saved ? parseFloat(saved) : 0.5;
   });
   const [presets, setPresets] = useState<{ id: PresetID; label: string }[]>([]);
-
-  // Pomodoro sync state
-  const [pomodoroEnabled, setPomodoroEnabled] = useState(() => {
-    return localStorage.getItem(LS_POMODORO_ENABLED) === "true";
-  });
-  const [pomodoroSound, setPomodoroSound] = useState<SoundID>(() => {
-    return (localStorage.getItem(LS_POMODORO_SOUND) as SoundID) || "white-noise";
-  });
 
   const soundscape = getSoundscape();
 
@@ -233,13 +203,6 @@ function Soundscape() {
     setPresets(soundscape.getPresets().map((p) => ({ id: p.id, label: p.label })));
   };
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      soundscape.stopAll();
-    };
-  }, [soundscape]);
-
   return (
     <div className="animate-fade-in">
       <div
@@ -283,6 +246,17 @@ function Soundscape() {
         <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)", minWidth: "32px", textAlign: "right" }}>
           {Math.round(masterVolume * 100)}%
         </span>
+        <button
+          className="btn btn-ghost"
+          onClick={() => {
+            soundscape.stopAll();
+            setPlaying(new Set());
+          }}
+          style={{ fontSize: "var(--font-size-xs)", whiteSpace: "nowrap" }}
+          title={t("soundscape.stopAll")}
+        >
+          {t("soundscape.stopAll")}
+        </button>
       </div>
 
       {/* Sound Cards */}
@@ -456,101 +430,6 @@ function Soundscape() {
             </button>
           </div>
         ))}
-      </div>
-
-      {/* Pomodoro Sync */}
-      <div
-        className="card"
-        style={{
-          maxWidth: "480px",
-          margin: "var(--space-md) auto 0",
-          padding: "var(--space-md) var(--space-lg)",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: pomodoroEnabled ? "var(--space-sm)" : 0,
-          }}
-        >
-          <div>
-            <div style={{ fontWeight: 600, fontSize: "var(--font-size-sm)" }}>
-              {t("soundscape.pomodoroSync")}
-            </div>
-            <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)" }}>
-              {t("soundscape.pomodoroSyncDesc")}
-            </div>
-          </div>
-          <label
-            style={{
-              position: "relative",
-              display: "inline-block",
-              width: "44px",
-              height: "24px",
-              cursor: "pointer",
-            }}
-          >
-            <input
-              type="checkbox"
-              checked={pomodoroEnabled}
-              onChange={(e) => {
-                const v = e.target.checked;
-                setPomodoroEnabled(v);
-                localStorage.setItem(LS_POMODORO_ENABLED, String(v));
-              }}
-              style={{ display: "none" }}
-            />
-            <span
-              style={{
-                position: "absolute",
-                inset: 0,
-                borderRadius: "24px",
-                background: pomodoroEnabled ? "var(--color-primary)" : "var(--color-border)",
-                transition: "background var(--transition-fast)",
-              }}
-            >
-              <span
-                style={{
-                  position: "absolute",
-                  top: "2px",
-                  left: pomodoroEnabled ? "22px" : "2px",
-                  width: "20px",
-                  height: "20px",
-                  borderRadius: "50%",
-                  background: "white",
-                  transition: "left var(--transition-fast)",
-                  boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
-                }}
-              />
-            </span>
-          </label>
-        </div>
-
-        {pomodoroEnabled && (
-          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)", marginTop: "var(--space-sm)" }}>
-            <span style={{ fontSize: "var(--font-size-sm)", fontWeight: 500, whiteSpace: "nowrap" }}>
-              {t("soundscape.sound")}
-            </span>
-            <select
-              className="select"
-              value={pomodoroSound}
-              onChange={(e) => {
-                const v = e.target.value as SoundID;
-                setPomodoroSound(v);
-                localStorage.setItem(LS_POMODORO_SOUND, v);
-              }}
-              style={{ flex: 1 }}
-            >
-              {SOUNDS.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.icon} {t(s.labelKey)}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
       </div>
 
       {/* Tip */}

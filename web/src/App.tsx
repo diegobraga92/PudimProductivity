@@ -32,6 +32,7 @@ import { useAlarm } from "./components/useAlarm";
 import { useAlarmNotifier } from "./hooks/useAlarmNotifier";
 import { useErrorReporter } from "./hooks/useErrorReporter";
 import { useLiveUpdates } from "./hooks/useLiveUpdates";
+import { usePomodoroSoundSync } from "./hooks/usePomodoroSoundSync";
 import { useTaskNotifier } from "./hooks/useTaskNotifier";
 import Dashboard from "./pages/Dashboard";
 import { useI18n } from "./i18n";
@@ -130,6 +131,10 @@ function AppInner() {
   // Real-time task updates from the backend WebSocket stream (Phase 2). This
   // replaces polling: task changes made on any client appear here immediately.
   useLiveUpdates();
+
+  // Global pomodoro → sound automation: plays the synced sound whenever the
+  // timer runs, on any tab (mounted at the root so it survives navigation).
+  usePomodoroSoundSync();
 
   // In-app toast notifications for task events (Phase 3 — the "push" channel
   // on the web, delivered over the same WebSocket stream).
@@ -300,7 +305,7 @@ function AppInner() {
 
             {page === "planner" && <Planner onNavigate={handleNavigate} />}
 
-            {page === "pomodoro" && <Pomodoro />}
+            {page === "pomodoro" && <Pomodoro onOpenSounds={() => go("soundscape")} />}
 
             {page === "soundscape" && <Soundscape />}
 

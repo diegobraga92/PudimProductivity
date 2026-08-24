@@ -107,6 +107,13 @@ export interface components {
          */
         SessionStatus: "running" | "paused" | "completed" | "cancelled";
         /**
+         * @description Which segment of the run the session represents. Single-shot sessions
+         *     are always `focus`; continuous runs alternate focus → break → focus.
+         * @example focus
+         * @enum {string}
+         */
+        SessionPhase: "focus" | "break";
+        /**
          * @description Provision for future white noise integration.
          *     Currently accepted but ignored.
          */
@@ -129,6 +136,12 @@ export interface components {
              */
             id: string;
             status: components["schemas"]["SessionStatus"];
+            phase: components["schemas"]["SessionPhase"];
+            /**
+             * @description Whether the run auto-advances between focus and break segments.
+             * @example false
+             */
+            continuous: boolean;
             /**
              * @description Focus duration in minutes.
              * @example 25
@@ -185,6 +198,11 @@ export interface components {
              * @example 5
              */
             break_duration?: number;
+            /**
+             * @description Auto-advance focus → break → focus until stopped. Defaults to false.
+             * @example true
+             */
+            continuous?: boolean;
             noise_config?: components["schemas"]["NoiseConfig"];
         };
         ErrorResponse: {

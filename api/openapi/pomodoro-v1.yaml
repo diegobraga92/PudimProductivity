@@ -155,7 +155,14 @@ components:
       description: Current state of the pomodoro session.
       example: running
 
-    # TODO: Add WhiteNoise to backend
+    SessionPhase:
+      type: string
+      enum: [focus, break]
+      description: |
+        Which segment of the run the session represents. Single-shot sessions
+        are always 'focus', continuous runs alternate focus → break → focus.
+      example: focus
+
     NoiseConfig:
       type: object
       description: |
@@ -176,6 +183,8 @@ components:
       required:
         - id
         - status
+        - phase
+        - continuous
         - focus_duration
         - break_duration
         - current_cycle
@@ -189,6 +198,12 @@ components:
           example: "550e8400-e29b-41d4-a716-446655440000"
         status:
           $ref: "#/components/schemas/SessionStatus"
+        phase:
+          $ref: "#/components/schemas/SessionPhase"
+        continuous:
+          type: boolean
+          description: Whether the run auto-advances between focus and break segments.
+          example: false
         focus_duration:
           type: integer
           description: Focus duration in minutes.
@@ -240,6 +255,10 @@ components:
           description: Break duration in minutes. Defaults to 5 if omitted or zero.
           example: 5
           minimum: 1
+        continuous:
+          type: boolean
+          description: Auto-advance focus → break → focus until stopped. Defaults to false.
+          example: true
         noise_config:
           $ref: "#/components/schemas/NoiseConfig"
 

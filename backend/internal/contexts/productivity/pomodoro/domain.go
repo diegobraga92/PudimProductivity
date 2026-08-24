@@ -23,6 +23,25 @@ func (s SessionStatus) Valid() bool {
 	}
 }
 
+// Phase identifies which segment of a pomodoro run is currently active. A
+// continuous run alternates focus → break → focus …; a single-shot run only
+// ever has a focus phase.
+type Phase string
+
+const (
+	PhaseFocus Phase = "focus"
+	PhaseBreak Phase = "break"
+)
+
+func (p Phase) Valid() bool {
+	switch p {
+	case PhaseFocus, PhaseBreak:
+		return true
+	default:
+		return false
+	}
+}
+
 type NoiseConfig struct {
 	Enabled bool   `json:"enabled"`
 	TrackID string `json:"track_id,omitempty"`
@@ -32,6 +51,8 @@ type PomodoroSession struct {
 	ID                 string
 	UserID             string // Phase 9a: who owns the session (for insights)
 	Status             SessionStatus
+	Phase              Phase // focus or break (continuous runs alternate)
+	Continuous         bool  // true when the run auto-advances focus ↔ break
 	FocusDuration      time.Duration
 	BreakDuration      time.Duration
 	CurrentCycle       int           // which pomodoro cycle, for long break tracking
@@ -42,7 +63,7 @@ type PomodoroSession struct {
 	NoiseConfig        *NoiseConfig
 }
 
-func NewSession(id string, focusMinutes, breakMinutes int, noise *NoiseConfig) (*PomodoroSession, error) {
+func NewSession(id string, focusMinutes, breakMinutes int, continuous bool, noise *NoiseConfig) (*PomodoroSession, error) {
 	if id == "" {
 		return nil, fmt.Errorf("session id cannot be empty")
 	}
@@ -58,6 +79,8 @@ func NewSession(id string, focusMinutes, breakMinutes int, noise *NoiseConfig) (
 	return &PomodoroSession{
 		ID:                 id,
 		Status:             SessionRunning,
+		Phase:              PhaseFocus,
+		Continuous:         continuous,
 		FocusDuration:      time.Duration(focusMinutes) * time.Minute,
 		BreakDuration:      time.Duration(breakMinutes) * time.Minute,
 		CurrentCycle:       1,
@@ -74,8 +97,17 @@ func (s *PomodoroSession) Elapsed() time.Duration {
 	return s.AccumulatedElapsed
 }
 
+// SegmentDuration returns the duration of the current phase — the focus
+// duration during a focus segment, the break duration during a break segment.
+func (s *PomodoroSession) SegmentDuration() time.Duration {
+	if s.Phase == PhaseBreak {
+		return s.BreakDuration
+	}
+	return s.FocusDuration
+}
+
 func (s *PomodoroSession) Remaining() time.Duration {
-	remaining := s.FocusDuration - s.Elapsed()
+	remaining := s.SegmentDuration() - s.Elapsed()
 	if remaining < 0 {
 		return 0
 	}
@@ -124,4 +156,33 @@ func (s *PomodoroSession) Cancel() error {
 	}
 	s.Status = SessionCancelled
 	return nil
+}
+
+// NextSegment derives the next session of a continuous run from s, starting
+// fresh at time now. A completed focus segment yields a break segment on the
+// same cycle; a completed break segment yields the next focus cycle.
+func (s *PomodoroSession) NextSegment(id string, now time.Time) (*PomodoroSession, error) {
+	if id == "" {
+		return nil, fmt.Errorf("session id cannot be empty")
+	}
+
+	phase := PhaseFocus
+	cycle := s.CurrentCycle + 1
+	if s.Phase == PhaseFocus {
+		phase = PhaseBreak
+		cycle = s.CurrentCycle
+	}
+
+	return &PomodoroSession{
+		ID:            id,
+		UserID:        s.UserID,
+		Status:        SessionRunning,
+		Phase:         phase,
+		Continuous:    s.Continuous,
+		FocusDuration: s.FocusDuration,
+		BreakDuration: s.BreakDuration,
+		CurrentCycle:  cycle,
+		StartedAt:     now,
+		NoiseConfig:   s.NoiseConfig,
+	}, nil
 }
