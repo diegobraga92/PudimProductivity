@@ -8,6 +8,7 @@ import {
   stopSession,
 } from "../api/pomodoro";
 import { getSoundscape, type SoundID } from "../utils/audio";
+import { loadSoundCatalog } from "../utils/soundFiles";
 import { useI18n } from "../i18n";
 
 const FOCUS_PRESETS = [15, 25, 30, 45, 60];
@@ -150,6 +151,10 @@ function Pomodoro() {
 
   // Stop sound on unmount
   useEffect(() => {
+    // Fetch the backend sound catalog once, so the focus sound uses the real
+    // audio loop when available (the engine synthesizes it otherwise).
+    void loadSoundCatalog();
+
     return () => {
       const enabled = localStorage.getItem("soundscape_pomodoro_enabled") === "true";
       if (!enabled) return;

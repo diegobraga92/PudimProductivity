@@ -3,8 +3,6 @@ package membership
 
 import "context"
 
-// TODO: Add proper users, login and auth to make use of membership
-
 // Repository resolves which task lists a user can access. It backs the sync
 // hub's event scoping and presence features.
 type Repository interface {

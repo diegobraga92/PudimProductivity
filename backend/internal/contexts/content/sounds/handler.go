@@ -1,0 +1,55 @@
+package sounds
+
+import (
+	"net/http"
+	"path/filepath"
+	"strings"
+
+	"github.com/go-chi/chi/v5"
+
+	httpx "github.com/diegobraga92/pudimproductivity/backend/internal/platform/http"
+)
+
+// Handler serves the ambient sound catalog and audio file bytes.
+type Handler struct {
+	dir     string
+	catalog []Sound
+}
+
+// NewHandler builds a handler rooted at dir.
+func NewHandler(dir string, catalog []Sound) *Handler {
+	return &Handler{dir: dir, catalog: catalog}
+}
+
+// ListCatalog returns the sound library as JSON so clients can resolve a
+// SoundID to a playable file URL without hardcoding file names.
+func (h *Handler) ListCatalog(w http.ResponseWriter, _ *http.Request) {
+	httpx.WriteJSON(w, http.StatusOK, map[string][]Sound{"sounds": h.catalog})
+}
+
+// GetFile serves a sound file. Only plain file names are accepted (no path
+// segments, no traversal), so the resolved path always stays inside the sound
+// directory. http.ServeFile supports HTTP Range requests, which browsers use
+// for efficient streaming/looping of larger audio files.
+func (h *Handler) GetFile(w http.ResponseWriter, r *http.Request) {
+	file := chi.URLParam(r, "*")
+	path, ok := h.resolve(file)
+	if !ok {
+		httpx.WriteError(w, http.StatusBadRequest, "invalid sound file")
+		return
+	}
+	http.ServeFile(w, r, path)
+}
+
+// resolve validates file and returns the absolute path under the sound root.
+func (h *Handler) resolve(file string) (string, bool) {
+	if file == "" || file == "." || strings.Contains(file, "..") || strings.ContainsAny(file, `/\`) {
+		return "", false
+	}
+	path := filepath.Join(h.dir, file)
+	rel, err := filepath.Rel(h.dir, path)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return "", false
+	}
+	return path, true
+}

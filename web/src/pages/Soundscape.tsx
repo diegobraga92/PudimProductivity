@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { getSoundscape, type SoundID, type PresetID } from "../utils/audio";
+import { loadSoundCatalog } from "../utils/soundFiles";
 import { useI18n } from "../i18n";
 
 interface SoundDef {
@@ -130,6 +131,12 @@ function Soundscape() {
   });
 
   const soundscape = getSoundscape();
+
+  // Fetch the backend sound file catalog once, so sound buttons play the real
+  // audio loops when available (the engine synthesizes them otherwise).
+  useEffect(() => {
+    void loadSoundCatalog();
+  }, []);
 
   // Load presets on mount
   useEffect(() => {

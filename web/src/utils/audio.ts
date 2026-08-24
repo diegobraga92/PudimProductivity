@@ -1,8 +1,11 @@
 /**
  * Web Audio API soundscape engine.
  *
- * Generates ambient sounds entirely in the browser using AudioContext.
- * No external files, no streaming, no third-party services.
+ * Generates ambient sounds in the browser using AudioContext, and plays
+ * looping audio files (MP3 loops served by the backend) when they are
+ * available — see ./soundFiles for the catalog. File-based and synthesized
+ * sounds can be mixed freely, and every file-backed sound falls back to its
+ * synthesized version when the file fails to load.
  *
  * Supported sounds:
  *   - white-noise  : flat spectrum, hiss-like
@@ -14,7 +17,7 @@
  *   - campfire     : crackling fire with embers and pops
  */
 
-import { AMBIENT_SOUND_FILES } from "./soundFiles";
+import { getSoundFile } from "./soundFiles";
 
 export type SoundID =
   | "white-noise"
@@ -184,14 +187,22 @@ class SoundscapeEngine {
     gain.gain.value = fadeIn ? 0 : (this.soundVolumes[id] ?? 0.5);
     gain.connect(this.masterGain!);
 
-    // If a sound file is registered for this sound, play it as a looping media
-    // element routed through the same gain → masterGain graph (so volume,
-    // reverb and the visualizer apply). Fall back to synthesis on any failure.
-    const file = AMBIENT_SOUND_FILES[id];
+    // If a sound file is available from the backend catalog, play it as a
+    // looping media element routed through the same gain → masterGain graph (so
+    // volume, reverb and the visualizer apply). Fall back to synthesis on any
+    // failure — including an async play() rejection (autoplay policy, CORS or
+    // network error), which would otherwise silently play nothing.
+    const file = getSoundFile(id);
     if (file) {
+      const element = new Audio();
+      // MediaElementAudioSourceNode outputs silence unless the media is
+      // CORS-clean. The desktop app loads from app://bundle and fetches the
+      // audio from the backend, so request anonymous (no-credential) CORS mode
+      // — the backend answers it via the global CORS middleware.
+      element.crossOrigin = "anonymous";
+      element.loop = true;
       try {
-        const element = new Audio(file);
-        element.loop = true;
+        element.src = file;
         const source = ctx.createMediaElementSource(element);
         source.connect(gain);
 
@@ -204,10 +215,20 @@ class SoundscapeEngine {
         const entry = { source, gain, element };
         this.active.set(id, entry);
         void element.play().catch(() => {
-          // Autoplay may be blocked outside a user gesture — clean up and
-          // remove the entry so the sound can be retried.
-          this.releaseEntry(entry);
+          // Media element failed to load/autoplay (missing file, CORS failure,
+          // autoplay policy) — release the element and its source node, but
+          // keep the shared gain node wired to masterGain so the synthesized
+          // fallback can play through it.
+          try {
+            element.pause();
+          } catch {
+            // already stopped
+          }
+          element.removeAttribute("src");
+          element.load();
+          source.disconnect();
           this.active.delete(id);
+          this.startSynthesized(ctx, id, gain, fadeIn);
         });
         return;
       } catch {
@@ -215,10 +236,17 @@ class SoundscapeEngine {
       }
     }
 
+    this.startSynthesized(ctx, id, gain, fadeIn);
+  }
+
+  /**
+   * Start the synthesized (Web Audio) version of a sound through an already
+   * wired gain node, applying the same fade-in the file path uses.
+   */
+  private startSynthesized(ctx: AudioContext, id: SoundID, gain: GainNode, fadeIn: boolean): void {
     const source = this.createSource(ctx, id, gain);
     if (!source) return;
 
-    // Fade in
     if (fadeIn) {
       const targetVol = this.soundVolumes[id] ?? 0.5;
       gain.gain.setValueAtTime(0, ctx.currentTime);

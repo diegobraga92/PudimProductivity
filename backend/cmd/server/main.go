@@ -27,6 +27,7 @@ import (
 	"github.com/diegobraga92/pudimproductivity/backend/internal/contexts/content/media"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/contexts/content/recipe"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/contexts/content/scoring"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/contexts/content/sounds"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/contexts/insights"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/contexts/productivity/pomodoro"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/contexts/productivity/scheduler"
@@ -271,6 +272,25 @@ func main() {
 	} else {
 		log.Info().Msg("no media storage configured — recipe media uploads disabled (degraded mode)")
 	}
+
+	// Soundscape ambient sound library (rain, fire, noise loops, …). The default
+	// loops ship inside the image (backend/sounds → /app/sounds-default) and are
+	// copied into SOUNDS_DIR on startup; existing files are never overwritten,
+	// so a sound can be overridden on disk or via the sounds data volume without
+	// rebuilding the image. In dev, both dirs default to ./sounds, where seeding
+	// is a harmless no-op and the repo files are served directly.
+	soundsDir := os.Getenv("SOUNDS_DIR")
+	if soundsDir == "" {
+		soundsDir = "./sounds"
+	}
+	bundledSoundsDir := os.Getenv("SOUNDS_BUNDLED_DIR")
+	if bundledSoundsDir == "" {
+		bundledSoundsDir = "./sounds"
+	}
+	if err := sounds.SeedBundledDefaults(bundledSoundsDir, soundsDir); err != nil {
+		log.Warn().Err(err).Msg("soundscape defaults seeding failed — serving directory may be incomplete")
+	}
+	sounds.RegisterSoundsRoutes(r, soundsDir, sounds.DefaultCatalog)
 
 	// Phase 5a: Recipes — depends on the media uploader (optional) for images.
 	if pool != nil {

@@ -10,6 +10,8 @@ import (
 	httpx "github.com/diegobraga92/pudimproductivity/backend/internal/platform/http"
 )
 
+// TODO: Add proper users, login and auth to make use of membership
+
 // PresenceHandler serves the REST presence snapshot endpoint.
 type PresenceHandler struct {
 	hub *sync.Hub

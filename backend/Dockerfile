@@ -23,7 +23,13 @@ RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 WORKDIR /app
 
+RUN mkdir -p /app/sounds && chown appuser:appgroup /app/sounds
+
 COPY --from=builder --chown=appuser:appgroup /build/server .
+COPY --from=builder --chown=appuser:appgroup /build/sounds /app/sounds-default
+
+ENV SOUNDS_DIR=/app/sounds \
+    SOUNDS_BUNDLED_DIR=/app/sounds-default
 
 USER appuser
 

@@ -1,30 +1,15 @@
 # Sound files
 
-Optional audio files for the ambient **Soundscape** sounds.
+The ambient **Soundscape** sounds no longer live here.
 
-The Soundscape engine normally synthesizes every ambient sound in the browser
-using the Web Audio API ("the JS Sound API"). To use a real audio file instead
-for a given sound:
+They are served as audio files (MP3 loops) by the **backend** at
+`/api/v1/sounds/…` — see `backend/sounds/` and
+`backend/internal/contexts/content/sounds/`. The web client fetches the sound
+catalog once (`web/src/utils/soundFiles.ts`) and the Soundscape engine plays
+the looping files through the same master-volume / reverb / visualizer graph
+as the synthesized sounds. If a file is missing or the backend is unreachable,
+the engine falls back to the in-browser synthesized version.
 
-1. Drop the file in this directory (`web/public/sounds/`). Any browser-playable
-   format works (`.mp3`, `.ogg`, `.wav`, `.m4a`). Loops are handled by the
-   engine, so the file should be a clean, loopable clip.
-2. Register it in `web/src/utils/soundFiles.ts`:
+This directory is kept (empty) for historical reference only — do not add sound
+files here.
 
-   ```ts
-   AMBIENT_SOUND_FILES = {
-     rain: "/sounds/rain.mp3",
-     ocean: "/sounds/ocean.mp3",
-   };
-   ```
-
-   The key must match a `SoundID` (e.g. `white-noise`, `pink-noise`,
-   `brown-noise`, `rain`, `ocean`, `wind`, `campfire`, `binaural-beat`,
-   `isochronic-tone`, `meditation-bowl`, `ambient-pad`).
-
-3. Rebuild/restart the web app. Sounds without a registered file keep the
-   synthesized version — file-based and synthesized sounds can be mixed freely.
-
-File-based sounds are routed through the same master volume / reverb /
-visualizer graph as the synthesized ones, so existing controls apply to them
-too.
