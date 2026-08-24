@@ -5,8 +5,6 @@ import (
 	"time"
 )
 
-// --- Requests ---
-
 type CreateItemRequest struct {
 	Name        string   `json:"name"`
 	MediaType   string   `json:"media_type"`
@@ -63,8 +61,6 @@ type ImportItemsRequest struct {
 	Items []CreateItemRequest `json:"items"`
 }
 
-// --- Responses ---
-
 type ItemResponse struct {
 	ID          string   `json:"id"`
 	Name        string   `json:"name"`
@@ -103,8 +99,7 @@ func toResponses(items []*Item) []ItemResponse {
 	return out
 }
 
-// ScoreCandidateResponse is a single rating-provider match for the score
-// search endpoint.
+// ScoreCandidateResponse is a single rating-provider match for the score endpoint.
 type ScoreCandidateResponse struct {
 	Title      string  `json:"title"`
 	Year       int     `json:"year"`
@@ -117,8 +112,6 @@ type ScoreCandidateResponse struct {
 func toScoreResponses(cands []ScoreCandidate) []ScoreCandidateResponse {
 	out := make([]ScoreCandidateResponse, 0, len(cands))
 	for _, c := range cands {
-		// ScoreCandidateResponse shares ScoreCandidate's fields 1:1 (the JSON
-		// tag renames Source → score_source), so a plain conversion suffices.
 		out = append(out, ScoreCandidateResponse(c))
 	}
 	return out
@@ -137,8 +130,7 @@ type ScoreBatchRequest struct {
 }
 
 // ScoreBatchResult is the outcome for one requested item. Index echoes the
-// input order so clients can match results to rows. Error is present when the
-// provider (or the request row) failed; otherwise candidates holds the matches.
+// input order so clients can match results to rows.
 type ScoreBatchResult struct {
 	Index      int                      `json:"index"`
 	Candidates []ScoreCandidateResponse `json:"candidates"`
@@ -149,8 +141,6 @@ type ScoreBatchResult struct {
 type ScoreBatchResponse struct {
 	Results []ScoreBatchResult `json:"results"`
 }
-
-// --- Service interface (consumer-side, handler level) ---
 
 type Service interface {
 	Create(ctx context.Context, in CreateInput) (*Item, error)

@@ -10,23 +10,20 @@ import (
 	httpx "github.com/diegobraga92/pudimproductivity/backend/internal/platform/http"
 )
 
-// RegisterLibraryRoutes wires the Library module (media tracking). lookup is
-// the score-lookup provider (pass NoopScoreLookup{} to disable); flags gates the
-// score-search feature at runtime.
+// RegisterLibraryRoutes wires the Library endpoints
 func RegisterLibraryRoutes(r chi.Router, repo Repository, auditLogger audit.Logger, bus eventbus.Bus, lookup ScoreLookupProvider, flags *featureflag.Service) *LibraryService {
 	service := NewLibraryService(repo, auditLogger, bus)
 	handler := NewHandler(service, lookup, flags)
 
 	r.Route("/api/v1/library", func(r chi.Router) {
-		// Read-only endpoints — anonymous access allowed. Batch score lookup is
-		// read-only (only queries external providers) so it sits with the reads.
+		// Read-only endpoints — anonymous access allowed.
 		r.Get("/", handler.List)
 		r.Get("/subtypes", handler.Subtypes)
 		r.Get("/score/search", handler.SearchScores)
 		r.Post("/score/batch", handler.SearchScoresBatch)
 		r.Get("/{itemId}", handler.Get)
 
-		// Mutations require an authenticated user (dev identity headers).
+		// Mutations require an authenticated user.
 		r.Group(func(r chi.Router) {
 			r.Use(httpx.RequireRole("admin", "user"))
 			r.Post("/", handler.Create)

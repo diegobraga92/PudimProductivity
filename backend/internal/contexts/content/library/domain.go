@@ -1,7 +1,4 @@
-// Package library implements media tracking: movies, series, books and games
-// are stored as simple items with a name, media type, release year, a done
-// flag (consumed/read/watched/played) and optional notes. It replaces the
-// book-specific booktrack module.
+// Package library implements media tracking.
 package library
 
 import (
@@ -38,21 +35,17 @@ type Item struct {
 	ReleaseYear *int
 	Done        bool
 	Notes       string
-	// Subtype is an optional free-text sub-category, e.g. "Console" for games
-	// or "Genre" for movies/series/books. Empty means not set.
-	Subtype string
-	// Score is an optional rating (0-100 scale: IMDb 8.7, Metacritic 95, ...).
-	Score *float64
-	// ScoreSource names where Score came from (e.g. "imdb", "metacritic").
-	// Empty means no score is recorded.
+	Subtype     string
+	// Score is an optional rating from a provider, like IMDB.
+	Score       *float64
 	ScoreSource string
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }
 
-// ScoreSource is a canonical token for where an item's score came from. Any
-// non-empty string is accepted so configurable providers can introduce new
-// sources without a domain change; these constants document the known ones.
+// TODO: Check for other sources.
+
+// ScoreSource is a canonical token for where an item's score came from.
 type ScoreSource string
 
 const (

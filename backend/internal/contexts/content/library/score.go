@@ -2,8 +2,9 @@ package library
 
 import "context"
 
-// ScoreLookupFeatureFlag gates the score-lookup feature (off by default). See
-// docs/adr/007-external-api-integrations.md for the graceful-degradation model.
+// TODO: Make it on by default.
+
+// ScoreLookupFeatureFlag gates the score-lookup feature (off by default).
 const ScoreLookupFeatureFlag = "library.score_lookup_enabled"
 
 // ScoreQuery identifies the media whose rating should be searched.
@@ -24,31 +25,26 @@ type ScoreCandidate struct {
 	URL        string
 }
 
-// ScoreLookupClient searches external rating providers. Consumers depend on
-// this interface (per ADR 007) so production can inject the configured
-// composite and tests can inject stubs.
+// ScoreLookupClient searches external rating providers.
 type ScoreLookupClient interface {
 	Search(ctx context.Context, query ScoreQuery) ([]ScoreCandidate, error)
 }
 
 // ScoreLookupProvider extends ScoreLookupClient with a Configured query so
 // handlers can distinguish "not configured / degraded" (503) from "no ratings
-// found" (200 with an empty list). Kept as a separate interface so plain
-// ScoreLookupClient stubs in tests do not have to implement it.
+// found" (200 with an empty list).
 type ScoreLookupProvider interface {
 	ScoreLookupClient
 	Configured() bool
 }
 
 // NoopScoreLookup is the default client when no provider is configured or the
-// feature flag is disabled. It always returns no candidates — the handler maps
-// this to a 503 so clients can tell "not configured" from "no ratings found".
+// feature flag is disabled.
 type NoopScoreLookup struct{}
 
 func (NoopScoreLookup) Search(context.Context, ScoreQuery) ([]ScoreCandidate, error) {
 	return nil, nil
 }
 
-// Configured reports whether the client can serve lookups. Noop is never
-// configured; a concrete client with live providers is.
+// Configured reports whether the client can serve lookups.
 func (NoopScoreLookup) Configured() bool { return false }

@@ -9,8 +9,6 @@ import (
 	"github.com/diegobraga92/pudimproductivity/backend/internal/platform/eventbus"
 )
 
-// --- fakes ---
-
 type fakeRepo struct {
 	saved     *Item
 	imported  []*Item
@@ -94,8 +92,6 @@ func (b *busSpy) Close() error { return nil }
 func ptrInt(v int) *int { return &v }
 
 func ptrFloat(v float64) *float64 { return &v }
-
-// --- tests ---
 
 func TestService_Create_PublishesEventAndAudits(t *testing.T) {
 	repo := &fakeRepo{}

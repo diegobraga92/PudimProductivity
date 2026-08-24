@@ -5,11 +5,9 @@ import (
 	"errors"
 )
 
-// ErrNotFound is returned when a library item does not exist.
 var ErrNotFound = errors.New("library item not found")
 
-// ListFilter carries the optional filters for List. Empty/zero values mean
-// "no filter" for that dimension.
+// ListFilter carries the optional filters for List.
 type ListFilter struct {
 	MediaType string // "" = all media types
 	Done      *bool  // nil = any status

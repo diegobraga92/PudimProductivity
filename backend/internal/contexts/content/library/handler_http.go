@@ -17,14 +17,8 @@ import (
 	httpx "github.com/diegobraga92/pudimproductivity/backend/internal/platform/http"
 )
 
-// maxImportItems caps a single bulk-import request to keep the payload sane.
 const maxImportItems = 5000
-
-// maxScoreBatchItems caps a single batch score-lookup request so a "long" CSV
-// is processed in chunks with bounded concurrency (see batchWorkers).
 const maxScoreBatchItems = 100
-
-// batchWorkers bounds how many provider searches run concurrently.
 const batchWorkers = 5
 
 type Handler struct {
@@ -115,7 +109,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 }
 
 // Subtypes returns the distinct non-empty genre/console values used by the
-// library's subtype filter dropdown. Read-only and anonymous like List.
+// library's subtype filter dropdown.
 func (h *Handler) Subtypes(w http.ResponseWriter, r *http.Request) {
 	mediaType := r.URL.Query().Get("type")
 	if mediaType != "" && !MediaType(mediaType).Valid() {
@@ -184,7 +178,6 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 
 // scoreLookupReady writes a 503 when the score-lookup feature is disabled or
 // no provider is configured, and reports whether the caller may proceed.
-// Graceful degradation per ADR 007: item CRUD never depends on this.
 func (h *Handler) scoreLookupReady(w http.ResponseWriter, r *http.Request) bool {
 	if h.flags != nil {
 		if enabled, err := h.flags.IsEnabled(r.Context(), ScoreLookupFeatureFlag); err != nil {
@@ -202,8 +195,6 @@ func (h *Handler) scoreLookupReady(w http.ResponseWriter, r *http.Request) bool 
 }
 
 // SearchScores looks up ratings for a title from the configured provider.
-// Read-only and anonymous like List. Returns 503 when the feature is disabled
-// or no provider is configured (graceful degradation, per ADR 007).
 func (h *Handler) SearchScores(w http.ResponseWriter, r *http.Request) {
 	if !h.scoreLookupReady(w, r) {
 		return
@@ -248,9 +239,7 @@ func (h *Handler) SearchScores(w http.ResponseWriter, r *http.Request) {
 }
 
 // SearchScoresBatch performs score lookups for many titles at once (used by the
-// CSV import auto-scoring flow). Each item is looked up independently with
-// bounded concurrency; per-item failures are reported inline rather than
-// failing the whole request. Same 503 gating as SearchScores.
+// CSV import auto-scoring flow).
 func (h *Handler) SearchScoresBatch(w http.ResponseWriter, r *http.Request) {
 	if !h.scoreLookupReady(w, r) {
 		return
