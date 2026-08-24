@@ -13,25 +13,18 @@ import (
 )
 
 // staleEventType tells a reconnecting client that it fell too far behind the
-// replay buffer and must refetch the full state via REST before resuming
-// real-time updates.
+// replay buffer and must refetch the full state via REST before resuming real-time updates.
 const staleEventType eventbus.EventType = "stale"
 
-// writeTimeout bounds each individual WebSocket write.
 const writeTimeout = 10 * time.Second
 
-// client wraps a single WebSocket connection. All writes are serialized through
-// sendCh; dispatch never blocks the event bus.
+// TODO: Check sync userID code when proper users are implemented
+
 type client struct {
 	hub    *Hub
 	conn   *websocket.Conn
 	remote string
 
-	// Phase 8: identity + membership. userID is the authenticated user from
-	// the dev identity headers; role their application role. listIDs is the
-	// set of task lists the user can access, resolved at connect time and
-	// refreshed when a tasklist.shared/unshared event arrives. It is guarded
-	// by mu (refreshed by the bus goroutine, read by the write pump).
 	userID  string
 	role    string
 	mu      sync.RWMutex
@@ -61,8 +54,6 @@ func newClient(hub *Hub, conn *websocket.Conn, remote string, lastSeq int64, use
 	}
 }
 
-// hasAnyList reports whether the client's membership includes any of the given
-// list IDs. Used to scope event dispatch to members of a list (Phase 8).
 func (c *client) hasAnyList(listIDs []string) bool {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -74,14 +65,12 @@ func (c *client) hasAnyList(listIDs []string) bool {
 	return false
 }
 
-// setListIDs atomically replaces the client's membership set.
 func (c *client) setListIDs(listIDs map[string]struct{}) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.listIDs = listIDs
 }
 
-// listIDSlice returns a copy of the client's membership as a slice.
 func (c *client) listIDSlice() []string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -105,7 +94,6 @@ func (c *client) dispatch(event eventbus.Event) {
 	}
 }
 
-// close idempotently tears down the connection.
 func (c *client) close() {
 	c.closeOnce.Do(func() {
 		close(c.closed)
@@ -113,11 +101,6 @@ func (c *client) close() {
 	})
 }
 
-// run streams events to the connection. The write pump first sends the replay
-// window (events published before this client registered, seq > lastSeq), then
-// streams live events. Because register() adds the client to the registry at
-// the same time it snapshots the replay, live events always have a higher seq
-// than replay events, so ordering is preserved.
 func (c *client) run(ctx context.Context, replay []eventbus.Event, stale bool) {
 	var wg sync.WaitGroup
 	wg.Add(2)
@@ -137,13 +120,12 @@ func (c *client) readPump(ctx context.Context) {
 	}
 }
 
-// writePump sends the replay window, then drains sendCh (live events) to the
-// connection.
+// writePump sends the replay window, then drains sendCh (live events) to the connection.
 func (c *client) writePump(ctx context.Context, replay []eventbus.Event, stale bool) {
 	defer c.close()
 
 	for _, e := range replay {
-		targets, restricted := targetsFor(e)
+		targets, restricted := affectedListIDs(e)
 		if restricted && !c.hasAnyList(targets) {
 			continue
 		}
@@ -174,7 +156,6 @@ func (c *client) writePump(ctx context.Context, replay []eventbus.Event, stale b
 	}
 }
 
-// writeEvent marshals and writes a single event frame. Returns false on error.
 func (c *client) writeEvent(ctx context.Context, event eventbus.Event) bool {
 	data, err := json.Marshal(event)
 	if err != nil {

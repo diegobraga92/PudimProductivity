@@ -15,7 +15,7 @@ import (
 	"github.com/diegobraga92/pudimproductivity/backend/internal/platform/eventbus"
 )
 
-// startHub wires an InMemoryBus + Hub and exposes ServeHTTP via httptest.
+// startHub wires an InMemoryBus + Hub and exposes the WS endpoint via httptest.
 func startHub(t *testing.T, cfg Config) (*eventbus.InMemoryBus, *httptest.Server) {
 	t.Helper()
 	bus := eventbus.NewInMemoryBus()
@@ -28,7 +28,7 @@ func startHub(t *testing.T, cfg Config) (*eventbus.InMemoryBus, *httptest.Server
 		_ = bus.Close()
 	})
 
-	srv := httptest.NewServer(http.HandlerFunc(hub.ServeHTTP))
+	srv := httptest.NewServer(http.HandlerFunc(NewHandler(hub).ServeHTTP))
 	t.Cleanup(srv.Close)
 	return bus, srv
 }

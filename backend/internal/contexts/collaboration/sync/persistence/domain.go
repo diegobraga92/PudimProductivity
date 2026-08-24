@@ -9,8 +9,7 @@ import (
 	"github.com/diegobraga92/pudimproductivity/backend/internal/contexts/productivity/tasklist"
 )
 
-// ChangeSet is the domain result of an incremental sync query: every row created
-// or updated after `since`, plus the IDs/keys of rows soft-deleted after `since`.
+// ChangeSet is contains the changes for a incremental sync query.
 type ChangeSet struct {
 	Timestamp            time.Time
 	Tasks                []*task.Task

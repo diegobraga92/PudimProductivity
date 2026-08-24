@@ -12,19 +12,20 @@ import (
 	httpx "github.com/diegobraga92/pudimproductivity/backend/internal/platform/http"
 )
 
+// Handler is the HTTP transport for the real-time sync endpoint.
+type Handler struct {
+	hub *Hub
+}
+
+// NewHandler builds a sync handler bound to the given hub.
+func NewHandler(hub *Hub) *Handler {
+	return &Handler{hub: hub}
+}
+
 // ServeHTTP upgrades the request to a WebSocket connection and streams events.
-//
-// Query parameters:
-//   - last_seq: the client's last seen sequence number. Omitted or 0 on a fresh
-//     connection (all buffered events are replayed). If the requested seq is too
-//     old for the in-memory replay buffer, the server sends a "stale" event and
-//     the client must refetch via REST.
-//
-// Identity: the connection inherits the authenticated user from the shared
-// AuthMiddleware (X-User-ID / X-User-Role dev headers). Presence is published
-// on connect/disconnect and events are scoped to the user's task-list
-// membership when a MembershipResolver is configured (Phase 8).
-func (h *Hub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+// last_seq is the client's last seen sequence number. Omitted or 0 on a fresh connection.
+// If seq is too old, the server sends a "stale" event and the client must refetch via REST.
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	lastSeq := int64(0)
 	if raw := r.URL.Query().Get("last_seq"); raw != "" {
 		if v, err := strconv.ParseInt(raw, 10, 64); err == nil && v > 0 {
@@ -32,9 +33,8 @@ func (h *Hub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// TODO: Local dev serves plain HTTP. Origin checks are skipped for now.
 	conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{
-		// Local dev serves plain HTTP; production sits behind a TLS-terminating
-		// proxy. Origin checks are skipped for now (see threat model I2/T1).
 		InsecureSkipVerify: true,
 	})
 	if err != nil {
@@ -42,17 +42,17 @@ func (h *Hub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		log.Warn().Err(err).Bool("hijackable", hijackable).Msg("websocket upgrade rejected")
 		return
 	}
-	// Clients send no data; bound read size to control frames only.
+
+	// Bound read size to control frames only.
 	conn.SetReadLimit(1024)
 
 	userID := httpx.GetUserID(r.Context())
 	role := httpx.GetUserRole(r.Context())
 
-	// Resolve task-list membership for event scoping + presence. When the
-	// resolver is unavailable the connection degrades to broadcast (legacy).
+	// Resolve task-list membership for event scoping + presence. Degrades to broadcast.
 	listIDs := make(map[string]struct{})
-	if h.resolver != nil {
-		ids, err := h.resolver.ListIDsForUser(r.Context(), userID, role)
+	if h.hub.resolver != nil {
+		ids, err := h.hub.resolver.ListIDsForUser(r.Context(), userID, role)
 		if err != nil {
 			log.Warn().Err(err).Str("user_id", userID).Msg("failed to resolve membership, broadcasting")
 		} else {
@@ -63,13 +63,13 @@ func (h *Hub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	remote := r.RemoteAddr
-	c := newClient(h, conn, remote, lastSeq, userID, role, listIDs)
-	replay, stale, added := h.register(c)
+	c := newClient(h.hub, conn, remote, lastSeq, userID, role, listIDs)
+	replay, stale, added := h.hub.register(c)
 	if !added {
 		_ = conn.Close(websocket.StatusPolicyViolation, "server busy")
 		return
 	}
-	defer h.removeClient(c)
+	defer h.hub.removeClient(c)
 	defer c.close()
 
 	log.Info().Str("user_id", userID).Str("remote", remote).Int64("last_seq", lastSeq).Int("lists", len(listIDs)).Msg("ws client connected")
@@ -77,11 +77,11 @@ func (h *Hub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Presence: announce the connect, then announce the disconnect when run
 	// returns. Both go through the bus so they are replayed to late joiners.
 	if userID != "" && userID != "anonymous" {
-		h.publishPresence(context.Background(), eventbus.EventPresenceOnline, map[string]any{
+		h.hub.publishPresence(context.Background(), eventbus.EventPresenceOnline, map[string]any{
 			"user_id":  userID,
 			"list_ids": c.listIDSlice(),
 		})
-		defer h.publishPresence(context.Background(), eventbus.EventPresenceOffline, map[string]any{
+		defer h.hub.publishPresence(context.Background(), eventbus.EventPresenceOffline, map[string]any{
 			"user_id": userID,
 		})
 	}

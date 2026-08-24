@@ -17,8 +17,6 @@ import (
 	"github.com/diegobraga92/pudimproductivity/backend/internal/platform/eventbus"
 )
 
-// contractSchema compiles api/ws/events-v1.json — the source of truth for the
-// WebSocket message format.
 func contractSchema(t *testing.T) *jsonschema.Schema {
 	t.Helper()
 	path := filepath.Join("..", "..", "..", "..", "..", "api", "ws", "events-v1.json")
@@ -41,8 +39,6 @@ func contractSchema(t *testing.T) *jsonschema.Schema {
 	return schema
 }
 
-// stubResolver gives the contract-test connection membership of the lists used
-// in scoped event payloads, so Phase 8 list-scoped events are delivered.
 type stubResolver struct{ listIDs []string }
 
 func (s stubResolver) ListIDsForUser(_ context.Context, _, _ string) ([]string, error) {
@@ -50,9 +46,7 @@ func (s stubResolver) ListIDsForUser(_ context.Context, _, _ string) ([]string, 
 }
 
 // TestWsEventsConformToContract publishes every task event type through the hub
-// and validates the received JSON against api/ws/events-v1.json. This is the
-// contract test that prevents spec drift between the Go event bus and the
-// documented WebSocket schema.
+// and validates the received JSON against the events.json.
 func TestWsEventsConformToContract(t *testing.T) {
 	schema := contractSchema(t)
 	bus := eventbus.NewInMemoryBus()
@@ -66,7 +60,7 @@ func TestWsEventsConformToContract(t *testing.T) {
 	}
 	t.Cleanup(hub.Close)
 
-	srv := httptest.NewServer(http.HandlerFunc(hub.ServeHTTP))
+	srv := httptest.NewServer(http.HandlerFunc(NewHandler(hub).ServeHTTP))
 	t.Cleanup(srv.Close)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -98,8 +92,6 @@ func TestWsEventsConformToContract(t *testing.T) {
 		{eventbus.EventTaskUncompleted, map[string]interface{}{
 			"id": "00000000-0000-0000-0000-000000000001", "title": "Contract test", "completed_date": "2026-08-09",
 		}},
-		// Phase 8: collaboration events (list-scoped; the test connection is a
-		// member of the list via stubResolver).
 		{eventbus.EventTaskMerged, map[string]interface{}{
 			"id": "00000000-0000-0000-0000-000000000001", "title": "Merged title", "status": "todo",
 			"list_id":    "00000000-0000-0000-0000-00000000000a",
@@ -119,7 +111,6 @@ func TestWsEventsConformToContract(t *testing.T) {
 		{eventbus.EventPresenceOffline, map[string]interface{}{
 			"user_id": "user-1",
 		}},
-		// Library media tracking (replaces Phase 5 book tracking).
 		{eventbus.EventLibraryItemAdded, map[string]interface{}{
 			"id": "00000000-0000-0000-0000-000000000001", "name": "The Matrix", "media_type": "movie", "done": false,
 		}},
@@ -132,7 +123,6 @@ func TestWsEventsConformToContract(t *testing.T) {
 		{eventbus.EventLibraryItemsImported, map[string]interface{}{
 			"imported": 3, "skipped": 1,
 		}},
-		// Phase 5a: recipes.
 		{eventbus.EventRecipeCreated, map[string]interface{}{
 			"id": "00000000-0000-0000-0000-000000000001", "title": "Pancakes", "difficulty": "easy",
 		}},
