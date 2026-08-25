@@ -28,8 +28,7 @@ export function usePomodoroSoundSync(): void {
 
   const status: SessionStatus | null = data?.active ? data.session.status : null;
 
-  // Prime the backend sound file catalog once so the looped MP3s are used when
-  // available (the engine synthesizes them otherwise).
+  // Prime the backend sound file catalog once so the looped MP3s are used.
   useEffect(() => {
     void loadSoundCatalog();
   }, []);

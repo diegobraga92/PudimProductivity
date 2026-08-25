@@ -14,15 +14,13 @@ type Sound struct {
 // DefaultCatalog lists the sounds shipped with the app. Every ID matches a
 // SoundID in web/src/utils/audio.ts.
 var DefaultCatalog = []Sound{
-	{ID: "white-noise", File: "white-noise.mp3", MIME: "audio/mpeg"},
-	{ID: "pink-noise", File: "pink-noise.mp3", MIME: "audio/mpeg"},
-	{ID: "brown-noise", File: "brown-noise.mp3", MIME: "audio/mpeg"},
-	{ID: "rain", File: "rain.mp3", MIME: "audio/mpeg"},
-	{ID: "ocean", File: "ocean.mp3", MIME: "audio/mpeg"},
-	{ID: "wind", File: "wind.mp3", MIME: "audio/mpeg"},
-	{ID: "campfire", File: "campfire.mp3", MIME: "audio/mpeg"},
-	{ID: "binaural-beat", File: "binaural-beat.mp3", MIME: "audio/mpeg"},
-	{ID: "isochronic-tone", File: "isochronic-tone.mp3", MIME: "audio/mpeg"},
-	{ID: "meditation-bowl", File: "meditation-bowl.mp3", MIME: "audio/mpeg"},
 	{ID: "ambient-pad", File: "ambient-pad.mp3", MIME: "audio/mpeg"},
+	{ID: "light-rain", File: "light-rain.mp3", MIME: "audio/mpeg"},
+	{ID: "rain", File: "rain.mp3", MIME: "audio/mpeg"},
+	{ID: "rain-and-thunder", File: "rain-and-thunder.mp3", MIME: "audio/mpeg"},
+	{ID: "strong-rain", File: "strong-rain.mp3", MIME: "audio/mpeg"},
+	{ID: "stronger-rain", File: "stronger-rain.mp3", MIME: "audio/mpeg"},
+	{ID: "fire", File: "fire.mp3", MIME: "audio/mpeg"},
+	{ID: "fire-and-thunder", File: "fire-and-thunder.mp3", MIME: "audio/mpeg"},
+	{ID: "ocean", File: "ocean.mp3", MIME: "audio/mpeg"},
 }

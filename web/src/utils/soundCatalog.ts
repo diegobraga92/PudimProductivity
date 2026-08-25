@@ -13,15 +13,13 @@ export interface SoundDef {
  * ./soundFiles and the SoundID union in ./audio.
  */
 export const SOUNDS: SoundDef[] = [
-  { id: "white-noise", labelKey: "soundscape.whiteNoise", icon: "🌊", descKey: "soundscape.desc.whiteNoise" },
-  { id: "pink-noise", labelKey: "soundscape.pinkNoise", icon: "🌸", descKey: "soundscape.desc.pinkNoise" },
-  { id: "brown-noise", labelKey: "soundscape.brownNoise", icon: "🌫️", descKey: "soundscape.desc.brownNoise" },
-  { id: "rain", labelKey: "soundscape.rainSound", icon: "🌧️", descKey: "soundscape.desc.rain" },
-  { id: "ocean", labelKey: "soundscape.ocean", icon: "🌊", descKey: "soundscape.desc.ocean" },
-  { id: "wind", labelKey: "soundscape.wind", icon: "💨", descKey: "soundscape.desc.wind" },
-  { id: "campfire", labelKey: "soundscape.campfire", icon: "🔥", descKey: "soundscape.desc.campfire" },
-  { id: "binaural-beat", labelKey: "soundscape.binaural", icon: "🎧", descKey: "soundscape.desc.binaural" },
-  { id: "isochronic-tone", labelKey: "soundscape.isochronic", icon: "📳", descKey: "soundscape.desc.isochronic" },
-  { id: "meditation-bowl", labelKey: "soundscape.meditationBowl", icon: "🕉️", descKey: "soundscape.desc.meditationBowl" },
   { id: "ambient-pad", labelKey: "soundscape.ambientPad", icon: "🎹", descKey: "soundscape.desc.ambientPad" },
+  { id: "light-rain", labelKey: "soundscape.lightRain", icon: "🌧️", descKey: "soundscape.desc.lightRain" },
+  { id: "rain", labelKey: "soundscape.rainSound", icon: "🌧️", descKey: "soundscape.desc.rain" },
+  { id: "rain-and-thunder", labelKey: "soundscape.rainAndThunder", icon: "⛈️", descKey: "soundscape.desc.rainAndThunder" },
+  { id: "strong-rain", labelKey: "soundscape.strongRain", icon: "🌧️", descKey: "soundscape.desc.strongRain" },
+  { id: "stronger-rain", labelKey: "soundscape.strongerRain", icon: "🌩️", descKey: "soundscape.desc.strongerRain" },
+  { id: "fire", labelKey: "soundscape.fire", icon: "🔥", descKey: "soundscape.desc.fire" },
+  { id: "fire-and-thunder", labelKey: "soundscape.fireAndThunder", icon: "🔥⛈️", descKey: "soundscape.desc.fireAndThunder" },
+  { id: "ocean", labelKey: "soundscape.ocean", icon: "🌊", descKey: "soundscape.desc.ocean" },
 ];

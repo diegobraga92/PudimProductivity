@@ -8,11 +8,9 @@ import config from "../config";
  *   GET /api/v1/sounds        → { "sounds": [{ "id": "rain", "file": "rain.mp3", … }] }
  *   GET /api/v1/sounds/{file} → audio bytes (Range-capable, CORS-enabled)
  *
- * This module fetches the catalog once and maps each known SoundID to its
- * playable URL. The Soundscape engine keeps synthesizing any sound whose file
- * is unknown or fails to load, so a missing/empty catalog silently degrades to
- * the in-browser synthesized versions (and the feature keeps working offline or
- * when the backend is unreachable).
+ * This module fetches the catalog once and maps each SoundID to its playable
+ * URL. Every sound in the catalog is file-backed; a sound whose file is
+ * unknown or fails to load simply does not play.
  */
 
 interface SoundCatalogEntry {
@@ -23,17 +21,15 @@ interface SoundCatalogEntry {
 
 /** SoundIDs the engine knows how to play (must match web/src/utils/audio.ts). */
 const KNOWN_SOUND_IDS: ReadonlySet<SoundID> = new Set<SoundID>([
-  "white-noise",
-  "pink-noise",
-  "brown-noise",
-  "rain",
-  "ocean",
-  "wind",
-  "campfire",
-  "binaural-beat",
-  "isochronic-tone",
-  "meditation-bowl",
   "ambient-pad",
+  "light-rain",
+  "rain",
+  "rain-and-thunder",
+  "strong-rain",
+  "stronger-rain",
+  "fire",
+  "fire-and-thunder",
+  "ocean",
 ]);
 
 /** Populated once the backend catalog is fetched; SoundID → playable URL. */
@@ -42,8 +38,8 @@ let loadPromise: Promise<void> | null = null;
 
 /**
  * Fetch the backend sound catalog. Safe to call multiple times — the network
- * request runs at most once and never throws (failures keep the synthesized
- * fallbacks active).
+ * request runs at most once and never throws (failures leave the catalog
+ * empty).
  */
 export function loadSoundCatalog(): Promise<void> {
   if (!loadPromise) {
@@ -61,7 +57,7 @@ export function loadSoundCatalog(): Promise<void> {
         }
         fileBySound = next;
       } catch {
-        // Backend unreachable or invalid response — keep synthesized sounds.
+        // Backend unreachable or invalid response — leave the catalog empty.
       }
     })();
   }

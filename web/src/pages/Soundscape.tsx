@@ -4,17 +4,6 @@ import { loadSoundCatalog } from "../utils/soundFiles";
 import { useI18n } from "../i18n";
 import { SOUNDS } from "../utils/soundCatalog";
 
-const LS_RAIN_INTENSITY = "soundscape_rain_intensity";
-
-// Rain intensity translation keys
-const RAIN_LABEL_KEYS = [
-  "soundscape.rainDrizzle",
-  "soundscape.rainLight",
-  "soundscape.rainModerate",
-  "soundscape.rainHeavy",
-  "soundscape.rainDownpour",
-];
-
 /** Canvas-based frequency visualizer. */
 function Visualizer() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -82,28 +71,22 @@ function Soundscape() {
   const [playing, setPlaying] = useState<Set<SoundID>>(new Set());
   const [masterVolume, setMasterVolume] = useState(0.5);
   const [volumes, setVolumes] = useState<Record<SoundID, number>>({
-    "white-noise": 0.5,
-    "pink-noise": 0.5,
-    "brown-noise": 0.5,
-    rain: 0.5,
-    ocean: 0.5,
-    wind: 0.5,
-    campfire: 0.5,
-    "binaural-beat": 0.5,
-    "isochronic-tone": 0.5,
-    "meditation-bowl": 0.5,
     "ambient-pad": 0.5,
-  });
-  const [rainIntensity, setRainIntensity] = useState(() => {
-    const saved = localStorage.getItem(LS_RAIN_INTENSITY);
-    return saved ? parseFloat(saved) : 0.5;
+    "light-rain": 0.5,
+    rain: 0.5,
+    "rain-and-thunder": 0.5,
+    "strong-rain": 0.5,
+    "stronger-rain": 0.5,
+    fire: 0.5,
+    "fire-and-thunder": 0.5,
+    ocean: 0.5,
   });
   const [presets, setPresets] = useState<{ id: PresetID; label: string }[]>([]);
 
   const soundscape = getSoundscape();
 
-  // Fetch the backend sound file catalog once, so sound buttons play the real
-  // audio loops when available (the engine synthesizes them otherwise).
+  // Fetch the backend sound file catalog once so sound buttons play the real
+  // audio loops served by the backend.
   useEffect(() => {
     void loadSoundCatalog();
   }, []);
@@ -118,11 +101,6 @@ function Soundscape() {
     soundscape.setVolume(masterVolume);
   }, [masterVolume, soundscape]);
 
-  // Sync rain intensity
-  useEffect(() => {
-    soundscape.setRainIntensity(rainIntensity);
-  }, [rainIntensity, soundscape]);
-
   const toggle = (id: SoundID) => {
     if (playing.has(id)) {
       // Stop with fade-out
@@ -132,8 +110,7 @@ function Soundscape() {
         next.delete(id);
         return next;
       });
-    } else {
-      soundscape.play(id);
+    } else if (soundscape.play(id)) {
       soundscape.setSoundVolume(id, volumes[id]);
       setPlaying((prev) => new Set(prev).add(id));
     }
@@ -144,11 +121,6 @@ function Soundscape() {
     soundscape.setSoundVolume(id, v);
   };
 
-  const changeRainIntensity = (v: number) => {
-    setRainIntensity(v);
-    localStorage.setItem(LS_RAIN_INTENSITY, String(v));
-  };
-
   /** Save current mix as a preset. */
   const savePreset = () => {
     const label = prompt(t("soundscape.presetPrompt"));
@@ -157,7 +129,7 @@ function Soundscape() {
     for (const id of SOUNDS.map((s) => s.id)) {
       currentSounds[id] = playing.has(id);
     }
-    soundscape.savePreset(label, currentSounds, volumes, masterVolume, rainIntensity);
+    soundscape.savePreset(label, currentSounds, volumes, masterVolume);
     setPresets(soundscape.getPresets().map((p) => ({ id: p.id, label: p.label })));
   };
 
@@ -176,9 +148,8 @@ function Soundscape() {
     // Apply preset
     const newPlaying = new Set<SoundID>();
     for (const id of SOUNDS.map((s) => s.id)) {
-      if (preset.sounds[id]) {
+      if (preset.sounds[id] && soundscape.play(id)) {
         const vol = preset.volumes[id] ?? 0.5;
-        soundscape.play(id);
         soundscape.setSoundVolume(id, vol);
         newPlaying.add(id);
       }
@@ -194,7 +165,6 @@ function Soundscape() {
     setVolumes(newVolumes);
     setPlaying(newPlaying);
     setMasterVolume(preset.masterVolume);
-    setRainIntensity(preset.rainIntensity);
   };
 
   /** Delete a preset. */
@@ -324,42 +294,6 @@ function Soundscape() {
           );
         })}
       </div>
-
-      {/* Rain Intensity Slider — visible when rain is playing */}
-      {playing.has("rain") && (
-        <div
-          className="card"
-          style={{
-            maxWidth: "480px",
-            margin: "var(--space-md) auto 0",
-            padding: "var(--space-md) var(--space-lg)",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "var(--space-md)",
-            }}
-          >
-            <span style={{ fontSize: "var(--font-size-sm)", fontWeight: 600, minWidth: "60px" }}>
-              🌧️ {t("soundscape.rain")}
-            </span>
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.01"
-              value={rainIntensity}
-              onChange={(e) => changeRainIntensity(parseFloat(e.target.value))}
-              style={{ flex: 1, accentColor: "var(--color-primary)" }}
-            />
-            <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)", minWidth: "80px", textAlign: "right" }}>
-              {t(RAIN_LABEL_KEYS[Math.round(rainIntensity * 4)])}
-            </span>
-          </div>
-        </div>
-      )}
 
       {/* Presets */}
       <div

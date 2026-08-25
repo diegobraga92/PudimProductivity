@@ -13,7 +13,7 @@ import { SOUNDS } from "./soundCatalog";
 
 export const POMODORO_SYNC_ENABLED_KEY = "soundscape_pomodoro_enabled";
 export const POMODORO_SYNC_SOUND_KEY = "soundscape_pomodoro_sound";
-export const DEFAULT_SYNC_SOUND: SoundID = "white-noise";
+export const DEFAULT_SYNC_SOUND: SoundID = "rain";
 
 const VALID_SOUND_IDS = new Set<SoundID>(SOUNDS.map((s) => s.id));
 

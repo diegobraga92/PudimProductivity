@@ -36,7 +36,7 @@ describe("pomodoroSoundSync store", () => {
     localStorage.clear();
   });
 
-  it("defaults to disabled with the white-noise sound", () => {
+  it("defaults to disabled with the rain sound", () => {
     expect(getPomodoroSyncEnabled()).toBe(false);
     expect(getPomodoroSyncSound()).toBe(DEFAULT_SYNC_SOUND);
   });
