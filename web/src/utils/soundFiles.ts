@@ -21,7 +21,6 @@ interface SoundCatalogEntry {
 
 /** SoundIDs the engine knows how to play (must match web/src/utils/audio.ts). */
 const KNOWN_SOUND_IDS: ReadonlySet<SoundID> = new Set<SoundID>([
-  "ambient-pad",
   "light-rain",
   "rain",
   "rain-and-thunder",

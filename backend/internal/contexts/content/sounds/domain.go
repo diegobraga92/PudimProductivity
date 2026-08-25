@@ -14,7 +14,6 @@ type Sound struct {
 // DefaultCatalog lists the sounds shipped with the app. Every ID matches a
 // SoundID in web/src/utils/audio.ts.
 var DefaultCatalog = []Sound{
-	{ID: "ambient-pad", File: "ambient-pad.mp3", MIME: "audio/mpeg"},
 	{ID: "light-rain", File: "light-rain.mp3", MIME: "audio/mpeg"},
 	{ID: "rain", File: "rain.mp3", MIME: "audio/mpeg"},
 	{ID: "rain-and-thunder", File: "rain-and-thunder.mp3", MIME: "audio/mpeg"},

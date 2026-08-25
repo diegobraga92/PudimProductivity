@@ -71,7 +71,6 @@ function Soundscape() {
   const [playing, setPlaying] = useState<Set<SoundID>>(new Set());
   const [masterVolume, setMasterVolume] = useState(0.5);
   const [volumes, setVolumes] = useState<Record<SoundID, number>>({
-    "ambient-pad": 0.5,
     "light-rain": 0.5,
     rain: 0.5,
     "rain-and-thunder": 0.5,

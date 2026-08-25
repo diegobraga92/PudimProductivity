@@ -7,7 +7,6 @@
  * the catalog of backend URLs.
  *
  * Sounds:
- *   - ambient-pad      : evolving chord pad
  *   - light-rain       : light rainfall
  *   - rain             : steady rain
  *   - rain-and-thunder : rain with distant thunder
@@ -21,7 +20,6 @@
 import { getSoundFile } from "./soundFiles";
 
 export type SoundID =
-  | "ambient-pad"
   | "light-rain"
   | "rain"
   | "rain-and-thunder"

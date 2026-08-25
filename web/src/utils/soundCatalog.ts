@@ -13,7 +13,6 @@ export interface SoundDef {
  * ./soundFiles and the SoundID union in ./audio.
  */
 export const SOUNDS: SoundDef[] = [
-  { id: "ambient-pad", labelKey: "soundscape.ambientPad", icon: "🎹", descKey: "soundscape.desc.ambientPad" },
   { id: "light-rain", labelKey: "soundscape.lightRain", icon: "🌧️", descKey: "soundscape.desc.lightRain" },
   { id: "rain", labelKey: "soundscape.rainSound", icon: "🌧️", descKey: "soundscape.desc.rain" },
   { id: "rain-and-thunder", labelKey: "soundscape.rainAndThunder", icon: "⛈️", descKey: "soundscape.desc.rainAndThunder" },
