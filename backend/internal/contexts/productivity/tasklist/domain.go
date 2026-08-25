@@ -5,8 +5,7 @@ import (
 	"time"
 )
 
-// Role is a member's permission level on a shared task list. The owner is the
-// user who created the list; shares grant editor or viewer access.
+// Role is a member's permission level on a shared task list.
 type Role string
 
 const (
@@ -15,8 +14,7 @@ const (
 	RoleViewer Role = "viewer"
 )
 
-// Valid reports whether r is a known share role (owner included so a full
-// membership list can be validated uniformly).
+// Valid reports whether r is a known share role.
 func (r Role) Valid() bool {
 	switch r {
 	case RoleOwner, RoleEditor, RoleViewer:

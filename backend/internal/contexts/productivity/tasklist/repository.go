@@ -7,13 +7,11 @@ import (
 
 var (
 	ErrTaskListNotFound = errors.New("task list not found")
-	// ErrTaskListAccessDenied is returned when a user is not a member
-	// (owner or share) of the task list, or their role is insufficient.
+	// ErrTaskListAccessDenied is returned when a user is not a member.
 	ErrTaskListAccessDenied = errors.New("access denied to task list")
 	// ErrShareNotFound is returned when removing a share that does not exist.
 	ErrShareNotFound = errors.New("share not found")
-	// ErrShareExists is returned when sharing a list with a user who is
-	// already a member (or is the owner).
+	// ErrShareExists is returned when sharing a list with a user who is already a member.
 	ErrShareExists = errors.New("share already exists")
 )
 
@@ -36,17 +34,11 @@ type TaskListRepository interface {
 	// Returns ErrTaskListNotFound if the list does not exist.
 	Delete(ctx context.Context, id string) error
 
-	// ShareRepository
 	ShareRepository
 }
 
-// ShareRepository is the Phase 8 collaboration surface. It is embedded in
-// TaskListRepository so a single Postgres implementation satisfies both.
 type ShareRepository interface {
-	// GetMemberRole returns the effective role for a user on a list:
-	// RoleOwner if they own it, the share role if they were invited, or
-	// ErrTaskListAccessDenied if they have no access. Admins bypass by passing
-	// RoleOwner via the higher-level service.
+	// GetMemberRole returns the effective role for a user on a list.
 	GetMemberRole(ctx context.Context, listID, userID string) (Role, error)
 
 	// CreateShare grants a role to another user.

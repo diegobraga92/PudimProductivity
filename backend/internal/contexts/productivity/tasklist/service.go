@@ -21,8 +21,7 @@ func NewTaskListService(repo TaskListRepository, bus eventbus.Bus) *TaskListServ
 	return &TaskListService{repo: repo, bus: bus}
 }
 
-// publish emits a domain event. A nil bus is a no-op; failures are logged, not
-// propagated (the DB write is the source of truth).
+// publish emits a domain event. A nil bus is a no-op.
 func (s *TaskListService) publish(ctx context.Context, typ eventbus.EventType, payload interface{}) {
 	if s.bus == nil {
 		return
@@ -32,8 +31,7 @@ func (s *TaskListService) publish(ctx context.Context, typ eventbus.EventType, p
 	}
 }
 
-// effectiveRole returns the user's role on a list. Admins are treated as
-// owners; otherwise the owner/share role is used.
+// effectiveRole returns the user's role on a list.
 func (s *TaskListService) effectiveRole(ctx context.Context, listID, userID string, isAdmin bool) (Role, error) {
 	if isAdmin {
 		return RoleOwner, nil
@@ -49,9 +47,7 @@ func (s *TaskListService) CreateTaskList(ctx context.Context, id, name, ownerID 
 	if id == "" {
 		id = uuid.NewUUID()
 	} else {
-		// Offline-first clients generate their own UUIDs so a create is
-		// idempotent: re-pushing an already-created list (e.g. after a lost
-		// response) returns the existing row instead of failing or duplicating.
+		// Offline-first clients generate their own UUIDs so a create is idempotent.
 		if _, err := guuid.Parse(id); err != nil {
 			return nil, fmt.Errorf("create task list: invalid id: %w", err)
 		}
@@ -82,7 +78,7 @@ func (s *TaskListService) GetTaskListForUser(ctx context.Context, id, userID str
 	return s.repo.GetByID(ctx, id)
 }
 
-// ListTaskListsForUser returns lists the user owns or is a member of (Phase 8).
+// ListTaskListsForUser returns lists the user owns or is a member of.
 func (s *TaskListService) ListTaskListsForUser(ctx context.Context, userID string, isAdmin bool) ([]*TaskList, error) {
 	if isAdmin {
 		return s.repo.List(ctx)
@@ -90,8 +86,7 @@ func (s *TaskListService) ListTaskListsForUser(ctx context.Context, userID strin
 	return s.repo.ListListsForUser(ctx, userID)
 }
 
-// ShareList grants sharedWith editor or viewer access. Only the owner (or an
-// admin) may share; you cannot share a list with yourself or with the owner.
+// ShareList grants sharedWith editor or viewer access.
 func (s *TaskListService) ShareList(ctx context.Context, listID, sharedBy, sharedWith string, role Role, isAdmin bool) error {
 	current, err := s.effectiveRole(ctx, listID, sharedBy, isAdmin)
 	if err != nil {
@@ -103,7 +98,6 @@ func (s *TaskListService) ShareList(ctx context.Context, listID, sharedBy, share
 	if sharedWith == sharedBy {
 		return fmt.Errorf("cannot share a list with yourself")
 	}
-	// Reject sharing with the owner.
 	ownerRole, err := s.repo.GetMemberRole(ctx, listID, sharedWith)
 	if err == nil && ownerRole == RoleOwner {
 		return fmt.Errorf("user already owns this list")

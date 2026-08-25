@@ -18,18 +18,14 @@ func RegisterTaskListRoutes(r chi.Router, repo TaskListRepository, bus eventbus.
 		r.Get("/", handler.ListTaskLists)
 		r.Get("/{listId}", handler.GetTaskList)
 		r.Get("/{listId}/tasks", handler.ListTasksByListID(taskService))
-		// Phase 8: collaboration — members are readable by any member.
 		r.Get("/{listId}/members", handler.ListMembers)
 
-		// Mutating endpoints require an authenticated user (see task module).
+		// Mutating endpoints require an authenticated user.
 		r.Group(func(r chi.Router) {
 			r.Use(httpx.RequireRole("admin", "user"))
 			r.Post("/", handler.CreateTaskList)
 			r.Put("/{listId}", handler.UpdateTaskList)
 			r.Delete("/{listId}", handler.DeleteTaskList)
-			// Phase 8: sharing. Note: /{listId}/share and /{listId}/members
-			// must be registered before any /{listId} catch-alls (chi does
-			// not match across path segments, so this is safe).
 			r.Post("/{listId}/share", handler.ShareTaskList)
 			r.Delete("/{listId}/share/{userId}", handler.UnshareTaskList)
 		})

@@ -75,7 +75,6 @@ func ToMemberResponse(s *Share) MemberResponse {
 	}
 }
 
-// isAdmin reports whether the request was made with the admin role.
 func isAdmin(r *http.Request) bool {
 	return httpx.GetUserRole(r.Context()) == "admin"
 }
@@ -85,8 +84,7 @@ func requester(r *http.Request) string {
 	return httpx.GetUserID(r.Context())
 }
 
-// GET /api/v1/task-lists — returns the lists the requesting user can access
-// (owned + shared with them). Admins see all lists.
+// ListTaskLists is used for GET /task-lists. Returns lists that are permitted.
 func (h *Handler) ListTaskLists(w http.ResponseWriter, r *http.Request) {
 	lists, err := h.service.ListTaskListsForUser(r.Context(), requester(r), isAdmin(r))
 	if err != nil {
@@ -103,7 +101,7 @@ func (h *Handler) ListTaskLists(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, responses)
 }
 
-// POST /api/v1/task-lists
+// CreateTaskList is used for POST /task-lists
 func (h *Handler) CreateTaskList(w http.ResponseWriter, r *http.Request) {
 	var req createTaskListRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -126,7 +124,7 @@ func (h *Handler) CreateTaskList(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusCreated, ToTaskListResponse(list))
 }
 
-// GET /api/v1/task-lists/{listId}
+// GetTaskList is used for GET /task-lists/{listId}
 func (h *Handler) GetTaskList(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "listId")
 	if id == "" {
@@ -152,7 +150,7 @@ func (h *Handler) GetTaskList(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, ToTaskListResponse(list))
 }
 
-// POST /api/v1/task-lists/{listId}/share — invites a user to the list.
+// ShareTaskList is used for POST /task-lists/{listId}/share. Invites a user to the list.
 func (h *Handler) ShareTaskList(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "listId")
 	if id == "" {
@@ -194,7 +192,7 @@ func (h *Handler) ShareTaskList(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// DELETE /api/v1/task-lists/{listId}/share/{userId} — revokes access.
+// UnshareTaskList is used for DELETE /task-lists/{listId}/share/{userId}. Revokes access.
 func (h *Handler) UnshareTaskList(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "listId")
 	userID := chi.URLParam(r, "userId")
@@ -221,7 +219,7 @@ func (h *Handler) UnshareTaskList(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// GET /api/v1/task-lists/{listId}/members — lists the shared members of a list.
+// ListMembers is used for GET /task-lists/{listId}/members. Lists the shared members of a list.
 func (h *Handler) ListMembers(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "listId")
 	if id == "" {
@@ -251,7 +249,7 @@ func (h *Handler) ListMembers(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, responses)
 }
 
-// PUT /api/v1/task-lists/{listId}
+// UpdateTaskList is used for PUT /task-lists/{listId}
 func (h *Handler) UpdateTaskList(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "listId")
 	if id == "" {
@@ -279,7 +277,7 @@ func (h *Handler) UpdateTaskList(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, ToTaskListResponse(list))
 }
 
-// DELETE /api/v1/task-lists/{listId}
+// DeleteTaskList is used for DELETE /task-lists/{listId}
 func (h *Handler) DeleteTaskList(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "listId")
 	if id == "" {
@@ -287,7 +285,6 @@ func (h *Handler) DeleteTaskList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Only the owner (or an admin) may delete a list (Phase 8).
 	if err := h.service.CheckAccess(r.Context(), id, requester(r), RoleOwner, isAdmin(r)); err != nil {
 		if errors.Is(err, ErrTaskListNotFound) {
 			httpx.WriteError(w, http.StatusNotFound, "task list not found")
@@ -315,8 +312,8 @@ func (h *Handler) DeleteTaskList(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// GET /api/v1/task-lists/{listId}/tasks
-// Returns a handler that lists tasks for a list. Uses task service to fetch tasks by list ID
+// ListTasksByListID is used for GET /task-lists/{listId}/tasks
+// Returns a handler that lists tasks for a list.
 func (h *Handler) ListTasksByListID(taskService task.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "listId")
@@ -325,7 +322,6 @@ func (h *Handler) ListTasksByListID(taskService task.Service) http.HandlerFunc {
 			return
 		}
 
-		// Members (owner, editor, viewer) can read tasks (Phase 8).
 		if err := h.service.CheckAccess(r.Context(), id, requester(r), RoleViewer, isAdmin(r)); err != nil {
 			if errors.Is(err, ErrTaskListNotFound) {
 				httpx.WriteError(w, http.StatusNotFound, "task list not found")
