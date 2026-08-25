@@ -1,18 +1,11 @@
-// Package nlp implements a small rule-based parser for natural-language task
-// input (Phase 7): "Buy milk tomorrow at 9am for 45 minutes" becomes a
-// structured ParsedTask that the task module can pre-fill.
-//
-// The parser is deliberately deterministic and dependency-free. Unsupported
-// patterns leave fields nil — the caller decides whether to keep the free
-// text as the title or ask for clarification (see ADR 008).
+// Package nlp implements a small rule-based parser for natural-language task.
 package nlp
 
 import "errors"
 
 // ParsedTask is the structured result of parsing a natural-language input.
 type ParsedTask struct {
-	// Title is the remaining text after date/time/duration/recurrence
-	// expressions were removed.
+	// Title is the remaining text after date/time/duration/recurrence are removed.
 	Title string
 	// DueDate is an ISO date (YYYY-MM-DD) resolved from relative phrases
 	// (today/tomorrow/next monday) or an explicit date.

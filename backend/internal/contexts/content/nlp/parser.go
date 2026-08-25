@@ -7,7 +7,6 @@ import (
 	"time"
 )
 
-// dayAliases maps every English weekday name to its 3-letter key.
 var dayAliases = map[string]string{
 	"mon": "mon", "monday": "mon",
 	"tue": "tue", "tues": "tue", "tuesday": "tue",
@@ -106,8 +105,6 @@ func Parse(input string, now time.Time) (*ParsedTask, error) {
 	return &out, nil
 }
 
-// --- recurrence ---
-
 var stopWords = map[string]bool{
 	"for": true, "at": true, "on": true, "from": true, "until": true,
 	"today": true, "tomorrow": true, "in": true,
@@ -152,8 +149,6 @@ func extractRecurrence(s string) ([]string, string) {
 	return days, strings.Replace(s, m[0], " ", 1)
 }
 
-// --- duration ---
-
 func extractDuration(s string) (int, string) {
 	if m := reDurationH.FindString(s); m != "" {
 		sub := reDurationH.FindStringSubmatch(s)
@@ -172,8 +167,6 @@ func extractDuration(s string) (int, string) {
 	}
 	return 0, s
 }
-
-// --- time ---
 
 func extractTime(s string) (string, string, bool) {
 	// Prefer a colon form: "14:30", "9:15", "2:30pm", "9:15 am".
@@ -208,8 +201,6 @@ func extractTime(s string) (string, string, bool) {
 	}
 	return "", s, false
 }
-
-// --- date ---
 
 func extractDate(s string, now time.Time) (*string, string, bool) {
 	if m := reISODate.FindString(s); m != "" {

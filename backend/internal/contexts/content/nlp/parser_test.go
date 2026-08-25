@@ -7,7 +7,6 @@ import (
 	"time"
 )
 
-// now is a fixed Monday (2026-08-10) so relative-date tests are deterministic.
 var now = time.Date(2026, 8, 10, 12, 0, 0, 0, time.UTC)
 
 func TestParse(t *testing.T) {
