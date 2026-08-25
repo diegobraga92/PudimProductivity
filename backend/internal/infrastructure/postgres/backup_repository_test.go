@@ -16,7 +16,7 @@ import (
 )
 
 // seedBackupTestData inserts one row into every backed-up table so the test
-// exercises the full round-trip (including arrays, jsonb, dates and FKs).
+// exercises the full round-trip (including arrays, dates and FKs).
 func seedBackupTestData(t *testing.T, ctx context.Context, pool *pgxpool.Pool) {
 	t.Helper()
 
@@ -41,8 +41,6 @@ func seedBackupTestData(t *testing.T, ctx context.Context, pool *pgxpool.Pool) {
 			('88888888-8888-8888-8888-888888888888', '66666666-6666-6666-6666-666666666666', 1, 'Mix and cook');
 		INSERT INTO pomodoro_sessions (id, user_id, focus_minutes, elapsed_s, started_at, completed_at) VALUES
 			('cccccccc-cccc-cccc-cccc-cccccccccccc', 'dev-user', 25, 1500, NOW(), NOW());
-		INSERT INTO insight_reports (id, user_id, week_start, report_json, report_text) VALUES
-			('dddddddd-dddd-dddd-dddd-dddddddddddd', 'dev-user', '2026-01-12', '{"score":5}', 'Good week');
 	`
 	if _, err := pool.Exec(ctx, seed); err != nil {
 		t.Fatalf("seed data: %v", err)
@@ -80,7 +78,6 @@ func TestBackupRepository_ExportImportRoundTrip(t *testing.T) {
 	expectOne(t, bf.RowCounts, "recipe_ingredients")
 	expectOne(t, bf.RowCounts, "recipe_steps")
 	expectOne(t, bf.RowCounts, "pomodoro_sessions")
-	expectOne(t, bf.RowCounts, "insight_reports")
 	if bf.RowCounts["feature_flags"] < 1 {
 		t.Fatalf("feature_flags row count = %d, want >= 1 (seeded by migration)", bf.RowCounts["feature_flags"])
 	}
@@ -136,16 +133,6 @@ func TestBackupRepository_ExportImportRoundTrip(t *testing.T) {
 	}
 	if ingName != "Flour" || ingOrder != 1 {
 		t.Fatalf("restored ingredient mismatch: name=%q sort_order=%d", ingName, ingOrder)
-	}
-
-	var reportJSON map[string]any
-	if err := pool.QueryRow(ctx,
-		`SELECT report_json FROM insight_reports WHERE id = 'dddddddd-dddd-dddd-dddd-dddddddddddd'`,
-	).Scan(&reportJSON); err != nil {
-		t.Fatalf("query restored insight report: %v", err)
-	}
-	if reportJSON["score"] != float64(5) {
-		t.Fatalf("restored report_json = %v, want score=5", reportJSON)
 	}
 
 	// 5. Excluded tables are untouched by a restore.

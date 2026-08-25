@@ -8,7 +8,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.Restaurant
@@ -61,8 +60,7 @@ fun TaskListScreen(
     onTaskClick: (String) -> Unit,
     onListClick: (String) -> Unit,
     onRecipes: () -> Unit,
-    onLibrary: () -> Unit,
-    onInsights: () -> Unit
+    onLibrary: () -> Unit
 ) {
     // Phase 9c: local-first — read straight from the local database via the
     // repository's flows (instant + offline); writes go through the repository

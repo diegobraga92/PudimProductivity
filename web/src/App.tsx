@@ -8,7 +8,6 @@ import { ConfirmProvider } from "./components/ConfirmProvider";
 import {
   BellIcon,
   CalendarIcon,
-  ChartIcon,
   ClockIcon,
   CloseIcon,
   DashboardIcon,

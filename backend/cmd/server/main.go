@@ -28,7 +28,6 @@ import (
 	"github.com/diegobraga92/pudimproductivity/backend/internal/contexts/content/recipe"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/contexts/content/scoring"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/contexts/content/sounds"
-	"github.com/diegobraga92/pudimproductivity/backend/internal/contexts/insights"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/contexts/productivity/pomodoro"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/contexts/productivity/scheduler"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/contexts/productivity/task"
@@ -222,13 +221,6 @@ func main() {
 	}
 
 	pomodoro.RegisterPomodoroRoutes(r, nil, auditService, composite)
-
-	// Phase 9a: AI coach — weekly insight reports. Consumes pomodoro events to
-	// persist focus history and serves GET /api/v1/insights/weekly. The
-	// subscription targets the in-memory bus (CompositeBus.Subscribe is a
-	// no-op by design — see eventbus/composite.go); pomodoro events reach it
-	// because the composite fans out to every child.
-	insights.RegisterInsightsRoutes(r, postgres.NewInsightsRepository(pool), inMemoryBus, flagService)
 
 	// Phase 9c: offline-first sync — GET /api/v1/sync?since=... returns the
 	// incremental changes (active + soft-deleted rows) for mobile Room DBs.

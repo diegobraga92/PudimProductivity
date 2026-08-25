@@ -20,7 +20,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.EventNote
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.HealthAndSafety
-import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Repeat
@@ -44,7 +43,6 @@ import com.pudimproductivity.notifications.HabitReminderScheduler
 import com.pudimproductivity.sync.SyncScheduler
 import com.pudimproductivity.ui.screens.PlannerScreen
 import com.pudimproductivity.ui.screens.HabitScreen
-import com.pudimproductivity.ui.screens.InsightsScreen
 import com.pudimproductivity.ui.screens.LibraryScreen
 import com.pudimproductivity.ui.screens.RecipeCreateScreen
 import com.pudimproductivity.ui.screens.RecipeDetailScreen
@@ -64,7 +62,7 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 
 enum class Screen {
-    Health, ServerSettings, TaskList, TaskCreate, TaskDetail, TaskListDetail, Habits, Recipes, RecipeCreate, RecipeDetail, Library, Planner, Insights
+    Health, ServerSettings, TaskList, TaskCreate, TaskDetail, TaskListDetail, Habits, Recipes, RecipeCreate, RecipeDetail, Library, Planner
 }
 
 class MainActivity : ComponentActivity() {
@@ -299,8 +297,7 @@ private fun AppNavigation(
                     currentScreen = Screen.TaskListDetail
                 },
                 onRecipes = { currentScreen = Screen.Recipes },
-                onLibrary = { currentScreen = Screen.Library },
-                onInsights = { currentScreen = Screen.Insights }
+                onLibrary = { currentScreen = Screen.Library }
             )
         }
         Screen.Habits -> {
@@ -373,9 +370,6 @@ private fun AppNavigation(
                     currentScreen = Screen.TaskDetail
                 }
             )
-        }
-        Screen.Insights -> {
-            InsightsScreen(onBack = { currentScreen = Screen.TaskList })
         }
                 }
             }

@@ -17,7 +17,7 @@
 --   012                         notifications
 --   014                         recipes (+ tags / ingredients / steps)
 --   015, 020                    library_items (books never created)
---   018                         pomodoro_sessions / insight_reports
+--   018                         pomodoro_sessions
 --   021                         no-op for fresh installs (meal plans never created)
 --   022, 023, 025               library_items score / subtype columns
 --   026                         score_providers / score_provider_config

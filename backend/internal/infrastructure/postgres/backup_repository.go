@@ -95,11 +95,6 @@ var backupTables = []backupTable{
 		idColumn: "id",
 		columns:  "id uuid, user_id text, focus_minutes integer, elapsed_s integer, started_at timestamptz, completed_at timestamptz",
 	},
-	{
-		name:     "insight_reports",
-		idColumn: "id",
-		columns:  "id uuid, user_id text, week_start date, report_json jsonb, report_text text, llm_summary text, created_at timestamptz",
-	},
 }
 
 // BackupRepository exports and restores the non-sensitive application data. It

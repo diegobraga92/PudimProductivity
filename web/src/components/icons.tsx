@@ -126,19 +126,6 @@ export function FilmIcon(props: IconProps) {
   );
 }
 
-/** Insights — bar chart. */
-export function ChartIcon(props: IconProps) {
-  return (
-    <Icon {...props}>
-      <path d="M3 3v16a2 2 0 0 0 2 2h16" />
-      <path d="M7 13v4" />
-      <path d="M11 9v8" />
-      <path d="M15 5v12" />
-      <path d="M19 11v6" />
-    </Icon>
-  );
-}
-
 /** Health — heart with pulse line. */
 export function HeartPulseIcon(props: IconProps) {
   return (
