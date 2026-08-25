@@ -9,8 +9,12 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-pudimproductivity}
     ports:
       - "${DB_PORT:-5433}:5432"
+    # Postgres 18+ images require a single mount at /var/lib/postgresql (data is
+    # stored in a major-version subdirectory, e.g. /var/lib/postgresql/18/docker).
+    # The old pre-18 path /var/lib/postgresql/data makes the entrypoint exit with
+    # "there appears to be PostgreSQL data in /var/lib/postgresql/data" on 18+.
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pudim} -d ${POSTGRES_DB:-pudimproductivity}"]
       interval: 5s
