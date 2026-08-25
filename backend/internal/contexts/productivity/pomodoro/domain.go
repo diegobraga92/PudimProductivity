@@ -23,9 +23,7 @@ func (s SessionStatus) Valid() bool {
 	}
 }
 
-// Phase identifies which segment of a pomodoro run is currently active. A
-// continuous run alternates focus → break → focus …; a single-shot run only
-// ever has a focus phase.
+// Phase identifies which segment of a pomodoro run is currently active.
 type Phase string
 
 const (
@@ -49,7 +47,6 @@ type NoiseConfig struct {
 
 type PomodoroSession struct {
 	ID                 string
-	UserID             string // Phase 9a: who owns the session (for insights)
 	Status             SessionStatus
 	Phase              Phase // focus or break (continuous runs alternate)
 	Continuous         bool  // true when the run auto-advances focus ↔ break
@@ -97,8 +94,7 @@ func (s *PomodoroSession) Elapsed() time.Duration {
 	return s.AccumulatedElapsed
 }
 
-// SegmentDuration returns the duration of the current phase — the focus
-// duration during a focus segment, the break duration during a break segment.
+// SegmentDuration returns the duration of the current phase.
 func (s *PomodoroSession) SegmentDuration() time.Duration {
 	if s.Phase == PhaseBreak {
 		return s.BreakDuration
@@ -130,7 +126,7 @@ func (s *PomodoroSession) Resume() error {
 	if s.Status != SessionPaused {
 		return fmt.Errorf("cannot resume a session that is %s", s.Status)
 	}
-	// Start a new segment; AccumulatedElapsed already holds the elapsed from previous segments.
+	// AccumulatedElapsed already holds the elapsed from previous segments.
 	s.StartedAt = time.Now().UTC()
 	s.PausedAt = nil
 	s.Status = SessionRunning
@@ -158,9 +154,7 @@ func (s *PomodoroSession) Cancel() error {
 	return nil
 }
 
-// NextSegment derives the next session of a continuous run from s, starting
-// fresh at time now. A completed focus segment yields a break segment on the
-// same cycle; a completed break segment yields the next focus cycle.
+// NextSegment derives the next session of a continuous run from s, starting fresh at time now.
 func (s *PomodoroSession) NextSegment(id string, now time.Time) (*PomodoroSession, error) {
 	if id == "" {
 		return nil, fmt.Errorf("session id cannot be empty")
@@ -175,7 +169,6 @@ func (s *PomodoroSession) NextSegment(id string, now time.Time) (*PomodoroSessio
 
 	return &PomodoroSession{
 		ID:            id,
-		UserID:        s.UserID,
 		Status:        SessionRunning,
 		Phase:         phase,
 		Continuous:    s.Continuous,

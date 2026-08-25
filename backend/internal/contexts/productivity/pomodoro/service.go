@@ -25,7 +25,6 @@ type PomodoroService struct {
 	current *PomodoroSession
 	noise   NoiseProvider // optional, may be nil
 	audit   audit.Logger
-	bus     eventbus.Bus       // Phase 9a: publishes session lifecycle events
 	cancel  context.CancelFunc // cancels the current timer goroutine
 }
 
@@ -36,18 +35,6 @@ func NewPomodoroService(noise NoiseProvider, auditLogger audit.Logger, bus event
 	return &PomodoroService{
 		noise: noise,
 		audit: auditLogger,
-		bus:   bus,
-	}
-}
-
-// publish emits a session lifecycle event. A nil bus is a no-op; failures are
-// logged, never propagated (the session lifecycle is the source of truth).
-func (s *PomodoroService) publish(ctx context.Context, typ eventbus.EventType, payload any) {
-	if s.bus == nil {
-		return
-	}
-	if err := s.bus.Publish(ctx, typ, payload); err != nil {
-		log.Warn().Err(err).Str("event_type", string(typ)).Msg("failed to publish pomodoro event")
 	}
 }
 
@@ -70,7 +57,6 @@ func (s *PomodoroService) StartSession(ctx context.Context, userID string, focus
 	if err != nil {
 		return nil, fmt.Errorf("create session: %w", err)
 	}
-	session.UserID = userID
 
 	s.current = session
 	s.startTimer()
@@ -87,15 +73,6 @@ func (s *PomodoroService) StartSession(ctx context.Context, userID string, focus
 		"focus_minutes": focusMinutes,
 		"break_minutes": breakMinutes,
 		"continuous":    continuous,
-	})
-
-	s.publish(ctx, eventbus.EventPomodoroSessionStarted, map[string]any{
-		"session_id":    id,
-		"user_id":       userID,
-		"phase":         string(PhaseFocus),
-		"continuous":    continuous,
-		"focus_minutes": focusMinutes,
-		"started_at":    session.StartedAt.Format(time.RFC3339),
 	})
 
 	return session, nil
@@ -170,7 +147,6 @@ func (s *PomodoroService) Stop(ctx context.Context) (*PomodoroSession, error) {
 
 	s.cancelTimer()
 
-	// Try to complete first; if that fails (e.g. already completed/cancelled), cancel
 	if err := s.current.Complete(); err != nil {
 		if err := s.current.Cancel(); err != nil {
 			return nil, fmt.Errorf("cannot stop session: %w", err)
@@ -188,34 +164,14 @@ func (s *PomodoroService) Stop(ctx context.Context) (*PomodoroSession, error) {
 		"elapsed_s": int(s.current.Elapsed().Seconds()),
 	})
 
-	// Publish completion only for focus segments — breaks are not focus history.
-	// A completed break segment that is manually stopped records nothing.
 	session := *s.current
-	switch {
-	case session.Status == SessionCompleted && session.Phase == PhaseFocus:
-		s.publish(ctx, eventbus.EventPomodoroSessionCompleted, map[string]any{
-			"session_id":    session.ID,
-			"user_id":       session.UserID,
-			"focus_minutes": int(session.FocusDuration.Minutes()),
-			"elapsed_s":     int(session.Elapsed().Seconds()),
-			"started_at":    session.StartedAt.Format(time.RFC3339),
-			"completed_at":  time.Now().UTC().Format(time.RFC3339),
-		})
-	case session.Status == SessionCancelled:
-		s.publish(ctx, eventbus.EventPomodoroSessionCancelled, map[string]any{
-			"session_id": session.ID,
-			"user_id":    session.UserID,
-		})
-	}
 
 	return &session, nil
 }
 
-// launches a background goroutine that ticks every second.
-// Auto-completes a single-shot session when its focus duration elapses, or
-// auto-advances a continuous run to the next phase. Must be called with s.mu held.
+// startTimer launches a background goroutine that ticks every second.
 func (s *PomodoroService) startTimer() {
-	s.cancelTimer() // cancel any previous timer
+	s.cancelTimer()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	s.cancel = cancel
@@ -239,8 +195,7 @@ func (s *PomodoroService) startTimer() {
 						s.mu.Unlock()
 						return
 					}
-					// Continuous: advance to the next phase. This creates a new
-					// segment and restarts the timer, so this goroutine exits.
+					// Continuous: advance to the next phase.
 					s.advanceSegment(ctx)
 					s.mu.Unlock()
 					return
@@ -251,9 +206,6 @@ func (s *PomodoroService) startTimer() {
 	}()
 }
 
-// completeSegment finalizes a single-shot focus session as completed and
-// publishes the completion event consumed by the insights module.
-// Must be called with s.mu held.
 func (s *PomodoroService) completeSegment(ctx context.Context) {
 	sessionID := s.current.ID
 	_ = s.current.Complete()
@@ -263,21 +215,8 @@ func (s *PomodoroService) completeSegment(ctx context.Context) {
 		"auto":      true,
 		"elapsed_s": int(s.current.Elapsed().Seconds()),
 	})
-	s.publish(ctx, eventbus.EventPomodoroSessionCompleted, map[string]any{
-		"session_id":    sessionID,
-		"user_id":       s.current.UserID,
-		"focus_minutes": int(s.current.FocusDuration.Minutes()),
-		"elapsed_s":     int(s.current.Elapsed().Seconds()),
-		"started_at":    s.current.StartedAt.Format(time.RFC3339),
-		"completed_at":  time.Now().UTC().Format(time.RFC3339),
-	})
 }
 
-// advanceSegment transitions a continuous run from the current segment to the
-// next one (focus → break on the same cycle, break → next focus cycle). Every
-// segment gets a fresh session id so insights records each focus cycle exactly
-// once. A completed focus segment publishes the completion event; a completed
-// break segment is silent. Must be called with s.mu held.
 func (s *PomodoroService) advanceSegment(ctx context.Context) {
 	completed := s.current
 	sessionID := completed.ID
@@ -290,14 +229,6 @@ func (s *PomodoroService) advanceSegment(ctx context.Context) {
 			"auto":      true,
 			"phase":     string(PhaseFocus),
 			"elapsed_s": int(completed.Elapsed().Seconds()),
-		})
-		s.publish(ctx, eventbus.EventPomodoroSessionCompleted, map[string]any{
-			"session_id":    sessionID,
-			"user_id":       completed.UserID,
-			"focus_minutes": int(completed.FocusDuration.Minutes()),
-			"elapsed_s":     int(completed.Elapsed().Seconds()),
-			"started_at":    completed.StartedAt.Format(time.RFC3339),
-			"completed_at":  time.Now().UTC().Format(time.RFC3339),
 		})
 	} else {
 		log.Info().Str("session_id", sessionID).Int("cycle", completed.CurrentCycle).Msg("pomodoro break segment completed, starting next focus")

@@ -78,7 +78,6 @@ func TestNextSegmentFocusToBreak(t *testing.T) {
 	started := time.Now().UTC()
 	s := &PomodoroSession{
 		ID:            "focus-1",
-		UserID:        "u1",
 		Status:        SessionRunning,
 		Phase:         PhaseFocus,
 		Continuous:    true,
@@ -101,9 +100,6 @@ func TestNextSegmentFocusToBreak(t *testing.T) {
 	if next.ID != "break-1" {
 		t.Errorf("expected new segment id, got %s", next.ID)
 	}
-	if next.UserID != "u1" {
-		t.Errorf("expected user to carry over, got %s", next.UserID)
-	}
 	if !next.Continuous {
 		t.Error("expected continuous flag to carry over")
 	}
@@ -116,7 +112,6 @@ func TestNextSegmentBreakToFocus(t *testing.T) {
 	started := time.Now().UTC()
 	s := &PomodoroSession{
 		ID:            "break-1",
-		UserID:        "u1",
 		Status:        SessionRunning,
 		Phase:         PhaseBreak,
 		Continuous:    true,

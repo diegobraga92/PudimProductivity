@@ -18,7 +18,6 @@ func NewHandler(service *PomodoroService) *Handler {
 	return &Handler{service: service}
 }
 
-// DTOs
 type SessionResponse struct {
 	ID               string       `json:"id"`
 	Status           string       `json:"status"`
@@ -71,7 +70,7 @@ func toSessionResponse(s *PomodoroSession) SessionResponse {
 	return resp
 }
 
-// POST /api/v1/pomodoro/start
+// POST /pomodoro/start
 func (h *Handler) StartSession(w http.ResponseWriter, r *http.Request) {
 	var req startSessionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -89,7 +88,7 @@ func (h *Handler) StartSession(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusCreated, toSessionResponse(session))
 }
 
-// GET /api/v1/pomodoro/current
+// GET /pomodoro/current
 func (h *Handler) GetCurrent(w http.ResponseWriter, r *http.Request) {
 	session := h.service.GetCurrent()
 	if session == nil {
@@ -105,7 +104,7 @@ func (h *Handler) GetCurrent(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// POST /api/v1/pomodoro/pause
+// POST /pomodoro/pause
 func (h *Handler) Pause(w http.ResponseWriter, r *http.Request) {
 	session, err := h.service.Pause(r.Context())
 	if err != nil {
@@ -116,7 +115,7 @@ func (h *Handler) Pause(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, toSessionResponse(session))
 }
 
-// POST /api/v1/pomodoro/resume
+// POST /pomodoro/resume
 func (h *Handler) Resume(w http.ResponseWriter, r *http.Request) {
 	session, err := h.service.Resume(r.Context())
 	if err != nil {
@@ -127,7 +126,7 @@ func (h *Handler) Resume(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, toSessionResponse(session))
 }
 
-// POST /api/v1/pomodoro/stop
+// POST /pomodoro/stop
 func (h *Handler) Stop(w http.ResponseWriter, r *http.Request) {
 	session, err := h.service.Stop(r.Context())
 	if err != nil {

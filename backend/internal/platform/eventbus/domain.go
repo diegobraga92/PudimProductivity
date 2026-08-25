@@ -53,14 +53,6 @@ const (
 	// EventPresenceOffline is published when a user disconnects.
 	// Payload: {user_id}.
 	EventPresenceOffline EventType = "presence.offline"
-
-	// Phase 9a: pomodoro lifecycle events (consumed by the insights module).
-	// EventPomodoroSessionStarted: {session_id, user_id, focus_minutes, started_at}.
-	EventPomodoroSessionStarted EventType = "pomodoro.session.started"
-	// EventPomodoroSessionCompleted: {session_id, user_id, focus_minutes, elapsed_s, completed_at}.
-	EventPomodoroSessionCompleted EventType = "pomodoro.session.completed"
-	// EventPomodoroSessionCancelled: {session_id, user_id}.
-	EventPomodoroSessionCancelled EventType = "pomodoro.session.cancelled"
 )
 
 // Event is the wire envelope pushed to subscribers and, ultimately, over the
