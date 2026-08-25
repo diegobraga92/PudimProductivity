@@ -6,8 +6,6 @@ import (
 	"time"
 )
 
-// ── NewTask ───────────────────────────────────────────────────────────────────
-
 func TestNewTask_ValidOneOff(t *testing.T) {
 	task, err := NewTask("id-1", "Buy groceries", nil)
 	if err != nil {
@@ -104,8 +102,6 @@ func TestNewTask_DuplicateRecurrenceDay(t *testing.T) {
 	}
 }
 
-// ── TaskStatus.Valid ──────────────────────────────────────────────────────────
-
 func TestTaskStatus_Valid(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -139,8 +135,6 @@ func TestTaskStatus_Valid(t *testing.T) {
 		})
 	}
 }
-
-// ── Task.Update ───────────────────────────────────────────────────────────────
 
 func mustNewTask(t *testing.T, title string, recurrenceDays []string) *Task {
 	t.Helper()
@@ -350,8 +344,6 @@ func TestTask_Update_NegativeAlarmMinutesRejected(t *testing.T) {
 	}
 }
 
-// ── NewTaskWithSchedule ───────────────────────────────────────────────────────
-
 func TestNewTaskWithSchedule_ValidWithAlarm(t *testing.T) {
 	start := "09:00"
 	end := "10:00"
@@ -377,8 +369,6 @@ func TestNewTaskWithSchedule_NegativeAlarmRejected(t *testing.T) {
 		t.Fatal("expected error for negative alarm_minutes, got nil")
 	}
 }
-
-// ── NewTaskCompletion ─────────────────────────────────────────────────────────
 
 func TestNewTaskCompletion_Valid(t *testing.T) {
 	date := time.Date(2026, 5, 25, 10, 30, 0, 0, time.UTC)

@@ -43,7 +43,6 @@ func NewHandler(service Service) *Handler {
 	return &Handler{service: service}
 }
 
-// DTO
 type TaskResponse struct {
 	ID             string   `json:"id"`
 	Title          string   `json:"title"`
@@ -84,8 +83,6 @@ type updateTaskRequest struct {
 	AlarmMinutes   optional.Optional[int]    `json:"alarm_minutes"`
 }
 
-// TaskCompletionResponse is the canonical wire shape for a task completion
-// (see GET /api/v1/tasks/{taskId}/completions and the offline-sync bundle).
 type TaskCompletionResponse struct {
 	ID            string `json:"id"`
 	TaskID        string `json:"task_id"`
@@ -110,7 +107,6 @@ func ToTaskResponse(t *Task) TaskResponse {
 	}
 }
 
-// ToTaskCompletionResponse maps a completion to its canonical wire shape.
 func ToTaskCompletionResponse(c *TaskCompletion) TaskCompletionResponse {
 	return TaskCompletionResponse{
 		ID:            c.ID,
@@ -120,7 +116,7 @@ func ToTaskCompletionResponse(c *TaskCompletion) TaskCompletionResponse {
 	}
 }
 
-// GET /api/v1/tasks
+// ListTasks is used for GET /tasks
 func (h *Handler) ListTasks(w http.ResponseWriter, r *http.Request) {
 	statusFilter := r.URL.Query().Get("status")
 	typeFilter := r.URL.Query().Get("type")
@@ -140,7 +136,7 @@ func (h *Handler) ListTasks(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, responses)
 }
 
-// GET /api/v1/tasks/scheduled — returns all tasks with time-blocking info for the planner
+// ListScheduledTasks is used for GET /tasks/scheduled
 func (h *Handler) ListScheduledTasks(w http.ResponseWriter, r *http.Request) {
 	tasks, err := h.service.ListScheduledTasks(r.Context())
 	if err != nil {
@@ -157,7 +153,7 @@ func (h *Handler) ListScheduledTasks(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, responses)
 }
 
-// POST /api/v1/tasks
+// CreateTask is used for POST /tasks
 func (h *Handler) CreateTask(w http.ResponseWriter, r *http.Request) {
 	var req createTaskRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -185,7 +181,7 @@ func (h *Handler) CreateTask(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusCreated, ToTaskResponse(task))
 }
 
-// GET /api/v1/tasks/{taskId}
+// GetTask is used for GET /tasks/{taskId}
 func (h *Handler) GetTask(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "taskId")
 	if id == "" {
@@ -207,7 +203,7 @@ func (h *Handler) GetTask(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, ToTaskResponse(task))
 }
 
-// PUT /api/v1/tasks/{taskId}
+// UpdateTask is used for PUT /tasks/{taskId}
 func (h *Handler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "taskId")
 	if id == "" {
@@ -235,12 +231,7 @@ func (h *Handler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, ToTaskResponse(task))
 }
 
-// PATCH /api/v1/tasks/{taskId}/merge — CRDT merge (Phase 8, ADR 010).
-// Body is an updateTaskRequest plus an optional client `updated_at` timestamp.
-// Responses:
-//
-//	200 — this write won; body is the merged task.
-//	409 — this write lost (a newer writer exists); body is the winning task.
+// MergeTask is used for PATCH /tasks/{taskId}/merge.
 func (h *Handler) MergeTask(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "taskId")
 	if id == "" {
@@ -269,7 +260,7 @@ func (h *Handler) MergeTask(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !applied {
-		// Lost the merge — return the winning state so the client reconciles.
+		// Lost the merge, return the winning state so the client reconciles.
 		httpx.WriteJSON(w, http.StatusConflict, ToTaskResponse(task))
 		return
 	}
@@ -277,7 +268,7 @@ func (h *Handler) MergeTask(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, ToTaskResponse(task))
 }
 
-// DELETE /api/v1/tasks/{taskId}
+// DeleteTask is used for DELETE /tasks/{taskId}
 func (h *Handler) DeleteTask(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "taskId")
 	if id == "" {
@@ -298,7 +289,7 @@ func (h *Handler) DeleteTask(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// POST /api/v1/tasks/{taskId}/complete
+// CompleteTask is used for POST /tasks/{taskId}/complete
 func (h *Handler) CompleteTask(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "taskId")
 	if id == "" {
@@ -330,7 +321,7 @@ func (h *Handler) CompleteTask(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusCreated, ToTaskCompletionResponse(completion))
 }
 
-// DELETE /api/v1/tasks/{taskId}/complete
+// UncompleteTask is used for DELETE /tasks/{taskId}/complete
 func (h *Handler) UncompleteTask(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "taskId")
 	if id == "" {
@@ -357,7 +348,7 @@ func (h *Handler) UncompleteTask(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// GET /api/v1/tasks/completions
+// GetAllCompletions is used for GET /tasks/completions
 func (h *Handler) GetAllCompletions(w http.ResponseWriter, r *http.Request) {
 	fromStr := r.URL.Query().Get("from")
 	toStr := r.URL.Query().Get("to")
@@ -399,7 +390,7 @@ func (h *Handler) GetAllCompletions(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, responses)
 }
 
-// GET /api/v1/tasks/{taskId}/completions
+// GetTaskCompletions is used for GET /tasks/{taskId}/completions
 func (h *Handler) GetTaskCompletions(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "taskId")
 	if id == "" {
@@ -421,7 +412,6 @@ func (h *Handler) GetTaskCompletions(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	} else {
-		// Default to 7 days ago
 		from = now.AddDate(0, 0, -defaultCompletionsLookbackDays).Truncate(24 * time.Hour)
 	}
 
@@ -454,8 +444,6 @@ func (h *Handler) GetTaskCompletions(w http.ResponseWriter, r *http.Request) {
 
 	httpx.WriteJSON(w, http.StatusOK, responses)
 }
-
-// --- NLP parse endpoint (Phase 7) ---
 
 type ParseTaskRequest struct {
 	Input string `json:"input"`

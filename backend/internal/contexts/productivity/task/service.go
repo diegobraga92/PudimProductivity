@@ -40,8 +40,7 @@ type TaskService struct {
 	cache TaskCache // nil = caching disabled
 }
 
-// NewTaskService builds the task service. The cache is optional: pass nil (or
-// omit the argument) to disable read-through caching.
+// NewTaskService builds the task service.
 func NewTaskService(repo TaskRepository, auditLogger audit.Logger, bus eventbus.Bus, cache ...TaskCache) *TaskService {
 	if auditLogger == nil {
 		auditLogger = audit.NoopLogger{}

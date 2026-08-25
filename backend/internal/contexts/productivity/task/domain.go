@@ -266,9 +266,8 @@ func validateAlarmMinutes(alarmMinutes *int) error {
 }
 
 func validateSchedule(startTime, endTime, color, scheduledDate *string, recurrenceDays []string) error {
-	// Both start and end must be set together (or both null = not scheduled)
 	if startTime == nil && endTime == nil {
-		return nil // not scheduled, no validation needed
+		return nil
 	}
 
 	if startTime == nil {
