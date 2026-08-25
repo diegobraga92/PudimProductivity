@@ -18,9 +18,7 @@ type File struct {
 	Size int64
 }
 
-// Storage is the domain port for reading, writing and deleting objects in the
-// media store. It complements Generator: Generator hands out short-lived upload
-// URLs to clients, while Storage is used server-side for direct object access.
+// Storage is the domain port for reading, writing and deleting objects in the media store.
 type Storage interface {
 	// Get returns the object for key, or ErrNotFound when absent.
 	Get(ctx context.Context, key string) (*File, error)
@@ -34,8 +32,7 @@ type Storage interface {
 var ErrNotFound = errors.New("media: object not found")
 
 // ValidateKey rejects object keys that could escape the media root (path
-// traversal) or reference non-file segments. The allowed shape is one or more
-// safe path segments, e.g. "<uuid>/pancakes.jpg".
+// traversal) or reference non-file segments.
 func ValidateKey(key string) error {
 	if key == "" || strings.Contains(key, "..") || strings.HasPrefix(key, "/") || strings.HasSuffix(key, "/") {
 		return fmt.Errorf("unsafe key %q", key)

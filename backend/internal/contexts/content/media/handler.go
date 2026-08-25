@@ -29,8 +29,7 @@ func NewMediaHandler(dir string) *MediaHandler {
 	return &MediaHandler{dir: dir}
 }
 
-// Put writes the request body to <dir>/<key>, capping the size and validating
-// the key so the resolved path stays inside the media root.
+// Put writes the request body to <dir>/<key>.
 func (h *MediaHandler) Put(w http.ResponseWriter, r *http.Request) {
 	key := chi.URLParam(r, "*")
 	path, ok := h.resolve(key)

@@ -1,10 +1,4 @@
 // Package media provides direct-to-object-storage uploads via presigned URLs.
-// The client requests a short-lived PUT URL, uploads the object itself, and
-// stores the returned object key in the domain record (e.g. recipe.image_url).
-//
-// Uploads are optional at runtime: if no storage backend is configured the
-// module runs in degraded mode and upload-URL requests fail with a clear error
-// (see ADR 007 for the graceful-degradation matrix).
 package media
 
 import (
