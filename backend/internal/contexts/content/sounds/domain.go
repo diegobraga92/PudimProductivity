@@ -1,12 +1,4 @@
-// Package sounds serves the Soundscape ambient sound library (rain, ocean,
-// fire, noise loops, …) as audio files. The web client fetches the catalog and
-// plays the files as looping media elements; the Soundscape engine still falls
-// back to in-browser synthesis when a file is unavailable, so this module is a
-// pure enhancement — a missing file or a down backend degrades gracefully.
-//
-// The default loops ship inside the container image (backend/sounds →
-// /app/sounds-default) and are copied into the served directory on startup, so
-// operators can override individual sounds without rebuilding the image.
+// Package sounds serves the Soundscape (focus) ambient sound library.
 package sounds
 
 // Sound describes one entry in the ambient sound library.
@@ -20,9 +12,7 @@ type Sound struct {
 }
 
 // DefaultCatalog lists the sounds shipped with the app. Every ID matches a
-// SoundID in web/src/utils/audio.ts. Add new sounds here (and drop the file
-// into backend/sounds/) to expose them to every client with no frontend
-// change — clients only ever see the catalog.
+// SoundID in web/src/utils/audio.ts.
 var DefaultCatalog = []Sound{
 	{ID: "white-noise", File: "white-noise.mp3", MIME: "audio/mpeg"},
 	{ID: "pink-noise", File: "pink-noise.mp3", MIME: "audio/mpeg"},

@@ -7,13 +7,10 @@ import (
 	"path/filepath"
 )
 
+// TODO: Check if this is necessary
+
 // SeedBundledDefaults copies the default sound library shipped inside the
 // image (bundledDir) into the served directory (dir) when files are missing.
-// Existing files are never overwritten, so an operator can override individual
-// sounds on disk (or via a mounted volume) and keep them across restarts.
-//
-// It is a no-op when either directory is empty, and tolerates a missing
-// bundledDir (dev runs may serve the repo's backend/sounds directly).
 func SeedBundledDefaults(bundledDir, dir string) error {
 	if bundledDir == "" || dir == "" {
 		return nil
