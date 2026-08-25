@@ -7,8 +7,6 @@ import (
 	"github.com/diegobraga92/pudimproductivity/backend/internal/contexts/content/media"
 )
 
-// --- Requests ---
-
 type IngredientInput struct {
 	Name     string `json:"name"`
 	Quantity string `json:"quantity"`
@@ -61,8 +59,6 @@ type UploadURLRequest struct {
 	ContentType string `json:"content_type"`
 	Filename    string `json:"filename"`
 }
-
-// --- Responses ---
 
 type IngredientResponse struct {
 	ID        string `json:"id"`
@@ -126,8 +122,6 @@ func toResponses(recipes []*Recipe) []RecipeResponse {
 	}
 	return out
 }
-
-// --- Service interface (consumer-side, handler level) ---
 
 type Service interface {
 	Create(ctx context.Context, in CreateInput) (*Recipe, error)

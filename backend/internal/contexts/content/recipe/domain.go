@@ -1,8 +1,4 @@
-// Package recipe implements the Recipes module (Phase 5a): a full recipe
-// manager with ingredients, steps, tags, search, and optional image upload via
-// presigned S3 URLs. Recipes are the composable unit for the Phase 5 meal
-// planner — a meal-plan slot references a recipe and the shopping list is
-// aggregated from recipe ingredients.
+// Package recipe implements the Recipes module.
 package recipe
 
 import (

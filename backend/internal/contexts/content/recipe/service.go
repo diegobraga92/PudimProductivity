@@ -13,9 +13,7 @@ import (
 	"github.com/diegobraga92/pudimproductivity/backend/pkg/uuid"
 )
 
-// CreateInput is the full set of fields for creating a recipe. Children
-// (ingredients, steps) are provided as ordered lists; IDs are assigned by the
-// service.
+// CreateInput is the full set of fields for creating a recipe.
 type CreateInput struct {
 	Title       string
 	Description string
@@ -116,8 +114,7 @@ func (s *RecipeService) Delete(ctx context.Context, id string) error {
 }
 
 // GenerateUploadURL returns a presigned PUT URL the client uploads the image to
-// directly, plus the object key that should be stored as the recipe's
-// image_url. Errors when media is not configured.
+// directly, plus the object key that should be stored as the recipe's image_url.
 func (s *RecipeService) GenerateUploadURL(ctx context.Context, recipeID, contentType, filename string) (*media.UploadURL, error) {
 	if s.uploads == nil {
 		return nil, fmt.Errorf("media uploads are not configured")

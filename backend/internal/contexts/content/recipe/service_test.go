@@ -11,8 +11,6 @@ import (
 	"github.com/diegobraga92/pudimproductivity/backend/internal/platform/eventbus"
 )
 
-// --- fakes ---
-
 type fakeRepo struct {
 	createCalled bool
 	updateCalled bool
@@ -68,8 +66,6 @@ func (b *busSpy) Subscribe(_ context.Context, _ eventbus.Handler) (func(), error
 	return func() {}, nil
 }
 func (b *busSpy) Close() error { return nil }
-
-// --- tests ---
 
 func TestService_CreatePublishesEventAndAudits(t *testing.T) {
 	repo := &fakeRepo{}

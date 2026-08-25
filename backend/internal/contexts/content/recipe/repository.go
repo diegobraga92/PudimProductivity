@@ -26,8 +26,7 @@ type Repository interface {
 	Create(ctx context.Context, recipe *Recipe) error
 	// GetByID returns the full recipe with all children; ErrNotFound if missing.
 	GetByID(ctx context.Context, id string) (*Recipe, error)
-	// List returns recipes matching the filter. Each result carries Tags (the
-	// list view); children are NOT loaded. Ordered created_at DESC, id DESC.
+	// List returns recipes matching the filter. Children are NOT loaded.
 	List(ctx context.Context, filter ListFilter) ([]*Recipe, error)
 	// Update replaces the recipe row and its children atomically.
 	Update(ctx context.Context, recipe *Recipe) error
