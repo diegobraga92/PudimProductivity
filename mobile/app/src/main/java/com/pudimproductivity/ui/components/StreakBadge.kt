@@ -35,7 +35,7 @@ fun StreakBadge(
             text = current.toString(),
             style = MaterialTheme.typography.bodySmall,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
+            color = MaterialTheme.colorScheme.onTertiaryContainer
         )
         if (longest > current) {
             Text(

@@ -24,6 +24,7 @@ import com.pudimproductivity.api.ServerConfig
 import com.pudimproductivity.api.SyncClient
 import com.pudimproductivity.i18n.AppLanguage
 import com.pudimproductivity.i18n.Localization
+import com.pudimproductivity.ui.theme.ThemeMode
 import kotlinx.coroutines.launch
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -36,7 +37,11 @@ import retrofit2.converter.gson.GsonConverterFactory
  * (ApiClient's Retrofit is invalidated and the sync WebSocket reconnects).
  */
 @Composable
-fun ServerSettingsScreen(onBack: () -> Unit) {
+fun ServerSettingsScreen(
+    onBack: () -> Unit,
+    themeMode: ThemeMode,
+    onThemeModeChange: (ThemeMode) -> Unit
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val currentUrl by ServerConfig.url.collectAsState()
@@ -220,6 +225,35 @@ fun ServerSettingsScreen(onBack: () -> Unit) {
                         }
                     },
                     label = { Text(Localization.text(Localization.LANGUAGE_KEYS.getValue(lang))) }
+                )
+            }
+        }
+
+        // Theme selector (System / Light / Dark).
+        Text(
+            text = Localization.text("settings.theme"),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(top = 24.dp)
+        )
+        Row(
+            modifier = Modifier.padding(top = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            ThemeMode.entries.forEach { mode ->
+                FilterChip(
+                    selected = themeMode == mode,
+                    onClick = { onThemeModeChange(mode) },
+                    label = {
+                        Text(
+                            Localization.text(
+                                when (mode) {
+                                    ThemeMode.SYSTEM -> "settings.theme.system"
+                                    ThemeMode.LIGHT -> "settings.theme.light"
+                                    ThemeMode.DARK -> "settings.theme.dark"
+                                }
+                            )
+                        )
+                    }
                 )
             }
         }

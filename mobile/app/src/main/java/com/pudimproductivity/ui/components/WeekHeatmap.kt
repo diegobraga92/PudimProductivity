@@ -79,12 +79,12 @@ fun WeekHeatmap(
                 val canToggle = (isScheduled || isCompleted) && !disabled
 
                 val cellColor = when {
-                    isCompleted -> MaterialTheme.colorScheme.primary
+                    isCompleted -> MaterialTheme.colorScheme.secondary
                     isScheduled -> MaterialTheme.colorScheme.tertiaryContainer
                     else -> MaterialTheme.colorScheme.surfaceVariant
                 }
                 val textColor = when {
-                    isCompleted -> MaterialTheme.colorScheme.onPrimary
+                    isCompleted -> MaterialTheme.colorScheme.onSecondary
                     isScheduled -> MaterialTheme.colorScheme.onTertiaryContainer
                     else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
                 }

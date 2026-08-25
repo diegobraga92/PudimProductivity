@@ -17,12 +17,15 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.pudimproductivity.api.SyncClient
 import com.pudimproductivity.api.TaskList
 import com.pudimproductivity.i18n.Localization
+import com.pudimproductivity.ui.theme.TodoAccentDark
+import com.pudimproductivity.ui.theme.TodoAccentLight
 import com.pudimproductivity.ui.components.SortSelector
 import com.pudimproductivity.ui.components.StreakBadge
 import com.pudimproductivity.ui.components.WeekHeatmap
@@ -73,6 +76,8 @@ fun TaskListScreen(
     var selectedTab by remember { mutableStateOf(0) }
     var newTodoTitle by remember { mutableStateOf("") }
     var newListName by remember { mutableStateOf("") }
+    // To-Dos sub-view: 0 = open (unchecked), 1 = completed (mirrors the web).
+    var todoFilter by remember { mutableStateOf(0) }
     // Phase 8: list currently open in the share dialog.
     var shareList by remember { mutableStateOf<TaskList?>(null) }
 
@@ -105,6 +110,16 @@ fun TaskListScreen(
 
     val sortedTodoTasks = sortTasks(todoTasks, todoSort)
     val sortedHabitTasks = sortTasks(habitTasks, habitSort)
+
+    // To-Dos are split into Open/Completed sub-views so done items don't
+    // clutter the unchecked list (mirrors the web).
+    val filteredTodoTasks =
+        if (todoFilter == 0) sortedTodoTasks.filter { it.status != "done" }
+        else sortedTodoTasks.filter { it.status == "done" }
+
+    // Web-aligned to-do accent color (blue) — matches the web's todo cards.
+    val todoAccent =
+        if (MaterialTheme.colorScheme.background.luminance() < 0.5f) TodoAccentDark else TodoAccentLight
 
     var isRefreshing by remember { mutableStateOf(false) }
     val refreshScope = rememberCoroutineScope()
@@ -205,6 +220,9 @@ fun TaskListScreen(
             when (selectedTab) {
                 0 -> {
                     // TODO TAB
+                    // Quick-add — always visible so switching Open/Completed
+                    // doesn't change the layout. New todos start unchecked, so
+                    // creating one from the "Completed" view jumps back to Open.
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -221,6 +239,7 @@ fun TaskListScreen(
                             onClick = {
                                 repository.createTask(title = newTodoTitle)
                                 newTodoTitle = ""
+                                todoFilter = 0
                             },
                             enabled = newTodoTitle.isNotBlank()
                         ) {
@@ -246,13 +265,38 @@ fun TaskListScreen(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    if (todoTasks.isEmpty()) {
+                    // Open / Completed sub-tabs (segmented pill, mirrors the web)
+                    SingleChoiceSegmentedButtonRow {
+                        SegmentedButton(
+                            selected = todoFilter == 0,
+                            onClick = { todoFilter = 0 },
+                            shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                            icon = {}
+                        ) {
+                            Text(Localization.text("mobile.tasks.openTodos"))
+                        }
+                        SegmentedButton(
+                            selected = todoFilter == 1,
+                            onClick = { todoFilter = 1 },
+                            shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                            icon = {}
+                        ) {
+                            Text(Localization.text("mobile.tasks.completedTodos"))
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    if (filteredTodoTasks.isEmpty()) {
                         Box(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = Localization.text("mobile.tasks.noTodos"),
+                                text = if (todoFilter == 0)
+                                    Localization.text("mobile.tasks.noTodos")
+                                else
+                                    Localization.text("mobile.tasks.noCompletedTodos"),
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -261,11 +305,12 @@ fun TaskListScreen(
                         LazyColumn(
                             verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            items(sortedTodoTasks, key = { it.id }) { task ->
+                            items(filteredTodoTasks, key = { it.id }) { task ->
                                 Card(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clickable { onTaskClick(task.id) },
+                                    shape = MaterialTheme.shapes.large,
                                     colors = CardDefaults.cardColors(
                                         containerColor = if (task.status == "done")
                                             MaterialTheme.colorScheme.surfaceVariant
@@ -279,13 +324,13 @@ fun TaskListScreen(
                                             .padding(12.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        // Left accent strip — brand identity, mirrors web cards
+                                        // Left accent strip — mirrors the web's to-do accent (blue)
                                         Box(
                                             modifier = Modifier
                                                 .width(3.dp)
                                                 .height(20.dp)
                                                 .clip(RoundedCornerShape(2.dp))
-                                                .background(MaterialTheme.colorScheme.primary)
+                                                .background(todoAccent)
                                         )
                                         Spacer(modifier = Modifier.width(10.dp))
                                         Checkbox(
@@ -309,6 +354,16 @@ fun TaskListScreen(
                                                 MaterialTheme.colorScheme.onSurface,
                                             modifier = Modifier.weight(1f)
                                         )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        TextButton(
+                                            onClick = { repository.deleteTask(task.id) }
+                                        ) {
+                                            Text(
+                                                "✕",
+                                                color = MaterialTheme.colorScheme.error,
+                                                style = MaterialTheme.typography.labelSmall
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -362,8 +417,9 @@ fun TaskListScreen(
 
                                 Card(
                                     modifier = Modifier.fillMaxWidth(),
+                                    shape = MaterialTheme.shapes.large,
                                     colors = CardDefaults.cardColors(
-                                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                                        containerColor = MaterialTheme.colorScheme.surface
                                     )
                                 ) {
                                     Column(

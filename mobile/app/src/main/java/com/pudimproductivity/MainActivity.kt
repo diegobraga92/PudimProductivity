@@ -53,6 +53,8 @@ import com.pudimproductivity.ui.screens.TaskListDetailScreen
 import com.pudimproductivity.ui.screens.ServerSettingsScreen
 import com.pudimproductivity.ui.screens.TaskListScreen
 import com.pudimproductivity.ui.theme.PudimProductivityTheme
+import com.pudimproductivity.ui.theme.ThemeMode
+import com.pudimproductivity.ui.theme.ThemePreferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -116,12 +118,24 @@ class MainActivity : ComponentActivity() {
         launchTarget.value = parseLaunch(intent)
 
         setContent {
-            PudimProductivityTheme {
+            // Theme mode is Compose state, so switching it re-renders the whole
+            // app live; the choice is persisted via ThemePreferences.
+            val appContext = applicationContext
+            var themeMode by remember { mutableStateOf(ThemePreferences.load(appContext)) }
+            PudimProductivityTheme(mode = themeMode) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    AppNavigation(repository, launchTarget)
+                    AppNavigation(
+                        repository = repository,
+                        launchTarget = launchTarget,
+                        themeMode = themeMode,
+                        onThemeModeChange = { mode ->
+                            ThemePreferences.save(appContext, mode)
+                            themeMode = mode
+                        }
+                    )
                 }
             }
         }
@@ -224,7 +238,9 @@ private enum class TopLevel { Tasks, Plan, Recipes, More }
 @Composable
 private fun AppNavigation(
     repository: TaskRepository,
-    launchTarget: MutableState<LaunchTarget?>
+    launchTarget: MutableState<LaunchTarget?>,
+    themeMode: ThemeMode,
+    onThemeModeChange: (ThemeMode) -> Unit
 ) {
     var currentScreen by remember { mutableStateOf(launchTarget.value?.screen ?: Screen.TaskList) }
     var selectedTaskId by remember { mutableStateOf(launchTarget.value?.taskId) }
@@ -280,7 +296,9 @@ private fun AppNavigation(
         }
         Screen.ServerSettings -> {
             ServerSettingsScreen(
-                onBack = { currentScreen = Screen.TaskList }
+                onBack = { currentScreen = Screen.TaskList },
+                themeMode = themeMode,
+                onThemeModeChange = onThemeModeChange
             )
         }
         Screen.TaskList -> {

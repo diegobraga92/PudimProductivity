@@ -191,8 +191,9 @@ private fun HabitCard(
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+            containerColor = MaterialTheme.colorScheme.surface
         )
     ) {
         Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {

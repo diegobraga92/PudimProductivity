@@ -55,7 +55,7 @@ export default function TaskCard({
         {title}
       </span>
       <button
-        className="btn btn-danger btn-sm"
+        className="btn btn-danger btn-sm task-delete"
         onClick={onDelete}
         aria-label={t("tasks.deleteAria", { title })}
       >

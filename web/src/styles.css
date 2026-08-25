@@ -36,6 +36,7 @@
   /* Neutral palette */
   --color-bg: #FEF6E9;
   --color-surface: #FFFFFF;
+  --color-panel: #EEF2F6; /* panel container bg — slightly muted so cards stand out */
   --color-border: #E2E8F0;
   --color-border-light: #F1F5F9;
   --color-text: #0F172A;
@@ -284,13 +285,23 @@ h1, h2, h3, h4, h5, h6 {
   border-color: var(--color-text-muted);
 }
 
-/* Hover-reveal kebab button inside habit cards */
-.card-habit .habit-kebab {
+/* Hover-reveal delete (X) button inside habit cards */
+.card-habit .habit-delete {
   opacity: 0;
   transition: opacity var(--transition-fast);
 }
-.card-habit:hover .habit-kebab,
-.card-habit:focus-within .habit-kebab {
+.card-habit:hover .habit-delete,
+.card-habit:focus-within .habit-delete {
+  opacity: 1;
+}
+
+/* Hover-reveal delete button inside to-do cards */
+.card-todo .task-delete {
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+.card-todo:hover .task-delete,
+.card-todo:focus-within .task-delete {
   opacity: 1;
 }
 
@@ -516,6 +527,14 @@ h1, h2, h3, h4, h5, h6 {
 .week-heatmap {
   display: flex;
   gap: 0.3rem;
+  width: 100%;
+}
+
+/* Inside habit cards the 7 day buttons stretch to fill the whole column width,
+   so there is no dead space to the right of the row. */
+.card-habit .week-day-btn {
+  flex: 1 1 0;
+  min-width: 0;
 }
 
 .week-day-btn {
@@ -595,40 +614,84 @@ h1, h2, h3, h4, h5, h6 {
   display: grid;
   grid-template-columns: 2fr 1fr;
   gap: var(--space-lg);
-  align-items: start;
+  align-items: stretch;
   margin-bottom: var(--space-2xl);
 }
 
-/* Tasks column — scrollable, primary content */
-.task-column:first-child {
+/* Each column is a self-contained panel so the two sections read as separate
+   boxes instead of free-floating lists. The panel uses a distinct background
+   from the cards inside it, so the to-do/habit cards visibly stand out. Both
+   panels stretch to the same height and stick to the same offset when
+   scrolling, so they always line up as a matching pair. */
+.task-column {
   min-width: 0;
   max-height: calc(100vh - 300px);
-  overflow-y: auto;
-  scrollbar-width: thin;
-  padding-right: var(--space-sm);
-}
-
-/* Habits column — sticky sidebar */
-.task-column:last-child {
-  min-width: 0;
   position: sticky;
   top: calc(56px + var(--space-lg));
-  align-self: start;
-  max-height: calc(100vh - 300px);
-  overflow-y: auto;
-  scrollbar-width: thin;
-  padding-right: var(--space-sm);
+  display: flex;
+  flex-direction: column;
+  background: var(--color-panel);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
 }
 
+/* Column header — fixed band holding the title + controls */
 .task-column-header {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  background: var(--color-bg);
-  padding-bottom: var(--space-sm);
+  flex-shrink: 0;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: var(--space-sm);
+  background: var(--color-panel);
+  padding: var(--space-md) var(--space-md) var(--space-sm);
+  border-bottom: 1px solid var(--color-border);
+}
+
+/* Scrollable content area below the header */
+.task-column-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-md);
+  scrollbar-width: thin;
+}
+
+/* To-Dos sub-tabs (Open / Completed) — compact pill control, left-aligned */
+.task-tabs {
+  flex-shrink: 0;
+  align-self: flex-start;
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  margin: var(--space-sm) var(--space-md);
+  background: var(--color-border-light);
+  border-radius: var(--radius-full);
+}
+
+.task-tab {
+  flex: 0 0 auto;
+  padding: 0.35rem 0.9rem;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color var(--transition-fast), background var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.task-tab:hover {
+  color: var(--color-text);
+}
+
+.task-tab.active {
+  background: var(--color-surface);
+  color: var(--color-primary);
+  font-weight: 600;
+  box-shadow: var(--shadow-sm);
+  border-radius: var(--radius-full);
 }
 
 /* --- Lists Section (Below the grid) --- */
@@ -690,8 +753,19 @@ h1, h2, h3, h4, h5, h6 {
   }
   .task-column {
     max-height: none;
+  }
+  .task-column-body {
+    max-height: none;
     overflow-y: visible;
-    padding-right: 0;
+  }
+  /* On a full-width stacked column, keep the day buttons at their natural
+     size and center them instead of stretching across the whole width. */
+  .card-habit .week-heatmap {
+    justify-content: center;
+  }
+  .card-habit .week-day-btn {
+    flex: 0 0 auto;
+    width: 2.25rem;
   }
   .lists-inner {
     grid-template-columns: 1fr;
@@ -1403,6 +1477,7 @@ h1, h2, h3, h4, h5, h6 {
 
   --color-bg: #0F172A;
   --color-surface: #1E293B;
+  --color-panel: #16202E;
   --color-border: #334155;
   --color-border-light: #273449;
   --color-text: #F1F5F9;
@@ -1443,6 +1518,7 @@ h1, h2, h3, h4, h5, h6 {
 
     --color-bg: #0F172A;
     --color-surface: #1E293B;
+    --color-panel: #16202E;
     --color-border: #334155;
     --color-border-light: #273449;
     --color-text: #F1F5F9;
