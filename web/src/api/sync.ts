@@ -3,7 +3,7 @@ import config from "../config";
 /**
  * WebSocket event types pushed by the backend sync hub (see api/ws/events-v1.json).
  */
-export type WsEventType =
+type WsEventType =
   | "task.created"
   | "task.updated"
   | "task.deleted"

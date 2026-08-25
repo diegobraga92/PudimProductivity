@@ -15,7 +15,7 @@ export type HealthResponse = components["schemas"]["HealthResponse"];
  * it (see `setDevRole`).
  */
 export const DEV_USER_ID = "dev-user";
-export const DEV_USER_ROLE = "user";
+const DEV_USER_ROLE = "user";
 
 const DEV_ROLE_KEY = "devRole";
 

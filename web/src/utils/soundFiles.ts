@@ -15,7 +15,7 @@ import config from "../config";
  * when the backend is unreachable).
  */
 
-export interface SoundCatalogEntry {
+interface SoundCatalogEntry {
   id: string;
   file: string;
   mime: string;

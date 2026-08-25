@@ -73,27 +73,3 @@ export async function getListPresence(listId: string): Promise<ListPresenceRespo
   }
   return response.json() as Promise<ListPresenceResponse>;
 }
-
-/**
- * Sends a CRDT merge for a task. On HTTP 409 the write lost and the server
- * returns the winning task state; the caller should reconcile against it.
- */
-export async function mergeTask(
-  taskId: string,
-  fields: Record<string, unknown>
-): Promise<{ task: import("./tasks").Task; conflict: boolean }> {
-  const response = await fetch(`${config.apiBaseUrl}/tasks/${taskId}/merge`, {
-    method: "PATCH",
-    headers: apiHeaders(),
-    body: JSON.stringify(fields),
-  });
-  const body = (await response.json().catch(() => null)) as import("./tasks").Task | null;
-  if (!response.ok) {
-    if (response.status === 409 && body) {
-      // Lost the merge: server returned the winning state for reconciliation.
-      return { task: body, conflict: true };
-    }
-    throw new Error(`Failed to merge task: ${response.status}`);
-  }
-  return { task: body as import("./tasks").Task, conflict: false };
-}

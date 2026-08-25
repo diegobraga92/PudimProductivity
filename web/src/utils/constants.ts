@@ -15,26 +15,6 @@ export const COLOR_PALETTE = [
   "#84CC16", // lime
 ];
 
-export const DAY_LABELS: Record<RecurrenceDay, string> = {
-  mon: "Mon",
-  tue: "Tue",
-  wed: "Wed",
-  thu: "Thu",
-  fri: "Fri",
-  sat: "Sat",
-  sun: "Sun",
-};
-
-export const DAY_LABELS_FULL: Record<RecurrenceDay, string> = {
-  mon: "Monday",
-  tue: "Tuesday",
-  wed: "Wednesday",
-  thu: "Thursday",
-  fri: "Friday",
-  sat: "Saturday",
-  sun: "Sunday",
-};
-
 export const DAY_OPTIONS: { value: RecurrenceDay; label: string }[] = [
   { value: "mon", label: "Mon" },
   { value: "tue", label: "Tue" },

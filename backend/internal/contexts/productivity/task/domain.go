@@ -33,19 +33,19 @@ var validRecurrenceDays = map[string]struct{}{
 }
 
 type Task struct {
-	ID             string
-	Title          string
-	Status         TaskStatus
-	RecurrenceDays []string // nil = one-off task, non-nil = habit
-	ListID         *string  // nil = not part of a list, non-nil = belongs to a task list
-	StartTime      *string  // nil = not scheduled on planner, "09:00" format
-	EndTime        *string  // nil = not scheduled on planner, "10:00" format
-	Color          *string  // nil = default (#3B82F6)
-	ScheduledDate  *string  // nil for habits, "2026-07-20" for one-off tasks
-	AlarmMinutes   *int     // nil = no alarm, e.g. 5 = notify 5 min before start_time
-	UpdatedBy      *string  // Phase 8: last writer, used to break LWW merge ties (nil = never merged)
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+	ID             string     `json:"id"`
+	Title          string     `json:"title"`
+	Status         TaskStatus `json:"status"`
+	RecurrenceDays []string   `json:"recurrence_days,omitempty"` // nil = one-off task, non-nil = habit
+	ListID         *string    `json:"list_id,omitempty"`         // nil = not part of a list, non-nil = belongs to a task list
+	StartTime      *string    `json:"start_time,omitempty"`      // nil = not scheduled on planner, "09:00" format
+	EndTime        *string    `json:"end_time,omitempty"`        // nil = not scheduled on planner, "10:00" format
+	Color          *string    `json:"color,omitempty"`           // nil = default (#3B82F6)
+	ScheduledDate  *string    `json:"scheduled_date,omitempty"`  // nil for habits, "2026-07-20" for one-off tasks
+	AlarmMinutes   *int       `json:"alarm_minutes,omitempty"`   // nil = no alarm, e.g. 5 = notify 5 min before start_time
+	UpdatedBy      *string    `json:"updated_by,omitempty"`      // Phase 8: last writer, used to break LWW merge ties (nil = never merged)
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
 }
 
 func NewTask(id, title string, recurrenceDays []string) (*Task, error) {

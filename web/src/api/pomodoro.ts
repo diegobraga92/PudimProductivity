@@ -3,7 +3,6 @@ import type { components, paths } from "./generated/pomodoro-v1";
 
 // Types are generated from api/openapi/pomodoro-v1.yaml (the source of truth).
 export type SessionStatus = components["schemas"]["SessionStatus"];
-export type NoiseConfig = components["schemas"]["NoiseConfig"];
 export type PomodoroSession = components["schemas"]["PomodoroSession"];
 export type StartSessionRequest = components["schemas"]["StartSessionRequest"];
 

@@ -36,6 +36,7 @@ import (
 	"github.com/diegobraga92/pudimproductivity/backend/internal/infrastructure/postgres"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/infrastructure/rabbitmq"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/infrastructure/storage"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/platform/cache"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/platform/config"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/platform/eventbus"
 	httpx "github.com/diegobraga92/pudimproductivity/backend/internal/platform/http"
@@ -192,6 +193,36 @@ func main() {
 		}()
 	}
 
+	// Redis: optional shared pub/sub fabric for cross-instance sync fan-out plus
+	// a read-through cache for task reads. When Redis is unavailable the sync
+	// hub keeps working single-instance and caching is disabled (degraded
+	// mode), mirroring the RabbitMQ behavior above.
+	var redisBus *eventbus.RedisBus
+	if cfg.RedisURL != "" {
+		rb, err := eventbus.NewRedisBus(context.Background(), eventbus.RedisConfig{URL: cfg.RedisURL})
+		if err != nil {
+			log.Warn().Err(err).Msg("redis unavailable — cross-instance sync and task cache disabled")
+		} else {
+			redisBus = rb
+			// Relay events from other instances into the local bus so the sync
+			// hub (subscribed to inMemoryBus) broadcasts them to its clients.
+			// The Redis bus filters self-origin messages, so there is no echo
+			// loop and no double delivery for locally produced events.
+			if _, err := rb.Subscribe(context.Background(), func(ctx context.Context, e eventbus.Event) error {
+				return inMemoryBus.Publish(ctx, e.Type, e.Payload)
+			}); err != nil {
+				log.Warn().Err(err).Msg("redis subscribe failed — cross-instance sync disabled")
+				redisBus = nil
+			} else {
+				children := []eventbus.Bus{inMemoryBus, rb}
+				if rabbitBus != nil {
+					children = append(children, rabbitBus)
+				}
+				composite = eventbus.NewCompositeBus(children...)
+			}
+		}
+	}
+
 	var auditService *audit.Service
 	if pool != nil {
 		auditRepo := postgres.NewAuditRepository(pool)
@@ -199,9 +230,22 @@ func main() {
 	}
 
 	// Setup routes
+	// Task read-through cache (optional, Redis-backed). Every task mutation
+	// bumps the shared cache version, so stale entries are never served across
+	// instances either.
+	var taskCache *cache.Cache
+	if pool != nil && redisBus != nil {
+		tc, err := cache.New(context.Background(), cfg.RedisURL, cfg.RedisCacheTTL)
+		if err != nil {
+			log.Warn().Err(err).Msg("redis task cache unavailable — task reads hit the database")
+		} else {
+			taskCache = tc
+		}
+	}
+
 	var taskService *task.TaskService
 	if pool != nil {
-		taskService = task.RegisterTaskRoutes(r, postgres.NewTaskRepository(pool), auditService, composite)
+		taskService = task.RegisterTaskRoutes(r, postgres.NewTaskRepository(pool), auditService, composite, taskCache)
 	}
 
 	if pool != nil {
@@ -352,6 +396,16 @@ func main() {
 	if rabbitBus != nil {
 		if err := rabbitBus.Close(); err != nil {
 			log.Warn().Err(err).Msg("rabbitmq bus close error")
+		}
+	}
+	if redisBus != nil {
+		if err := redisBus.Close(); err != nil {
+			log.Warn().Err(err).Msg("redis event bus close error")
+		}
+	}
+	if taskCache != nil {
+		if err := taskCache.Close(); err != nil {
+			log.Warn().Err(err).Msg("task cache close error")
 		}
 	}
 	if err := inMemoryBus.Close(); err != nil {

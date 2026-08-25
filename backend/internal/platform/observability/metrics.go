@@ -123,12 +123,6 @@ func (w *metricsResponseWriter) Flush() {
 	}
 }
 
-func RegisterMetricsRoutes(r chi.Router, metrics *Metrics) {
-	r.Use(metrics.MetricsMiddleware)
-
-	r.Get("/metrics", MetricsHandler())
-}
-
 // This should be started on a separate port that is not exposed publicly.
 func SetupInternalMetricsServer(metrics *Metrics) *http.Server {
 	mux := chi.NewRouter()

@@ -329,19 +329,6 @@ class SoundscapeEngine {
     return this.active.has(id);
   }
 
-  /** Clean up everything. */
-  destroy(): void {
-    this.stopAll();
-    if (this.ctx) {
-      this.ctx.close();
-      this.ctx = null;
-      this.masterGain = null;
-      this.reverbNode = null;
-      this.reverbGain = null;
-      this.analyserNode = null;
-    }
-  }
-
   // ─── Presets ───────────────────────────────────────────────
 
   /** Load presets from localStorage. */
@@ -1905,11 +1892,4 @@ export function getSoundscape(): SoundscapeEngine {
     instance = new SoundscapeEngine();
   }
   return instance;
-}
-
-export function destroySoundscape(): void {
-  if (instance) {
-    instance.destroy();
-    instance = null;
-  }
 }

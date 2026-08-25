@@ -1,117 +1,107 @@
+// Package cache provides a small Redis-backed read-through cache with
+// namespace-scoped version invalidation.
+//
+// Entries are stored as JSON under a caller-chosen key. Mutations bump a
+// per-namespace version (INCR); readers prefix keys with that version, so a
+// bump atomically invalidates every entry in the namespace without having to
+// enumerate or delete keys. Old entries simply expire via their TTL.
 package cache
 
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/redis/go-redis/v9"
-	"github.com/rs/zerolog/log"
 )
 
-const redisPingTimeout = 3 * time.Second
+const defaultTTL = 30 * time.Second
 
+// Cache is a Redis-backed JSON cache. It is safe for concurrent use.
 type Cache struct {
 	client *redis.Client
 	ttl    time.Duration
 }
 
-func NewCache(redisURL string, ttl time.Duration) *Cache {
-	// If redisURL is empty, returns a no-op cache that always misses.
+// New connects to Redis and verifies reachability with a ping. It returns an
+// error when Redis is unavailable so the caller can disable caching
+// gracefully. A non-positive ttl falls back to the default (30s).
+func New(ctx context.Context, redisURL string, ttl time.Duration) (*Cache, error) {
 	if redisURL == "" {
-		log.Warn().Msg("Redis URL not configured — caching disabled")
-		return &Cache{client: nil, ttl: ttl}
+		return nil, errors.New("cache: empty redis url")
 	}
-
 	opts, err := redis.ParseURL(redisURL)
 	if err != nil {
-		log.Warn().Err(err).Msg("invalid Redis URL — caching disabled")
-		return &Cache{client: nil, ttl: ttl}
+		return nil, err
 	}
-
 	client := redis.NewClient(opts)
-
-	ctx, cancel := context.WithTimeout(context.Background(), redisPingTimeout)
-	defer cancel()
-
 	if err := client.Ping(ctx).Err(); err != nil {
-		log.Warn().Err(err).Msg("Redis connection failed — caching disabled")
-		return &Cache{client: nil, ttl: ttl}
+		_ = client.Close()
+		return nil, err
 	}
-
-	log.Info().Str("addr", opts.Addr).Msg("Redis cache connected")
-	return &Cache{client: client, ttl: ttl}
+	if ttl <= 0 {
+		ttl = defaultTTL
+	}
+	return &Cache{client: client, ttl: ttl}, nil
 }
 
+// Get unmarshals the cached JSON value into dest. It returns (true, nil) on a
+// hit and (false, nil) on a miss. A corrupt entry is reported as an error; the
+// caller should treat it as a miss and overwrite the key.
 func (c *Cache) Get(ctx context.Context, key string, dest any) (bool, error) {
-	if c.client == nil {
-		return false, nil
-	}
-
 	data, err := c.client.Get(ctx, key).Bytes()
 	if err != nil {
 		if err == redis.Nil {
 			return false, nil
 		}
-		log.Warn().Err(err).Str("key", key).Msg("Redis GET error")
-		return false, nil
+		return false, err
 	}
-
 	if err := json.Unmarshal(data, dest); err != nil {
-		log.Warn().Err(err).Str("key", key).Msg("Redis cache unmarshal error")
-		return false, nil
+		return false, fmt.Errorf("cache: unmarshal %q: %w", key, err)
 	}
-
 	return true, nil
 }
 
+// Set marshals value and stores it under key with the cache TTL.
 func (c *Cache) Set(ctx context.Context, key string, value any) error {
-	if c.client == nil {
-		return nil
-	}
-
 	data, err := json.Marshal(value)
 	if err != nil {
-		return fmt.Errorf("cache marshal error: %w", err)
+		return fmt.Errorf("cache: marshal %q: %w", key, err)
 	}
-
-	if err := c.client.Set(ctx, key, data, c.ttl).Err(); err != nil {
-		log.Warn().Err(err).Str("key", key).Msg("Redis SET error")
-		return err
-	}
-
-	return nil
+	return c.client.Set(ctx, key, data, c.ttl).Err()
 }
 
+// Del removes one or more keys. Missing keys are not an error.
 func (c *Cache) Del(ctx context.Context, keys ...string) error {
-	if c.client == nil {
+	if len(keys) == 0 {
 		return nil
 	}
-
-	if err := c.client.Del(ctx, keys...).Err(); err != nil {
-		log.Warn().Strs("keys", keys).Err(err).Msg("Redis DEL error")
-		return err
-	}
-
-	return nil
+	return c.client.Del(ctx, keys...).Err()
 }
 
-func (c *Cache) Close() error {
-	if c.client == nil {
-		return nil
+// Version returns the current invalidation version for a namespace, or 0 when
+// it has never been bumped.
+func (c *Cache) Version(ctx context.Context, ns string) (int64, error) {
+	v, err := c.client.Get(ctx, versionKey(ns)).Int64()
+	if err == redis.Nil {
+		return 0, nil
 	}
+	return v, err
+}
+
+// Bump increments the namespace version, invalidating every cached entry that
+// was keyed under a previous version. It returns the new version.
+func (c *Cache) Bump(ctx context.Context, ns string) (int64, error) {
+	return c.client.Incr(ctx, versionKey(ns)).Result()
+}
+
+// Close releases the underlying Redis connection.
+func (c *Cache) Close() error {
 	return c.client.Close()
 }
 
-// CacheKey helpers for consistent key naming.
-type CacheKey string
-
-const (
-	CacheKeyTask     CacheKey = "task:%s"    // task:{id}
-	CacheKeyTaskList CacheKey = "tasks:list" // tasks:list (user-specific keys to be added with auth)
-)
-
-func Key(format CacheKey, args ...any) string {
-	return fmt.Sprintf(string(format), args...)
+func versionKey(ns string) string {
+	return "cache:version:" + ns
 }

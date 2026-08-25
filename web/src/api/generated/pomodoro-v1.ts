@@ -108,7 +108,7 @@ export interface components {
         SessionStatus: "running" | "paused" | "completed" | "cancelled";
         /**
          * @description Which segment of the run the session represents. Single-shot sessions
-         *     are always `focus`; continuous runs alternate focus → break → focus.
+         *     are always 'focus', continuous runs alternate focus → break → focus.
          * @example focus
          * @enum {string}
          */

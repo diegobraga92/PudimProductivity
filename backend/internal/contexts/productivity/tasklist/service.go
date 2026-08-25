@@ -74,24 +74,12 @@ func (s *TaskListService) CreateTaskList(ctx context.Context, id, name, ownerID 
 	return list, nil
 }
 
-func (s *TaskListService) GetTaskList(ctx context.Context, id string) (*TaskList, error) {
-	list, err := s.repo.GetByID(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-	return list, nil
-}
-
 // GetTaskListForUser returns a list only if userID can access it.
 func (s *TaskListService) GetTaskListForUser(ctx context.Context, id, userID string, isAdmin bool) (*TaskList, error) {
 	if _, err := s.effectiveRole(ctx, id, userID, isAdmin); err != nil {
 		return nil, err
 	}
 	return s.repo.GetByID(ctx, id)
-}
-
-func (s *TaskListService) ListTaskLists(ctx context.Context) ([]*TaskList, error) {
-	return s.repo.List(ctx)
 }
 
 // ListTaskListsForUser returns lists the user owns or is a member of (Phase 8).

@@ -10,8 +10,9 @@ import (
 )
 
 // Returns the TaskService so other modules (e.g., tasklist) can use it.
-func RegisterTaskRoutes(r chi.Router, repo TaskRepository, auditLogger audit.Logger, bus eventbus.Bus) *TaskService {
-	service := NewTaskService(repo, auditLogger, bus)
+// Cache is optional, omit to disable read-through caching.
+func RegisterTaskRoutes(r chi.Router, repo TaskRepository, auditLogger audit.Logger, bus eventbus.Bus, cache ...TaskCache) *TaskService {
+	service := NewTaskService(repo, auditLogger, bus, cache...)
 	handler := NewHandler(service)
 
 	r.Route("/api/v1/tasks", func(r chi.Router) {

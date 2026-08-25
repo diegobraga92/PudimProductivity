@@ -8,15 +8,6 @@ export type SortOption =
   | "time-asc"
   | "time-desc";
 
-export const SORT_LABELS: Record<SortOption, string> = {
-  "alpha-asc": "Name A-Z",
-  "alpha-desc": "Name Z-A",
-  "created-asc": "Oldest first",
-  "created-desc": "Newest first",
-  "time-asc": "Time ↑",
-  "time-desc": "Time ↓",
-};
-
 export const VALID_SORT_OPTIONS = new Set<string>([
   "alpha-asc",
   "alpha-desc",

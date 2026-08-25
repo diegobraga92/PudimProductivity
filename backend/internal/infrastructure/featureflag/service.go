@@ -73,14 +73,6 @@ func (s *Service) GetByName(ctx context.Context, name string) (*FeatureFlag, err
 	return s.repo.GetByName(ctx, name)
 }
 
-func (s *Service) GetAll(ctx context.Context) ([]FeatureFlag, error) {
-	enabled, err := s.repo.ListEnabled(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return enabled, nil
-}
-
 func (s *Service) SetEnabled(ctx context.Context, id string, enabled bool) error {
 	if err := s.repo.SetEnabled(ctx, id, enabled); err != nil {
 		return fmt.Errorf("set feature flag: %w", err)

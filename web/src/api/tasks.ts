@@ -6,7 +6,6 @@ import type { components } from "./generated/tasks-v1";
 // Edit the spec, run `npm run generate:api`, and commit — CI fails on drift.
 export type Task = components["schemas"]["Task"];
 export type TaskStatus = components["schemas"]["TaskStatus"];
-export type TaskType = components["schemas"]["TaskType"];
 export type RecurrenceDay = components["schemas"]["RecurrenceDay"];
 export type TaskCompletion = components["schemas"]["TaskCompletion"];
 export type CreateTaskRequest = components["schemas"]["CreateTaskRequest"];

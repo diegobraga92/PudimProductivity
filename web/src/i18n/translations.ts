@@ -15,8 +15,3 @@ export const dictionaries: Record<Language, Dictionary> = {
   en: en as Dictionary,
   "pt-BR": ptBR as Dictionary,
 };
-
-export const LANGUAGE_LABELS: Record<Language, string> = {
-  en: "English",
-  "pt-BR": "Português",
-};
