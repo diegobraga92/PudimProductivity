@@ -426,10 +426,6 @@ private fun AppNavigation(
                         moreSheetOpen = false
                         currentScreen = Screen.Library
                     }
-                    MoreSheetItem(Icons.Filled.Insights, Localization.text("nav.insights")) {
-                        moreSheetOpen = false
-                        currentScreen = Screen.Insights
-                    }
                     MoreSheetItem(Icons.Filled.HealthAndSafety, Localization.text("nav.health")) {
                         moreSheetOpen = false
                         currentScreen = Screen.Health

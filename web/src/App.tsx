@@ -50,10 +50,9 @@ const Soundscape = lazy(() => import("./pages/Soundscape"));
 const RecipeList = lazy(() => import("./pages/RecipeList"));
 const RecipeDetail = lazy(() => import("./pages/RecipeDetail"));
 const Library = lazy(() => import("./pages/Library"));
-const Insights = lazy(() => import("./pages/Insights"));
 const ServerSettings = lazy(() => import("./pages/ServerSettings"));
 
-type Page = "dashboard" | "tasks" | "lists" | "planner" | "pomodoro" | "soundscape" | "recipes" | "library" | "insights" | "health" | "settings";
+type Page = "dashboard" | "tasks" | "lists" | "planner" | "pomodoro" | "soundscape" | "recipes" | "library" | "health" | "settings";
 
 type NavItem = {
   id: Page;
@@ -71,7 +70,6 @@ const NAV_ITEMS: NavItem[] = [
   { id: "soundscape", labelKey: "nav.sounds", icon: MusicIcon },
   { id: "recipes", labelKey: "nav.recipes", icon: UtensilsIcon },
   { id: "library", labelKey: "nav.library", icon: FilmIcon },
-  { id: "insights", labelKey: "nav.insights", icon: ChartIcon },
 ];
 
 // Secondary pages tucked into the desktop "More" dropdown so the top bar does
@@ -317,8 +315,6 @@ function AppInner() {
               ))}
 
             {page === "library" && <Library />}
-
-            {page === "insights" && <Insights />}
 
             {page === "settings" && <ServerSettings />}
           </Suspense>

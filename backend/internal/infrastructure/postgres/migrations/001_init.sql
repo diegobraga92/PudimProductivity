@@ -43,7 +43,6 @@ VALUES
     (gen_random_uuid(), 'focus_timer', 'Focus timer feature', false),
     (gen_random_uuid(), 'book_tracking', 'Book tracking feature', false),
     (gen_random_uuid(), 'collaboration', 'Collaboration feature', false),
-    (gen_random_uuid(), 'ai_insights', 'AI-powered insights feature', false),
     (gen_random_uuid(), 'library.score_lookup_enabled', 'Library score lookup feature', false)
 ON CONFLICT (name) DO NOTHING;
 
@@ -251,7 +250,7 @@ CREATE INDEX idx_library_items_media_type ON library_items (media_type);
 CREATE INDEX idx_library_items_done ON library_items (done);
 
 -- ============================================================================
--- Insights: pomodoro focus history + generated reports
+-- Pomodoro focus history + generated reports
 -- ============================================================================
 
 CREATE TABLE pomodoro_sessions (
@@ -266,16 +265,6 @@ CREATE TABLE pomodoro_sessions (
 CREATE INDEX idx_pomodoro_sessions_user_completed
     ON pomodoro_sessions (user_id, completed_at);
 
-CREATE TABLE insight_reports (
-    id           UUID PRIMARY KEY,
-    user_id      TEXT NOT NULL,
-    week_start   DATE NOT NULL,
-    report_json  JSONB NOT NULL,
-    report_text  TEXT NOT NULL,
-    llm_summary  TEXT,
-    created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE (user_id, week_start)
-);
 
 -- ============================================================================
 -- Score provider settings (admin-configurable at runtime)

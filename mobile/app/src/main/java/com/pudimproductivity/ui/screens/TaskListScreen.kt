@@ -136,12 +136,6 @@ fun TaskListScreen(
                             contentDescription = Localization.text("nav.library")
                         )
                     }
-                    IconButton(onClick = onInsights) {
-                        Icon(
-                            Icons.Filled.Insights,
-                            contentDescription = Localization.text("nav.insights")
-                        )
-                    }
                     IconButton(onClick = onCreateTask) {
                         Icon(
                             Icons.Filled.Add,
