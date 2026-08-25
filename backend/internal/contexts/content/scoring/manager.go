@@ -10,18 +10,13 @@ import (
 	"github.com/diegobraga92/pudimproductivity/backend/internal/platform/config"
 )
 
-// Manager is a reloadable library.ScoreLookupProvider. It holds the current
-// composite behind a mutex and swaps it atomically on Reload, so provider
-// configuration changes made through the admin UI take effect immediately
-// without a backend restart.
+// Manager is a reloadable library.ScoreLookupProvider, so provider configuration
+// changes take effect immediately without a backend restart.
 type Manager struct {
 	mu      sync.RWMutex
 	current library.ScoreLookupProvider
 }
 
-// NewManager builds a Manager starting from initial (nil means Noop, i.e.
-// "not configured"). The initial client is typically the result of a startup
-// load, and can be replaced later via Reload.
 func NewManager(initial library.ScoreLookupProvider) *Manager {
 	if initial == nil {
 		initial = library.NoopScoreLookup{}
@@ -29,7 +24,7 @@ func NewManager(initial library.ScoreLookupProvider) *Manager {
 	return &Manager{current: initial}
 }
 
-// Search delegates to the active client. Satisfies library.ScoreLookupClient.
+// Search calls the provider's search.
 func (m *Manager) Search(ctx context.Context, query library.ScoreQuery) ([]library.ScoreCandidate, error) {
 	m.mu.RLock()
 	current := m.current
@@ -40,24 +35,21 @@ func (m *Manager) Search(ctx context.Context, query library.ScoreQuery) ([]libra
 	return current.Search(ctx, query)
 }
 
-// Configured reports whether the active client can serve lookups. Satisfies
-// library.ScoreLookupProvider.
+// Configured reports whether the active client can serve lookups.
 func (m *Manager) Configured() bool {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.current != nil && m.current.Configured()
 }
 
-// Current returns the active client (readers may also use Search directly).
+// Current returns the active provider.
 func (m *Manager) Current() library.ScoreLookupProvider {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.current
 }
 
-// Reload rebuilds the composite from cfg and swaps it in atomically. On error
-// the previous client stays active (a failed config change never degrades the
-// running lookup).
+// Reload rebuilds the composite from cfg and swaps it in atomically.
 func (m *Manager) Reload(ctx context.Context, cfg config.ScoreProviderConfig) error {
 	client, err := scoringapi.NewComposite(ctx, cfg)
 	if err != nil {
@@ -65,8 +57,6 @@ func (m *Manager) Reload(ctx context.Context, cfg config.ScoreProviderConfig) er
 	}
 	provider, ok := client.(library.ScoreLookupProvider)
 	if !ok {
-		// NewComposite only ever returns *composite or NoopScoreLookup, both of
-		// which implement the provider interface. Defensive fallback.
 		return fmt.Errorf("reload score providers: client %T is not a ScoreLookupProvider", client)
 	}
 	m.mu.Lock()

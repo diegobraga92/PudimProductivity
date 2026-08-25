@@ -1,7 +1,4 @@
-// Package scoring manages the library's rating-provider configuration
-// (which provider serves each media type, plus per-provider API keys) from the
-// database so it can be edited at runtime through the admin UI instead of
-// environment variables.
+// Package scoring manages the library's rating-provider configuration.
 package scoring
 
 import (
@@ -11,17 +8,13 @@ import (
 )
 
 // Provider is a single registered score provider with its stored configuration.
-// api_key is a secret: it is never returned by the API and is excluded from
-// backups.
 type Provider struct {
 	Name    string
 	APIKey  string
 	BaseURL string
 }
 
-// Config is the persisted media-type → provider mapping. saved_at is nil until
-// the user explicitly saves via the admin UI; while nil the service overlays
-// environment defaults so existing .env-based deployments keep working.
+// Config is the persisted media-type → provider mapping.
 type Config struct {
 	MovieProvider  string
 	SeriesProvider string
@@ -38,7 +31,7 @@ type ProviderAPI struct {
 	SupportedTypes []string `json:"supported_types"`
 }
 
-// ConfigAPI is the full response for GET /api/v1/admin/score-providers.
+// ConfigAPI is the full response for GET /admin/score-providers.
 type ConfigAPI struct {
 	MovieProvider  string        `json:"movie_provider"`
 	SeriesProvider string        `json:"series_provider"`

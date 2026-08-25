@@ -15,8 +15,7 @@ import (
 	"github.com/diegobraga92/pudimproductivity/backend/internal/platform/config"
 )
 
-// Reloader rebuilds the runtime score-lookup client from a config. The scoring
-// Manager implements this; it swaps the active composite atomically.
+// Reloader rebuilds the runtime score-lookup client from a config.
 type Reloader interface {
 	Reload(ctx context.Context, cfg config.ScoreProviderConfig) error
 }
@@ -38,7 +37,6 @@ func NewService(repo Repository, flags *featureflag.Service, reload Reloader, au
 	return &Service{repo: repo, flags: flags, reload: reload, audit: auditLogger, env: env}
 }
 
-// mediaTypes is the canonical set of library media types, in display order.
 var mediaTypes = []library.MediaType{
 	library.MediaTypeMovie,
 	library.MediaTypeSeries,
@@ -47,6 +45,8 @@ var mediaTypes = []library.MediaType{
 }
 
 func trim(v string) string { return strings.TrimSpace(v) }
+
+// TODO: Check about removing env code after full migration to using DB
 
 // envAssignment returns the provider selected for a media type by the
 // environment bootstrap config ("" = disabled).
@@ -65,10 +65,7 @@ func envAssignment(env config.ScoreProviderConfig, mt library.MediaType) string 
 	}
 }
 
-// mergeEnv overlays environment bootstrap defaults onto the persisted config
-// and provider rows, but only while the config has never been explicitly saved
-// (saved_at is nil). Once the user saves through the UI the DB becomes
-// authoritative and the environment is ignored.
+// mergeEnv overlays environment bootstrap defaults onto the persisted config and provider rows.
 func mergeEnv(cfg Config, env config.ScoreProviderConfig, dbProviders []Provider) (Config, []Provider) {
 	if cfg.SavedAt != nil {
 		return cfg, dbProviders
@@ -108,10 +105,6 @@ func mergeEnv(cfg Config, env config.ScoreProviderConfig, dbProviders []Provider
 	return cfg, providers
 }
 
-// buildScoreProviderConfig validates a config and turns it into the
-// config.ScoreProviderConfig consumed by scoring.NewComposite. Unknown provider
-// names, provider/media-type mismatches and missing API keys are all rejected
-// with a clear message.
 func buildScoreProviderConfig(cfg Config, providers []Provider) (config.ScoreProviderConfig, error) {
 	keys := make(map[string]string, len(providers))
 	baseURLs := make(map[string]string, len(providers))
@@ -150,10 +143,7 @@ func buildScoreProviderConfig(cfg Config, providers []Provider) (config.ScorePro
 	return out, nil
 }
 
-// ApplyConfig computes the effective config (persisted, overlaid with the env
-// bootstrap when never saved) and pushes it into the runtime lookup. Called at
-// startup; returns an error for invalid configuration so the caller can log and
-// keep the lookup degraded (503), matching the pre-UI behavior.
+// ApplyConfig computes the effective config and pushes it into the runtime lookup.
 func (s *Service) ApplyConfig(ctx context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -189,9 +179,7 @@ func (s *Service) Config(ctx context.Context) (ConfigAPI, error) {
 	return s.toAPI(cfg, providers, enabled), nil
 }
 
-// Update applies a new configuration: validates it, activates it in the
-// runtime lookup, persists it (marking it as explicitly saved) and optionally
-// toggles the lookup feature flag. Returns the resulting masked config.
+// Update applies a new configuration, after validating it.
 func (s *Service) Update(ctx context.Context, req UpdateConfigRequest) (ConfigAPI, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -205,7 +193,7 @@ func (s *Service) Update(ctx context.Context, req UpdateConfigRequest) (ConfigAP
 		return ConfigAPI{}, err
 	}
 
-	// Apply provider updates: nil APIKey/BaseURL mean "keep", "" means "clear".
+	// nil APIKey/BaseURL mean "keep", "" means "clear".
 	byName := make(map[string]Provider, len(oldProviders))
 	for _, p := range oldProviders {
 		byName[p.Name] = p
@@ -284,8 +272,6 @@ func (s *Service) Update(ctx context.Context, req UpdateConfigRequest) (ConfigAP
 	return s.toAPI(newCfg, newProviders, enabled), nil
 }
 
-// loadEffective reads the persisted config and providers and overlays the env
-// bootstrap when the config was never explicitly saved.
 func (s *Service) loadEffective(ctx context.Context) (Config, []Provider, error) {
 	cfg, err := s.repo.GetConfig(ctx)
 	if err != nil {

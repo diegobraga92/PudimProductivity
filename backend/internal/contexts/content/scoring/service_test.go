@@ -8,8 +8,6 @@ import (
 	"github.com/diegobraga92/pudimproductivity/backend/internal/platform/config"
 )
 
-// --- fakes ---
-
 type fakeRepo struct {
 	cfg            Config
 	providers      []Provider

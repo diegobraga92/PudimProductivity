@@ -8,15 +8,13 @@ import (
 )
 
 // UpdateProviderRequest carries changes for a single provider row.
-// APIKey/BaseURL are pointers: nil = keep the stored value, "" = clear it.
 type UpdateProviderRequest struct {
 	Name    string  `json:"name"`
 	APIKey  *string `json:"api_key"`
 	BaseURL *string `json:"base_url"`
 }
 
-// UpdateConfigRequest is the payload for PUT /api/v1/admin/score-providers.
-// LookupEnabled is optional (nil = leave the feature flag unchanged).
+// UpdateConfigRequest is the payload for PUT //admin/score-providers.
 type UpdateConfigRequest struct {
 	MovieProvider  string                  `json:"movie_provider"`
 	SeriesProvider string                  `json:"series_provider"`
