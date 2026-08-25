@@ -29,7 +29,6 @@ import (
 	"github.com/diegobraga92/pudimproductivity/backend/internal/contexts/content/scoring"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/contexts/content/sounds"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/contexts/productivity/pomodoro"
-	"github.com/diegobraga92/pudimproductivity/backend/internal/contexts/productivity/scheduler"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/contexts/productivity/task"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/contexts/productivity/tasklist"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/infrastructure/featureflag"
@@ -203,12 +202,6 @@ func main() {
 	var taskService *task.TaskService
 	if pool != nil {
 		taskService = task.RegisterTaskRoutes(r, postgres.NewTaskRepository(pool), auditService, composite)
-	}
-
-	// Phase 7: auto-scheduler — derives a profile from task data and suggests a
-	// daily plan. Requires the task service.
-	if taskService != nil {
-		scheduler.RegisterSchedulerRoutes(r, taskService)
 	}
 
 	if pool != nil {
