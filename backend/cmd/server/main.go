@@ -169,7 +169,11 @@ func main() {
 
 	var taskService *task.TaskService
 	if pool != nil {
-		taskService = task.RegisterTaskRoutes(r, postgres.NewTaskRepository(pool), auditService, composite, taskCache)
+		var cacheArgs []task.TaskCache
+		if taskCache != nil {
+			cacheArgs = append(cacheArgs, taskCache)
+		}
+		taskService = task.RegisterTaskRoutes(r, postgres.NewTaskRepository(pool), auditService, composite, cacheArgs...)
 	}
 
 	if pool != nil {

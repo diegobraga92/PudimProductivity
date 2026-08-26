@@ -9,7 +9,7 @@ import (
 	"github.com/alicebob/miniredis/v2"
 )
 
-func newTestRedisBus(t *testing.T, instanceID string) (*RedisBus, *miniredis.Miniredis) {
+func newTestRedisBus(t *testing.T, instanceID string) *RedisBus {
 	t.Helper()
 	s := miniredis.RunT(t)
 	b, err := NewRedisBus(context.Background(), RedisConfig{
@@ -20,7 +20,7 @@ func newTestRedisBus(t *testing.T, instanceID string) (*RedisBus, *miniredis.Min
 		t.Fatalf("NewRedisBus: %v", err)
 	}
 	t.Cleanup(func() { _ = b.Close() })
-	return b, s
+	return b
 }
 
 func TestRedisBusCrossInstanceFanout(t *testing.T) {
@@ -77,7 +77,7 @@ func TestRedisBusCrossInstanceFanout(t *testing.T) {
 }
 
 func TestRedisBusFiltersSelfOrigin(t *testing.T) {
-	b, _ := newTestRedisBus(t, "instance-a")
+	b := newTestRedisBus(t, "instance-a")
 
 	calls := 0
 	if _, err := b.Subscribe(context.Background(), func(_ context.Context, e Event) error {
@@ -101,7 +101,7 @@ func TestRedisBusFiltersSelfOrigin(t *testing.T) {
 }
 
 func TestRedisBusDropsMalformedMessages(t *testing.T) {
-	b, _ := newTestRedisBus(t, "instance-a")
+	b := newTestRedisBus(t, "instance-a")
 
 	calls := 0
 	if _, err := b.Subscribe(context.Background(), func(_ context.Context, e Event) error {
@@ -118,7 +118,7 @@ func TestRedisBusDropsMalformedMessages(t *testing.T) {
 }
 
 func TestRedisBusClose(t *testing.T) {
-	b, _ := newTestRedisBus(t, "instance-a")
+	b := newTestRedisBus(t, "instance-a")
 	if _, err := b.Subscribe(context.Background(), func(_ context.Context, e Event) error { return nil }); err != nil {
 		t.Fatalf("Subscribe: %v", err)
 	}

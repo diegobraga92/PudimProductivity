@@ -7,7 +7,8 @@
 //
 //   BASE_URL=http://localhost:8080/api/v1 k6 run infra/k6/smoke.js
 //
-// Thresholds mirror docs/slo.md: p95 < 200ms, < 1% errors.
+// Thresholds mirror the SLO burn-rate rules in infra/prometheus/alerts.yml:
+// p95 < 200ms, < 1% errors.
 
 import http from "k6/http";
 import { check, sleep } from "k6";

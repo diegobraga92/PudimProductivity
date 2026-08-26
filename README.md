@@ -1,232 +1,48 @@
 # PudimProductivity
 
-Starting as a To Do App. Hopefully adding other stuff later.
+Personal productivity app with tasks, habits, pomodoro timer, focus soundscapes, recipes, and a media library. Everything stays in sync between web (React), desktop (Electron), and Android (Kotlin), with a Go backend.
 
-## Quick Start (Development)
 
-Prerequisites:
-- Go 1.25+
-- Node 20+ (see `.nvmrc` or `web/package.json` for the exact version)
-- Docker & Docker Compose
+## Quick start (development)
+
+Go 1.26+, Node 20+ (see `.nvmrc`), and Docker.
 
 ```bash
-# Copy environment file and edit the passwords
 cp .env.example .env
-
-# Start the full dev stack — infrastructure (PostgreSQL, Redis)
-# plus the backend and frontend dev servers
-./scripts/run.sh
+./scripts/run.sh 
 ```
+
+Open http://localhost:3000. The backend health check is at http://localhost:8080/api/v1/health.
+
+- **Android app:** `./scripts/run-mobile.sh` (boots an emulator, builds and installs the app)
+- **Desktop app:** see [`desktop/README.md`](desktop/README.md)
 
 ## Deploy on LAN
 
-Deploy the entire application as a self-contained stack on any Linux machine in your local network.
-
-### Prerequisites
-
-- A Linux server on your LAN
-- Docker & Docker Compose
-- `git`
-
-### Steps
+Run the whole thing as a self-contained Docker stack on any Linux machine in a local network:
 
 ```bash
-# 1. Clone the repository on your LAN server
 git clone https://github.com/diegobraga92/PudimProductivity.git ~/pudimproductivity
 cd ~/pudimproductivity
-
-# 2. Create and configure environment file
 cp .env.example .env
-# ⚠️ Edit .env now — change POSTGRES_PASSWORD (it defaults
-#    to "change_me_in_production"). All host ports are configurable there too.
-
-# 3. Start all services (PostgreSQL, Redis, Backend, Frontend)
 docker compose up -d
-
-# 4. Access the app from any device on your LAN
-# Open http://<server-lan-ip>:<port> in your browser
-# (default port is 3000, configurable via FRONTEND_PORT in .env)
 ```
 
-The frontend (nginx) serves the built React app and proxies `/api/` requests to the backend. All services are wired together via Docker Compose networking. The first `docker compose up -d` builds the backend (Go) and frontend (React) images, so allow a few minutes before the app responds.
+Then open `http://<server-ip>:3000` from any device on the LAN. Ports are configurable in `.env`. The nginx frontend serves the built app and proxies `/api/` (and WebSockets) to the backend.
 
-### Services
 
-All host ports are **configurable via `.env`** — see `.env.example` for defaults.
+## What it does (for now)
 
-| Service    | Default port | Description                        |
-|------------|-------------|------------------------------------|
-| Frontend   | 3000       | React SPA (nginx)                  |
-| Backend    | 8080       | Go API (chi)                       |
-| PostgreSQL | 5433       | Database                           |
-| Redis      | 6379       | Cache / real-time sync store       |
+- **Tasks & habits** — task lists, recurring habits with streaks and weekly heatmaps
+- **Weekly planner** — with alarms: in-app toasts on web, native notifications on desktop, and local alarms on Android
+- **Pomodoro focus timer** and **soundscape** (ambient loops like rain and ocean) — web + desktop
+- **Recipes**
+- **Media library** — movies, series, books and games, with CSV import and optional ratings pulled from OMDb / RAWG / IGDB (configured at runtime in Server Settings)
+- **Real-time sync** — changes push to every client over WebSocket. The Android app is local-first (SQLite) and catches up when it reconnects. The database always wins.
 
-### Desktop app (Electron)
+## To be added
 
-There's also a native desktop app (`desktop/`) that reuses the same React web
-client. Full instructions live in [`desktop/README.md`](desktop/README.md).
-Short version — to deploy it on another Linux machine and point it at this LAN
-server:
-
-1. **On the server** — the desktop app serves its UI from the `app://bundle`
-   origin, so allow it to call the API cross-origin and rebuild the backend:
-
-   ```bash
-   echo 'CORS_ALLOWED_ORIGINS=app://bundle' >> .env
-   docker compose up -d --build backend
-   ```
-
-2. **On the desktop machine** — build with the server URL baked in, then
-   install the generated package:
-
-   ```bash
-   # web/.env.desktop:
-   VITE_API_BASE_URL=http://<server-lan-ip>:8080/api/v1   # or :3000 via nginx
-
-   cd desktop
-   npm install && npm run package
-   sudo apt install ./release/pudimproductivity-desktop_*_amd64.deb   # or run the .AppImage
-   ```
-
-The desktop app then talks to the server over HTTP + WebSocket (real-time sync
-with the browser/Android included). A runtime override
-(`window.desktop.setApiBaseUrl(...)` or the `PUDIM_API_BASE_URL` env var) wins
-over the baked URL — see `desktop/README.md`.
-
-## API
-
-Using API-first, `api/openapi/` should be the source of truth.
-
-## Monitoring & Observability
-
-- **Metrics:** the backend exposes a Prometheus scrape endpoint on an internal-only
-  port (`:9090/metrics`) — it is deliberately not exposed on the public port.
-  Metrics include request rate/duration/in-flight, DB query counts, and Go runtime stats.
-- **Alerting:** SLO burn-rate rules live in `infra/prometheus/alerts.yml`
-  (health 99.5%, task API 99.0% / p95 < 200ms — see `docs/slo.md`).
-- **Dashboards:** Grafana dashboard JSON files are in `infra/grafana/`
-  (`red-dashboard.json` for RED metrics + SLOs, `business-kpi.json` for product KPIs).
-  When provisioning, set the Prometheus datasource `uid` to `prometheus`.
-- **Security:** a STRIDE threat model is maintained in `docs/security/threat-model.md`.
-
-## Tracing (OpenTelemetry)
-
-- Every HTTP request gets a W3C `trace_id`; the ID appears in JSON logs (`trace_id` /
-  `span_id`) and is stamped onto event-bus events for downstream consumers.
-- Spans export to stdout by default. To view them in Jaeger:
-  `docker compose --profile tracing up -d`, set `OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318`
-  in `.env`, restart the backend, then open http://localhost:16686.
-- Instrumentation lives in `backend/internal/observability/`.
-
-## Real-Time Sync
-
-- Task changes push to all clients over WebSocket (`GET /api/v1/ws`), so updates
-  made on any client (web, mobile) appear everywhere immediately — no polling.
-- The sync hub uses monotonic sequence numbers and a bounded replay buffer:
-  reconnecting clients pass `?last_seq=N` to catch up, or receive a `stale`
-  signal to do a full REST refetch. See `docs/adr/004-websocket-consistency.md`.
-- Message schema: `api/ws/events-v1.json`. Both the Vite dev proxy and the
-  nginx config are wired to forward WebSocket upgrades.
-
-## Notifications & planner alarms
-
-- **Web:** in-app alarm toasts (`AlarmProvider` / `useAlarmNotifier`) fire a
-  sound + toast `alarm_minutes` before a habit's `start_time` on each
-  recurrence day, and the Electron desktop app adds a native OS notification.
-- **Mobile:** the same alarm is scheduled **locally** on the device
-  (`notifications/TaskAlarmScheduler.kt`, WorkManager). The schedule is pulled
-  into the local SQLite DB by the Phase 9c sync worker, so alarms fire even
-  when the app is closed and fully offline — no push service required.
-- WebSocket in-app toasts (`useTaskNotifier`) still surface task events (create/
-  update/complete) from other devices in real time.
-
-## Architecture
-
-- **C4 model:** [System Context](docs/architecture/c4-system-context.md) and
-  [Container](docs/architecture/c4-container.md) diagrams (Mermaid).
-- **ADRs:** [Index of all architecture decision records](docs/adr/README.md) —
-  migrations, modular monolith, caching, WebSocket consistency, async
-  notifications, deployment strategy, external API integrations.
-
-## For Product & Compliance Stakeholders
-
-This section explains, in plain language, the trade-offs that matter for
-non-engineering readers. Engineering detail lives in `docs/`.
-
-### What the product is
-
-A personal productivity suite: **tasks & habits**, a **weekly planner**, a
-**focus timer (pomodoro)**, **real-time sync** between devices,
-**notifications** (email + push), a **recipe manager** with image upload, and
-a **media library** (movies, series, books and games — with CSV import, plus
-optional score ratings auto-looked-up from configurable rating providers such
-as OMDb (films/series → Metacritic score with IMDb fallback) and IGDB/RAWG
-(games → Metacritic / community ratings)).
-Web, Desktop (Electron), Android, and a Go API backend.
-
-### The data model: one source of truth
-
-Every task, habit completion, and planner entry lives in one PostgreSQL
-database. When you tick a task on one device, the change is saved to the
-database first, then pushed to your other devices in real time. If a device
-loses connectivity and misses an update, it re-synchronises from the database
-the next time it connects. **You can never "lose" a completed task because a
-push failed** — the database always wins.
-
-### How changes reach other devices
-
-We use a live connection (WebSocket) so updates feel instant. If that
-connection drops — flaky Wi-Fi, phone in airplane mode, backend restart — the
-device reconnects and catches up automatically. Notifications and planner
-alarms are best-effort convenience; they never change your data.
-
-### What is (and isn't) available offline
-
-- **Data is stored on the server**, not just on your phone. A fresh install
-  pulls everything back from the database.
-- **The Android app is local-first (Phase 9c):** tasks, habits and completions
-  are read from a local SQLite copy, so adding/editing/ticking works offline and
-  the change is saved immediately on the device. The change is pushed to the
-  server as soon as connectivity returns (network regain or WebSocket reconnect)
-  or on the next periodic sync; the server wins on timestamp conflicts (ADR 012).
-- **The focus timer also works fully offline** (a foreground service keeps the
-  countdown accurate).
-
-### Security & privacy posture
-
-- All sensitive configuration (database passwords) lives
-  in environment variables — never in the code or the repo. The one exception
-  is the library rating-provider API keys (OMDb/IGDB/RAWG), which can be configured
-  at runtime via the admin UI (Server Settings); they are stored server-side,
-  never returned by the API (masked `api_key_set` / `settings_set` only), and excluded
-  from backups (see [ADR 014](docs/adr/014-runtime-score-provider-config.md)).
-- The current build uses **development-only identity headers** instead of real
-  user accounts. This is the single most important known gap: before any
-  multi-user or public deployment, authentication (JWT/session) and per-user
-  data isolation must be implemented. It is tracked as a P0 item in our threat
-  model.
-- Dependency scanning runs in CI for Go, npm, and Android dependencies; a
-  container image scan (Trivy) is part of the backend pipeline.
-
-### Reliability expectations (SLOs)
-
-- **Health of the service:** 99.5% uptime target.
-- **Task API:** 99.0% of requests succeed, and 95% of them respond in under
-  200 ms. These targets are monitored with burn-rate alerting.
-
-### Data retention
-
-We do not auto-delete data. Deleting a task is permanent (the database honours
-the delete). Audit logs (who did what, when) are append-only and are not
-deleted by the app.
-
-### Cost & deployment
-
-The MVP runs as a single-server stack (one Docker host) — deliberately cheap and
-simple at this scale. The deployment is fully described in code (infrastructure
-as code), so it is reproducible and reviewable. A cluster-based deployment with
-automated rollouts is designed but not activated, and would only be switched on
-when traffic justifies it.
+- Users and observability, likely other stuff too.
 
 ## License
 

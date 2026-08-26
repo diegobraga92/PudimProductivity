@@ -89,6 +89,10 @@ jobs:
         with:
           path: ~/.gradle/dependency-check-data
           key: nvd-data-${{ runner.os }}-${{ hashFiles('mobile/build.gradle.kts', 'mobile/app/build.gradle.kts') }}
+          # Reuse the previous feed so dependency-check refreshes incrementally instead of
+          # re-downloading everything from scratch (and risking a NVD 429 wall).
+          restore-keys: |
+            nvd-data-${{ runner.os }}-
 
       - name: Run OWASP dependency-check
         # NVD_API_KEY makes the feed download much faster

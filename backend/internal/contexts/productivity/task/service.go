@@ -50,7 +50,7 @@ func NewTaskService(repo TaskRepository, auditLogger audit.Logger, bus eventbus.
 		audit: auditLogger,
 		bus:   bus,
 	}
-	if len(cache) > 0 {
+	if len(cache) > 0 && cache[0] != nil {
 		s.cache = cache[0]
 	}
 	return s

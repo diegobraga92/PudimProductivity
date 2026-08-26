@@ -191,12 +191,12 @@ func (s *PomodoroService) startTimer() {
 				if s.current != nil && s.current.ID == sessionID && s.current.Status == SessionRunning && s.current.Remaining() <= 0 {
 					if !s.current.Continuous {
 						// Single-shot: complete the focus session and finish.
-						s.completeSegment(ctx)
+						s.completeSegment()
 						s.mu.Unlock()
 						return
 					}
 					// Continuous: advance to the next phase.
-					s.advanceSegment(ctx)
+					s.advanceSegment()
 					s.mu.Unlock()
 					return
 				}
@@ -206,7 +206,7 @@ func (s *PomodoroService) startTimer() {
 	}()
 }
 
-func (s *PomodoroService) completeSegment(ctx context.Context) {
+func (s *PomodoroService) completeSegment() {
 	sessionID := s.current.ID
 	_ = s.current.Complete()
 	log.Info().Str("session_id", sessionID).Msg("pomodoro session auto-completed")
@@ -217,7 +217,7 @@ func (s *PomodoroService) completeSegment(ctx context.Context) {
 	})
 }
 
-func (s *PomodoroService) advanceSegment(ctx context.Context) {
+func (s *PomodoroService) advanceSegment() {
 	completed := s.current
 	sessionID := completed.ID
 	_ = completed.Complete()

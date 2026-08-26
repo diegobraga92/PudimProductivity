@@ -101,7 +101,7 @@ func TestSyncResponseConformsToContract(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get sync: %v", err)
 	}
-	defer res.Body.Close()
+	t.Cleanup(func() { _ = res.Body.Close() })
 	if res.StatusCode != http.StatusOK {
 		t.Fatalf("sync status = %d, want 200", res.StatusCode)
 	}

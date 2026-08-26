@@ -135,7 +135,7 @@ func (b *RedisBus) Subscribe(ctx context.Context, handler Handler) (func(), erro
 		b.cancel = cancel
 		b.pubsub = pubsub
 		b.mu.Unlock()
-		go b.runSubscriber(subCtx, pubsub)
+		go b.runSubscriber(pubsub)
 	}
 
 	return func() {
@@ -146,7 +146,7 @@ func (b *RedisBus) Subscribe(ctx context.Context, handler Handler) (func(), erro
 }
 
 // runSubscriber consumes messages from the channel until the pubsub is closed.
-func (b *RedisBus) runSubscriber(ctx context.Context, pubsub *redis.PubSub) {
+func (b *RedisBus) runSubscriber(pubsub *redis.PubSub) {
 	defer close(b.done)
 	defer func() { _ = pubsub.Close() }()
 

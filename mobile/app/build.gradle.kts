@@ -118,7 +118,17 @@ tasks.named("preBuild") {
 //   with no key the plugin uses the (slow, rate-limited) anonymous path.
 dependencyCheck {
     autoUpdate = true
-    failOnError = true
+    // NVD rate-limits anonymous requests (HTTP 429) and occasionally goes down
+    // entirely. Failing the whole CI run because the feed couldn't refresh is
+    // useless — the scan still runs against the cached feed and warns instead.
+    // If you want a strict gate, set NVD_API_KEY in repo secrets (much faster,
+    // much less likely to 429) and flip this back to true.
+    failOnError = false
+    // Reuse the cached NVD feed for a week instead of re-downloading on every
+    // CI run; each full re-download is a fresh chance to hit the 429 wall.
+    nvd {
+        validForHours = 168
+    }
     analyzers {
         ossIndex.enabled = false
     }

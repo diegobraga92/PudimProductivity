@@ -17,7 +17,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
 
 FROM alpine:3.24
 
-RUN apk add --no-cache ca-certificates tzdata
+RUN apk upgrade --no-cache && apk add --no-cache ca-certificates tzdata
 
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
