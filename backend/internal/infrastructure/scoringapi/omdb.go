@@ -33,20 +33,50 @@ type omdbSearchResponse struct {
 }
 
 // omdbDetailResponse mirrors the fields we consume from OMDb's detail response.
+// Metascore is OMDb's copy of the Metacritic 0-100 score ("N/A" when absent).
 type omdbDetailResponse struct {
 	ImdbRating string `json:"imdbRating"`
+	Metascore  string `json:"Metascore"`
 	Response   string `json:"Response"`
 	Error      string `json:"Error"`
 }
 
-// omdbClient searches OMDb for films/series and surfaces the IMDb rating.
+// omdbRating is a resolved rating for a title, on the source's native scale.
+type omdbRating struct {
+	score  float64
+	source string
+}
+
+// preferred returns the most relevant rating for the feature.
+func (d omdbDetailResponse) preferred() *omdbRating {
+	if ms, ok := parseOMDBScore(d.Metascore); ok {
+		return &omdbRating{score: ms, source: string(library.ScoreSourceMetacritic)}
+	}
+	if ir, ok := parseOMDBScore(d.ImdbRating); ok {
+		return &omdbRating{score: ir, source: string(library.ScoreSourceIMDb)}
+	}
+	return nil
+}
+
+// parseOMDBScore parses an OMDb numeric rating, treating "N/A" and zero as "not rated yet".
+func parseOMDBScore(s string) (float64, bool) {
+	v, err := strconv.ParseFloat(strings.TrimSpace(s), 64)
+	if err != nil || v == 0 {
+		return 0, false
+	}
+	return v, true
+}
+
+// omdbClient searches OMDb for films/series and surfaces the Metacritic score
+// when available (falling back to the IMDb rating).
 type omdbClient struct {
 	hc   *httpclient.Client
 	key  string
 	base string
 }
 
-// NewOMDB builds the OMDb adapter (films/series → IMDb rating).
+// NewOMDB builds the OMDb adapter (films/series → Metacritic score, with an
+// IMDb-rating fallback).
 func NewOMDB(_ context.Context, cfg ProviderConfig) (library.ScoreLookupClient, error) {
 	if cfg.APIKey == "" {
 		return nil, fmt.Errorf("omdb: API key required")
@@ -90,18 +120,19 @@ func (o *omdbClient) Search(ctx context.Context, query library.ScoreQuery) ([]li
 		if i >= maxOMDBDetails {
 			break
 		}
-		rating, err := o.fetchRating(ctx, hit.ImdbID)
+		detail, err := o.fetchDetail(ctx, hit.ImdbID)
 		if err != nil {
 			return nil, err
 		}
+		rating := detail.preferred()
 		if rating == nil {
-			continue // no IMDb rating yet — skip the candidate
+			continue // no Metacritic or IMDb rating yet — skip the candidate
 		}
 		cands = append(cands, library.ScoreCandidate{
 			Title:      hit.Title,
 			Year:       omdbYear(hit.Year),
-			Score:      *rating,
-			Source:     string(library.ScoreSourceIMDb),
+			Score:      rating.score,
+			Source:     rating.source,
 			ExternalID: hit.ImdbID,
 			URL:        "https://www.imdb.com/title/" + hit.ImdbID,
 		})
@@ -109,28 +140,23 @@ func (o *omdbClient) Search(ctx context.Context, query library.ScoreQuery) ([]li
 	return cands, nil
 }
 
-// fetchRating returns the IMDb rating for a title, or nil when the title has
-// no rating yet.
-func (o *omdbClient) fetchRating(ctx context.Context, imdbID string) (*float64, error) {
+// fetchDetail returns the full rating payload for a title.
+func (o *omdbClient) fetchDetail(ctx context.Context, imdbID string) (omdbDetailResponse, error) {
 	params := url.Values{}
 	params.Set("apikey", o.key)
 	params.Set("i", imdbID)
 	body, err := o.hc.Get(ctx, o.base+"?"+params.Encode())
 	if err != nil {
-		return nil, o.mapErr(err)
+		return omdbDetailResponse{}, o.mapErr(err)
 	}
 	var detail omdbDetailResponse
 	if err := json.Unmarshal(body, &detail); err != nil {
-		return nil, fmt.Errorf("omdb: parse detail response: %w", err)
+		return omdbDetailResponse{}, fmt.Errorf("omdb: parse detail response: %w", err)
 	}
 	if detail.Response == "False" {
-		return nil, fmt.Errorf("omdb: %s", detail.Error)
+		return omdbDetailResponse{}, fmt.Errorf("omdb: %s", detail.Error)
 	}
-	rating, err := strconv.ParseFloat(detail.ImdbRating, 64)
-	if err != nil || rating == 0 {
-		return nil, nil // "N/A" or unrated
-	}
-	return &rating, nil
+	return detail, nil
 }
 
 func omdbType(mt library.MediaType) string {

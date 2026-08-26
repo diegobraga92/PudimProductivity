@@ -45,9 +45,10 @@ func NewComposite(ctx context.Context, cfg config.ScoreProviderConfig) (library.
 			return nil, fmt.Errorf("score provider %q does not support media type %q", name, mt)
 		}
 		client, err := buildClient(ctx, name, ProviderConfig{
-			Name:    name,
-			APIKey:  cfg.Keys[name],
-			BaseURL: cfg.BaseURLs[name],
+			Name:     name,
+			APIKey:   cfg.Keys[name],
+			BaseURL:  cfg.BaseURLs[name],
+			Settings: cfg.Settings[name],
 		})
 		if err != nil {
 			return nil, fmt.Errorf("configure score provider %q for %q: %w", name, mt, err)

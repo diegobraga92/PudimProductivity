@@ -37,12 +37,18 @@ export interface components {
         /** @enum {string} */
         MediaType: "movie" | "series" | "book" | "game";
         ScoreProvider: {
-            /** @description Registered provider name (e.g. "omdb", "rawg"). */
+            /** @description Registered provider name (e.g. "omdb", "rawg", "igdb"). */
             name: string;
             /** @description Override base URL, or empty to use default. */
             base_url: string;
             /** @description If an API key is stored. */
             api_key_set: boolean;
+            /** @description Extra settings fields this provider needs beyond the API key (e.g. ["client_secret"] for igdb). The admin UI renders one input per key. */
+            settings_keys: string[];
+            /** @description Which settings fields already have a stored value (masked). */
+            settings_set: {
+                [key: string]: boolean;
+            };
             supported_types: components["schemas"]["MediaType"][];
         };
         ScoreProvidersConfig: {
@@ -65,6 +71,14 @@ export interface components {
             api_key?: string | null;
             /** @description nil = keep stored; "" = use default. */
             base_url?: string | null;
+            /**
+             * @description Provider-specific settings (e.g. {"client_secret": "..."} for igdb).
+             *     Keys present are upserted, an empty value clears a key, and absent
+             *     keys are kept unchanged. Secrets are never returned in responses.
+             */
+            settings?: {
+                [key: string]: string;
+            };
         };
         ScoreProvidersUpdate: {
             movie_provider: string;

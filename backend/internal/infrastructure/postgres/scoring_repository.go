@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -51,7 +52,7 @@ func (r *ScoringRepository) SaveConfig(ctx context.Context, cfg scoring.Config) 
 
 func (r *ScoringRepository) GetProviders(ctx context.Context) ([]scoring.Provider, error) {
 	rows, err := r.pool.Query(ctx, `
-		SELECT name, api_key, base_url
+		SELECT name, api_key, base_url, COALESCE(settings, '{}'::jsonb) AS settings
 		FROM score_providers
 		ORDER BY name ASC
 	`)
@@ -63,8 +64,13 @@ func (r *ScoringRepository) GetProviders(ctx context.Context) ([]scoring.Provide
 	var providers []scoring.Provider
 	for rows.Next() {
 		var p scoring.Provider
-		if err := rows.Scan(&p.Name, &p.APIKey, &p.BaseURL); err != nil {
+		var settingsJSON []byte
+		if err := rows.Scan(&p.Name, &p.APIKey, &p.BaseURL, &settingsJSON); err != nil {
 			return nil, fmt.Errorf("scan score provider row: %w", err)
+		}
+		p.Settings, err = decodeProviderSettings(settingsJSON)
+		if err != nil {
+			return nil, fmt.Errorf("decode settings for score provider %q: %w", p.Name, err)
 		}
 		providers = append(providers, p)
 	}
@@ -78,16 +84,36 @@ func (r *ScoringRepository) GetProviders(ctx context.Context) ([]scoring.Provide
 }
 
 func (r *ScoringRepository) SaveProvider(ctx context.Context, p scoring.Provider) error {
-	_, err := r.pool.Exec(ctx, `
-		INSERT INTO score_providers (name, api_key, base_url, updated_at)
-		VALUES ($1, $2, $3, NOW())
+	settingsJSON, err := json.Marshal(p.Settings)
+	if err != nil {
+		return fmt.Errorf("encode settings for score provider %q: %w", p.Name, err)
+	}
+	if len(settingsJSON) == 0 {
+		settingsJSON = []byte("{}")
+	}
+	_, err = r.pool.Exec(ctx, `
+		INSERT INTO score_providers (name, api_key, base_url, settings, updated_at)
+		VALUES ($1, $2, $3, $4::jsonb, NOW())
 		ON CONFLICT (name) DO UPDATE SET
 			api_key    = EXCLUDED.api_key,
 			base_url   = EXCLUDED.base_url,
+			settings   = EXCLUDED.settings,
 			updated_at = NOW()
-	`, p.Name, p.APIKey, p.BaseURL)
+	`, p.Name, p.APIKey, p.BaseURL, string(settingsJSON))
 	if err != nil {
 		return fmt.Errorf("save score provider %q: %w", p.Name, err)
 	}
 	return nil
+}
+
+// decodeProviderSettings unmarshals the provider settings JSONB bag.
+func decodeProviderSettings(raw []byte) (map[string]string, error) {
+	settings := make(map[string]string)
+	if len(raw) == 0 {
+		return settings, nil
+	}
+	if err := json.Unmarshal(raw, &settings); err != nil {
+		return nil, err
+	}
+	return settings, nil
 }

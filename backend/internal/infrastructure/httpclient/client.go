@@ -90,8 +90,24 @@ func (c *Client) Get(ctx context.Context, url string) ([]byte, error) {
 	return c.Do(ctx, http.MethodGet, url, nil)
 }
 
+// Post performs a POST request with an explicit Content-Type and returns the
+// bounded response body. Needed by providers whose APIs require a non-JSON body.
+func (c *Client) Post(ctx context.Context, url, contentType string, body []byte) ([]byte, error) {
+	return c.do(ctx, http.MethodPost, url, contentType, body, nil)
+}
+
+// DoWith performs a request with an explicit Content-Type and extra headers.
+// Used when an API requires auth headers (e.g. IGDB's Client-ID + Authorization Bearer token).
+func (c *Client) DoWith(ctx context.Context, method, url, contentType string, body []byte, headers map[string]string) ([]byte, error) {
+	return c.do(ctx, method, url, contentType, body, headers)
+}
+
 // Do performs a request through the rate limiter, circuit breaker and retry loop.
 func (c *Client) Do(ctx context.Context, method, url string, body []byte) ([]byte, error) {
+	return c.do(ctx, method, url, "", body, nil)
+}
+
+func (c *Client) do(ctx context.Context, method, url, contentType string, body []byte, headers map[string]string) ([]byte, error) {
 	if err := c.limiter.wait(ctx); err != nil {
 		return nil, err
 	}
@@ -101,7 +117,7 @@ func (c *Client) Do(ctx context.Context, method, url string, body []byte) ([]byt
 
 	var lastErr error
 	for attempt := 0; attempt <= c.config.Retries; attempt++ {
-		respBody, err := c.doOnce(ctx, method, url, body)
+		respBody, err := c.doOnce(ctx, method, url, contentType, body, headers)
 		if err == nil {
 			c.breaker.recordResult(true)
 			return respBody, nil
@@ -124,7 +140,7 @@ func (c *Client) Do(ctx context.Context, method, url string, body []byte) ([]byt
 	return nil, lastErr
 }
 
-func (c *Client) doOnce(ctx context.Context, method, url string, body []byte) ([]byte, error) {
+func (c *Client) doOnce(ctx context.Context, method, url, contentType string, body []byte, headers map[string]string) ([]byte, error) {
 	var reader io.Reader
 	if body != nil {
 		reader = bytesReader(body)
@@ -134,7 +150,13 @@ func (c *Client) doOnce(ctx context.Context, method, url string, body []byte) ([
 		return nil, err
 	}
 	if body != nil {
-		req.Header.Set("Content-Type", "application/json")
+		if contentType == "" {
+			contentType = "application/json"
+		}
+		req.Header.Set("Content-Type", contentType)
+	}
+	for k, v := range headers {
+		req.Header.Set(k, v)
 	}
 
 	resp, err := c.http.Do(req)

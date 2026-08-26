@@ -53,6 +53,7 @@ const (
 	ScoreSourceMetacritic ScoreSource = "metacritic"
 	ScoreSourceTMDB       ScoreSource = "tmdb"
 	ScoreSourceRAWG       ScoreSource = "rawg"
+	ScoreSourceIGDB       ScoreSource = "igdb"
 	ScoreSourceCustom     ScoreSource = "custom"
 )
 

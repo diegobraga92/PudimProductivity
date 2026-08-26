@@ -13,9 +13,10 @@ import (
 // ProviderConfig is the subset of config.ScoreProviderConfig that a single
 // provider instance needs.
 type ProviderConfig struct {
-	Name    string
-	APIKey  string
-	BaseURL string
+	Name     string
+	APIKey   string
+	BaseURL  string
+	Settings map[string]string
 }
 
 // Constructor builds a provider client from its config.
@@ -26,6 +27,7 @@ type Constructor func(ctx context.Context, cfg ProviderConfig) (library.ScoreLoo
 var registry = map[string]Constructor{
 	"omdb": NewOMDB,
 	"rawg": NewRAWG,
+	"igdb": NewIGDB,
 }
 
 // capabilities declares which media types each provider can serve. Used to
@@ -33,6 +35,13 @@ var registry = map[string]Constructor{
 var capabilities = map[string][]library.MediaType{
 	"omdb": {library.MediaTypeMovie, library.MediaTypeSeries},
 	"rawg": {library.MediaTypeGame},
+	"igdb": {library.MediaTypeGame},
+}
+
+// settingKeys declares the extra per-provider settings fields exposed by the
+// admin API, beyond the generic api_key + base_url columns.
+var settingKeys = map[string][]string{
+	"igdb": {igdbClientSecretSetting},
 }
 
 // Names returns the sorted list of registered provider names.
@@ -68,4 +77,11 @@ func supports(name string, mt library.MediaType) bool {
 // settings module to validate media-type → provider assignments at save time.
 func Supports(name string, mt library.MediaType) bool {
 	return supports(name, mt)
+}
+
+// SettingKeys returns the extra settings fields a provider exposes in the admin
+// UI (beyond api_key and base_url). Empty for providers that only need a single
+// key.
+func SettingKeys(name string) []string {
+	return settingKeys[name]
 }

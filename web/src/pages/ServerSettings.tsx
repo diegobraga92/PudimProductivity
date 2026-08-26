@@ -24,6 +24,13 @@ const MEDIA_ICONS: Record<(typeof MEDIA_TYPES)[number], string> = {
   book: "📚",
 };
 
+// Labels for the extra per-provider settings fields returned by the backend
+// (score_providers.settings JSONB). Keys without an entry fall back to the raw
+// field name.
+const SETTING_LABEL_KEYS: Record<string, string> = {
+  client_secret: "serverSettings.clientSecret",
+};
+
 /**
  * Server Settings (admin): manages the library score-provider configuration at
  * runtime — which rating provider serves each media type, plus per-provider API
@@ -41,6 +48,9 @@ export default function ServerSettings() {
   const [assignments, setAssignments] = useState<Record<string, string>>({ movie: "", series: "", game: "", book: "" });
   const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
   const [baseUrls, setBaseUrls] = useState<Record<string, string>>({});
+  // Per-provider extra settings (e.g. IGDB's client_secret), keyed by provider
+  // name then setting key. Only non-empty entries are sent — empty = keep.
+  const [settings, setSettings] = useState<Record<string, Record<string, string>>>({});
   const [lookupEnabled, setLookupEnabled] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [savedFlash, setSavedFlash] = useState(false);
@@ -71,12 +81,22 @@ export default function ServerSettings() {
 
   const save = useMutation({
     mutationFn: async (): Promise<ScoreProvidersConfig> => {
-      const providers = (data?.providers ?? []).map((p) => ({
-        name: p.name,
-        // Empty input = keep the stored key; only send a new key when typed.
-        api_key: apiKeys[p.name] ? apiKeys[p.name] : null,
-        base_url: null,
-      }));
+      const providers = (data?.providers ?? []).map((p) => {
+        // Same "empty = keep" rule as the API key: only send a setting when the
+        // admin typed a value. Omitting the key leaves the stored secret alone.
+        const settingsPayload: Record<string, string> = {};
+        for (const k of p.settings_keys ?? []) {
+          const v = settings[p.name]?.[k];
+          if (v) settingsPayload[k] = v;
+        }
+        return {
+          name: p.name,
+          // Empty input = keep the stored key; only send a new key when typed.
+          api_key: apiKeys[p.name] ? apiKeys[p.name] : null,
+          base_url: null,
+          ...(Object.keys(settingsPayload).length > 0 ? { settings: settingsPayload } : {}),
+        };
+      });
       const req: ScoreProvidersUpdate = {
         movie_provider: assignments.movie,
         series_provider: assignments.series,
@@ -91,6 +111,7 @@ export default function ServerSettings() {
       queryClient.setQueryData(["admin", "score-providers", role], res);
       setApiKeys({});
       setBaseUrls({});
+      setSettings({});
       setDirty(false);
       setSavedFlash(true);
       window.setTimeout(() => setSavedFlash(false), 3000);
@@ -213,7 +234,12 @@ export default function ServerSettings() {
                 <h3 style={{ margin: "0 0 var(--space-sm)", fontSize: "var(--font-size-lg)" }}>🔑 API keys</h3>
                 {data.providers.map((p) => (
                   <div key={p.name} style={{ display: "grid", gap: "0.3rem", marginBottom: "var(--space-md)" }}>
-                    <p className="text-sm" style={{ fontWeight: 600, margin: 0 }}>{p.name}</p>
+                    <p className="text-sm" style={{ fontWeight: 600, margin: 0 }}>
+                      {p.name}
+                      {p.name === "igdb" && (
+                        <span className="text-secondary" style={{ fontWeight: 400 }}> — {t("serverSettings.igdbHint")}</span>
+                      )}
+                    </p>
                     <input
                       className="input"
                       type="password"
@@ -222,6 +248,20 @@ export default function ServerSettings() {
                       autoComplete="off"
                       onChange={(e) => { setApiKeys({ ...apiKeys, [p.name]: e.target.value }); setDirty(true); }}
                     />
+                    {(p.settings_keys ?? []).map((k) => (
+                      <input
+                        key={k}
+                        className="input"
+                        type="password"
+                        placeholder={`${t(SETTING_LABEL_KEYS[k] ?? "serverSettings.setting")}${p.settings_set?.[k] ? ` — ${t("serverSettings.settingStored")}` : ""}`}
+                        value={settings[p.name]?.[k] ?? ""}
+                        autoComplete="off"
+                        onChange={(e) => {
+                          setSettings({ ...settings, [p.name]: { ...(settings[p.name] ?? {}), [k]: e.target.value } });
+                          setDirty(true);
+                        }}
+                      />
+                    ))}
                     <input
                       className="input"
                       placeholder={t("serverSettings.baseUrl")}

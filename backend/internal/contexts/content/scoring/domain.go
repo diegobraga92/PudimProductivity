@@ -12,6 +12,9 @@ type Provider struct {
 	Name    string
 	APIKey  string
 	BaseURL string
+	// Settings holds provider-specific values beyond the single API key, e.g.
+	// IGDB's Twitch client secret ("client_secret"). Keys are secret.
+	Settings map[string]string
 }
 
 // Config is the persisted media-type → provider mapping.
@@ -25,10 +28,12 @@ type Config struct {
 
 // ProviderAPI is the masked, client-facing view of a provider.
 type ProviderAPI struct {
-	Name           string   `json:"name"`
-	BaseURL        string   `json:"base_url"`
-	APIKeySet      bool     `json:"api_key_set"`
-	SupportedTypes []string `json:"supported_types"`
+	Name           string          `json:"name"`
+	BaseURL        string          `json:"base_url"`
+	APIKeySet      bool            `json:"api_key_set"`
+	SettingsKeys   []string        `json:"settings_keys"`
+	SettingsSet    map[string]bool `json:"settings_set"`
+	SupportedTypes []string        `json:"supported_types"`
 }
 
 // ConfigAPI is the full response for GET /admin/score-providers.

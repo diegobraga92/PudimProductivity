@@ -66,7 +66,7 @@ func boolPtr(b bool) *bool    { return &b }
 
 func seededRepo() *fakeRepo {
 	return &fakeRepo{
-		providers: []Provider{{Name: "omdb"}, {Name: "rawg"}},
+		providers: []Provider{{Name: "omdb"}, {Name: "rawg"}, {Name: "igdb"}},
 	}
 }
 
@@ -106,6 +106,30 @@ func TestMergeEnv_IgnoresEnvAfterSaved(t *testing.T) {
 	}
 	if providers[0].APIKey != "" {
 		t.Fatalf("mergeEnv(saved) rawg key = %q, want empty", providers[0].APIKey)
+	}
+}
+
+func TestMergeEnv_OverlaysSettingsWhenNeverSaved(t *testing.T) {
+	env := config.ScoreProviderConfig{
+		Game: "igdb",
+		Keys: map[string]string{"igdb": "client-id"},
+		Settings: map[string]map[string]string{
+			"igdb": {"client_secret": "env-secret"},
+		},
+	}
+	cfg, providers := mergeEnv(Config{}, env, []Provider{{Name: "omdb"}, {Name: "rawg"}, {Name: "igdb"}})
+	if cfg.GameProvider != "igdb" {
+		t.Fatalf("mergeEnv(unsaved) game provider = %q, want igdb", cfg.GameProvider)
+	}
+	got := map[string]Provider{}
+	for _, p := range providers {
+		got[p.Name] = p
+	}
+	if got["igdb"].APIKey != "client-id" || got["igdb"].Settings["client_secret"] != "env-secret" {
+		t.Fatalf("mergeEnv(unsaved) igdb = %+v, want env key+secret", got["igdb"])
+	}
+	if got["omdb"].Settings != nil {
+		t.Fatalf("mergeEnv(unsaved) omdb settings = %+v, want nil", got["omdb"].Settings)
 	}
 }
 

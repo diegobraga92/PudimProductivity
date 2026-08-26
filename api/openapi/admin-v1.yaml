@@ -78,17 +78,27 @@ components:
 
     ScoreProvider:
       type: object
-      required: [name, base_url, api_key_set, supported_types]
+      required: [name, base_url, api_key_set, settings_keys, settings_set, supported_types]
       properties:
         name:
           type: string
-          description: Registered provider name (e.g. "omdb", "rawg").
+          description: Registered provider name (e.g. "omdb", "rawg", "igdb").
         base_url:
           type: string
           description: Override base URL, or empty to use default.
         api_key_set:
           type: boolean
           description: If an API key is stored.
+        settings_keys:
+          type: array
+          items:
+            type: string
+          description: Extra settings fields this provider needs beyond the API key (e.g. ["client_secret"] for igdb). The admin UI renders one input per key.
+        settings_set:
+          type: object
+          additionalProperties:
+            type: boolean
+          description: Which settings fields already have a stored value (masked).
         supported_types:
           type: array
           items:
@@ -131,6 +141,14 @@ components:
         base_url:
           type: [string, "null"]
           description: nil = keep stored; "" = use default.
+        settings:
+          type: object
+          additionalProperties:
+            type: string
+          description: |
+            Provider-specific settings (e.g. {"client_secret": "..."} for igdb).
+            Keys present are upserted, an empty value clears a key, and absent
+            keys are kept unchanged. Secrets are never returned in responses.
 
     ScoreProvidersUpdate:
       type: object

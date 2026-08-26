@@ -12,6 +12,9 @@ type UpdateProviderRequest struct {
 	Name    string  `json:"name"`
 	APIKey  *string `json:"api_key"`
 	BaseURL *string `json:"base_url"`
+	// Settings merges provider-specific values: keys present are upserted, an
+	// empty value clears a key, and absent keys are left unchanged.
+	Settings map[string]string `json:"settings"`
 }
 
 // UpdateConfigRequest is the payload for PUT //admin/score-providers.

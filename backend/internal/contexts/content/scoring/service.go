@@ -102,17 +102,33 @@ func mergeEnv(cfg Config, env config.ScoreProviderConfig, dbProviders []Provider
 			providers[i].BaseURL = baseURL
 		}
 	}
+	for name, settings := range env.Settings {
+		i, ok := byName[name]
+		if !ok {
+			continue
+		}
+		if providers[i].Settings == nil {
+			providers[i].Settings = make(map[string]string)
+		}
+		for k, v := range settings {
+			if v != "" && providers[i].Settings[k] == "" {
+				providers[i].Settings[k] = v
+			}
+		}
+	}
 	return cfg, providers
 }
 
 func buildScoreProviderConfig(cfg Config, providers []Provider) (config.ScoreProviderConfig, error) {
 	keys := make(map[string]string, len(providers))
 	baseURLs := make(map[string]string, len(providers))
+	settings := make(map[string]map[string]string, len(providers))
 	known := make(map[string]bool, len(providers))
 	for _, p := range providers {
 		known[p.Name] = true
 		keys[p.Name] = p.APIKey
 		baseURLs[p.Name] = p.BaseURL
+		settings[p.Name] = p.Settings
 	}
 
 	out := config.ScoreProviderConfig{
@@ -122,6 +138,7 @@ func buildScoreProviderConfig(cfg Config, providers []Provider) (config.ScorePro
 		Book:     cfg.BookProvider,
 		Keys:     keys,
 		BaseURLs: baseURLs,
+		Settings: settings,
 	}
 
 	for _, mt := range mediaTypes {
@@ -193,7 +210,8 @@ func (s *Service) Update(ctx context.Context, req UpdateConfigRequest) (ConfigAP
 		return ConfigAPI{}, err
 	}
 
-	// nil APIKey/BaseURL mean "keep", "" means "clear".
+	// nil APIKey/BaseURL mean "keep", "" means "clear". Settings merge per key:
+	// present keys are upserted, "" clears, absent keys are kept.
 	byName := make(map[string]Provider, len(oldProviders))
 	for _, p := range oldProviders {
 		byName[p.Name] = p
@@ -208,6 +226,12 @@ func (s *Service) Update(ctx context.Context, req UpdateConfigRequest) (ConfigAP
 		}
 		if up.BaseURL != nil {
 			p.BaseURL = trim(*up.BaseURL)
+		}
+		for k, v := range up.Settings {
+			if p.Settings == nil {
+				p.Settings = make(map[string]string)
+			}
+			p.Settings[k] = trim(v)
 		}
 		byName[up.Name] = p
 	}
@@ -301,10 +325,17 @@ func (s *Service) toAPI(cfg Config, providers []Provider, enabled bool) ConfigAP
 				types = append(types, string(mt))
 			}
 		}
+		settingsKeys := scoringapi.SettingKeys(p.Name)
+		settingsSet := make(map[string]bool, len(settingsKeys))
+		for _, k := range settingsKeys {
+			settingsSet[k] = p.Settings[k] != ""
+		}
 		api.Providers = append(api.Providers, ProviderAPI{
 			Name:           p.Name,
 			BaseURL:        p.BaseURL,
 			APIKeySet:      p.APIKey != "",
+			SettingsKeys:   settingsKeys,
+			SettingsSet:    settingsSet,
 			SupportedTypes: types,
 		})
 	}
@@ -315,7 +346,15 @@ func (s *Service) toAPI(cfg Config, providers []Provider, enabled bool) ConfigAP
 func masked(cfg Config, providers []Provider) map[string]any {
 	prov := make(map[string]any, len(providers))
 	for _, p := range providers {
-		prov[p.Name] = map[string]any{"api_key_set": p.APIKey != "", "base_url": p.BaseURL}
+		settingsSet := make(map[string]bool)
+		for _, k := range scoringapi.SettingKeys(p.Name) {
+			settingsSet[k] = p.Settings[k] != ""
+		}
+		prov[p.Name] = map[string]any{
+			"api_key_set": p.APIKey != "",
+			"base_url":    p.BaseURL,
+			"settings":    settingsSet,
+		}
 	}
 	return map[string]any{
 		"movie_provider":  providerForMediaType(cfg, library.MediaTypeMovie),

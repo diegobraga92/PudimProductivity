@@ -160,7 +160,8 @@ A personal productivity suite: **tasks & habits**, a **weekly planner**, a
 **notifications** (email + push), a **recipe manager** with image upload, and
 a **media library** (movies, series, books and games — with CSV import, plus
 optional score ratings auto-looked-up from configurable rating providers such
-as IMDb (OMDb) for film and Metacritic (RAWG) for games).
+as OMDb (films/series → Metacritic score with IMDb fallback) and IGDB/RAWG
+(games → Metacritic / community ratings)).
 Web, Desktop (Electron), Android, and a Go API backend.
 
 ### The data model: one source of truth
@@ -195,10 +196,10 @@ alarms are best-effort convenience; they never change your data.
 
 - All sensitive configuration (database passwords) lives
   in environment variables — never in the code or the repo. The one exception
-  is the library rating-provider API keys (OMDb/RAWG), which can be configured
+  is the library rating-provider API keys (OMDb/IGDB/RAWG), which can be configured
   at runtime via the admin UI (Server Settings); they are stored server-side,
-  never returned by the API (masked `api_key_set` only), and excluded from
-  backups (see [ADR 014](docs/adr/014-runtime-score-provider-config.md)).
+  never returned by the API (masked `api_key_set` / `settings_set` only), and excluded
+  from backups (see [ADR 014](docs/adr/014-runtime-score-provider-config.md)).
 - The current build uses **development-only identity headers** instead of real
   user accounts. This is the single most important known gap: before any
   multi-user or public deployment, authentication (JWT/session) and per-user

@@ -43,6 +43,7 @@ type ScoreProviderConfig struct {
 	Book     string
 	Keys     map[string]string
 	BaseURLs map[string]string
+	Settings map[string]map[string]string
 }
 
 func LoadConfig() Config {
@@ -122,10 +123,18 @@ func LoadScoreProviderConfig() ScoreProviderConfig {
 		Keys: map[string]string{
 			"omdb": getEnv("OMDB_API_KEY", ""),
 			"rawg": getEnv("RAWG_API_KEY", ""),
+			"igdb": getEnv("IGDB_CLIENT_ID", ""),
 		},
 		BaseURLs: map[string]string{
 			"omdb": getEnv("OMDB_BASE_URL", ""),
 			"rawg": getEnv("RAWG_BASE_URL", ""),
+			"igdb": getEnv("IGDB_BASE_URL", ""),
+		},
+		Settings: map[string]map[string]string{
+			"igdb": {
+				"client_secret": getEnv("IGDB_CLIENT_SECRET", ""),
+				"token_url":     getEnv("IGDB_TOKEN_URL", ""),
+			},
 		},
 	}
 }

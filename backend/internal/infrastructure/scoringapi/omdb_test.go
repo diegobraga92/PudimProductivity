@@ -16,7 +16,8 @@ import (
 func ip(v int) *int { return &v }
 
 // omdbTestServer serves the search (s=) and detail (i=) endpoints OMDb exposes.
-func omdbTestServer(t *testing.T, wantNotFound bool) (*httptest.Server, *string) {
+// metascore is the Metascore value returned by the detail endpoint.
+func omdbTestServer(t *testing.T, wantNotFound bool, metascore string) (*httptest.Server, *string) {
 	t.Helper()
 	var lastSearch string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -40,7 +41,7 @@ func omdbTestServer(t *testing.T, wantNotFound bool) (*httptest.Server, *string)
 				Response: "True",
 			})
 		case r.URL.Query().Get("i") != "":
-			_ = json.NewEncoder(w).Encode(omdbDetailResponse{ImdbRating: "8.7", Response: "True"})
+			_ = json.NewEncoder(w).Encode(omdbDetailResponse{ImdbRating: "8.7", Metascore: metascore, Response: "True"})
 		default:
 			http.Error(w, "unexpected request", http.StatusBadRequest)
 		}
@@ -56,7 +57,7 @@ func TestOMDB_MissingKey(t *testing.T) {
 }
 
 func TestOMDB_Search_HappyPath(t *testing.T) {
-	srv, lastSearch := omdbTestServer(t, false)
+	srv, lastSearch := omdbTestServer(t, false, "73")
 	client, err := NewOMDB(context.Background(), ProviderConfig{APIKey: "k", BaseURL: srv.URL})
 	if err != nil {
 		t.Fatalf("NewOMDB: %v", err)
@@ -72,7 +73,8 @@ func TestOMDB_Search_HappyPath(t *testing.T) {
 	if len(cands) != 2 {
 		t.Fatalf("candidates = %d, want 2", len(cands))
 	}
-	if cands[0].Title != "The Matrix" || cands[0].Score != 8.7 || cands[0].Source != "imdb" ||
+	// The Metascore is preferred over the IMDb rating.
+	if cands[0].Title != "The Matrix" || cands[0].Score != 73 || cands[0].Source != "metacritic" ||
 		cands[0].Year != 1999 || cands[0].ExternalID != "tt0133093" || cands[0].URL == "" {
 		t.Fatalf("unexpected candidate: %+v", cands[0])
 	}
@@ -81,8 +83,26 @@ func TestOMDB_Search_HappyPath(t *testing.T) {
 	}
 }
 
+func TestOMDB_Search_FallsBackToIMDB_WhenNoMetascore(t *testing.T) {
+	srv, _ := omdbTestServer(t, false, "N/A")
+	client, err := NewOMDB(context.Background(), ProviderConfig{APIKey: "k", BaseURL: srv.URL})
+	if err != nil {
+		t.Fatalf("NewOMDB: %v", err)
+	}
+	cands, err := client.Search(context.Background(), library.ScoreQuery{Name: "Matrix", MediaType: library.MediaTypeMovie})
+	if err != nil {
+		t.Fatalf("Search: %v", err)
+	}
+	if len(cands) != 2 {
+		t.Fatalf("candidates = %d, want 2", len(cands))
+	}
+	if cands[0].Score != 8.7 || cands[0].Source != "imdb" {
+		t.Fatalf("expected IMDb fallback, got score=%v source=%q", cands[0].Score, cands[0].Source)
+	}
+}
+
 func TestOMDB_Search_NotFound_ReturnsEmpty(t *testing.T) {
-	srv, _ := omdbTestServer(t, true)
+	srv, _ := omdbTestServer(t, true, "N/A")
 	client, err := NewOMDB(context.Background(), ProviderConfig{APIKey: "k", BaseURL: srv.URL})
 	if err != nil {
 		t.Fatalf("NewOMDB: %v", err)
