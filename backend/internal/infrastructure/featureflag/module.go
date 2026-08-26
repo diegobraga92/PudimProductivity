@@ -19,9 +19,7 @@ func RegisterFeatureFlagRoutes(r chi.Router, repo Repository, auditLogger audit.
 	r.Route("/api/v1/features", func(r chi.Router) {
 		r.Get("/", handler.ListEnabled)
 		r.Get("/{name}", handler.GetByName)
-		// Toggling flags is admin-only, enforced by httpx.RequireRole.
-		// In development the AuthMiddleware trusts X-User-Role; production will
-		// validate JWTs.
+		// Toggling flags is admin-only.
 		r.With(httpx.RequireRole("admin")).Put("/{name}/toggle", handler.Toggle)
 	})
 

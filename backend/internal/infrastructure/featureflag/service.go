@@ -9,6 +9,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// TODO: Check if caching can cause problems.
+
 // Feature flags are per-deployment (not per-user), with a local in-memory cache
 type Service struct {
 	repo        Repository

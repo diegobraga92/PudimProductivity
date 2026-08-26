@@ -43,7 +43,7 @@ func toFlagResponse(f FeatureFlag) featureFlagResponse {
 	}
 }
 
-// GET /api/v1/features
+// ListEnabled is used for GET /features
 func (h *Handler) ListEnabled(w http.ResponseWriter, r *http.Request) {
 	flags, err := h.service.ListEnabled(r.Context())
 	if err != nil {
@@ -60,7 +60,7 @@ func (h *Handler) ListEnabled(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, responses)
 }
 
-// GET /api/v1/features/{name}
+// GetByName is used for GET /features/{name}
 func (h *Handler) GetByName(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 	if name == "" {
@@ -81,7 +81,7 @@ func (h *Handler) GetByName(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// PUT /api/v1/features/{name}/toggle
+// Toggle is used for PUT /features/{name}/toggle
 func (h *Handler) Toggle(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 	if name == "" {
