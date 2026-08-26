@@ -1,26 +1,4 @@
 -- 001_init.sql — consolidated baseline schema for fresh installs.
---
--- This single migration replaces the original 001..026 series. Since the
--- database is always created from scratch, the schema is declared in its final
--- state: every historical intermediate step (ALTER TABLE additions, data
--- backfills, tables created then dropped, idempotency workarounds) is folded
--- directly into the CREATE statements below.
---
--- Folded-in sources (original migration numbers):
---   001, 003, 006, 010, 011     tasks
---   002, 022                    feature_flags + seeds
---   004, 013, 024               task_completions (+ indexes, partial unique)
---   005, 017, 019               task_lists / task_list_shares (+ soft delete)
---   007                         users + seeds
---   008                         audit_log
---   009                         planner_entries
---   012                         notifications
---   014                         recipes (+ tags / ingredients / steps)
---   015, 020                    library_items (books never created)
---   018                         pomodoro_sessions
---   021                         no-op for fresh installs (meal plans never created)
---   022, 023, 025               library_items score / subtype columns
---   026                         score_providers / score_provider_config
 
 -- ============================================================================
 -- Core: feature flags & users
@@ -29,7 +7,7 @@
 CREATE TABLE feature_flags (
     id          UUID PRIMARY KEY,
     name        TEXT NOT NULL UNIQUE,
-    description TEXT,
+    description TEXT NOT NULL DEFAULT '',
     enabled     BOOLEAN NOT NULL DEFAULT false,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -53,6 +31,9 @@ CREATE TABLE users (
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Enforce case-insensitive email uniqueness (the UNIQUE above is case-sensitive).
+CREATE UNIQUE INDEX idx_users_email_lower ON users (LOWER(email));
 
 -- Seed a default admin user (replace email in production).
 INSERT INTO users (id, email, role)
@@ -80,6 +61,8 @@ CREATE TABLE task_lists (
 
 CREATE INDEX idx_task_lists_owner_id ON task_lists (owner_id);
 CREATE INDEX idx_task_lists_updated_at ON task_lists (updated_at);
+-- Incremental sync deletes: WHERE deleted_at IS NOT NULL AND deleted_at > $1.
+CREATE INDEX idx_task_lists_deleted ON task_lists (deleted_at) WHERE deleted_at IS NOT NULL;
 
 CREATE TABLE tasks (
     id              UUID PRIMARY KEY,
@@ -96,14 +79,23 @@ CREATE TABLE tasks (
     updated_by      TEXT,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    deleted_at      TIMESTAMPTZ
+    deleted_at      TIMESTAMPTZ,
+    -- Mirrors the domain validation (task package): a time window is either
+    -- absent or start < end, and an alarm can't be negative. NULLs pass.
+    CONSTRAINT tasks_time_window
+        CHECK (start_time IS NULL OR end_time IS NULL OR end_time > start_time),
+    CONSTRAINT tasks_alarm_non_negative
+        CHECK (alarm_minutes IS NULL OR alarm_minutes >= 0)
 );
 
-CREATE INDEX idx_tasks_status ON tasks (status);
 CREATE INDEX idx_tasks_list_id ON tasks (list_id);
 -- Habit list query: list_id IS NULL AND recurrence_days IS NOT NULL, ORDER BY created_at DESC.
 CREATE INDEX idx_tasks_habits ON tasks (created_at DESC) WHERE recurrence_days IS NOT NULL;
+-- Inbox list query: list_id IS NULL AND deleted_at IS NULL, ORDER BY created_at DESC.
+CREATE INDEX idx_tasks_inbox ON tasks (created_at DESC) WHERE list_id IS NULL AND deleted_at IS NULL;
 CREATE INDEX idx_tasks_updated_at ON tasks (updated_at);
+-- Incremental sync deletes: WHERE deleted_at IS NOT NULL AND deleted_at > $1.
+CREATE INDEX idx_tasks_deleted ON tasks (deleted_at) WHERE deleted_at IS NOT NULL;
 
 CREATE TABLE task_completions (
     id              UUID PRIMARY KEY,
@@ -113,14 +105,18 @@ CREATE TABLE task_completions (
     deleted_at      TIMESTAMPTZ
 );
 
-CREATE INDEX idx_task_completions_task_date ON task_completions (task_id, completed_date);
 -- Batch completion queries (habit screens / heatmap week range).
 CREATE INDEX idx_task_completions_date ON task_completions (completed_date);
 CREATE INDEX idx_task_completions_created_at ON task_completions (created_at);
 -- Uniqueness applies to active rows only; soft-deleted tombstones don't block re-completion.
+-- Also serves active-row lookups by (task_id, completed_date), so a separate
+-- non-partial (task_id, completed_date) index would be redundant.
 CREATE UNIQUE INDEX idx_task_completions_active_task_date
     ON task_completions (task_id, completed_date)
     WHERE deleted_at IS NULL;
+-- Incremental sync deletes: WHERE deleted_at IS NOT NULL AND deleted_at > $1.
+CREATE INDEX idx_task_completions_deleted
+    ON task_completions (deleted_at) WHERE deleted_at IS NOT NULL;
 
 CREATE TABLE task_list_shares (
     list_id     UUID NOT NULL REFERENCES task_lists(id) ON DELETE CASCADE,
@@ -132,9 +128,12 @@ CREATE TABLE task_list_shares (
 );
 
 CREATE INDEX idx_task_list_shares_shared_with ON task_list_shares (shared_with);
+-- Incremental sync deletes: WHERE deleted_at IS NOT NULL AND deleted_at > $1.
+CREATE INDEX idx_task_list_shares_deleted
+    ON task_list_shares (deleted_at) WHERE deleted_at IS NOT NULL;
 
 -- ============================================================================
--- Planner, audit log & notifications
+-- Planner & audit log
 -- ============================================================================
 
 CREATE TABLE planner_entries (
@@ -162,18 +161,6 @@ CREATE TABLE audit_log (
 CREATE INDEX idx_audit_log_actor ON audit_log (actor_id, created_at);
 CREATE INDEX idx_audit_log_resource ON audit_log (resource, resource_id);
 CREATE INDEX idx_audit_log_action ON audit_log (action, created_at);
-
-CREATE TABLE notifications (
-    id         UUID PRIMARY KEY,
-    event_id   TEXT NOT NULL,
-    channel    TEXT NOT NULL CHECK (channel IN ('email', 'push')),
-    event_type TEXT NOT NULL,
-    task_id    TEXT,
-    sent_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE (event_id, channel)
-);
-
-CREATE INDEX idx_notifications_event ON notifications (event_id);
 
 -- ============================================================================
 -- Recipes module
@@ -218,10 +205,10 @@ CREATE TABLE recipe_steps (
     recipe_id   UUID NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
     step_number INT  NOT NULL,
     instruction TEXT NOT NULL,
+    -- UNIQUE already provides the leading-column index on recipe_id, so no
+    -- separate idx_recipe_steps_recipe is needed.
     UNIQUE (recipe_id, step_number)
 );
-
-CREATE INDEX idx_recipe_steps_recipe ON recipe_steps (recipe_id);
 
 -- ============================================================================
 -- Library: generic media tracking (replaces the book-specific table)
@@ -259,7 +246,11 @@ CREATE TABLE pomodoro_sessions (
     focus_minutes INT NOT NULL,
     elapsed_s     INT NOT NULL,
     started_at    TIMESTAMPTZ NOT NULL,
-    completed_at  TIMESTAMPTZ NOT NULL
+    completed_at  TIMESTAMPTZ NOT NULL,
+    CONSTRAINT pomodoro_sessions_durations_non_negative
+        CHECK (focus_minutes >= 0 AND elapsed_s >= 0),
+    CONSTRAINT pomodoro_sessions_completed_after_started
+        CHECK (completed_at >= started_at)
 );
 
 CREATE INDEX idx_pomodoro_sessions_user_completed
@@ -278,9 +269,7 @@ CREATE TABLE score_providers (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Singleton row mapping media type -> provider. '' or 'none' disables lookup for
--- that media type. saved_at is NULL until the user explicitly saves via the
--- admin UI; until then the service falls back to environment defaults.
+-- Singleton row mapping media type -> provider. '' or 'none' disables lookup
 CREATE TABLE score_provider_config (
     id              SMALLINT PRIMARY KEY CHECK (id = 1),
     movie_provider  TEXT NOT NULL DEFAULT '',

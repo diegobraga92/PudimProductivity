@@ -68,7 +68,7 @@ var backupTables = []backupTable{
 	{
 		name:     "library_items",
 		idColumn: "id",
-		columns:  "id uuid, name text, media_type text, release_year integer, done boolean, notes text, created_at timestamptz, updated_at timestamptz",
+		columns:  "id uuid, name text, media_type text, release_year integer, done boolean, notes text, subtype text, score numeric, score_source text, created_at timestamptz, updated_at timestamptz",
 	},
 	{
 		name:     "recipes",
