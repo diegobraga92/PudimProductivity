@@ -25,7 +25,7 @@ Usage: $(basename "$0") [OPTIONS]
 Start the PudimProductivity development environment.
 
 Options:
-  --no-db    Skip starting Docker services (postgres, redis, rabbitmq)
+  --no-db    Skip starting Docker services (postgres, redis)
   --no-web   Skip starting the web frontend
   --clean    Remove Docker volumes, node_modules, and Go build cache before starting
   --help     Show this help message and exit
@@ -88,7 +88,7 @@ done
 if [ "$CLEAN" = true ]; then
     log_info "Cleaning environment..."
 
-    # Tear down Docker volumes (postgres + rabbitmq data)
+    # Tear down Docker volumes (postgres + redis data)
     if docker compose -f "$ROOT_DIR/docker-compose.yml" ps --quiet 2>/dev/null | grep -q .; then
         log_info "Removing Docker containers and volumes..."
         docker compose -f "$ROOT_DIR/docker-compose.yml" down -v
@@ -127,11 +127,11 @@ fi
 
 # ─── 3. Start Docker services ──────────────────────────────────────────────
 if [ "$SKIP_DOCKER" = false ]; then
-    log_info "Starting Docker services (postgres, redis, rabbitmq)..."
+    log_info "Starting Docker services (postgres, redis)..."
     # `--wait` blocks until every started service passes its healthcheck.
     # Healthchecks use the .env credentials via the compose file, so no roles
     # are hardcoded here.
-    docker compose -f "$ROOT_DIR/docker-compose.yml" up -d --wait postgres redis rabbitmq
+    docker compose -f "$ROOT_DIR/docker-compose.yml" up -d --wait postgres redis
     DOCKER_STARTED=true
     log_ok "All Docker services are healthy."
 else

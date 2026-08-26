@@ -16,7 +16,8 @@ data class Task(
     val start_time: String? = null,
     val end_time: String? = null,
     val color: String? = null,
-    val scheduled_date: String? = null
+    val scheduled_date: String? = null,
+    val alarm_minutes: Int? = null
 )
 
 data class TaskCompletion(

@@ -1,7 +1,7 @@
 // Package eventbus provides the event-dispatch abstraction used across the
-// backend. Phase 2 introduces an in-memory implementation; Phase 3 will add a
-// RabbitMQ-backed implementation that satisfies the same Bus interface so that
-// producers (task service) and consumers (sync hub) do not change.
+// backend. Phase 2 introduces an in-memory implementation; a Redis-backed
+// implementation satisfies the same Bus interface for cross-instance fan-out,
+// so producers (task service) and consumers (sync hub) do not change.
 package eventbus
 
 import (
@@ -64,12 +64,10 @@ const (
 //
 // TraceID/SpanID carry the OpenTelemetry trace context of the producer (e.g.
 // the HTTP request that created the task). They are not serialized to
-// WebSocket clients; the Phase 3 RabbitMQ adapter will read them to propagate
-// the trace through broker message headers.
+// WebSocket clients.
 type Event struct {
 	// ID uniquely identifies the event instance. The in-memory bus leaves it
-	// empty; the RabbitMQ adapter sets it to the AMQP message ID so consumers
-	// can deduplicate at-least-once redeliveries.
+	// empty.
 	ID        string      `json:"id,omitempty"`
 	Type      EventType   `json:"type"`
 	Seq       int64       `json:"seq"`

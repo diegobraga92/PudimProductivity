@@ -71,7 +71,6 @@ docker-data/
 # Misc
 *.log
 tmp/
-# Android release keystores and Firebase config (never commit)
+# Android release keystores (never commit)
 *.keystore
 *.jks
-mobile/app/google-services.json

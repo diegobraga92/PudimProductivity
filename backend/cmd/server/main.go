@@ -32,9 +32,7 @@ import (
 	"github.com/diegobraga92/pudimproductivity/backend/internal/contexts/productivity/task"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/contexts/productivity/tasklist"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/infrastructure/featureflag"
-	"github.com/diegobraga92/pudimproductivity/backend/internal/infrastructure/notification"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/infrastructure/postgres"
-	"github.com/diegobraga92/pudimproductivity/backend/internal/infrastructure/rabbitmq"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/infrastructure/storage"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/platform/cache"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/platform/config"
@@ -144,50 +142,13 @@ func main() {
 		membership.RegisterCollabRoutes(r, syncHub)
 	}
 
-	// Phase 3: RabbitMQ becomes the durable backbone for async consumers. If
-	// RabbitMQ is unavailable we degrade gracefully: events still fan out to
-	// WebSocket clients via the in-memory bus, but the notifications worker
-	// stays off until the broker comes back.
+	// Event bus fan-out: the in-memory bus feeds the WebSocket sync hub and,
+	// when Redis is available, a cross-instance pub/sub fabric (wired below).
 	composite := eventbus.NewCompositeBus(inMemoryBus)
-	var rabbitBus *rabbitmq.Bus
-	var notifWorker *notification.Worker
-	rabbitURL := os.Getenv("RABBITMQ_URL")
-	if rabbitURL == "" {
-		rabbitURL = "amqp://pudim:" + os.Getenv("RABBITMQ_PASS") + "@rabbitmq:5672/"
-	}
-	if rb, err := rabbitmq.New(context.Background(), rabbitmq.Config{URL: rabbitURL}); err != nil {
-		log.Warn().Err(err).Msg("rabbitmq unavailable — notifications worker disabled")
-	} else {
-		rabbitBus = rb
-		composite = eventbus.NewCompositeBus(inMemoryBus, rb)
-
-		var pushes []notification.PushDeliverer
-		if fcm, err := notification.NewFCMSender(context.Background(), notification.FCMConfig{}); err != nil {
-			log.Warn().Err(err).Msg("fcm sender disabled")
-			pushes = append(pushes, notification.NoopSender{})
-		} else {
-			pushes = append(pushes, fcm)
-		}
-
-		var notifRepo notification.Repo = notification.NewMemoryRepo()
-		if pool != nil {
-			notifRepo = notification.NewPostgresRepo(pool)
-		}
-
-		notifWorker = notification.NewWorker(rb, pushes, notifRepo, notification.Recipients{
-			PushToken: os.Getenv("FCM_DEVICE_TOKEN"),
-		})
-		go func() {
-			if err := notifWorker.Run(context.Background()); err != nil {
-				log.Error().Err(err).Msg("notification worker stopped with error")
-			}
-		}()
-	}
 
 	// Redis: optional shared pub/sub fabric for cross-instance sync fan-out plus
 	// a read-through cache for task reads. When Redis is unavailable the sync
-	// hub keeps working single-instance and caching is disabled (degraded
-	// mode), mirroring the RabbitMQ behavior above.
+	// hub keeps working single-instance and caching is disabled (degraded mode).
 	var redisBus *eventbus.RedisBus
 	if cfg.RedisURL != "" {
 		rb, err := eventbus.NewRedisBus(context.Background(), eventbus.RedisConfig{URL: cfg.RedisURL})
@@ -205,11 +166,7 @@ func main() {
 				log.Warn().Err(err).Msg("redis subscribe failed — cross-instance sync disabled")
 				redisBus = nil
 			} else {
-				children := []eventbus.Bus{inMemoryBus, rb}
-				if rabbitBus != nil {
-					children = append(children, rabbitBus)
-				}
-				composite = eventbus.NewCompositeBus(children...)
+				composite = eventbus.NewCompositeBus(inMemoryBus, rb)
 			}
 		}
 	}
@@ -381,14 +338,6 @@ func main() {
 	}
 
 	syncHub.Close()
-	if notifWorker != nil {
-		notifWorker.Close()
-	}
-	if rabbitBus != nil {
-		if err := rabbitBus.Close(); err != nil {
-			log.Warn().Err(err).Msg("rabbitmq bus close error")
-		}
-	}
 	if redisBus != nil {
 		if err := redisBus.Close(); err != nil {
 			log.Warn().Err(err).Msg("redis event bus close error")

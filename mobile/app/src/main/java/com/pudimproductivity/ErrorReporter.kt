@@ -1,4 +1,4 @@
-package com.pudimproductivity.fcm
+package com.pudimproductivity
 
 import android.content.Context
 import com.pudimproductivity.BuildConfig

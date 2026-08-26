@@ -64,6 +64,11 @@ class SyncManager(private val context: Context) {
                 LocalTask(
                     id = t.id, title = t.title, status = t.status,
                     recurrence_days = t.recurrence_days, list_id = t.list_id,
+                    // Planner scheduling fields — needed locally so the alarm
+                    // scheduler (start_time − alarm_minutes) works offline.
+                    start_time = t.start_time, end_time = t.end_time,
+                    color = t.color, scheduled_date = t.scheduled_date,
+                    alarm_minutes = t.alarm_minutes,
                     created_at = t.created_at, updated_at = t.updated_at,
                     // Server rows exist remotely, so a later local edit is an UPDATE.
                     synced = true

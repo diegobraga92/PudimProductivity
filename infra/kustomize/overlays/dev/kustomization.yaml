@@ -34,7 +34,7 @@ patches:
         path: /spec/template/spec/containers/0/imagePullPolicy
         value: IfNotPresent
   # Point the backend at the in-cluster PostgreSQL and disable the async
-  # infrastructure (RabbitMQ/Redis) so the pod starts standalone.
+  # infrastructure (Redis) so the pod starts standalone.
   - target:
       kind: ConfigMap
       name: backend-config
@@ -45,9 +45,6 @@ patches:
       - op: add
         path: /data/DATABASE_URL
         value: "postgres://pudim:pudim@postgres:5432/pudimproductivity?sslmode=disable"
-      - op: add
-        path: /data/RABBITMQ_URL
-        value: ""
       - op: add
         path: /data/REDIS_URL
         value: ""

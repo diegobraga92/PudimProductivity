@@ -55,7 +55,7 @@ func (b *InMemoryBus) Publish(ctx context.Context, typ EventType, payload interf
 	}
 
 	// Stamp the event with the producer's trace context so downstream
-	// consumers can continue the trace (e.g. the Phase 3 RabbitMQ adapter).
+	// consumers can continue the trace (e.g. the cross-instance Redis fabric).
 	if sc := trace.SpanContextFromContext(ctx); sc.IsValid() {
 		event.TraceID = sc.TraceID().String()
 		event.SpanID = sc.SpanID().String()

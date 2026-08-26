@@ -21,24 +21,6 @@ services:
       timeout: 3s
       retries: 5
 
-  rabbitmq:
-    image: rabbitmq:4-management-alpine  # https://hub.docker.com/_/rabbitmq/tags?name=management-alpine
-    container_name: pudim-rabbitmq
-    restart: unless-stopped
-    environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-pudim}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:?RABBITMQ_PASS must be set}
-    ports:
-      - "5672:5672"   # AMQP
-      - "15672:15672" # Management UI
-    volumes:
-      - rabbitmqdata:/var/lib/rabbitmq
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   # Jaeger for OpenTelemetry traces (Phase 6). Start with:
   #   docker compose --profile tracing up -d
   # then open http://localhost:16686 to view spans. The backend exports spans
@@ -69,9 +51,6 @@ services:
       DATABASE_URL: "postgres://${POSTGRES_USER:-pudim}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-pudimproductivity}?sslmode=disable"
       REDIS_URL: "redis://redis:6379/0"
       LOG_LEVEL: "${LOG_LEVEL:-debug}"
-      # Phase 3 notifications: RabbitMQ + optional FCM.
-      RABBITMQ_URL: "amqp://${RABBITMQ_USER:-pudim}:${RABBITMQ_PASS}@rabbitmq:5672/"
-      FCM_DEVICE_TOKEN: "${FCM_DEVICE_TOKEN:-}"
       # OpenTelemetry OTLP/HTTP endpoint. Empty by default (spans go to stdout
       # only). Set to http://jaeger:4318 in .env and run `docker compose
       # --profile tracing up` to view traces in Jaeger (http://localhost:16686).
@@ -101,8 +80,6 @@ services:
       start_period: 15s
     depends_on:
       postgres:
-        condition: service_healthy
-      rabbitmq:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -135,7 +112,6 @@ services:
 
 volumes:
   pgdata:
-  rabbitmqdata:
   redisdata:
   mediadata:
   soundsdata:

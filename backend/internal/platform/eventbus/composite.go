@@ -9,13 +9,13 @@ import (
 
 // CompositeBus fans Publish out to multiple underlying buses concurrently. It
 // implements Bus, so producers (e.g. the task service) keep a single reference
-// while the real-time sync hub and the async RabbitMQ pipeline each get their
-// own copy of every event.
+// while the real-time sync hub and the optional cross-instance Redis fabric
+// each get their own copy of every event.
 //
 // Publish never blocks or fails because of a slow or unavailable child bus:
 // each child is invoked in its own goroutine and errors are only logged. This
-// is the core of the Phase 3 graceful-degradation story — a down RabbitMQ must
-// not delay WebSocket fan-out.
+// is the core of the graceful-degradation story — a down Redis must not delay
+// WebSocket fan-out.
 //
 // Subscribe on the composite is intentionally unsupported; consumers subscribe
 // to the specific child bus they care about.

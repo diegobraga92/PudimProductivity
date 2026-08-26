@@ -13,7 +13,7 @@ Prerequisites:
 # Copy environment file and edit the passwords
 cp .env.example .env
 
-# Start the full dev stack — infrastructure (PostgreSQL, Redis, RabbitMQ)
+# Start the full dev stack — infrastructure (PostgreSQL, Redis)
 # plus the backend and frontend dev servers
 ./scripts/run.sh
 ```
@@ -37,10 +37,10 @@ cd ~/pudimproductivity
 
 # 2. Create and configure environment file
 cp .env.example .env
-# ⚠️ Edit .env now — change POSTGRES_PASSWORD and RABBITMQ_PASS (both default
+# ⚠️ Edit .env now — change POSTGRES_PASSWORD (it defaults
 #    to "change_me_in_production"). All host ports are configurable there too.
 
-# 3. Start all services (PostgreSQL, Redis, RabbitMQ, Backend, Frontend)
+# 3. Start all services (PostgreSQL, Redis, Backend, Frontend)
 docker compose up -d
 
 # 4. Access the app from any device on your LAN
@@ -49,11 +49,6 @@ docker compose up -d
 ```
 
 The frontend (nginx) serves the built React app and proxies `/api/` requests to the backend. All services are wired together via Docker Compose networking. The first `docker compose up -d` builds the backend (Go) and frontend (React) images, so allow a few minutes before the app responds.
-
-> ⚠️ **LAN exposure note:** the RabbitMQ management UI (`http://<server-ip>:15672`)
-> is also reachable from any device on your LAN. That's fine for a personal
-> network; if you want it private, remove its `ports:` entry from
-> `docker-compose.yml` or block it at the firewall.
 
 ### Services
 
@@ -65,8 +60,6 @@ All host ports are **configurable via `.env`** — see `.env.example` for defaul
 | Backend    | 8080       | Go API (chi)                       |
 | PostgreSQL | 5433       | Database                           |
 | Redis      | 6379       | Cache / real-time sync store       |
-| RabbitMQ   | 5672       | Async notification event bus       |
-|            | 15672      | RabbitMQ management UI (web)       |
 
 ### Desktop app (Electron)
 
@@ -135,25 +128,17 @@ Using API-first, `api/openapi/` should be the source of truth.
 - Message schema: `api/ws/events-v1.json`. Both the Vite dev proxy and the
   nginx config are wired to forward WebSocket upgrades.
 
-## Notifications (Phase 3)
+## Notifications & planner alarms
 
-- Task events fan out to **RabbitMQ** (`task.events` exchange) via a
-  `CompositeBus` alongside the in-memory WebSocket bus. A worker in
-  `internal/notification/` consumes them and sends push notifications
-  (Firebase Cloud Messaging).
-- **Idempotency:** the `notifications` table (`UNIQUE(event_id, channel)`)
-  dedupes at-least-once redeliveries.
-- **Retry + DLQ:** failed sends are dead-lettered and republished up to 5 times
-  (`x-retry-count`), then discarded.
-- **Tracing:** W3C `traceparent` travels in AMQP headers, so worker logs share
-  the producer's `trace_id`.
-- **Web:** in-app toasts (`useTaskNotifier`) surface task events from the
-  WebSocket stream.
-- **Mobile:** `PudimFirebaseMessagingService` handles FCM push — add
-  `mobile/app/google-services.json` + the Google Services Gradle plugin to use a
-  real Firebase project, and set `FCM_DEVICE_TOKEN` on the backend.
-- See `docs/adr/005-async-notifications.md` for the design and degradation
-  matrix.
+- **Web:** in-app alarm toasts (`AlarmProvider` / `useAlarmNotifier`) fire a
+  sound + toast `alarm_minutes` before a habit's `start_time` on each
+  recurrence day, and the Electron desktop app adds a native OS notification.
+- **Mobile:** the same alarm is scheduled **locally** on the device
+  (`notifications/TaskAlarmScheduler.kt`, WorkManager). The schedule is pulled
+  into the local SQLite DB by the Phase 9c sync worker, so alarms fire even
+  when the app is closed and fully offline — no push service required.
+- WebSocket in-app toasts (`useTaskNotifier`) still surface task events (create/
+  update/complete) from other devices in real time.
 
 ## Architecture
 
@@ -191,9 +176,8 @@ push failed** — the database always wins.
 
 We use a live connection (WebSocket) so updates feel instant. If that
 connection drops — flaky Wi-Fi, phone in airplane mode, backend restart — the
-device reconnects and catches up automatically. The trade-off: a notification
-such as a "habit reminder" email may be delayed while the messaging service is
-down. Notifications are best-effort convenience; they never change your data.
+device reconnects and catches up automatically. Notifications and planner
+alarms are best-effort convenience; they never change your data.
 
 ### What is (and isn't) available offline
 
@@ -209,7 +193,7 @@ down. Notifications are best-effort convenience; they never change your data.
 
 ### Security & privacy posture
 
-- All sensitive configuration (database passwords, messaging credentials) lives
+- All sensitive configuration (database passwords) lives
   in environment variables — never in the code or the repo. The one exception
   is the library rating-provider API keys (OMDb/RAWG), which can be configured
   at runtime via the admin UI (Server Settings); they are stored server-side,

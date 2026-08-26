@@ -1,7 +1,7 @@
 // Package observability wires OpenTelemetry tracing into the backend so every
 // HTTP request, WebSocket dispatch, and log line carries a W3C trace ID. The
 // trace context also flows through the event bus (see internal/eventbus), ready
-// for the Phase 3 RabbitMQ adapter to propagate it via message headers.
+// for cross-instance consumers (e.g. the Redis fabric) to propagate.
 package observability
 
 import (

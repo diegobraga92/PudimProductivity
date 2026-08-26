@@ -46,7 +46,7 @@ spec:
           envFrom:
             - configMapRef:
                 name: backend-config
-          # Secrets (DATABASE_URL, RABBITMQ_URL, FCM) must be
+          # Secrets (DATABASE_URL) must be
           # injected by the overlay via sealed-secrets/ExternalSecret. Do not
           # commit plaintext secrets.
           env:

@@ -25,13 +25,16 @@ class LocalDatabase(context: Context) : SQLiteOpenHelper(context.applicationCont
         const val DB_NAME = "pudim_offline.db"
         // v2: added `synced` (exists-on-server) flag to tasks + task_lists so a
         // push picks create vs update correctly for offline-created rows.
-        const val DB_VERSION = 2
+        // v3: added planner scheduling columns (start_time, end_time, color,
+        // scheduled_date, alarm_minutes) so the local alarm scheduler can fire
+        // notifications offline without a backend push channel.
+        const val DB_VERSION = 3
 
         const val META_KEY_LAST_SYNC = "last_sync_ts"
     }
 
     override fun onCreate(db: SQLiteDatabase) {
-        db.execSQL("CREATE TABLE IF NOT EXISTS tasks (id TEXT PRIMARY KEY, title TEXT NOT NULL, status TEXT NOT NULL, recurrence_days TEXT, list_id TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, dirty INTEGER NOT NULL DEFAULT 0, deleted INTEGER NOT NULL DEFAULT 0, synced INTEGER NOT NULL DEFAULT 0)")
+        db.execSQL("CREATE TABLE IF NOT EXISTS tasks (id TEXT PRIMARY KEY, title TEXT NOT NULL, status TEXT NOT NULL, recurrence_days TEXT, list_id TEXT, start_time TEXT, end_time TEXT, color TEXT, scheduled_date TEXT, alarm_minutes INTEGER, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, dirty INTEGER NOT NULL DEFAULT 0, deleted INTEGER NOT NULL DEFAULT 0, synced INTEGER NOT NULL DEFAULT 0)")
         db.execSQL("CREATE TABLE IF NOT EXISTS completions (id TEXT PRIMARY KEY, task_id TEXT NOT NULL, completed_date TEXT NOT NULL, created_at TEXT NOT NULL, dirty INTEGER NOT NULL DEFAULT 0, deleted INTEGER NOT NULL DEFAULT 0)")
         db.execSQL("CREATE TABLE IF NOT EXISTS task_lists (id TEXT PRIMARY KEY, name TEXT NOT NULL, description TEXT NOT NULL DEFAULT '', owner_id TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL, updated_at TEXT NOT NULL, dirty INTEGER NOT NULL DEFAULT 0, deleted INTEGER NOT NULL DEFAULT 0, synced INTEGER NOT NULL DEFAULT 0)")
         db.execSQL("CREATE TABLE IF NOT EXISTS shares (list_id TEXT NOT NULL, shared_with TEXT NOT NULL, role TEXT NOT NULL, created_at TEXT NOT NULL, deleted INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (list_id, shared_with))")
@@ -51,6 +54,15 @@ class LocalDatabase(context: Context) : SQLiteOpenHelper(context.applicationCont
             db.execSQL("ALTER TABLE task_lists ADD COLUMN synced INTEGER NOT NULL DEFAULT 0")
             db.execSQL("UPDATE tasks SET synced = 1")
             db.execSQL("UPDATE task_lists SET synced = 1")
+        }
+        if (oldVersion < 3) {
+            // v3: planner scheduling columns for the local alarm scheduler.
+            // Existing rows have no schedule — nullable columns default to NULL.
+            db.execSQL("ALTER TABLE tasks ADD COLUMN start_time TEXT")
+            db.execSQL("ALTER TABLE tasks ADD COLUMN end_time TEXT")
+            db.execSQL("ALTER TABLE tasks ADD COLUMN color TEXT")
+            db.execSQL("ALTER TABLE tasks ADD COLUMN scheduled_date TEXT")
+            db.execSQL("ALTER TABLE tasks ADD COLUMN alarm_minutes INTEGER")
         }
     }
 
@@ -86,6 +98,11 @@ class LocalDatabase(context: Context) : SQLiteOpenHelper(context.applicationCont
                     put("status", t.status)
                     put("recurrence_days", encodeDays(t.recurrence_days))
                     put("list_id", t.list_id)
+                    put("start_time", t.start_time)
+                    put("end_time", t.end_time)
+                    put("color", t.color)
+                    put("scheduled_date", t.scheduled_date)
+                    put("alarm_minutes", t.alarm_minutes)
                     put("created_at", t.created_at)
                     put("updated_at", t.updated_at)
                     put("dirty", if (t.dirty) 1 else 0)
@@ -146,12 +163,30 @@ class LocalDatabase(context: Context) : SQLiteOpenHelper(context.applicationCont
         return out
     }
 
+    /**
+     * Every task id the DB knows, including soft-deleted tombstones. Used to
+     * cancel pending planner alarms for tasks that no longer exist.
+     */
+    fun queryAllTaskIds(): List<String> {
+        val db = readableDatabase
+        val out = mutableListOf<String>()
+        db.query("tasks", arrayOf("id"), null, null, null, null, null).use { c ->
+            while (c.moveToNext()) out.add(c.getString(0))
+        }
+        return out
+    }
+
     private fun readTask(c: Cursor): LocalTask = LocalTask(
         id = c.getString(c.getColumnIndexOrThrow("id")),
         title = c.getString(c.getColumnIndexOrThrow("title")),
         status = c.getString(c.getColumnIndexOrThrow("status")),
         recurrence_days = decodeDays(c.getString(c.getColumnIndexOrThrow("recurrence_days"))),
         list_id = c.getString(c.getColumnIndexOrThrow("list_id")),
+        start_time = c.getString(c.getColumnIndexOrThrow("start_time")),
+        end_time = c.getString(c.getColumnIndexOrThrow("end_time")),
+        color = c.getString(c.getColumnIndexOrThrow("color")),
+        scheduled_date = c.getString(c.getColumnIndexOrThrow("scheduled_date")),
+        alarm_minutes = c.getInt(c.getColumnIndexOrThrow("alarm_minutes")).takeIf { !c.isNull(c.getColumnIndexOrThrow("alarm_minutes")) },
         created_at = c.getString(c.getColumnIndexOrThrow("created_at")),
         updated_at = c.getString(c.getColumnIndexOrThrow("updated_at")),
         dirty = c.getInt(c.getColumnIndexOrThrow("dirty")) == 1,

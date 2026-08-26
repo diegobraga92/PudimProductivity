@@ -3,7 +3,7 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <!-- Android 13+ runtime notification permission (push notifications, Phase 3) -->
+    <!-- Android 13+ runtime notification permission (local planner alarms) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
@@ -51,17 +51,6 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/habits_widget_info" />
         </receiver>
-
-        <!-- Firebase Cloud Messaging (Phase 3): handles push notifications.
-             Requires a Firebase project (google-services.json) to receive real
-             messages; the service is harmless without it. -->
-        <service
-            android:name=".fcm.PudimFirebaseMessagingService"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="com.google.firebase.MESSAGING_EVENT" />
-            </intent-filter>
-        </service>
 
         <!-- Phase 9b: FileProvider so the camera intent can write the photo
              to app-private storage (androidx.core FileProvider). -->

@@ -10,6 +10,13 @@ data class SyncTask(
     val status: String,
     val recurrence_days: List<String>? = null,
     val list_id: String? = null,
+    // Planner scheduling fields — the sync endpoint returns them so the local
+    // DB can drive planner alarms offline.
+    val start_time: String? = null,
+    val end_time: String? = null,
+    val color: String? = null,
+    val scheduled_date: String? = null,
+    val alarm_minutes: Int? = null,
     val created_at: String,
     val updated_at: String
 )

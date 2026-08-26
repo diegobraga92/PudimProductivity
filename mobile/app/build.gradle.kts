@@ -131,9 +131,8 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.9.3")
 
     // Fragment (androidx.fragment:fragment-ktx). Not used directly, but pinned
-    // >= 1.3.0: Firebase's play-services-basement pulls in fragment 1.1.0, and
-    // androidx.activity's ActivityResult APIs (registerForActivityResult — used
-    // for the Android 13+ POST_NOTIFICATIONS permission prompt) require
+    // >= 1.3.0: androidx.activity's ActivityResult APIs (registerForActivityResult
+    // — used for the Android 13+ POST_NOTIFICATIONS permission prompt) require
     // fragment >= 1.3.0 (lint: InvalidFragmentVersionForActivityResult).
     implementation("androidx.fragment:fragment-ktx:1.8.9")
 
@@ -150,12 +149,6 @@ dependencies {
     implementation("com.squareup.retrofit2:converter-gson:2.11.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
-
-    // Push notifications (Firebase Cloud Messaging) — Phase 3.
-    // Requires google-services.json + the google-services Gradle plugin for a
-    // real Firebase project (see README); the code below is guarded so the app
-    // runs without it.
-    implementation("com.google.firebase:firebase-messaging:24.1.0")
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")

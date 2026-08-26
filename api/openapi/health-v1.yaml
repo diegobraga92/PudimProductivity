@@ -15,7 +15,6 @@ paths:
     get:
       operationId: getHealth
       summary: Health check
-      # TODO: Include other services, like RabbitMQ
       description: Returns the health status of the backend service, including DB and other connectivity.
       security: []
       tags:

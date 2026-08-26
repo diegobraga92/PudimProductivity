@@ -36,10 +36,10 @@ import com.pudimproductivity.api.ApiClient
 import com.pudimproductivity.api.HealthResponse
 import com.pudimproductivity.api.ServerConfig
 import com.pudimproductivity.api.SyncClient
+import com.pudimproductivity.ErrorReporter
 import com.pudimproductivity.data.TaskRepository
-import com.pudimproductivity.fcm.ErrorReporter
 import com.pudimproductivity.i18n.Localization
-import com.pudimproductivity.notifications.HabitReminderScheduler
+import com.pudimproductivity.notifications.TaskAlarmScheduler
 import com.pudimproductivity.sync.SyncScheduler
 import com.pudimproductivity.ui.screens.PlannerScreen
 import com.pudimproductivity.ui.screens.HabitScreen
@@ -80,9 +80,9 @@ class MainActivity : ComponentActivity() {
     // widget/TasksWidget.kt, widget/HabitsWidget.kt and [parseLaunch]).
     private val launchTarget = mutableStateOf<LaunchTarget?>(null)
 
-    // Android 13+ notifications are a runtime permission. Habit reminders (and
-    // FCM pushes) are silently dropped while it's denied, so ask up front; the
-    // notification workers re-check before posting. The callback is a no-op.
+    // Android 13+ notifications are a runtime permission. Planner alarms are
+    // silently dropped while it's denied, so ask up front; the alarm worker
+    // re-checks before posting. The callback is a no-op.
     private val requestNotificationPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
@@ -105,7 +105,10 @@ class MainActivity : ComponentActivity() {
         repository = TaskRepository(applicationContext, appScope)
         repository.start()
         SyncScheduler.schedule(applicationContext)
-        HabitReminderScheduler.schedule(applicationContext)
+        // Planner alarms (start_time − alarm_minutes): schedule the next
+        // occurrence now and re-schedule on every data refresh (see
+        // TaskRepository.refreshFromLocal).
+        TaskAlarmScheduler.schedule(applicationContext)
         requestNotificationPermissionIfNeeded()
 
         // Phase 9c: reconnect hooks — flush offline edits the moment the device

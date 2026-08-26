@@ -553,11 +553,9 @@
   "widgets.moreInApp": "+{count} mais no aplicativo",
   "widgets.openInApp": "{title} — abrir no aplicativo",
 
-  "notifications.channel.task": "Notificações de tarefas",
-  "notifications.channel.habits": "Lembretes de hábitos",
-  "notifications.channel.habitsDesc": "Lembretes diários locais para hábitos ainda não concluídos",
-  "notifications.goodMorning": "🌅 Bom dia!",
-  "notifications.pendingHabits": "{count} hábito{count, plural, one {} other {s}} ainda não concluído{count, plural, one {} other {s}} hoje: "
+  "notifications.channel.alarm": "Alarmes do planejador",
+  "notifications.channel.alarmDesc": "Alarmes locais para hábitos agendados no planejador",
+  "notifications.alarm.body": "Começa às {time}"
 }
 
 

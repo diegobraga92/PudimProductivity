@@ -20,7 +20,6 @@
 | Mobile client | Kotlin + Jetpack Compose (Retrofit) | Talks to backend via REST |
 | Database | PostgreSQL 16 | Hosted via Docker locally; RDS in planned prod |
 | Cache | Redis 7 | Graceful degradation to no-op |
-| Message broker | RabbitMQ (Phase 3, planned) | Currently profile-gated in docker-compose, not wired |
 | Observability | Prometheus (:9090), Grafana (planned) | Metrics endpoint is internal-only |
 
 ### Trust Boundaries
@@ -29,7 +28,7 @@
 2. **Clients → Backend API** (REST over HTTP)
 3. **Backend → PostgreSQL / Redis** (internal network, no TLS locally)
 4. **Backend :9090 → Prometheus** (internal-only scrape endpoint)
-5. **Backend → RabbitMQ / FCM / Google Books API** (Phase 3/5, future)
+5. **Backend → Google Books API** (Phase 5, future)
 
 ### Actors & Roles
 
@@ -90,7 +89,6 @@ JWT/session mechanism is required before any non-local deployment.
 | D1 | Request flood against the API | Backend availability | Medium | Medium | `middleware.Timeout` caps request duration; connection pool caps DB load | Add rate limiting per client/IP; enforce max body sizes; horizontal scaling via EKS |
 | D2 | Connection pool exhaustion (slow queries + many clients) | PostgreSQL | Medium | High | pgxpool with configured min/max conns | Tune pool (`DATABASE_MAX_CONNS`), add slow-query monitoring, index hot paths (Phase 6) |
 | D3 | Redis outage causes cascading DB load | Backend + DB | Low | Medium | `shared.Cache` degrades to no-op when Redis is down | Document graceful degradation; monitor cache hit rate |
-| D4 | RabbitMQ backlog (Phase 3) | Notifications pipeline | Future | Medium | Not yet implemented | Idempotent consumers, dead-letter queues, prefetch limits (Phase 3) |
 
 ### 2.6 Elevation of Privilege
 
@@ -125,7 +123,7 @@ JWT/session mechanism is required before any non-local deployment.
 ## 5. Re-Review Triggers
 
 - Introduction of authentication (JWT) — mandatory
-- Any change to trust boundaries (e.g., exposing :9090, adding RabbitMQ/FCM)
+- Any change to trust boundaries (e.g., exposing :9090)
 - New external API integrations (Google Books, calendar sync)
 - Deployment topology change (Docker → EKS/RDS)
 

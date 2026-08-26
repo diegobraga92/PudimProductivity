@@ -554,11 +554,9 @@
   "widgets.moreInApp": "+{count} more in the app",
   "widgets.openInApp": "{title} — open in app",
 
-  "notifications.channel.task": "Task notifications",
-  "notifications.channel.habits": "Habit reminders",
-  "notifications.channel.habitsDesc": "Local daily reminders for habits not yet completed",
-  "notifications.goodMorning": "🌅 Good morning!",
-  "notifications.pendingHabits": "{count} habit{count, plural, one {} other {s}} not done yet today: "
+  "notifications.channel.alarm": "Planner alarms",
+  "notifications.channel.alarmDesc": "Local alarms for habits scheduled on the planner",
+  "notifications.alarm.body": "Starts at {time}"
 }
 
 

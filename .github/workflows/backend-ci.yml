@@ -117,7 +117,6 @@ jobs:
         env:
           DATABASE_URL: postgres://pudim:t@localhost:5432/pudimproductivity?sslmode=disable
           PORT: "18080"
-          RABBITMQ_URL: ""
           REDIS_URL: ""
           LOG_LEVEL: warn
         run: |

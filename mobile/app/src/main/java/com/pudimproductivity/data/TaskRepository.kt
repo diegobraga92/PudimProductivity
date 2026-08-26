@@ -8,6 +8,7 @@ import com.pudimproductivity.local.LocalCompletion
 import com.pudimproductivity.local.LocalDatabase
 import com.pudimproductivity.local.LocalTask
 import com.pudimproductivity.local.LocalTaskList
+import com.pudimproductivity.notifications.TaskAlarmScheduler
 import com.pudimproductivity.sync.SyncManager
 import com.pudimproductivity.widget.WidgetUpdater
 import kotlinx.coroutines.CoroutineScope
@@ -62,6 +63,12 @@ class TaskRepository(private val context: Context, scope: CoroutineScope) {
         // Phase 10: keep home-screen widgets in sync with the local snapshot.
         // Covers every local write, WS-event refresh, and post-sync re-emit.
         appScope.launch { WidgetUpdater.updateAll(context) }
+        // Keep planner alarms (start_time − alarm_minutes) aligned with the
+        // latest snapshot after every change (sync pull, WS refresh, local
+        // write). Cheap DB scan + WorkManager reschedule, off the main thread.
+        appScope.launch {
+            withContext(Dispatchers.IO) { TaskAlarmScheduler.rescheduleAll(context) }
+        }
     }
 
     // --- writes (optimistic, local-first) ---
@@ -208,6 +215,11 @@ private fun LocalTask.toApi(): Task = Task(
     status = status,
     recurrence_days = recurrence_days,
     list_id = list_id,
+    start_time = start_time,
+    end_time = end_time,
+    color = color,
+    scheduled_date = scheduled_date,
+    alarm_minutes = alarm_minutes,
     created_at = created_at,
     updated_at = updated_at
 )

@@ -19,7 +19,6 @@ All secrets are loaded from a `.env` file at the repository root. This file is:
 | Secret | Environment Variable | Source | Rotation |
 |--------|--------------------|--------|----------|
 | PostgreSQL password | `POSTGRES_PASSWORD` | `.env` | N/A (local only) |
-| RabbitMQ password | `RABBITMQ_PASS` | `.env` | N/A (local only) |
 | Database URL | `DATABASE_URL` | Derived from POSTGRES_* vars | N/A (local only) |
 | Android release keystore | `KEYSTORE_FILE`/`KEYSTORE_PASSWORD`/`KEY_ALIAS`/`KEY_PASSWORD` | GitHub Secrets (CI) or `mobile/local.properties` (local) | New keystore + re-sign before Play rollout |
 
@@ -57,7 +56,6 @@ store a backup offline and rotate (new keystore) before any public Play rollout.
 
 - Default passwords (e.g., `change_me_in_production`) **must be overridden** before any non-local deployment.
 - Postgres exposes port `5433` on the host (not `5432`) to avoid conflicts with local PostgreSQL instances.
-- RabbitMQ management UI (`15672`) should only be accessible on localhost.
 
 ---
 
@@ -70,7 +68,6 @@ store a backup offline and rotate (new keystore) before any public Play rollout.
 | DB master password | AWS Secrets Manager | EKS pod IAM role (IRSA) |
 | DB connection URL | AWS Secrets Manager | Generated from master password + host |
 | JWT signing key | AWS Secrets Manager | EKS pod IAM role |
-| FCM server key | AWS Secrets Manager | EKS pod IAM role |
 | Google OAuth client secret | AWS Secrets Manager | EKS pod IAM role |
 
 ### Architecture
@@ -97,7 +94,6 @@ metadata:
 type: Opaque
 stringData:
   DATABASE_URL: "postgres://..."
-  RABBITMQ_PASS: "..."
 ```
 
 **Note:** K8s Secrets are base64-encoded, not encrypted by default. For staging, enable **encryption at rest** via KMS.
@@ -151,7 +147,6 @@ echo "Database credentials rotated successfully for ${ENV}"
 
 | Key | Rotation Action |
 |-----|----------------|
-| FCM Server Key | Generate new key in Firebase Console → update Secrets Manager → restart notification worker |
 | Google OAuth Client Secret | Generate new secret in Google Cloud Console → update Secrets Manager → restart backend |
 | JWT Signing Key | Generate new key pair → update Secrets Manager → validate existing tokens still work → expire old key after 48h |
 
@@ -215,4 +210,3 @@ chmod +x .git/hooks/pre-commit
 
 - Never expose PostgreSQL port `5432` directly from the host in production.
 - Use the non-default port `5433` for local dev to avoid conflicts.
-- RabbitMQ management UI should only be bound to `127.0.0.1` for local dev.
