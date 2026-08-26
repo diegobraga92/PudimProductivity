@@ -6,8 +6,7 @@ import (
 	"time"
 )
 
-// rateLimiter is a thread-safe token bucket. A nil *rateLimiter (Rate == 0)
-// means "no limit".
+// rateLimiter is a thread-safe token bucket. A nil *rateLimiter means "no limit".
 type rateLimiter struct {
 	mu      sync.Mutex
 	tokens  float64

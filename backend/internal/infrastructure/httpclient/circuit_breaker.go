@@ -13,14 +13,7 @@ const (
 	stateHalfOpen
 )
 
-// circuitBreaker is a minimal in-process circuit breaker:
-//
-//	closed:    requests flow; consecutive failures are counted.
-//	open:      requests fail fast (ErrCircuitOpen) until openTimeout elapses.
-//	half-open: one probe request is allowed; success re-closes, failure re-opens.
-//
-// Thread-safe and deliberately small — sized for a handful of external-API
-// adapters inside the single backend process.
+// circuitBreaker is a minimal in-process circuit breaker.
 type circuitBreaker struct {
 	mu          sync.Mutex
 	state       breakerState
@@ -34,8 +27,7 @@ func newCircuitBreaker(maxFailures int, openTimeout time.Duration) *circuitBreak
 	return &circuitBreaker{maxFailures: maxFailures, openTimeout: openTimeout}
 }
 
-// allow reports whether a request may proceed. When the circuit transitions
-// open → half-open, exactly one probe is let through.
+// allow reports whether a request may proceed.
 func (cb *circuitBreaker) allow(now time.Time) bool {
 	cb.mu.Lock()
 	defer cb.mu.Unlock()

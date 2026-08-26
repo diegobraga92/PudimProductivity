@@ -1,3 +1,4 @@
+// Package featureflag is responsible for enabling/disabling project features.
 package featureflag
 
 import "time"

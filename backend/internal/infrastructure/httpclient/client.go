@@ -1,16 +1,5 @@
 // Package httpclient provides a small, testable HTTP client wrapper for
-// external API integrations (Phase 5: Google Books, recipe media ingest, etc.).
-//
-// Every adapter gets the same reliability posture:
-//   - per-request timeout
-//   - bounded response body (protects against huge third-party payloads)
-//   - bounded retry with exponential backoff (transient 429/5xx/network only)
-//   - token-bucket rate limiting (stay within vendor quotas)
-//   - an in-process circuit breaker (fail fast when the vendor is down)
-//
-// The breaker/limiter are deliberately in-process: at MVP scale there is a
-// single backend process and a handful of adapters. If the integration count
-// grows, these concerns can move to a sidecar or API gateway (see ADR 007).
+// external API integrations.
 package httpclient
 
 import (
@@ -32,24 +21,21 @@ const (
 
 // Config tunes a Client. Zero values select the documented defaults.
 type Config struct {
-	// Timeout is the per-request timeout (default 10s).
+	// Timeout is the per-request timeout.
 	Timeout time.Duration
-	// MaxResponseBytes caps the response body read into memory (default 4 MiB).
+	// MaxResponseBytes caps the response body read into memory.
 	MaxResponseBytes int64
-	// Retries is the number of additional attempts after a transient failure
-	// (default 0).
+	// Retries is the number of additional attempts after a transient failure.
 	Retries int
-	// Backoff is the base delay between retries, doubled each attempt
-	// (default 200ms).
+	// Backoff is the base delay between retries, doubled each attempt.
 	Backoff time.Duration
 	// Rate is the token-bucket refill rate in requests/second (0 = unlimited).
 	Rate float64
-	// Burst is the token-bucket burst size (default = Rate when Rate > 0).
+	// Burst is the token-bucket burst size.
 	Burst int
-	// MaxOpenFailures opens the circuit after this many consecutive failures
-	// (default 3).
+	// MaxOpenFailures opens the circuit after this many consecutive failures.
 	MaxOpenFailures int
-	// OpenTimeout is how long the circuit stays open (default 30s).
+	// OpenTimeout is how long the circuit stays open.
 	OpenTimeout time.Duration
 }
 
@@ -104,10 +90,7 @@ func (c *Client) Get(ctx context.Context, url string) ([]byte, error) {
 	return c.Do(ctx, http.MethodGet, url, nil)
 }
 
-// Do performs a request through the rate limiter, circuit breaker and retry
-// loop. A non-2xx response is returned as *StatusError. Retryable conditions
-// (network errors, HTTP 429 and 5xx) are retried up to Config.Retries times
-// with exponential backoff; other errors fail immediately.
+// Do performs a request through the rate limiter, circuit breaker and retry loop.
 func (c *Client) Do(ctx context.Context, method, url string, body []byte) ([]byte, error) {
 	if err := c.limiter.wait(ctx); err != nil {
 		return nil, err
