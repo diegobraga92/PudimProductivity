@@ -5,16 +5,7 @@ import (
 )
 
 // CorsMiddleware adds CORS headers when the request Origin is in the configured
-// allow-list (see CORS_ALLOWED_ORIGINS). When no origins are configured it is a
-// no-op, preserving the same-origin behavior used by the web (nginx) and Vite
-// dev deployments. Allowed origins are matched exactly (e.g. "app://bundle" for
-// the Electron desktop app).
-//
-// Requests without an Origin header (curl, internal services) and requests from
-// non-allowed origins pass through unchanged — we never add headers for them.
-// WebSocket upgrades are normal GET requests with an Upgrade header: they pass
-// through untouched (we only set response headers), and the sync hub performs
-// the actual hijack further down the chain.
+// allow-list (see CORS_ALLOWED_ORIGINS).
 func CorsMiddleware(allowedOrigins map[string]bool) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
