@@ -11,14 +11,6 @@ import (
 )
 
 // InMemoryBus dispatches events to subscribed handlers within the same process.
-//
-// Design notes:
-//   - Handlers are invoked synchronously in publish order, which guarantees
-//     subscribers observe a consistent sequence (required by the sync hub's
-//     replay buffer and per-connection ordering).
-//   - Subscribing/unsubscribing is safe concurrently with publishing.
-//   - A slow or blocking handler would stall publishers; handlers are expected
-//     to do minimal work (e.g., push to a buffered channel, append to a buffer).
 type InMemoryBus struct {
 	// publishMu serializes the publish+deliver critical section so subscribers
 	// always observe events in monotonic seq order, even under concurrent
@@ -55,7 +47,7 @@ func (b *InMemoryBus) Publish(ctx context.Context, typ EventType, payload interf
 	}
 
 	// Stamp the event with the producer's trace context so downstream
-	// consumers can continue the trace (e.g. the cross-instance Redis fabric).
+	// consumers can continue the trace.
 	if sc := trace.SpanContextFromContext(ctx); sc.IsValid() {
 		event.TraceID = sc.TraceID().String()
 		event.SpanID = sc.SpanID().String()

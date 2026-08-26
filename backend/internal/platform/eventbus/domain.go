@@ -1,7 +1,4 @@
-// Package eventbus provides the event-dispatch abstraction used across the
-// backend. Phase 2 introduces an in-memory implementation; a Redis-backed
-// implementation satisfies the same Bus interface for cross-instance fan-out,
-// so producers (task service) and consumers (sync hub) do not change.
+// Package eventbus provides the event-dispatch abstraction used across the backend.
 package eventbus
 
 import (
@@ -10,64 +7,36 @@ import (
 	"time"
 )
 
-// EventType identifies the kind of domain event. Payload shapes are documented
-// in api/ws/events-v1.json.
+// EventType identifies the kind of domain event. Payload shapes are documented in events.json.
 type EventType string
 
 const (
-	// EventTaskCreated is published after a task is persisted.
-	EventTaskCreated EventType = "task.created"
-	// EventTaskUpdated is published after a task mutation is persisted.
-	EventTaskUpdated EventType = "task.updated"
-	// EventTaskDeleted is published after a task is removed.
-	EventTaskDeleted EventType = "task.deleted"
-	// EventTaskCompleted is published after a habit task is completed for a date.
-	EventTaskCompleted EventType = "task.completed"
-	// EventTaskUncompleted is published after a habit task completion is removed.
+	EventTaskCreated     EventType = "task.created"
+	EventTaskUpdated     EventType = "task.updated"
+	EventTaskDeleted     EventType = "task.deleted"
+	EventTaskCompleted   EventType = "task.completed"
 	EventTaskUncompleted EventType = "task.uncompleted"
 
-	// Library media tracking (replaces Phase 5 book tracking).
 	EventLibraryItemAdded     EventType = "library.item.added"
 	EventLibraryItemUpdated   EventType = "library.item.updated"
 	EventLibraryItemDeleted   EventType = "library.item.deleted"
 	EventLibraryItemsImported EventType = "library.items.imported"
 
-	// Phase 5a: recipes.
 	EventRecipeCreated EventType = "recipe.created"
 	EventRecipeUpdated EventType = "recipe.updated"
 	EventRecipeDeleted EventType = "recipe.deleted"
 
-	// Phase 8: collaboration & multi-user.
-	// EventTaskListShared is published when a user shares a task list with
-	// another user. Payload: {list_id, shared_with, role, shared_by}.
-	EventTaskListShared EventType = "tasklist.shared"
-	// EventTaskListUnshared is published when a share is revoked.
-	// Payload: {list_id, shared_with, removed_by}.
+	EventTaskListShared   EventType = "tasklist.shared"
 	EventTaskListUnshared EventType = "tasklist.unshared"
-	// EventTaskMerged is published when a CRDT merge resolves for a task. The
-	// payload is the winning TaskResponse so clients can reconcile.
-	EventTaskMerged EventType = "task.merged"
-	// EventPresenceOnline is published when a user connects to the sync hub.
-	// Payload: {user_id, list_ids[]}.
-	EventPresenceOnline EventType = "presence.online"
-	// EventPresenceOffline is published when a user disconnects.
-	// Payload: {user_id}.
+	EventTaskMerged       EventType = "task.merged"
+
+	EventPresenceOnline  EventType = "presence.online"
 	EventPresenceOffline EventType = "presence.offline"
 )
 
-// Event is the wire envelope pushed to subscribers and, ultimately, over the
-// WebSocket to connected clients.
-//
-// Seq is assigned by the Bus implementation and is guaranteed to be strictly
-// increasing within a single process, which lets clients resume after a
-// disconnect without missing updates (see docs/adr/004-websocket-consistency.md).
-//
-// TraceID/SpanID carry the OpenTelemetry trace context of the producer (e.g.
-// the HTTP request that created the task). They are not serialized to
-// WebSocket clients.
+// Event is the wire envelope pushed to subscribers.
 type Event struct {
-	// ID uniquely identifies the event instance. The in-memory bus leaves it
-	// empty.
+	// ID uniquely identifies the event instance. The in-memory bus leaves it empty.
 	ID        string      `json:"id,omitempty"`
 	Type      EventType   `json:"type"`
 	Seq       int64       `json:"seq"`
@@ -81,10 +50,7 @@ type Event struct {
 // ErrBusClosed is returned by Publish/Subscribe after Close has been called.
 var ErrBusClosed = errors.New("event bus closed")
 
-// Handler receives a single event. Handlers MUST NOT block for long periods:
-// the in-memory implementation invokes handlers synchronously in publish order,
-// so a slow handler would stall publishers. Handlers must be safe for concurrent
-// use (the same handler instance can be invoked from multiple publishers).
+// Handler receives a single event.
 type Handler func(ctx context.Context, event Event) error
 
 // Bus is the event-dispatch abstraction.

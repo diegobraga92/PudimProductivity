@@ -30,13 +30,9 @@ type RedisConfig struct {
 }
 
 // RedisBus implements Bus over Redis pub/sub so events produced on one backend
-// instance are received by every other instance's sync hub. It is a
-// best-effort, at-most-once fabric: messages published while a subscriber is
-// disconnected are dropped (clients recover via the REST catch-up path).
-//
-// Publish broadcasts to the channel; Subscribe runs a single subscriber
-// goroutine (with go-redis automatic reconnection) and dispatches only
-// messages from OTHER instances to the registered handlers.
+// instance are received by every other instance's sync hub.
+// Messages published while a subscriber is disconnected are dropped
+// (clients recover via the REST catch-up path).
 type RedisBus struct {
 	client  *redis.Client
 	channel string
@@ -116,10 +112,7 @@ func (b *RedisBus) Publish(ctx context.Context, typ EventType, payload interface
 	return client.Publish(ctx, b.channel, data).Err()
 }
 
-// Subscribe registers a handler for remote events. The subscriber goroutine is
-// started on the first subscription and stays alive (reconnecting via go-redis)
-// until Close. The returned function unsubscribes the handler and is safe to
-// call multiple times.
+// Subscribe registers a handler for remote events.
 func (b *RedisBus) Subscribe(ctx context.Context, handler Handler) (func(), error) {
 	if handler == nil {
 		return func() {}, nil
@@ -165,8 +158,7 @@ func (b *RedisBus) runSubscriber(ctx context.Context, pubsub *redis.PubSub) {
 }
 
 // handleMessage decodes a channel message, filters self-origin messages and
-// dispatches the rest to the registered handlers. Split out so tests can drive
-// it deterministically.
+// dispatches the rest to the registered handlers.
 func (b *RedisBus) handleMessage(raw string) {
 	var msg wireMessage
 	if err := json.Unmarshal([]byte(raw), &msg); err != nil {
@@ -212,8 +204,7 @@ func (b *RedisBus) Close() error {
 	b.client = nil
 	b.mu.Unlock()
 
-	// pubsub.Close() is what actually ends the Channel() loop; cancelling the
-	// context alone is not enough to wake go-redis's receive goroutine.
+	// pubsub.Close() is what actually ends the Channel() loop.
 	if pubsub != nil {
 		_ = pubsub.Close()
 	}

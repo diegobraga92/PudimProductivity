@@ -11,14 +11,6 @@ import (
 // implements Bus, so producers (e.g. the task service) keep a single reference
 // while the real-time sync hub and the optional cross-instance Redis fabric
 // each get their own copy of every event.
-//
-// Publish never blocks or fails because of a slow or unavailable child bus:
-// each child is invoked in its own goroutine and errors are only logged. This
-// is the core of the graceful-degradation story — a down Redis must not delay
-// WebSocket fan-out.
-//
-// Subscribe on the composite is intentionally unsupported; consumers subscribe
-// to the specific child bus they care about.
 type CompositeBus struct {
 	buses []Bus
 }
@@ -30,7 +22,7 @@ func NewCompositeBus(buses ...Bus) *CompositeBus {
 }
 
 // Publish delivers the event to every child bus concurrently. Returns nil
-// always — child failures are logged, never propagated to the caller.
+// always, child failures are logged, never propagated to the caller.
 func (c *CompositeBus) Publish(ctx context.Context, typ EventType, payload interface{}) error {
 	var wg sync.WaitGroup
 	for _, b := range c.buses {

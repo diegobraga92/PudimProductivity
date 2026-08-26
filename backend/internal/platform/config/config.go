@@ -108,8 +108,10 @@ func ParseAllowedOrigins(raw string) map[string]bool {
 	return set
 }
 
+// TODO: Check about removing this after keys go completely to the DB.
+
 // LoadScoreProviderConfig reads the score-provider selection from the
-// environment. Keys are optional: an empty key means the provider is configured
+// environment. Keys are optional, an empty key means the provider is configured
 // but unusable, which the scoring registry surfaces as a startup warning.
 func LoadScoreProviderConfig() ScoreProviderConfig {
 	return ScoreProviderConfig{
