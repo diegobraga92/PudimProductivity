@@ -161,14 +161,6 @@ func main() {
 		rabbitBus = rb
 		composite = eventbus.NewCompositeBus(inMemoryBus, rb)
 
-		emails := []notification.EmailDeliverer{
-			notification.NewEmailSender(notification.EmailConfig{
-				SMTPHost: os.Getenv("SMTP_HOST"),
-				SMTPPort: os.Getenv("SMTP_PORT"),
-				From:     os.Getenv("SMTP_FROM"),
-			}),
-		}
-
 		var pushes []notification.PushDeliverer
 		if fcm, err := notification.NewFCMSender(context.Background(), notification.FCMConfig{}); err != nil {
 			log.Warn().Err(err).Msg("fcm sender disabled")
@@ -182,8 +174,7 @@ func main() {
 			notifRepo = notification.NewPostgresRepo(pool)
 		}
 
-		notifWorker = notification.NewWorker(rb, emails, pushes, notifRepo, notification.Recipients{
-			Email:     os.Getenv("NOTIFY_EMAIL"),
+		notifWorker = notification.NewWorker(rb, pushes, notifRepo, notification.Recipients{
 			PushToken: os.Getenv("FCM_DEVICE_TOKEN"),
 		})
 		go func() {

@@ -26,7 +26,6 @@ flowchart LR
     API -->|"OTLP/HTTP traces"| JAEGER[Jaeger<br/>tracing]
 
     AMQP -->|"notifications queue"| WORKER[Notifications Worker<br/>in-process Go consumer]
-    WORKER -->|"SMTP"| MAILPIT[Mailpit<br/>local email capture]
     WORKER -->|"FCM HTTP v1"| FCM[Firebase Cloud Messaging]
 
     PROM[Prometheus<br/>scrapes :9090] -->|"metrics"| API
@@ -45,7 +44,6 @@ flowchart LR
 | **PostgreSQL** | External system | System of record. Migrations via embedded SQL (`embed.FS`). |
 | **Redis** | External system | Optional read-through cache for the task list API. Degrades gracefully. |
 | **RabbitMQ** | External system | Durable event backbone for async notifications (ADR 005). Degrades gracefully. |
-| **Mailpit** | External system | Dev SMTP capture (UI on :8025). Production would use a real SMTP provider. |
 | **Firebase Cloud Messaging** | External system | Push notifications to the Android client. Optional (no-op without credentials). |
 | **Prometheus / Grafana / Jaeger** | External systems | Observability stack (metrics on :9090, RED + business-KPI dashboards, OTLP traces). |
 

@@ -39,16 +39,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # Mailpit — local email capture for the Phase 3 notifications worker.
-  # UI: http://localhost:8025 ; SMTP: localhost:1025
-  mailpit:
-    image: axllent/mailpit:latest  # https://hub.docker.com/r/axllent/mailpit
-    container_name: pudim-mailpit
-    restart: unless-stopped
-    ports:
-      - "1025:1025" # SMTP
-      - "8025:8025" # Web UI
-
   # Jaeger for OpenTelemetry traces (Phase 6). Start with:
   #   docker compose --profile tracing up -d
   # then open http://localhost:16686 to view spans. The backend exports spans
@@ -79,12 +69,8 @@ services:
       DATABASE_URL: "postgres://${POSTGRES_USER:-pudim}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-pudimproductivity}?sslmode=disable"
       REDIS_URL: "redis://redis:6379/0"
       LOG_LEVEL: "${LOG_LEVEL:-debug}"
-      # Phase 3 notifications: RabbitMQ + Mailpit (SMTP) + optional FCM.
+      # Phase 3 notifications: RabbitMQ + optional FCM.
       RABBITMQ_URL: "amqp://${RABBITMQ_USER:-pudim}:${RABBITMQ_PASS}@rabbitmq:5672/"
-      SMTP_HOST: "mailpit"
-      SMTP_PORT: "1025"
-      SMTP_FROM: "pudim@localhost"
-      NOTIFY_EMAIL: "${NOTIFY_EMAIL:-pudim@localhost}"
       FCM_DEVICE_TOKEN: "${FCM_DEVICE_TOKEN:-}"
       # OpenTelemetry OTLP/HTTP endpoint. Empty by default (spans go to stdout
       # only). Set to http://jaeger:4318 in .env and run `docker compose

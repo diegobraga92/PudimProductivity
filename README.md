@@ -13,8 +13,8 @@ Prerequisites:
 # Copy environment file and edit the passwords
 cp .env.example .env
 
-# Start the full dev stack — infrastructure (PostgreSQL, Redis, RabbitMQ,
-# Mailpit) plus the backend and frontend dev servers
+# Start the full dev stack — infrastructure (PostgreSQL, Redis, RabbitMQ)
+# plus the backend and frontend dev servers
 ./scripts/run.sh
 ```
 
@@ -40,7 +40,7 @@ cp .env.example .env
 # ⚠️ Edit .env now — change POSTGRES_PASSWORD and RABBITMQ_PASS (both default
 #    to "change_me_in_production"). All host ports are configurable there too.
 
-# 3. Start all services (PostgreSQL, Redis, RabbitMQ, Mailpit, Backend, Frontend)
+# 3. Start all services (PostgreSQL, Redis, RabbitMQ, Backend, Frontend)
 docker compose up -d
 
 # 4. Access the app from any device on your LAN
@@ -51,10 +51,9 @@ docker compose up -d
 The frontend (nginx) serves the built React app and proxies `/api/` requests to the backend. All services are wired together via Docker Compose networking. The first `docker compose up -d` builds the backend (Go) and frontend (React) images, so allow a few minutes before the app responds.
 
 > ⚠️ **LAN exposure note:** the RabbitMQ management UI (`http://<server-ip>:15672`)
-> and Mailpit web UI (`http://<server-ip>:8025`) are also reachable from any
-> device on your LAN. That's fine for a personal network; if you want them
-> private, remove their `ports:` entries from `docker-compose.yml` or block them
-> at the firewall.
+> is also reachable from any device on your LAN. That's fine for a personal
+> network; if you want it private, remove its `ports:` entry from
+> `docker-compose.yml` or block it at the firewall.
 
 ### Services
 
@@ -68,8 +67,6 @@ All host ports are **configurable via `.env`** — see `.env.example` for defaul
 | Redis      | 6379       | Cache / real-time sync store       |
 | RabbitMQ   | 5672       | Async notification event bus       |
 |            | 15672      | RabbitMQ management UI (web)       |
-| Mailpit    | 1025       | Local SMTP (email capture)         |
-|            | 8025       | Mailpit web UI (sent-mail preview) |
 
 ### Desktop app (Electron)
 
@@ -142,8 +139,8 @@ Using API-first, `api/openapi/` should be the source of truth.
 
 - Task events fan out to **RabbitMQ** (`task.events` exchange) via a
   `CompositeBus` alongside the in-memory WebSocket bus. A worker in
-  `internal/notification/` consumes them and sends email (via **Mailpit** in
-  dev) and push (Firebase Cloud Messaging).
+  `internal/notification/` consumes them and sends push notifications
+  (Firebase Cloud Messaging).
 - **Idempotency:** the `notifications` table (`UNIQUE(event_id, channel)`)
   dedupes at-least-once redeliveries.
 - **Retry + DLQ:** failed sends are dead-lettered and republished up to 5 times

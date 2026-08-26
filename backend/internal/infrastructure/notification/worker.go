@@ -12,8 +12,6 @@ import (
 // Recipients configures who receives notifications. The app is single-user in
 // this phase; per-user targeting arrives with auth (threat model P0 / Phase 8).
 type Recipients struct {
-	// Email is the recipient address for email notifications.
-	Email string
 	// PushToken is a device registration token for push notifications.
 	PushToken string
 }
@@ -23,7 +21,6 @@ type Recipients struct {
 // adapter rejects the message into the dead-letter queue for retry.
 type Worker struct {
 	bus    eventbus.Bus
-	emails []EmailDeliverer
 	pushes []PushDeliverer
 	repo   Repo
 	recip  Recipients
@@ -31,10 +28,9 @@ type Worker struct {
 }
 
 // NewWorker creates a notifications worker.
-func NewWorker(bus eventbus.Bus, emails []EmailDeliverer, pushes []PushDeliverer, repo Repo, recip Recipients) *Worker {
+func NewWorker(bus eventbus.Bus, pushes []PushDeliverer, repo Repo, recip Recipients) *Worker {
 	return &Worker{
 		bus:    bus,
-		emails: emails,
 		pushes: pushes,
 		repo:   repo,
 		recip:  recip,
@@ -48,7 +44,7 @@ func (w *Worker) Run(ctx context.Context) error {
 		return fmt.Errorf("notification worker: subscribe: %w", err)
 	}
 	w.unsub = unsub
-	log.Info().Str("email", w.recip.Email).Msg("notification worker started")
+	log.Info().Str("push_token", w.recip.PushToken).Msg("notification worker started")
 	<-ctx.Done()
 	return nil
 }
@@ -68,22 +64,12 @@ func (w *Worker) handleEvent(ctx context.Context, event eventbus.Event) error {
 		return nil // not a notifiable event type
 	}
 
-	var firstErr error
-	if w.recip.Email != "" {
-		if err := w.sendOnce(ctx, event, "email", func() error {
-			return w.sendEmail(ctx, title, body)
-		}); err != nil {
-			firstErr = err
-		}
-	}
 	if w.recip.PushToken != "" {
-		if err := w.sendOnce(ctx, event, "push", func() error {
+		return w.sendOnce(ctx, event, "push", func() error {
 			return w.sendPush(ctx, title, body)
-		}); err != nil {
-			firstErr = err
-		}
+		})
 	}
-	return firstErr
+	return nil
 }
 
 // sendOnce checks idempotency, sends via the given closure, and records the
@@ -111,16 +97,6 @@ func (w *Worker) sendOnce(ctx context.Context, event eventbus.Event, channel str
 
 	taskID := extractTaskID(event)
 	return w.repo.MarkSent(ctx, eventID, channel, string(event.Type), taskID)
-}
-
-func (w *Worker) sendEmail(ctx context.Context, title, body string) error {
-	for _, s := range w.emails {
-		if err := s.SendEmail(ctx, w.recip.Email, title, body); err != nil {
-			log.Warn().Ctx(ctx).Err(err).Msg("email send failed")
-			return err
-		}
-	}
-	return nil
 }
 
 func (w *Worker) sendPush(ctx context.Context, title, body string) error {

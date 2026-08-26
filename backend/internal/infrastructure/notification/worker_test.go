@@ -9,19 +9,19 @@ import (
 	"github.com/diegobraga92/pudimproductivity/backend/internal/platform/eventbus"
 )
 
-type recordingEmailer struct {
+type recordingPusher struct {
 	mu   sync.Mutex
 	sent []string
 }
 
-func (r *recordingEmailer) SendEmail(_ context.Context, to, subject, body string) error {
+func (r *recordingPusher) SendPush(_ context.Context, token, title, body string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.sent = append(r.sent, subject+" | "+body)
+	r.sent = append(r.sent, title+" | "+body)
 	return nil
 }
 
-func (r *recordingEmailer) count() int {
+func (r *recordingPusher) count() int {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	return len(r.sent)
@@ -58,9 +58,9 @@ func TestWorker_SendsOncePerEventID(t *testing.T) {
 	bus := eventbus.NewInMemoryBus()
 	t.Cleanup(func() { _ = bus.Close() })
 
-	emailer := &recordingEmailer{}
-	worker := NewWorker(bus, []EmailDeliverer{emailer}, []PushDeliverer{NoopSender{}},
-		NewMemoryRepo(), Recipients{Email: "a@b.c"})
+	pusher := &recordingPusher{}
+	worker := NewWorker(bus, []PushDeliverer{pusher},
+		NewMemoryRepo(), Recipients{PushToken: "tok-1"})
 
 	ctx := context.Background()
 
@@ -76,15 +76,15 @@ func TestWorker_SendsOncePerEventID(t *testing.T) {
 	if err := worker.handleEvent(ctx, evt); err != nil {
 		t.Fatalf("first handleEvent: %v", err)
 	}
-	if emailer.count() != 1 {
-		t.Fatalf("expected 1 email, got %d", emailer.count())
+	if pusher.count() != 1 {
+		t.Fatalf("expected 1 push, got %d", pusher.count())
 	}
 
 	if err := worker.handleEvent(ctx, evt); err != nil {
 		t.Fatalf("second handleEvent: %v", err)
 	}
-	if emailer.count() != 1 {
-		t.Fatalf("duplicate redelivery should be deduped, got %d emails", emailer.count())
+	if pusher.count() != 1 {
+		t.Fatalf("duplicate redelivery should be deduped, got %d pushes", pusher.count())
 	}
 }
 
@@ -92,9 +92,9 @@ func TestWorker_HandlerErrorPropagatesForRetry(t *testing.T) {
 	bus := eventbus.NewInMemoryBus()
 	t.Cleanup(func() { _ = bus.Close() })
 
-	failing := failingEmailer{}
-	worker := NewWorker(bus, []EmailDeliverer{failing}, nil,
-		NewMemoryRepo(), Recipients{Email: "a@b.c"})
+	failing := failingPusher{}
+	worker := NewWorker(bus, []PushDeliverer{failing},
+		NewMemoryRepo(), Recipients{PushToken: "tok-1"})
 
 	err := worker.handleEvent(context.Background(), eventbus.Event{
 		ID:      "msg-fail",
@@ -106,8 +106,8 @@ func TestWorker_HandlerErrorPropagatesForRetry(t *testing.T) {
 	}
 }
 
-type failingEmailer struct{}
+type failingPusher struct{}
 
-func (failingEmailer) SendEmail(context.Context, string, string, string) error {
+func (failingPusher) SendPush(context.Context, string, string, string) error {
 	return context.DeadlineExceeded
 }
