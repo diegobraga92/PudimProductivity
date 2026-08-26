@@ -46,7 +46,7 @@ function buildWsUrl(lastSeq: number): string {
  * - Reference-counted: `connect()`/`close()` are safe to call from multiple
  *   consumers; the socket is only torn down when the last consumer disconnects.
  */
-class SyncClient {
+export class SyncClient {
   private ws: WebSocket | null = null;
   private lastSeq = 0;
   private reconnectDelayMs = INITIAL_RECONNECT_DELAY_MS;
@@ -67,6 +67,11 @@ class SyncClient {
     this.refCount += 1;
     if (this.refCount === 1) {
       this.stopped = false;
+      // Cancel any pending reconnect before opening.
+      if (this.reconnectTimer !== null) {
+        window.clearTimeout(this.reconnectTimer);
+        this.reconnectTimer = null;
+      }
       this.open();
     }
   }
@@ -105,6 +110,9 @@ class SyncClient {
   private open(): void {
     if (this.stopped) return;
 
+    // A new connection replaces any existing one instead of joining it.
+    this.ws?.close();
+
     let socket: WebSocket;
     try {
       socket = new WebSocket(buildWsUrl(this.lastSeq));
@@ -124,7 +132,9 @@ class SyncClient {
     };
 
     socket.onclose = () => {
-      if (this.ws === socket) this.ws = null;
+      // Only the current socket may flip status and schedule a reconnect.
+      if (this.ws !== socket) return;
+      this.ws = null;
       this.emitStatus(false);
       if (!this.stopped) this.scheduleReconnect();
     };
