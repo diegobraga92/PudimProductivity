@@ -1,10 +1,5 @@
 // Package cache provides a small Redis-backed read-through cache with
 // namespace-scoped version invalidation.
-//
-// Entries are stored as JSON under a caller-chosen key. Mutations bump a
-// per-namespace version (INCR); readers prefix keys with that version, so a
-// bump atomically invalidates every entry in the namespace without having to
-// enumerate or delete keys. Old entries simply expire via their TTL.
 package cache
 
 import (
@@ -27,7 +22,7 @@ type Cache struct {
 
 // New connects to Redis and verifies reachability with a ping. It returns an
 // error when Redis is unavailable so the caller can disable caching
-// gracefully. A non-positive ttl falls back to the default (30s).
+// gracefully. A non-positive ttl falls back to the default.
 func New(ctx context.Context, redisURL string, ttl time.Duration) (*Cache, error) {
 	if redisURL == "" {
 		return nil, errors.New("cache: empty redis url")
@@ -48,8 +43,7 @@ func New(ctx context.Context, redisURL string, ttl time.Duration) (*Cache, error
 }
 
 // Get unmarshals the cached JSON value into dest. It returns (true, nil) on a
-// hit and (false, nil) on a miss. A corrupt entry is reported as an error; the
-// caller should treat it as a miss and overwrite the key.
+// hit and (false, nil) on a miss. A corrupt entry is reported as an error.
 func (c *Cache) Get(ctx context.Context, key string, dest any) (bool, error) {
 	data, err := c.client.Get(ctx, key).Bytes()
 	if err != nil {
