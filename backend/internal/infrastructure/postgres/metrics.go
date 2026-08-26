@@ -13,8 +13,7 @@ import (
 )
 
 // metricsTracer is a pgx.QueryTracer that records per-query count and duration
-// metrics for every statement executed through the pool — no repository changes
-// needed. Operation labels are derived from the SQL (verb + primary table).
+// metrics for every statement executed through the pool.
 type metricsTracer struct {
 	metrics *observability.Metrics
 }
@@ -41,7 +40,7 @@ func (t *metricsTracer) TraceQueryEnd(ctx context.Context, _ *pgx.Conn, _ pgx.Tr
 }
 
 // ConnectPoolWithMetrics is ConnectPool with a query tracer attached, so every
-// statement's count + latency is exposed on the :9090 metrics endpoint.
+// statement's count + latency is exposed on the metrics endpoint.
 func ConnectPoolWithMetrics(ctx context.Context, dbCfg config.DatabaseConfig, metrics *observability.Metrics) (*pgxpool.Pool, error) {
 	poolConfig, err := pgxpool.ParseConfig(dbCfg.URL)
 	if err != nil {

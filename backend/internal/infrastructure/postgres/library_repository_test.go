@@ -133,8 +133,7 @@ func TestLibraryRepository_ImportRollsBackOnError(t *testing.T) {
 	ctx, pool := postgrestest.SetupPool(t)
 	repo := postgres.NewLibraryRepository(pool)
 
-	// Second item is invalid (empty name would still insert — use a duplicate
-	// UUID to force a constraint violation mid-batch instead).
+	// Second item is invalid.
 	dup := "dddddddd-dddd-dddd-dddd-dddddddddddd"
 	good, _ := library.NewItem(dup, "Good", library.MediaTypeMovie, nil, false, "", nil, "", "")
 	if err := repo.Create(ctx, good); err != nil {
@@ -160,12 +159,6 @@ func TestLibraryRepository_ImportRollsBackOnError(t *testing.T) {
 	}
 }
 
-// TestLibraryRepository_ScoreSourceNotNull guards the Library-page regression
-// where GET /api/v1/library returned 500 ("can't scan into dest[8] (col:
-// score_source): cannot scan NULL into *string"). Migration 022 declared
-// score_source TEXT NULL while the Go domain models it as a non-nullable string
-// (empty = no source), so rows written before migration 022 broke the list
-// query. Migration 025 backfills NULLs and enforces NOT NULL DEFAULT ”.
 func TestLibraryRepository_ScoreSourceNotNull(t *testing.T) {
 	postgrestest.SkipIfShort(t)
 	ctx, pool := postgrestest.SetupPool(t)

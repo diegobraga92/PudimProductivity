@@ -10,9 +10,6 @@ import (
 	"github.com/diegobraga92/pudimproductivity/backend/internal/infrastructure/postgres/postgrestest"
 )
 
-// TestReCompleteAfterUncomplete guards against the Phase 9c regression where the
-// soft-delete tombstone kept occupying the UNIQUE(task_id, completed_date) key,
-// making a completion impossible to re-check after it was unchecked (false 409).
 func TestReCompleteAfterUncomplete(t *testing.T) {
 	postgrestest.SkipIfShort(t)
 	ctx, pool := postgrestest.SetupPool(t)
@@ -35,8 +32,7 @@ func TestReCompleteAfterUncomplete(t *testing.T) {
 		t.Fatalf("UncompleteTask: %v", err)
 	}
 
-	// 3. Re-checking the same date must succeed — this was the bug: the
-	//    tombstone row blocked re-insertion with a false "already completed".
+	// 3. Re-checking the same date must succeed.
 	if _, err := service.CompleteTask(ctx, habit.ID, date, nil); err != nil {
 		t.Fatalf("re-CompleteTask after uncomplete: %v", err)
 	}

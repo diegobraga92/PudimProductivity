@@ -38,8 +38,7 @@ func scanRecipe(scanner interface{ Scan(dest ...any) error }) (*recipedomain.Rec
 	return r, nil
 }
 
-// scanRecipeRow scans the List projection: the recipe columns plus the
-// aggregated tags array in a single Scan call.
+// scanRecipeRow scans the recipe columns plus the aggregated tags array in a single Scan call.
 func scanRecipeRow(scanner interface{ Scan(dest ...any) error }) (*recipedomain.Recipe, error) {
 	r := &recipedomain.Recipe{}
 	var imageURL, sourceURL *string
@@ -290,7 +289,7 @@ func (r *RecipeRepository) Update(ctx context.Context, recipe *recipedomain.Reci
 		return recipedomain.ErrNotFound
 	}
 
-	// Replace children wholesale (delete then insert) — simpler and idempotent.
+	// Replace children wholesale, simpler and idempotent.
 	for _, table := range []string{"recipe_tags", "recipe_ingredients", "recipe_steps"} {
 		if _, err := tx.Exec(ctx, `DELETE FROM `+table+` WHERE recipe_id = $1`, recipe.ID); err != nil {
 			return fmt.Errorf("clear %s: %w", table, err)

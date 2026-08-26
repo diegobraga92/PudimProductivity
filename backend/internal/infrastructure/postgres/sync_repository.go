@@ -53,7 +53,7 @@ func (r *SyncRepository) loadTasks(ctx context.Context, since time.Time, cs *per
 
 	for rows.Next() {
 		t := &task.Task{}
-		// pgx cannot scan a DATE column into *string directly in binary mode —
+		// pgx cannot scan a DATE column into *string directly in binary mode,
 		// mirror task.scanTask and use an intermediate *time.Time for
 		// scheduled_date (start_time/end_time TIME columns scan into *string fine).
 		var scheduledDate *time.Time

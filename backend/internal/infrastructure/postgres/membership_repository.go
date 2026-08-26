@@ -8,9 +8,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// MembershipRepository answers "which task lists can this user access?" from
-// task_lists.owner_id + task_list_shares.shared_with. It implements
-// membership.Repository and satisfies the sync hub's MembershipResolver.
+// MembershipRepository answers "which task lists can this user access?".
 type MembershipRepository struct {
 	pool *pgxpool.Pool
 }
@@ -21,7 +19,7 @@ func NewMembershipRepository(pool *pgxpool.Pool) *MembershipRepository {
 }
 
 // ListIDsForUser returns the IDs of the task lists the user owns or is a
-// member of. Admins see every list (dev-mode role model).
+// member of. Admins see every list.
 func (r *MembershipRepository) ListIDsForUser(ctx context.Context, userID, role string) ([]string, error) {
 	if userID == "" {
 		return []string{}, nil
@@ -32,10 +30,6 @@ func (r *MembershipRepository) ListIDsForUser(ctx context.Context, userID, role 
 		err  error
 	)
 	if role == "admin" {
-		// This branch has no $1 placeholder, so userID must not be passed:
-		// pgx uses the extended protocol whenever arguments are present, and
-		// PostgreSQL rejects a bind that supplies more parameters than the
-		// statement declares.
 		rows, err = r.pool.Query(ctx, `SELECT id FROM task_lists WHERE deleted_at IS NULL`)
 	} else {
 		rows, err = r.pool.Query(ctx, `

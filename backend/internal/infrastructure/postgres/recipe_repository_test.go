@@ -37,7 +37,7 @@ func TestRecipeRepository_CRUD(t *testing.T) {
 		t.Fatalf("GetByID returned incomplete recipe: %+v", got)
 	}
 
-	// Update with different children — old ones must be replaced, not merged.
+	// Update with different children, old ones must be replaced, not merged.
 	updated, err := recipedomain.NewRecipe(
 		recipe.ID, "Pancakes v2", "Still fluffy", recipedomain.DifficultyMedium,
 		15, 20, 6,

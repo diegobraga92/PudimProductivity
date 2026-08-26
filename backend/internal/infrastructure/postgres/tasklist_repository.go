@@ -135,7 +135,6 @@ func (r *TaskListRepository) Update(ctx context.Context, list *tasklist.TaskList
 }
 
 func (r *TaskListRepository) Delete(ctx context.Context, id string) error {
-	// Phase 9c: soft delete so offline clients can learn about the deletion.
 	query := `UPDATE task_lists SET deleted_at = NOW() WHERE id = $1 AND deleted_at IS NULL`
 
 	result, err := r.pool.Exec(ctx, query, id)
@@ -149,8 +148,6 @@ func (r *TaskListRepository) Delete(ctx context.Context, id string) error {
 
 	return nil
 }
-
-// --- Phase 8: collaboration / sharing ---
 
 func (r *TaskListRepository) GetMemberRole(ctx context.Context, listID, userID string) (tasklist.Role, error) {
 	// Owner check first.
@@ -204,7 +201,6 @@ func (r *TaskListRepository) CreateShare(ctx context.Context, share *tasklist.Sh
 }
 
 func (r *TaskListRepository) DeleteShare(ctx context.Context, listID, userID string) error {
-	// Phase 9c: soft delete so offline clients can learn about the removal.
 	result, err := r.pool.Exec(ctx,
 		`UPDATE task_list_shares SET deleted_at = NOW() WHERE list_id = $1 AND shared_with = $2 AND deleted_at IS NULL`,
 		listID, userID,

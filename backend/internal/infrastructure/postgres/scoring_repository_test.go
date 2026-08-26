@@ -34,7 +34,7 @@ func TestPostgresRepository_ConfigLifecycle(t *testing.T) {
 		t.Fatalf("providers seeded = %+v, want omdb+rawg", names)
 	}
 
-	// Save a config + provider; verify it persists and marks saved.
+	// Save a config + provider. Verify it persists and marks saved.
 	now := time.Now().UTC()
 	want := scoring.Config{
 		MovieProvider:  "omdb",

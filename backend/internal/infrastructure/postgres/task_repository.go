@@ -259,7 +259,7 @@ func (r *TaskRepository) Update(ctx context.Context, task *taskdomain.Task) erro
 }
 
 func (r *TaskRepository) Delete(ctx context.Context, id string) error {
-	// Phase 9c: soft delete so offline clients can learn about the deletion
+	// Soft delete so offline clients can learn about the deletion
 	// through the incremental sync endpoint.
 	query := `UPDATE tasks SET deleted_at = NOW() WHERE id = $1 AND deleted_at IS NULL`
 
@@ -276,10 +276,8 @@ func (r *TaskRepository) Delete(ctx context.Context, id string) error {
 }
 
 func (r *TaskRepository) CreateCompletion(ctx context.Context, completion *taskdomain.TaskCompletion) error {
-	// Conflict target is the partial unique index (migration 024) that only
-	// constrains active rows (deleted_at IS NULL). A soft-deleted tombstone no
-	// longer blocks re-completing the same date after an uncomplete, while a
-	// genuinely active completion still yields taskdomain.ErrCompletionAlreadyExists.
+	// A soft-deleted tombstone no longer blocks re-completing the same date after an uncomplete,
+	// while a genuinely active completion still yields taskdomain.ErrCompletionAlreadyExists.
 	query := `
 		INSERT INTO task_completions (id, task_id, completed_date, created_at)
 		VALUES ($1, $2, $3, $4)
@@ -304,7 +302,6 @@ func (r *TaskRepository) CreateCompletion(ctx context.Context, completion *taskd
 }
 
 func (r *TaskRepository) DeleteCompletion(ctx context.Context, taskID string, date time.Time) error {
-	// Phase 9c: soft delete so offline clients can learn about the removal.
 	query := `UPDATE task_completions SET deleted_at = NOW() WHERE task_id = $1 AND completed_date = $2 AND deleted_at IS NULL`
 
 	result, err := r.pool.Exec(ctx, query, taskID, date)

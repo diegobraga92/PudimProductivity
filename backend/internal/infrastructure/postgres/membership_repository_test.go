@@ -8,8 +8,6 @@ import (
 	"github.com/diegobraga92/pudimproductivity/backend/internal/infrastructure/postgres/postgrestest"
 )
 
-// TestMembershipRepository_ListIDsForUser exercises the owner + shared scoping
-// that the sync hub relies on for event dispatch and presence.
 func TestMembershipRepository_ListIDsForUser(t *testing.T) {
 	postgrestest.SkipIfShort(t)
 	ctx, pool := postgrestest.SetupPool(t)
@@ -29,7 +27,7 @@ func TestMembershipRepository_ListIDsForUser(t *testing.T) {
 		t.Fatalf("seed: %v", err)
 	}
 
-	// Alice owns list 1 and is shared list 2; her soft-deleted list is excluded.
+	// Alice owns list 1 and is shared list 2, her soft-deleted list is excluded.
 	ids, err := repo.ListIDsForUser(ctx, "alice", "user")
 	if err != nil {
 		t.Fatalf("ListIDsForUser(alice): %v", err)

@@ -97,8 +97,7 @@ var backupTables = []backupTable{
 	},
 }
 
-// BackupRepository exports and restores the non-sensitive application data. It
-// implements backup.Repository.
+// BackupRepository exports and restores the non-sensitive application data.
 type BackupRepository struct {
 	pool *pgxpool.Pool
 }
