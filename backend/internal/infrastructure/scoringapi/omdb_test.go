@@ -16,8 +16,6 @@ import (
 func ip(v int) *int { return &v }
 
 // omdbTestServer serves the search (s=) and detail (i=) endpoints OMDb exposes.
-// detail returns the rating for every title; set wantNotFound to simulate OMDb
-// reporting no matches.
 func omdbTestServer(t *testing.T, wantNotFound bool) (*httptest.Server, *string) {
 	t.Helper()
 	var lastSearch string

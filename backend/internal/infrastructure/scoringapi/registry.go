@@ -1,8 +1,5 @@
 // Package scoring implements configurable rating-provider adapters for the
-// library module. It follows ADR 007: thin, vendor-scoped HTTP clients behind
-// the library.ScoreLookupClient consumer-side interface. Which provider serves
-// which media type is decided at startup from config.ScoreProviderConfig, so
-// swapping providers (or adding new ones) never touches the library module.
+// library module.
 package scoringapi
 
 import (
@@ -21,8 +18,7 @@ type ProviderConfig struct {
 	BaseURL string
 }
 
-// Constructor builds a provider client from its config. It must return a
-// non-nil error when required settings (e.g. the API key) are missing.
+// Constructor builds a provider client from its config.
 type Constructor func(ctx context.Context, cfg ProviderConfig) (library.ScoreLookupClient, error)
 
 // registry holds every built-in provider constructor keyed by provider name.
