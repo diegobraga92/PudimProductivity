@@ -4,15 +4,10 @@ import type { components } from "./generated/health-v1";
 export type HealthResponse = components["schemas"]["HealthResponse"];
 
 /**
- * Development-only auth headers, mirroring the backend's `shared.AuthMiddleware`
- * dev-mode contract (X-User-ID / X-User-Role). The backend currently trusts
- * these headers; in production they would be replaced by a JWT/session credential.
- *
- * Mutating endpoints (POST/PUT/DELETE) are protected by `RequireRole("admin", "user")`,
- * so clients must present these headers to create/update/delete tasks. Admin-only
- * endpoints (feature-flag toggles, score-provider settings) additionally require
- * role "admin" — the dev role is stored in localStorage so the admin UI can switch
- * it (see `setDevRole`).
+ * Dev-mode identity headers mirroring the backend's AuthMiddleware
+ * (X-User-ID / X-User-Role). Mutating endpoints require role "user"; admin
+ * endpoints (feature-flag toggles, score-provider settings) require "admin" —
+ * the dev role is persisted in localStorage so the admin UI can switch it.
  */
 export const DEV_USER_ID = "dev-user";
 const DEV_USER_ROLE = "user";

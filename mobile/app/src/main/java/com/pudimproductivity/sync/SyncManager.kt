@@ -17,11 +17,11 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 /**
- * Phase 9c offline sync:
+ * Offline sync:
  *
  *  - **push** local dirty rows to the server via the existing REST endpoints
  *    (create/update/delete/complete). On success the rows are marked clean.
- *    HTTP 409 from a merge (Phase 8 LWW) is treated as a conflict: the server
+ *    HTTP 409 from a merge is treated as a conflict: the server
  *    state is pulled in the next pass and the local dirty flag is cleared.
  *  - **pull** incremental changes from `GET /api/v1/sync?since=...` and apply
  *    them to the local SQLite database (upsert active rows, tombstone deleted).

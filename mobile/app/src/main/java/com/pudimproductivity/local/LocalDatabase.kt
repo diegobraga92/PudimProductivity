@@ -7,7 +7,7 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 
 /**
- * Local SQLite database for offline-first operation (Phase 9c).
+ * Local SQLite database for offline-first operation.
  *
  * Chosen over Room because AGP 9.1's built-in Kotlin is incompatible with KSP
  * (Room's annotation processor) and migrating the whole build off built-in
@@ -27,7 +27,7 @@ class LocalDatabase(context: Context) : SQLiteOpenHelper(context.applicationCont
         // push picks create vs update correctly for offline-created rows.
         // v3: added planner scheduling columns (start_time, end_time, color,
         // scheduled_date, alarm_minutes) so the local alarm scheduler can fire
-        // notifications offline without a backend push channel.
+        // notifications offline.
         const val DB_VERSION = 3
 
         const val META_KEY_LAST_SYNC = "last_sync_ts"

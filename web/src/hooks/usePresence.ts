@@ -3,7 +3,7 @@ import { getListPresence } from "../api/collab";
 import { syncClient, type WsEvent } from "../api/sync";
 
 /**
- * Tracks which users are online for a set of task lists (Phase 8).
+ * Tracks which users are online for a set of task lists.
  *
  * - Bootstraps from the REST presence snapshot (`GET /presence/{listId}`).
  * - Applies presence.online / presence.offline events from the WebSocket

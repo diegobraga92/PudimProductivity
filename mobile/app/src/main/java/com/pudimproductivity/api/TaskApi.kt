@@ -74,7 +74,7 @@ data class UpdateTaskListRequest(
     val description: String? = null
 )
 
-/** Phase 8: collaboration data classes. */
+/** Collaboration data classes. */
 data class ShareTaskListRequest(
     val shared_with: String,
     val role: String
@@ -165,7 +165,7 @@ interface TaskService {
         @Query("type") type: String? = null
     ): List<Task>
 
-    // Phase 8: collaboration — sharing + presence.
+    // Collaboration — sharing + presence.
     @POST("task-lists/{listId}/share")
     suspend fun shareTaskList(
         @Path("listId") listId: String,
@@ -183,14 +183,6 @@ interface TaskService {
 
     @GET("presence/{listId}")
     suspend fun getListPresence(@Path("listId") listId: String): ListPresenceResponse
-
-    // Phase 8: CRDT merge (LWW). Throws HttpException with the winning task body
-    // on HTTP 409 — callers reconcile against the error body.
-    @PATCH("tasks/{taskId}/merge")
-    suspend fun mergeTask(
-        @Path("taskId") taskId: String,
-        @Body request: UpdateTaskRequest
-    ): Task
 
     // Batch completions
     @GET("tasks/completions")

@@ -17,7 +17,7 @@ import com.pudimproductivity.i18n.Localization
 import kotlinx.coroutines.launch
 
 /**
- * Phase 8: share dialog for a task list. Owners can invite (editor/viewer) and
+ * Share dialog for a task list. Owners can invite (editor/viewer) and
  * revoke access; all members see the member list with live presence dots.
  */
 @Composable

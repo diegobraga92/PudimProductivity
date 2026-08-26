@@ -11,7 +11,7 @@ import androidx.work.WorkManager
 import java.util.concurrent.TimeUnit
 
 /**
- * Schedules Phase 9c background sync:
+ * Schedules background sync:
  *  - an immediate one-time sync on app start,
  *  - a periodic sync every 15 minutes while connected to the network.
  */

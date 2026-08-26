@@ -20,7 +20,7 @@ interface TaskListShareProps {
 }
 
 /**
- * Phase 8 share dialog: invite a user (editor/viewer), list members with live
+ * Share dialog: invite a user (editor/viewer), list members with live
  * presence dots, and revoke access. Owner-only for mutations.
  */
 export default function TaskListShare({

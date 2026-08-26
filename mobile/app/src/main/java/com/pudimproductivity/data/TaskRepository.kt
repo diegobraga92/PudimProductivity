@@ -20,7 +20,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * Phase 9c local-first repository. All reads come from the local SQLite
+ * Local-first repository. All reads come from the local SQLite
  * database (instant, works offline); writes are optimistic (row inserted with
  * `dirty=1`) and flushed to the server by [SyncManager] on the next sync.
  */
@@ -60,12 +60,11 @@ class TaskRepository(private val context: Context, scope: CoroutineScope) {
         _tasks.value = db.queryTasks().map { it.toApi() }
         _completions.value = db.queryCompletions().map { it.toApi() }
         _taskLists.value = db.queryTaskLists().map { it.toApi() }
-        // Phase 10: keep home-screen widgets in sync with the local snapshot.
+        // Keep home-screen widgets in sync with the local snapshot.
         // Covers every local write, WS-event refresh, and post-sync re-emit.
         appScope.launch { WidgetUpdater.updateAll(context) }
         // Keep planner alarms (start_time − alarm_minutes) aligned with the
-        // latest snapshot after every change (sync pull, WS refresh, local
-        // write). Cheap DB scan + WorkManager reschedule, off the main thread.
+        // latest snapshot after every change. Cheap DB scan + reschedule.
         appScope.launch {
             withContext(Dispatchers.IO) { TaskAlarmScheduler.rescheduleAll(context) }
         }
@@ -128,8 +127,6 @@ class TaskRepository(private val context: Context, scope: CoroutineScope) {
         refreshFromLocal()
         triggerSync()
     }
-
-
 
     /** Record a local habit completion optimistically. */
     fun completeHabit(taskId: String, date: String) {

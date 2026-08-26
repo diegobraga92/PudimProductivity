@@ -3,7 +3,7 @@ package com.pudimproductivity.api
 import retrofit2.http.GET
 import retrofit2.http.Query
 
-/** Phase 9c: incremental sync bundle (api/openapi/sync-v1.yaml). */
+/** Incremental sync bundle (api/openapi/sync-v1.yaml). */
 data class SyncTask(
     val id: String,
     val title: String,

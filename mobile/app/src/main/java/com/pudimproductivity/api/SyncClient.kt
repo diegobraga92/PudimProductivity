@@ -61,7 +61,7 @@ object SyncClient {
      * Whether the WebSocket is currently connected to the backend. The app
      * watches this to flush local dirty rows and pull server changes the moment
      * the connection is (re)established — the "reconnect to the server" hook for
-     * Phase 9c offline sync.
+     * offline sync.
      */
     val connected: StateFlow<Boolean> = _connected.asStateFlow()
 

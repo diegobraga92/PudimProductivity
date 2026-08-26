@@ -66,15 +66,15 @@ export function useLiveUpdates(): void {
       queryClient.invalidateQueries({ queryKey: TASK_LISTS_KEY });
     };
 
-    // Phase 8: a task merge resolved — the payload is the winning task, so the
-    // cache converges exactly like task.updated.
+    // A task merge resolved — the payload is the winning task, so the cache
+    // converges exactly like task.updated.
     const handleMerge = (event: WsEvent) => {
       handleUpsert(event);
       queryClient.invalidateQueries({ queryKey: SCHEDULED_KEY });
     };
 
-    // Phase 8: membership changed (list shared with me / unshared). Refresh the
-    // list picker and any tasks cached under that list.
+    // Membership changed (list shared with me / unshared). Refresh the list
+    // picker and any tasks cached under that list.
     const handleShareChanged = (event: WsEvent) => {
       queryClient.invalidateQueries({ queryKey: TASK_LISTS_KEY });
       const payload = (event.payload ?? {}) as { list_id?: string };

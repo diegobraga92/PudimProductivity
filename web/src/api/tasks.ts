@@ -182,7 +182,7 @@ export async function getAllTaskCompletions(
   return response.json() as Promise<TaskCompletion[]>;
 }
 
-/** Parse a natural-language task input into structured fields (Phase 7). */
+/** Parse a natural-language task input into structured fields. */
 export async function parseTask(input: string): Promise<ParseTaskResult> {
   const response = await fetch(`${config.apiBaseUrl}/tasks/parse`, {
     method: "POST",

@@ -3,7 +3,7 @@ import { apiHeaders } from "./client";
 import type { components } from "./generated/tasks-v1";
 
 /**
- * Phase 8 collaboration API client. Backend contract: api/openapi/tasks-v1.yaml.
+ * Collaboration API client. Backend contract: api/openapi/tasks-v1.yaml.
  * Sharing + presence are user-scoped via the dev identity headers.
  */
 

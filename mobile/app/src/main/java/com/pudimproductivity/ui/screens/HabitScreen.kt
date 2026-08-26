@@ -40,7 +40,7 @@ private val HABIT_SORT_OPTIONS = listOf(
 )
 
 /**
- * Dedicated habit screen (Phase 4): Material 3 chips for recurrence days,
+ * Dedicated habit screen: Material 3 chips for recurrence days,
  * streak badge, inline week heatmap with tap-to-toggle, and weekly progress.
  */
 @OptIn(ExperimentalMaterial3Api::class)

@@ -12,13 +12,11 @@ import java.time.ZonedDateTime
 import java.util.concurrent.TimeUnit
 
 /**
- * Planner alarms (re-created after the FCM push pipeline was removed).
- *
- * Mirrors the web app's alarm semantics (`web/src/hooks/useAlarmNotifier.ts`):
- * a habit with `start_time` and `alarm_minutes` fires a local notification
- * `alarm_minutes` before `start_time` on each of its recurrence days. Unlike
- * FCM this is fully local — the schedule is pulled into the local DB by the
- * sync worker, so alarms fire with the app closed and fully offline.
+ * Planner alarms: a habit with `start_time` and `alarm_minutes` fires a local
+ * notification `alarm_minutes` before `start_time` on each of its recurrence
+ * days, mirroring the web app's alarm semantics
+ * (`web/src/hooks/useAlarmNotifier.ts`). The schedule is pulled into the local
+ * DB by the sync worker, so alarms fire with the app closed and fully offline.
  */
 object TaskAlarmScheduler {
 

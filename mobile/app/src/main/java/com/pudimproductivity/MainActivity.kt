@@ -72,11 +72,11 @@ class MainActivity : ComponentActivity() {
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private lateinit var repository: TaskRepository
 
-    // Phase 9c: watched while the activity lives; flushes local dirty rows on
+    // Watched while the activity lives; flushes local dirty rows on
     // reconnect (deregistered in onDestroy).
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
 
-    // Phase 10: deep link targets from home-screen widget taps (see
+    // Deep link targets from home-screen widget taps (see
     // widget/TasksWidget.kt, widget/HabitsWidget.kt and [parseLaunch]).
     private val launchTarget = mutableStateOf<LaunchTarget?>(null)
 
@@ -98,10 +98,10 @@ class MainActivity : ComponentActivity() {
         // Report uncaught exceptions to the backend error beacon.
         ErrorReporter.install(applicationContext)
 
-        // Real-time task sync (Phase 2): app-lifetime WebSocket connection.
+        // Real-time task sync: app-lifetime WebSocket connection.
         SyncClient.start(applicationContext)
 
-        // Phase 9c offline-first: local repository + background sync workers.
+        // Offline-first: local repository + background sync workers.
         repository = TaskRepository(applicationContext, appScope)
         repository.start()
         SyncScheduler.schedule(applicationContext)
@@ -111,7 +111,7 @@ class MainActivity : ComponentActivity() {
         TaskAlarmScheduler.schedule(applicationContext)
         requestNotificationPermissionIfNeeded()
 
-        // Phase 9c: reconnect hooks — flush offline edits the moment the device
+        // Reconnect hooks — flush offline edits the moment the device
         // regains a network and again when the real-time WebSocket reconnects.
         registerConnectivityCallback()
         observeSyncClientConnected()
@@ -155,7 +155,7 @@ class MainActivity : ComponentActivity() {
     }
 
     /**
-     * Phase 9c: flushes local dirty rows and pulls server changes the moment the
+     * Flushes local dirty rows and pulls server changes the moment the
      * device regains a default network (airplane mode off, Wi-Fi back). Without
      * this, work done offline would sit `dirty` in SQLite until the 15-minute
      * periodic sync or a manual pull-to-refresh.
@@ -174,7 +174,7 @@ class MainActivity : ComponentActivity() {
     }
 
     /**
-     * Phase 9c: also sync when the real-time WebSocket (re)connects — this covers
+     * Also sync when the real-time WebSocket (re)connects — this covers
      * "the server became reachable again" without any device-network change
      * (e.g. the LAN backend restarts while Wi-Fi stays up). Debounced to
      * coalesce flapping before the connection settles. Runs on [lifecycleScope]
@@ -268,7 +268,7 @@ private fun AppNavigation(
         }
     }
 
-    // Phase 10: navigate to a widget tap target (also fires for the initial
+    // Navigate to a widget tap target (also fires for the initial
     // launch), then clear it so the next tap is honoured.
     val target = launchTarget.value
     LaunchedEffect(target) {

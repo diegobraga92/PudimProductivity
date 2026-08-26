@@ -72,7 +72,7 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 // Secondary pages tucked into the desktop "More" dropdown so the top bar does
-// not overflow (the health/status item was previously pushed off-screen).
+// not overflow.
 const MORE_ITEMS: NavItem[] = [
   { id: "health", labelKey: "nav.health", icon: HeartPulseIcon },
   { id: "settings", labelKey: "nav.serverSettings", icon: SettingsIcon },
@@ -125,16 +125,16 @@ function AppInner() {
   // Polls scheduled habit tasks and fires sound + in-app toast alarms
   useAlarmNotifier();
 
-  // Real-time task updates from the backend WebSocket stream (Phase 2). This
-  // replaces polling: task changes made on any client appear here immediately.
+  // Real-time task updates from the backend WebSocket stream. This replaces
+  // polling: task changes made on any client appear here immediately.
   useLiveUpdates();
 
   // Global pomodoro → sound automation: plays the synced sound whenever the
   // timer runs, on any tab (mounted at the root so it survives navigation).
   usePomodoroSoundSync();
 
-  // In-app toast notifications for task events (Phase 3 — the "push" channel
-  // on the web, delivered over the same WebSocket stream).
+  // In-app toast notifications for task events — the "push" channel on the
+  // web, delivered over the same WebSocket stream.
   useTaskNotifier();
 
   // Report client-side JS errors to the backend beacon (POST /api/v1/errors).

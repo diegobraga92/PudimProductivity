@@ -42,15 +42,6 @@ data class UpdateLibraryItemRequest(
     val score_source: String? = null
 )
 
-data class ScoreCandidate(
-    val title: String,
-    val year: Int? = null,
-    val score: Double,
-    val score_source: String,
-    val external_id: String? = null,
-    val url: String? = null
-)
-
 interface LibraryService {
     @GET("library")
     suspend fun listItems(
@@ -70,13 +61,6 @@ interface LibraryService {
 
     @DELETE("library/{itemId}")
     suspend fun deleteItem(@Path("itemId") itemId: String)
-
-    @GET("library/score/search")
-    suspend fun searchScores(
-        @Query("type") mediaType: String,
-        @Query("query") query: String,
-        @Query("year") year: Int? = null
-    ): List<ScoreCandidate>
 }
 
 val ApiClient.libraryService: LibraryService

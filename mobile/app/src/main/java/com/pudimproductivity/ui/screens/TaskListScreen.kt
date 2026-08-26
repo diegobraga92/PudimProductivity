@@ -65,7 +65,7 @@ fun TaskListScreen(
     onRecipes: () -> Unit,
     onLibrary: () -> Unit
 ) {
-    // Phase 9c: local-first — read straight from the local database via the
+    // Local-first — read straight from the local database via the
     // repository's flows (instant + offline); writes go through the repository
     // (optimistic + dirty flag) and are flushed to the server on sync.
     val tasks by repository.tasks.collectAsState()
@@ -78,7 +78,7 @@ fun TaskListScreen(
     var newListName by remember { mutableStateOf("") }
     // To-Dos sub-view: 0 = open (unchecked), 1 = completed (mirrors the web).
     var todoFilter by remember { mutableStateOf(0) }
-    // Phase 8: list currently open in the share dialog.
+    // List currently open in the share dialog.
     var shareList by remember { mutableStateOf<TaskList?>(null) }
 
     // Week offset for habits (shared across all habits)
@@ -93,7 +93,7 @@ fun TaskListScreen(
         completions.groupBy({ it.task_id }, { it.completed_date })
     }
 
-    // Phase 9c: WS events still arrive (Phase 2) — pull the server's incremental
+    // WS events still arrive — pull the server's incremental
     // changes into the local DB so a change made on another client (e.g. web)
     // is reflected immediately, not just re-read from the stale local snapshot.
     @OptIn(FlowPreview::class)
@@ -199,7 +199,7 @@ fun TaskListScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Phase 9c: offline banner — data is local-first, so the app stays
+            // Offline banner — data is local-first, so the app stays
             // usable; this just informs the user that sync is pending.
             if (!isOnline) {
                 Surface(
@@ -533,7 +533,7 @@ fun TaskListScreen(
                                             style = MaterialTheme.typography.titleMedium,
                                             modifier = Modifier.weight(1f)
                                         )
-                                        // Phase 8: share dialog.
+                                        // Share dialog.
                                         TextButton(onClick = { shareList = list }) {
                                             Text("👥")
                                         }
@@ -552,7 +552,7 @@ fun TaskListScreen(
         }
     }
 
-    // Phase 8: share dialog.
+    // Share dialog.
     shareList?.let { list ->
         TaskListShareDialog(taskList = list, onClose = { shareList = null })
     }

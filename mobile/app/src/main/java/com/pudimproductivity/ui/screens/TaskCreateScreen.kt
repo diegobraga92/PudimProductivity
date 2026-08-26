@@ -70,7 +70,7 @@ fun TaskCreateScreen(
     ) {
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Smart Parse (Phase 7): quick natural-language entry with NLP preview.
+        // Smart Parse: quick natural-language entry with NLP preview.
         var parseInput by remember { mutableStateOf("") }
         var parseHint by remember { mutableStateOf<String?>(null) }
         TextButton(onClick = {

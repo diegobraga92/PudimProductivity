@@ -6,7 +6,7 @@ import androidx.work.WorkerParameters
 import com.pudimproductivity.widget.WidgetUpdater
 
 /**
- * Phase 9c background sync worker. Scheduled periodically and on app
+ * Background sync worker. Scheduled periodically and on app
  * foreground; pushes local dirty rows and pulls incremental changes.
  */
 class SyncWorker(
@@ -17,7 +17,7 @@ class SyncWorker(
     override suspend fun doWork(): Result {
         return try {
             SyncManager(applicationContext).sync()
-            // Phase 10: widgets read the local DB directly, so refresh them
+            // Widgets read the local DB directly, so refresh them
             // after the server state is applied.
             WidgetUpdater.updateAll(applicationContext)
             Result.success()

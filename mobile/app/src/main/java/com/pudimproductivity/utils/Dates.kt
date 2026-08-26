@@ -1,20 +1,7 @@
 package com.pudimproductivity.utils
 
-import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import java.time.temporal.TemporalAdjusters
-
-/**
- * Returns 7 date strings (YYYY-MM-DD) for the week starting Monday,
- * offset by [weekOffset] weeks (0 = current week, -1 = last week, etc.).
- */
-fun getWeekDates(weekOffset: Int = 0): List<String> {
-    val today = LocalDate.now()
-    val monday = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
-        .plusWeeks(weekOffset.toLong())
-    return (0..6).map { monday.plusDays(it.toLong()).format(DateTimeFormatter.ISO_LOCAL_DATE) }
-}
 
 /**
  * Returns today's date as YYYY-MM-DD.
@@ -27,10 +14,10 @@ fun getToday(): String {
  * Returns 7 ISO date strings (YYYY-MM-DD) for a rolling 7-day window anchored
  * to today (mirrors the web's `getRollingWindowDates`).
  *
- * Unlike [getWeekDates] (fixed Monday–Sunday), offset 0 returns the last 7 days
- * ending today, with today as the final column. This keeps habit streaks flowing
- * continuously between calendar weeks — on Monday you still see the previous
- * week's completions instead of a hard reset to a blank Monday–Sunday grid.
+ * Offset 0 returns the last 7 days ending today, with today as the final
+ * column. This keeps habit streaks flowing continuously between calendar weeks
+ * — on Monday you still see the previous week's completions instead of a hard
+ * reset to a blank Monday–Sunday grid.
  *
  * @param offset Offset relative to the current window:
  *   0 (default) = last 7 days ending today,

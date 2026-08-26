@@ -19,7 +19,7 @@ export default function Lists() {
   const { t } = useI18n();
   const [selectedListForDetail, setSelectedListForDetail] = useState<string | null>(null);
   const [newListName, setNewListName] = useState("");
-  // Phase 8: which list's share dialog is open.
+  // Which list's share dialog is open.
   const [shareListId, setShareListId] = useState<string | null>(null);
 
   // Fetch task lists
@@ -28,7 +28,7 @@ export default function Lists() {
     queryFn: listTaskLists,
   });
 
-  // Phase 8: live presence — who is online per list.
+  // Live presence — who is online per list.
   const { online: onlineByList } = usePresence(taskLists.map((l) => l.id));
 
   const confirm = useConfirm();
@@ -96,7 +96,7 @@ export default function Lists() {
                   onClick={() => setSelectedListForDetail(list.id)}
                 >
                   <span style={{ fontSize: "1rem" }}>📁</span>
-                  {/* Phase 8: owner presence dot */}
+                  {/* Owner presence dot */}
                   <span
                     style={{
                       width: 8,
@@ -119,7 +119,7 @@ export default function Lists() {
                   >
                     {list.name}
                   </span>
-                  {/* Phase 8: share dialog */}
+                  {/* Share dialog */}
                   <button
                     className="btn btn-ghost btn-sm"
                     style={{ padding: "0.15rem 0.4rem", fontSize: "0.7rem" }}
@@ -131,7 +131,7 @@ export default function Lists() {
                   >
                     👥
                   </button>
-                  {/* Only the owner can delete a list (Phase 8) */}
+                  {/* Only the owner can delete a list */}
                   {isOwner && (
                     <button
                       className="btn btn-danger btn-sm"
@@ -176,7 +176,7 @@ export default function Lists() {
         </div>
       </div>
 
-      {/* Phase 8: share dialog */}
+      {/* Share dialog */}
       {shareListId &&
         (() => {
           const list = taskLists.find((l) => l.id === shareListId);

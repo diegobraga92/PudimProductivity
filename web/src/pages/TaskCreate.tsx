@@ -60,7 +60,7 @@ export default function TaskCreate({ onCreated, onCancel }: TaskCreateProps) {
     );
   };
 
-  // Smart Parse (Phase 7): natural-language input → pre-filled form.
+  // Smart Parse: natural-language input → pre-filled form.
   const [showParse, setShowParse] = useState(false);
   const [parseInput, setParseInput] = useState("");
   const [parsing, setParsing] = useState(false);
@@ -155,7 +155,7 @@ export default function TaskCreate({ onCreated, onCancel }: TaskCreateProps) {
       </div>
 
       <form onSubmit={handleSubmit}>
-        {/* Smart Parse (Phase 7): quick natural-language entry */}
+        {/* Smart Parse: quick natural-language entry */}
         <div className="card" style={{ marginBottom: "var(--space-lg)" }}>
           {!showParse ? (
             <button

@@ -6,7 +6,7 @@ import com.pudimproductivity.utils.computeStreaks
 import java.time.LocalDate
 
 /**
- * View-models and pure mapping functions for the Phase 10 home-screen widgets.
+ * View-models and pure mapping functions for the home-screen widgets.
  *
  * The `build*` functions take plain local-DB entities (ADR 012) and return
  * small UI snapshots. They have no Android dependencies, so they can be

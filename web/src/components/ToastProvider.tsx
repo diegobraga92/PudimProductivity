@@ -6,7 +6,7 @@ const TOAST_DURATION_MS = 5_000;
 
 /**
  * Provides lightweight in-app toasts (used for real-time task notifications
- * delivered over the WebSocket stream — Phase 3). Alarm toasts remain separate.
+ * delivered over the WebSocket stream). Alarm toasts remain separate.
  */
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);

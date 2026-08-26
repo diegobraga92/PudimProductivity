@@ -112,13 +112,6 @@ class SoundscapeEngine {
     return buffer;
   }
 
-  /** Set the reverb wet mix (0–1, clamped to 0.5). */
-  setReverbMix(v: number): void {
-    if (this.reverbGain) {
-      this.reverbGain.gain.value = Math.max(0, Math.min(0.5, v));
-    }
-  }
-
   /**
    * Get current frequency data for the visualizer (returns Uint8Array of
    * length fftSize/2). Caller should supply a pre-allocated Uint8Array.
