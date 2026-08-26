@@ -17,8 +17,7 @@ import (
 
 // S3Uploader issues presigned PUT URLs against an S3 bucket and implements the
 // media.Storage port for direct object reads/writes. It reads credentials from
-// the standard AWS credential chain (env, shared config, IAM role) — nothing is
-// stored in the repo.
+// the standard AWS credential chain (env, shared config, IAM role).
 type S3Uploader struct {
 	presigner *s3.PresignClient
 	client    *s3.Client
@@ -28,8 +27,8 @@ type S3Uploader struct {
 // Compile-time check that S3Uploader satisfies the media.Storage port.
 var _ media.Storage = (*S3Uploader)(nil)
 
-// NewS3Uploader builds an uploader. bucket and region are required; the
-// credentials come from the environment (AWS_ACCESS_KEY_ID / role).
+// NewS3Uploader builds an uploader. bucket and region are required.
+// The credentials come from the environment (AWS_ACCESS_KEY_ID / role).
 func NewS3Uploader(ctx context.Context, bucket, region string) (*S3Uploader, error) {
 	if bucket == "" || region == "" {
 		return nil, fmt.Errorf("media: S3 bucket and region are required")
