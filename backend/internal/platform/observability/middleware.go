@@ -16,9 +16,6 @@ const tracerName = "pudimproductivity/backend"
 
 // TracingMiddleware extracts incoming W3C trace context (if any), starts a
 // server span for the request, and records method, URL, and status code.
-//
-// Register it as the outermost middleware so spans are active for the whole
-// chain (metrics, request logging, handlers, and the WebSocket sync hub).
 func TracingMiddleware(next http.Handler) http.Handler {
 	tracer := otel.Tracer(tracerName)
 	propagator := otel.GetTextMapPropagator()
@@ -43,9 +40,7 @@ func TracingMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// statusRecorder captures the response status code so it can be attached to the
-// span. It forwards Hijack/Flush so WebSocket upgrades and streaming responses
-// keep working through the tracing middleware.
+// statusRecorder captures the response status code so it can be attached to the span.
 type statusRecorder struct {
 	http.ResponseWriter
 	status int

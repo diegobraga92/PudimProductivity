@@ -1,7 +1,5 @@
 // Package observability wires OpenTelemetry tracing into the backend so every
-// HTTP request, WebSocket dispatch, and log line carries a W3C trace ID. The
-// trace context also flows through the event bus (see internal/eventbus), ready
-// for cross-instance consumers (e.g. the Redis fabric) to propagate.
+// HTTP request, WebSocket dispatch, and log line carries a W3C trace ID.
 package observability
 
 import (
@@ -23,16 +21,14 @@ type Config struct {
 	ServiceName string
 	// Version is the build version (attribute service.version).
 	Version string
-	// OTLPEndpoint is the base URL of an OTLP/HTTP collector (e.g. Jaeger at
-	// http://jaeger:4318 or http://localhost:4318). Empty disables OTLP export.
+	// OTLPEndpoint is the base URL of an OTLP/HTTP collector. Empty disables OTLP export.
 	OTLPEndpoint string
 	// Stdout enables a human-readable stdout span exporter. Default true.
 	Stdout bool
 }
 
 // InitTracing builds a TracerProvider, installs it as the global provider, and
-// configures W3C TraceContext + Baggage propagation. It must be called once at
-// startup; the returned provider should be Shutdown() on graceful stop.
+// configures W3C TraceContext + Baggage propagation.
 func InitTracing(ctx context.Context, cfg Config) (*sdktrace.TracerProvider, error) {
 	res, err := resource.New(ctx,
 		resource.WithAttributes(
@@ -58,8 +54,7 @@ func InitTracing(ctx context.Context, cfg Config) (*sdktrace.TracerProvider, err
 	}
 
 	if cfg.OTLPEndpoint != "" {
-		// Normalize so users can set a bare collector URL (http://jaeger:4318)
-		// without worrying about the OTLP/HTTP path.
+		// Normalize so users can set a bare collector URL.
 		endpoint := strings.TrimRight(cfg.OTLPEndpoint, "/")
 		if !strings.HasSuffix(endpoint, "/v1/traces") {
 			endpoint += "/v1/traces"
