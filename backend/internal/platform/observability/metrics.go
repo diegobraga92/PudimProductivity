@@ -13,8 +13,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-// TODO: Add wiring, prometheus server, maybe Grafana
-
 type Metrics struct {
 	requestsTotal    *prometheus.CounterVec
 	requestDuration  *prometheus.HistogramVec

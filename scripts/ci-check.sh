@@ -7,7 +7,6 @@
 #
 # Options:
 #   --skip-mobile        Skip Android / Gradle checks
-#   --skip-terraform     Skip Terraform validation checks
 #   --skip-integration   Skip Docker-dependent integration tests (go test)
 #   --help               Show this help message and exit
 # ──────────────────────────────────────────────────────────────────────────────
@@ -17,7 +16,6 @@ ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 WEB_DIR="$ROOT_DIR/web"
 BACKEND_DIR="$ROOT_DIR/backend"
 MOBILE_DIR="$ROOT_DIR/mobile"
-INFRA_DIR="$ROOT_DIR/infra/terraform"
 API_DIR="$ROOT_DIR/api"
 SCRIPTS_DIR="$ROOT_DIR/scripts"
 
@@ -87,7 +85,6 @@ Run all PudimProductivity CI checks locally.
 
 Options:
   --skip-mobile        Skip Android / Gradle checks
-  --skip-terraform     Skip Terraform validation checks
   --skip-integration   Skip Docker-dependent integration tests (go test)
   --help               Show this help message and exit
 EOF
@@ -96,13 +93,11 @@ EOF
 
 # ─── Parse arguments ───────────────────────────────────────────────────────
 SKIP_MOBILE=false
-SKIP_TERRAFORM=false
 SKIP_INTEGRATION=false
 
 for arg in "$@"; do
     case "$arg" in
         --skip-mobile)      SKIP_MOBILE=true ;;
-        --skip-terraform)   SKIP_TERRAFORM=true ;;
         --skip-integration) SKIP_INTEGRATION=true ;;
         --help)             usage ;;
         *) log_warn "Unknown argument: $arg"; usage ;;
@@ -349,48 +344,7 @@ else
     skip "hadolint (not installed — install with 'apt install hadolint' or 'brew install hadolint')"
 fi
 
-# ── 4c. Terraform (optional) ──────────────────────────────────────────────
-if [ "$SKIP_TERRAFORM" = true ]; then
-    skip "Terraform checks (--skip-terraform)"
-else
-    log_info "Checking for terraform..."
-    if command -v terraform &> /dev/null; then
-        if [ -d "$INFRA_DIR" ]; then
-            # ── Terraform fmt ─────────────────────────────────────────────
-            log_info "Running terraform fmt -check..."
-            if (cd "$INFRA_DIR" && terraform fmt -check -recursive) 2>&1; then
-                pass "terraform fmt"
-            else
-                fail "terraform fmt"
-            fi
-
-            # ── Terraform validate ─────────────────────────────────────────
-            log_info "Running terraform validate..."
-            # Use -backend=false to avoid requiring backend configuration
-            # during validation (we just want to check syntax and structure)
-            INIT_OUTPUT=$(cd "$INFRA_DIR" && terraform init -backend=false 2>&1)
-            INIT_EXIT=$?
-
-            if [ "$INIT_EXIT" -ne 0 ]; then
-                log_warn "terraform init -backend=false:"
-                echo "$INIT_OUTPUT"
-                skip "terraform validate (init failed)"
-            else
-                if (cd "$INFRA_DIR" && terraform validate) 2>&1; then
-                    pass "terraform validate"
-                else
-                    fail "terraform validate"
-                fi
-            fi
-        else
-            skip "Terraform checks (infra/terraform/ directory not found)"
-        fi
-    else
-        skip "Terraform checks (not installed)"
-    fi
-fi
-
-# ── 4d. OpenAPI spec validation (optional) ────────────────────────────────
+# ── 4c. OpenAPI spec validation (optional) ────────────────────────────────
 log_info "Checking for OpenAPI validator..."
 # Try redocly first, then swagger-cli as fallback
 VALIDATOR=""
@@ -451,7 +405,7 @@ else
     skip "OpenAPI validation (no validator found — install with 'npm install -g @redocly/cli' or 'npm install -g swagger-cli')"
 fi
 
-# ── 4e. Docker compose config validation ──────────────────────────────────
+# ── 4d. Docker compose config validation ──────────────────────────────────
 log_info "Validating docker-compose.yml..."
 if command -v docker &> /dev/null; then
     if docker compose -f "$ROOT_DIR/docker-compose.yml" config -q 2>&1; then

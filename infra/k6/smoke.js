@@ -2,13 +2,11 @@
 //
 // A short, low-VU pass over the hottest task + habit endpoints. Runs in CI on
 // every backend push (see .github/workflows/backend-ci.yml → load-smoke job)
-// to catch SLO regressions early without the cost of the full load suite
-// (infra/k6/tasks-load.js, infra/k6/habits-load.js).
+// to catch SLO regressions early.
 //
 //   BASE_URL=http://localhost:8080/api/v1 k6 run infra/k6/smoke.js
 //
-// Thresholds mirror the SLO burn-rate rules in infra/prometheus/alerts.yml:
-// p95 < 200ms, < 1% errors.
+// Thresholds: p95 < 200ms, < 1% errors.
 
 import http from "k6/http";
 import { check, sleep } from "k6";
@@ -71,7 +69,7 @@ export default function (data) {
   // WRITE: habit completion toggle (iteration-unique date avoids 409 conflicts).
   // Each (VU, iteration) pair maps to a unique day index via the bijection
   // ITER*5 + (VU-1): 5 VUs → no two requests ever touch the same date, so a
-  // per-VU date (as in habits-load.js) would collide across iterations.
+  // per-VU date would collide across iterations.
   const iterOffset = (__ITER * 5) + (__VU - 1);
   const date = new Date(Date.now() - iterOffset * 86400000).toISOString().slice(0, 10);
   const complete = http.post(`${BASE}/tasks/${habitId}/complete?date=${date}`, null, { headers: HEADERS });

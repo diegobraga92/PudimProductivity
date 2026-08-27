@@ -1,28 +1,29 @@
 # GitOps Deployment (ArgoCD)
 
-> **Status: deployed on a local Kind cluster (2026-08-10).** The public-GitHub
-> ApplicationSet (`application-set.yaml`) is validated but not applied — the
-> local-demo Application in `local-demo/` proves the full GitOps loop
-> (commit → local git daemon → ArgoCD auto-sync → Healthy) against the same
-> Kustomize overlays. Production activation is still gated on a reachable
-> cluster + registry per [ADR 006](../adr/006-deployment-strategy.md).
+> **Status: deployed on a local Kind cluster (2026-08-10).** The local-demo
+> Application in `local-demo/` proves the full GitOps loop (commit → local git
+> daemon → ArgoCD auto-sync → Healthy) against the Kustomize dev overlay.
 
 ## Layout
 
 ```
 infra/
 ├── argocd/
-│   ├── application-set.yaml   # one ArgoCD Application per overlay (dev, prod)
-│   ├── local-demo/            # Kind-cluster demo: local git daemon repo + Application
-│   └── README.md
+│   └── local-demo/            # Kind-cluster demo: local git daemon repo + Application
 ├── kind/
 │   └── kind-config.yaml       # single-node cluster with NodePort mappings
+├── k6/
+│   └── smoke.js               # CI load-smoke test (runs on every backend push)
 └── kustomize/
     ├── base/                  # backend + web Deployments/Services, ConfigMap
     └── overlays/
-        ├── dev/               # 1 replica, :dev image tags, in-cluster Postgres
-        └── prod/              # 2 replicas, :main image tags, bigger limits
+        └── dev/               # 1 replica, :dev image tags, in-cluster Postgres
 ```
+
+> Previously removed as unused: `terraform/`, `prometheus/`, `grafana/`, the
+> prod overlay and the `application-set.yaml` were never wired to anything real
+> (no cluster, no Prometheus/Grafana deployment, no CI image push). Re-add them
+> when production (cluster + registry + managed DB + ingress) exists.
 
 ## Deploying the local demo (Kind + ArgoCD)
 
@@ -73,20 +74,3 @@ infra/
      -o jsonpath='{.status.sync.status} / {.status.health.status}'
    kubectl get pods -n pudimproductivity   # backend, web, postgres all Running
    ```
-
-## Production activation checklist
-
-- [x] Kustomize overlays verified against a real cluster (local demo).
-- [x] ArgoCD install + repo registration + Application sync proven locally.
-- [ ] Push image build+push to CI (backend + web workflows) — images are
-      currently loaded directly into the demo cluster.
-- [ ] Apply `application-set.yaml` once the GitHub repo is reachable from the
-      cluster (validated with `kubectl apply --dry-run=client`).
-- [ ] Provision the DB (managed RDS, see `infra/terraform/`) and create the
-      `backend-secrets` Secret.
-- [ ] Ingress: TLS cert + a single `Ingress` routing `/` → web, `/api/*` →
-      backend (WebSocket upgrades need
-      `nginx.ingress.kubernetes.io/proxy-read-timeout`).
-- [ ] Consider `argocd-image-updater` for automatic rollout on new image tags
-      (canary via Argo Rollouts once prod has real traffic).
-
