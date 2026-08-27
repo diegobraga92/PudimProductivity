@@ -1,4 +1,4 @@
-# PudimProductivity — Desktop build configuration
+# PudimProductivity Desktop build configuration
 # https://www.electron.build/configuration
 appId: com.pudimproductivity.app
 productName: PudimProductivity

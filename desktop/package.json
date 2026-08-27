@@ -15,12 +15,13 @@
   },
   "main": "dist-electron/main.js",
   "scripts": {
+    "build": "npm run build:web && npm run build:shell && npm run icons",
     "build:web": "npm --prefix ../web run build:desktop",
     "build:shell": "tsc -p tsconfig.json",
     "icons": "node scripts/generate-icons.mjs",
-    "dev": "npm run build:web && npm run build:shell && npm run icons && electron .",
-    "package": "npm run build:web && npm run build:shell && npm run icons && node scripts/copy-web.mjs && electron-builder",
-    "package:dir": "npm run build:web && npm run build:shell && npm run icons && node scripts/copy-web.mjs && electron-builder --dir",
+    "dev": "npm run build && electron .",
+    "package": "npm run build && node scripts/copy-web.mjs && electron-builder",
+    "package:dir": "npm run build && node scripts/copy-web.mjs && electron-builder --dir",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

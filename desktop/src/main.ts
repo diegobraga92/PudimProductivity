@@ -1,13 +1,13 @@
 /**
- * PudimProductivity — Electron main process.
+ * PudimProductivity Electron main process.
  *
- * Loads the built React SPA (web/dist) from a custom `app://bundle` origin and
- * provides the native desktop integration: OS notifications, tray, auto-update,
- * window-state persistence, runtime API base override and power-save blocking.
+ * Loads the built React SPA from a custom `app://bundle` origin and provides
+ * the native integration: notifications, tray, auto-update, window-state
+ * persistence, runtime API base override and power-save blocking.
  *
- * The SPA talks to the Go backend over HTTP + WebSocket exactly as it does in
- * the browser. The backend must be reachable and allow the app://bundle origin
- * (CORS_ALLOWED_ORIGINS=app://bundle — see backend/internal/shared/cors_middleware.go).
+ * The SPA talks to the Go backend over HTTP + WebSocket exactly as in the
+ * browser; the backend must allow the `app://bundle` origin
+ * (CORS_ALLOWED_ORIGINS=app://bundle).
  */
 import {
   app,
@@ -22,7 +22,7 @@ import {
   shell,
   Tray,
 } from "electron";
-import type { MenuItemConstructorOptions } from "electron";
+import type { MenuItemConstructorOptions, Rectangle } from "electron";
 import { autoUpdater } from "electron-updater";
 import fs from "node:fs";
 import path from "node:path";
@@ -50,35 +50,35 @@ function settingsFilePath(): string {
   return path.join(app.getPath("userData"), "settings.json");
 }
 
-function readSettings(): Record<string, unknown> {
+function readJsonFile<T>(file: string): T | null {
   try {
-    return JSON.parse(fs.readFileSync(settingsFilePath(), "utf8")) as Record<string, unknown>;
+    return JSON.parse(fs.readFileSync(file, "utf8")) as T;
   } catch {
-    return {};
+    return null;
   }
+}
+
+function writeJsonFile(file: string, data: unknown): void {
+  try {
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, JSON.stringify(data, null, 2), "utf8");
+  } catch (err) {
+    console.error(`[desktop] failed to write ${path.basename(file)}`, err);
+  }
+}
+
+function readSettings(): Record<string, unknown> {
+  return readJsonFile(settingsFilePath()) ?? {};
 }
 
 function writeSettings(patch: Record<string, unknown>): void {
-  try {
-    fs.mkdirSync(path.dirname(settingsFilePath()), { recursive: true });
-    fs.writeFileSync(
-      settingsFilePath(),
-      JSON.stringify({ ...readSettings(), ...patch }, null, 2),
-      "utf8",
-    );
-  } catch (err) {
-    console.error("[desktop] failed to persist settings", err);
-  }
+  writeJsonFile(settingsFilePath(), { ...readSettings(), ...patch });
 }
 
 /**
- * Backend base URL for the renderer. Precedence:
- *   1. User override persisted in settings.json (setApiBaseUrl)
- *   2. PUDIM_API_BASE_URL environment variable
- *   3. "" — no override. The renderer then falls back to the build-time
- *      VITE_API_BASE_URL baked from web/.env.desktop (the LAN/default URL),
- *      so a packaged desktop build can be pointed at a backend without any
- *      runtime configuration.
+ * Backend base URL passed to the renderer. Precedence: persisted user override
+ * (setApiBaseUrl), then the PUDIM_API_BASE_URL env var, then "", the renderer
+ * falls back to the VITE_API_BASE_URL baked from web/.env.desktop.
  */
 function getConfiguredApiBaseUrl(): string {
   const stored = readSettings().apiBaseUrl;
@@ -105,33 +105,22 @@ interface WindowState {
 }
 
 function readWindowState(): WindowState {
-  try {
-    return JSON.parse(fs.readFileSync(windowStateFilePath(), "utf8")) as WindowState;
-  } catch {
-    return {};
-  }
+  return readJsonFile(windowStateFilePath()) ?? {};
 }
 
 function saveWindowState(win: BrowserWindow): void {
   const { x, y, width, height } = win.getNormalBounds();
-  try {
-    fs.writeFileSync(
-      windowStateFilePath(),
-      JSON.stringify({ x, y, width, height, isMaximized: win.isMaximized() }, null, 2),
-      "utf8",
-    );
-  } catch (err) {
-    console.error("[desktop] failed to save window state", err);
-  }
+  writeJsonFile(windowStateFilePath(), {
+    x,
+    y,
+    width,
+    height,
+    isMaximized: win.isMaximized(),
+  });
 }
 
 /** True when at least part of the bounds intersects a connected display. */
-function isVisibleOnSomeDisplay(bounds: {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}): boolean {
+function isVisibleOnSomeDisplay(bounds: Rectangle): boolean {
   return screen.getAllDisplays().some(({ workArea }) => {
     return (
       bounds.x < workArea.x + workArea.width &&
@@ -145,15 +134,14 @@ function isVisibleOnSomeDisplay(bounds: {
 // ─── Web bundle resolution + app:// protocol ────────────────────────────────
 
 function resolveDistDir(): string {
+  if (!app.isPackaged) {
+    const repo = path.join(__dirname, "..", "..", "web", "dist");
+    if (fs.existsSync(repo)) return repo;
+    console.error("[desktop] web build not found. Run: npm --prefix ../web run build:desktop");
+    app.exit(1);
+  }
   // Packaged: dist-web/ is copied next to dist-electron/ inside the asar.
-  const packaged = path.join(__dirname, "..", "dist-web");
-  if (fs.existsSync(packaged)) return packaged;
-  // Dev: load the repository's web build directly.
-  const repo = path.join(__dirname, "..", "..", "web", "dist");
-  if (fs.existsSync(repo)) return repo;
-  console.error("[desktop] web build not found. Run: npm --prefix ../web run build:desktop");
-  app.exit(1);
-  return packaged;
+  return path.join(__dirname, "..", "dist-web");
 }
 
 const MIME_TYPES: Record<string, string> = {
@@ -182,8 +170,6 @@ function registerAppProtocol(distDir: string): void {
     try {
       requested = decodeURIComponent(new URL(request.url).pathname);
     } catch {
-      // Malformed percent-encoding in the request path — never crash the
-      // main process over a bad URL.
       return new Response("bad request", { status: 400 });
     }
     const file = path.normalize(path.join(distDir, requested));
@@ -204,7 +190,7 @@ function registerAppProtocol(distDir: string): void {
 
 // ─── Window ─────────────────────────────────────────────────────────────────
 
-function createWindow(): BrowserWindow {
+function createWindow(): void {
   const saved = readWindowState();
   const restoredBounds = {
     width: saved.width ?? 1280,
@@ -222,6 +208,7 @@ function createWindow(): BrowserWindow {
     minWidth: 720,
     minHeight: 480,
     show: false,
+    autoHideMenuBar: true,
     title: "PudimProductivity",
     icon: path.join(__dirname, "..", "assets", "icon.png"),
     backgroundColor: "#141414",
@@ -269,7 +256,6 @@ function createWindow(): BrowserWindow {
 
   void win.loadURL(`${APP_SCHEME}://${APP_HOST}/index.html`);
   mainWindow = win;
-  return win;
 }
 
 function showMainWindow(): void {
@@ -283,9 +269,8 @@ function showMainWindow(): void {
 }
 
 /**
- * Flashes the taskbar/dock entry (when the window exists and is not focused)
- * and stops after 30 seconds so it never flashes indefinitely. The flash is
- * also cleared on window focus.
+ * Flashes the taskbar/dock entry when the window is not focused. Auto-stops
+ * after 30s (and is cleared on focus) so it never blinks forever.
  */
 function flashMainWindow(): void {
   if (!mainWindow || mainWindow.isFocused()) return;
@@ -324,8 +309,8 @@ function createTray(): void {
       else showMainWindow();
     });
   } catch (err) {
-    // Some Linux desktops have no StatusNotifier host; degrade gracefully
-    // instead of crashing the app after the window is already up.
+    // Some Linux desktops have no StatusNotifier host. 
+    // Degrade gracefully instead of crashing the app after the window is already up.
     tray = null;
     console.warn("[desktop] system tray unavailable — running without tray", err);
   }
@@ -337,8 +322,8 @@ function registerIpcHandlers(): void {
   ipcMain.handle("desktop:notify", (_event, options: { title?: string; body?: string }) => {
     if (!Notification.isSupported()) return;
     new Notification({
-      title: options?.title ?? "PudimProductivity",
-      body: options?.body ?? "",
+      title: options.title ?? "PudimProductivity",
+      body: options.body ?? "",
     }).show();
     flashMainWindow();
   });
@@ -383,7 +368,7 @@ function registerIpcHandlers(): void {
   });
 }
 
-// ─── Auto-update (electron-updater; packaged builds only) ───────────────────
+// ─── Auto-update (electron-updater, packaged builds only) ───────────────────
 
 function setupAutoUpdater(): void {
   if (!app.isPackaged) return;
@@ -409,6 +394,10 @@ function setupAutoUpdater(): void {
 }
 
 // ─── Application menu (keeps copy/paste working, esp. on macOS) ─────────────
+// The menu stays registered so keyboard accelerators (Ctrl/Cmd+C/V/X/Z, and
+// reload/devtools in dev) keep working. The window toolbar is hidden on
+// Windows/Linux via `autoHideMenuBar: true` in createWindow(); on macOS the
+// menu lives in the system menu bar, so nothing is rendered in the window.
 
 function createApplicationMenu(): void {
   const isMac = process.platform === "darwin";

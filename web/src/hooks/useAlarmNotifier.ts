@@ -4,7 +4,7 @@ import { listScheduledTasks, type Task } from "../api/tasks";
 import { useAlarm } from "../components/useAlarm";
 import { useI18n } from "../i18n";
 import { playAlarmSound } from "../utils/sounds";
-import { getToday } from "../utils/dates";
+import { getToday, sanitizeTime } from "../utils/dates";
 
 const CHECK_INTERVAL_MS = 15_000;
 const FIRED_ALARMS_KEY = "pudim_fired_alarms";
@@ -117,7 +117,7 @@ export function useAlarmNotifier(): void {
             // app (no-op in the browser — the in-app toast still fires).
             window.desktop?.notify?.({
               title: task.title,
-              body: task.start_time ? tRef.current("alarm.desktopTime", { time: task.start_time }) : undefined,
+              body: task.start_time ? tRef.current("alarm.desktopTime", { time: sanitizeTime(task.start_time) }) : undefined,
             });
             firedAny = true;
           }
