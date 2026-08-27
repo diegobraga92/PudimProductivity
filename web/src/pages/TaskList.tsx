@@ -18,6 +18,7 @@ import TaskCard from "../components/TaskCard";
 import WeekHeatmap from "../components/WeekHeatmap";
 import StreakBadge from "../components/StreakBadge";
 import SortSelect from "../components/SortSelect";
+import { TasksIcon } from "../components/icons";
 import { usePersistedSort } from "../hooks/usePersistedSort";
 import { useHabitCompletions } from "../hooks/useHabitCompletions";
 import { useI18n } from "../i18n";
@@ -132,7 +133,8 @@ export default function TaskList() {
       <div className="page-header">
         <div>
           <h1 className="page-heading" style={{ marginBottom: "0.25rem" }}>
-            📋 {t("tasks.title")}
+            <TasksIcon size={24} />
+            {t("tasks.title")}
           </h1>
           <p className="page-subtitle">
             {t("tasks.subtitle")}
@@ -163,7 +165,7 @@ export default function TaskList() {
           <div className="task-column-header">
             <div className="flex-between" style={{ gap: "var(--space-sm)", flexWrap: "wrap" }}>
               <h2 className="section-header" style={{ marginBottom: 0 }}>
-                {t("tasks.todos")} <span className="badge badge-todo">{activeTodos.length}</span>
+                📋 {t("tasks.todos")} <span className="badge badge-todo">{activeTodos.length}</span>
               </h2>
               <SortSelect
                 value={todoSort}
@@ -252,7 +254,7 @@ export default function TaskList() {
           <div className="task-column-header">
             <div className="flex-between" style={{ gap: "var(--space-sm)", flexWrap: "wrap" }}>
               <h2 className="section-header" style={{ marginBottom: 0 }}>
-                {t("tasks.habits")} <span className="badge badge-habit">{habitTasks.length}</span>
+                🔄 {t("tasks.habits")} <span className="badge badge-habit">{habitTasks.length}</span>
               </h2>
               <SortSelect
                 value={habitSort}
@@ -280,7 +282,10 @@ export default function TaskList() {
               >
                 &larr; {t("week.prevWeek")}
               </button>
-              <span className="text-sm text-bold text-secondary">
+              <span
+                className="text-sm text-bold text-secondary"
+                style={{ flex: 1, textAlign: "center", whiteSpace: "nowrap", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}
+              >
                 {weekOffset === 0
                   ? t("week.last7Days")
                   : formatWeekRange(weekDates)}

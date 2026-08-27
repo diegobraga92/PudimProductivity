@@ -13,6 +13,7 @@ import {
   type ScoreCandidate,
 } from "../api/library";
 import { LibraryCsvImport } from "../components/LibraryCsvImport";
+import { FilmIcon } from "../components/icons";
 import { useConfirm } from "../components/useConfirm";
 import { useFeatureFlag } from "../hooks/useFeatureFlag";
 import { useI18n } from "../i18n";
@@ -32,6 +33,14 @@ const MEDIA_ICONS: Record<MediaType, string> = {
   book: "📚",
   game: "🎮",
 };
+
+/**
+ * Library scores can arrive with long decimals (e.g. 93.33333333333334 from a
+ * provider average). Round to at most one decimal for display so the table
+ * cell never overflows. The stored value is left untouched.
+ */
+const roundScore = (score: number): number => Math.round(score * 10) / 10;
+const formatScore = (score: number): string => String(roundScore(score));
 
 const EMPTY_FORM: CreateLibraryItemRequest = {
   name: "",
@@ -153,7 +162,7 @@ export default function Library() {
       done: item.done,
       notes: item.notes,
       subtype: item.subtype ?? "",
-      score: item.score ?? null,
+      score: item.score != null ? roundScore(item.score) : null,
       score_source: item.score_source ?? "",
     });
     setScoreHits(null);
@@ -210,7 +219,7 @@ export default function Library() {
   return (
     <div className="animate-fade-in">
       <div className="flex-center" style={{ justifyContent: "space-between", marginBottom: "var(--space-md)" }}>
-        <h2 className="page-heading" style={{ marginBottom: 0 }}>{t("library.title")}</h2>
+        <h2 className="page-heading" style={{ marginBottom: 0 }}><FilmIcon size={24} /> {t("library.title")}</h2>
       </div>
 
       {/* Toolbar: add / import / filters */}
@@ -366,7 +375,7 @@ export default function Library() {
                   onClick={() => applyCandidate(hit)}
                 >
                   {hit.title}
-                  {hit.year != null && hit.year > 0 ? ` (${hit.year})` : ""} · ★ {hit.score}
+                  {hit.year != null && hit.year > 0 ? ` (${hit.year})` : ""} · ★ {formatScore(hit.score)}
                   {hit.score_source ? ` (${hit.score_source})` : ""}
                 </button>
               ))}
@@ -531,7 +540,9 @@ export default function Library() {
               {item.subtype || <span style={{ color: "var(--color-text-muted)" }}>—</span>}
             </span>
             <span className="text-sm">{item.release_year ?? "—"}</span>
-            <span className="text-sm">{item.score != null ? `★ ${item.score}` : "—"}</span>
+            <span className="text-sm" style={{ overflowWrap: "anywhere" }}>
+              {item.score != null ? `★ ${formatScore(item.score)}` : "—"}
+            </span>
             <div className="flex-center" style={{ gap: "0.35rem" }}>
               <label className="checkbox-wrapper" title={item.done ? t("library.markNotDone") : t("library.markDone")}>
                 <input

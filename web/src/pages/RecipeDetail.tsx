@@ -9,6 +9,7 @@ import {
   uploadToPresignedUrl,
 } from "../api/recipes";
 import { useI18n } from "../i18n";
+import { UtensilsIcon } from "../components/icons";
 
 type IngredientRow = { name: string; quantity: string; unit: string };
 type StepRow = { instruction: string };
@@ -127,6 +128,7 @@ export default function RecipeDetail({ recipeId, onBack }: { recipeId: string; o
         ← {t("common.back")}
       </button>
       <h2 className="page-heading" style={{ marginBottom: "var(--space-md)" }}>
+        <UtensilsIcon size={24} />
         {isNew ? t("recipes.newTitle") : t("recipes.editTitle")}
       </h2>
 

@@ -18,6 +18,7 @@ import Modal from "./Modal";
 import { computeStreaks } from "../utils/streaks";
 import { getToday, sanitizeTime } from "../utils/dates";
 import { useI18n } from "../i18n";
+import { TasksIcon } from "../components/icons";
 import { COLOR_PALETTE, STREAK_HISTORY_START } from "../utils/constants";
 import {
   playHabitCompletionSound,
@@ -219,6 +220,7 @@ export default function TaskEditModal({
           {/* Header */}
           <div className="flex-between" style={{ marginBottom: "var(--space-md)" }}>
             <h2 className="page-heading" style={{ margin: 0 }}>
+              <TasksIcon size={24} />
               {isHabit ? t("tasks.editHabit") : t("tasks.editTask")}
             </h2>
             <button className="btn btn-ghost btn-sm" onClick={onClose} aria-label={t("a11y.close")}>

@@ -8,6 +8,7 @@ import { useHabitCompletions } from "../hooks/useHabitCompletions";
 import { getWeekDates, formatWeekRange, sanitizeTime } from "../utils/dates";
 import { useI18n, useMonthNames } from "../i18n";
 import { DAY_OPTIONS } from "../utils/constants";
+import { CalendarIcon } from "../components/icons";
 
 const DAYS = DAY_OPTIONS.map((d) => d.value);
 
@@ -119,6 +120,7 @@ export default function Planner({ onNavigate }: PlannerProps) {
         }}
       >
         <h2 className="page-heading" style={{ marginBottom: 0 }}>
+          <CalendarIcon size={24} />
           {t("planner.title")}
         </h2>
         <div

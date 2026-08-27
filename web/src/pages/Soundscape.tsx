@@ -3,6 +3,7 @@ import { getSoundscape, type SoundID, type PresetID } from "../utils/audio";
 import { loadSoundCatalog } from "../utils/soundFiles";
 import { useI18n } from "../i18n";
 import { SOUNDS } from "../utils/soundCatalog";
+import { MusicIcon } from "../components/icons";
 
 /** Canvas-based frequency visualizer. */
 function Visualizer() {
@@ -55,7 +56,7 @@ function Visualizer() {
       height={80}
       style={{
         width: "100%",
-        maxWidth: "480px",
+        maxWidth: "560px",
         height: "80px",
         borderRadius: "8px",
         display: "block",
@@ -182,7 +183,7 @@ function Soundscape() {
           marginBottom: "var(--space-lg)",
         }}
       >
-        <h2 className="page-heading" style={{ marginBottom: 0 }}>{t("soundscape.title")}</h2>
+        <h2 className="page-heading" style={{ marginBottom: 0 }}><MusicIcon size={24} /> {t("soundscape.title")}</h2>
       </div>
 
       {/* Frequency Visualizer */}
@@ -192,7 +193,7 @@ function Soundscape() {
       <div
         className="card"
         style={{
-          maxWidth: "480px",
+          maxWidth: "560px",
           margin: "0 auto var(--space-md)",
           padding: "var(--space-md) var(--space-lg)",
           display: "flex",
@@ -231,7 +232,7 @@ function Soundscape() {
       {/* Sound Cards */}
       <div
         style={{
-          maxWidth: "480px",
+          maxWidth: "560px",
           margin: "0 auto",
           display: "flex",
           flexDirection: "column",
@@ -268,11 +269,16 @@ function Soundscape() {
 
               {/* Info */}
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 600, fontSize: "var(--font-size-sm)" }}>
+                <div
+                  style={{
+                    fontWeight: 600,
+                    fontSize: "var(--font-size-sm)",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
                   {sound.icon} {t(sound.labelKey)}
-                </div>
-                <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)" }}>
-                  {t(sound.descKey)}
                 </div>
               </div>
 
@@ -298,7 +304,7 @@ function Soundscape() {
       <div
         className="card"
         style={{
-          maxWidth: "480px",
+          maxWidth: "560px",
           margin: "var(--space-md) auto 0",
           padding: "var(--space-md) var(--space-lg)",
         }}
@@ -368,7 +374,7 @@ function Soundscape() {
       {/* Tip */}
       <div
         style={{
-          maxWidth: "480px",
+          maxWidth: "560px",
           margin: "var(--space-md) auto 0",
           textAlign: "center",
           fontSize: "var(--font-size-xs)",

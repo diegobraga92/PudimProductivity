@@ -1,13 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { listTasks, type Task } from "../api/tasks";
 import { listTaskLists, type TaskList } from "../api/taskLists";
-import { exportBackup, importBackup } from "../api/backup";
 import { useHabitCompletions } from "../hooks/useHabitCompletions";
 import { computeStreaks, isScheduledOn } from "../utils/streaks";
 import { getToday } from "../utils/dates";
-import { useConfirm } from "../components/useConfirm";
-import { useToast } from "../components/toastContext";
 import { useI18n } from "../i18n";
 
 interface DashboardProps {
@@ -15,12 +11,7 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ onNavigate }: DashboardProps) {
-  const queryClient = useQueryClient();
-  const { pushToast } = useToast();
-  const confirm = useConfirm();
   const { t } = useI18n();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const { data: todoTasks = [] } = useQuery<Task[]>({
     queryKey: ["tasks", "one-off"],
@@ -67,55 +58,6 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
       bestStreakName = task.title;
     }
   }
-
-  // Backup & Restore — export a JSON snapshot of all non-sensitive data, or
-  // restore from a previous one (destructive, so it needs confirmation).
-  const exportMutation = useMutation({
-    mutationFn: exportBackup,
-    onSuccess: ({ blob, filename }) => {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-      pushToast({ icon: "💾", title: t("dashboard.toast.exportedTitle"), body: t("dashboard.toast.exportedBody", { filename }) });
-    },
-    onError: (err: Error) =>
-      pushToast({ icon: "⚠️", title: t("dashboard.toast.exportFailed"), body: err.message }),
-  });
-
-  const importMutation = useMutation({
-    mutationFn: (file: File) => importBackup(file),
-    onSuccess: (result) => {
-      const total = Object.values(result.row_counts).reduce((sum, n) => sum + n, 0);
-      pushToast({ icon: "♻️", title: t("dashboard.toast.restoredTitle"), body: t("dashboard.toast.restoredBody", { count: total }) });
-      // A restore replaces everything the client may have cached.
-      queryClient.invalidateQueries();
-      setSelectedFile(null);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    },
-    onError: (err: Error) =>
-      pushToast({ icon: "⚠️", title: t("dashboard.toast.restoreFailed"), body: err.message }),
-  });
-
-  const handleFileSelected = async (file: File) => {
-    setSelectedFile(file);
-    const ok = await confirm({
-      title: t("dashboard.confirm.restoreTitle"),
-      message: t("dashboard.confirm.restoreMessage", { name: file.name }),
-      confirmLabel: t("dashboard.confirm.restore"),
-      confirmVariant: "danger",
-    });
-    if (ok) {
-      importMutation.mutate(file);
-    } else {
-      setSelectedFile(null);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    }
-  };
 
   return (
     <div className="animate-fade-in">
@@ -283,46 +225,6 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         </div>
       )}
 
-      {/* Backup & Restore */}
-      <div className="card mt-lg">
-        <div className="section-card-header">
-          <h3 className="card-title">{t("dashboard.backupTitle")}</h3>
-        </div>
-        <p className="text-sm text-secondary" style={{ margin: "0 0 var(--space-md)" }}>
-          {t("dashboard.backupDescription")}
-        </p>
-        <div className="flex-center" style={{ gap: "var(--space-md)", flexWrap: "wrap" }}>
-          <button
-            className="btn btn-primary"
-            onClick={() => exportMutation.mutate()}
-            disabled={exportMutation.isPending}
-          >
-            {exportMutation.isPending ? t("dashboard.exporting") : t("dashboard.exportBackup")}
-          </button>
-          <button
-            className="btn btn-ghost"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={importMutation.isPending}
-          >
-            {importMutation.isPending ? t("dashboard.restoring") : t("dashboard.restoreBackup")}
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="application/json,.json"
-            style={{ display: "none" }}
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) void handleFileSelected(file);
-            }}
-          />
-        </div>
-        {selectedFile && !importMutation.isPending && (
-          <p className="text-sm text-secondary" style={{ margin: "var(--space-sm) 0 0" }}>
-            {t("dashboard.selectedFile", { name: selectedFile.name })}
-          </p>
-        )}
-      </div>
     </div>
   );
 }

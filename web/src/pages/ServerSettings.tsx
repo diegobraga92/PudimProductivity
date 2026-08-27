@@ -1,13 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   getScoreProviders,
   saveScoreProviders,
   type ScoreProvidersConfig,
   type ScoreProvidersUpdate,
 } from "../api/admin";
+import { exportBackup, importBackup } from "../api/backup";
 import { getDevRole, setDevRole } from "../api/client";
 import { searchLibraryScores } from "../api/library";
+import { useConfirm } from "../components/useConfirm";
+import { useToast } from "../components/toastContext";
+import { SettingsIcon } from "../components/icons";
 import { useI18n } from "../i18n";
 
 const MEDIA_TYPES = ["movie", "series", "game", "book"] as const;
@@ -41,6 +45,8 @@ const SETTING_LABEL_KEYS: Record<string, string> = {
 export default function ServerSettings() {
   const queryClient = useQueryClient();
   const { t } = useI18n();
+  const { pushToast } = useToast();
+  const confirm = useConfirm();
 
   const [role, setRole] = useState<string>(getDevRole());
   const isAdmin = role === "admin";
@@ -143,12 +149,64 @@ export default function ServerSettings() {
     }
   }
 
+  // Backup & Restore — export a JSON snapshot of all non-sensitive data, or
+  // restore from a previous one (destructive, so it needs confirmation).
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  const exportMutation = useMutation({
+    mutationFn: exportBackup,
+    onSuccess: ({ blob, filename }) => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      pushToast({ icon: "💾", title: t("serverSettings.toast.exportedTitle"), body: t("serverSettings.toast.exportedBody", { filename }) });
+    },
+    onError: (err: Error) =>
+      pushToast({ icon: "⚠️", title: t("serverSettings.toast.exportFailed"), body: err.message }),
+  });
+
+  const importMutation = useMutation({
+    mutationFn: (file: File) => importBackup(file),
+    onSuccess: (result) => {
+      const total = Object.values(result.row_counts).reduce((sum, n) => sum + n, 0);
+      pushToast({ icon: "♻️", title: t("serverSettings.toast.restoredTitle"), body: t("serverSettings.toast.restoredBody", { count: total }) });
+      // A restore replaces everything the client may have cached.
+      queryClient.invalidateQueries();
+      setSelectedFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    },
+    onError: (err: Error) =>
+      pushToast({ icon: "⚠️", title: t("serverSettings.toast.restoreFailed"), body: err.message }),
+  });
+
+  const handleFileSelected = async (file: File) => {
+    setSelectedFile(file);
+    const ok = await confirm({
+      title: t("serverSettings.confirm.restoreTitle"),
+      message: t("serverSettings.confirm.restoreMessage", { name: file.name }),
+      confirmLabel: t("serverSettings.confirm.restore"),
+      confirmVariant: "danger",
+    });
+    if (ok) {
+      importMutation.mutate(file);
+    } else {
+      setSelectedFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
   const providerOptions = (mediaType: (typeof MEDIA_TYPES)[number]) =>
     (data?.providers ?? []).filter((p) => p.supported_types.includes(mediaType));
 
   return (
     <div className="animate-fade-in">
-      <h2 className="page-heading">{t("serverSettings.title")}</h2>
+      <h2 className="page-heading"><SettingsIcon size={24} /> {t("serverSettings.title")}</h2>
 
       {!isAdmin && (
         <div className="card" style={{ maxWidth: 640, padding: "var(--space-md)", marginBottom: "var(--space-md)" }}>
@@ -319,6 +377,47 @@ export default function ServerSettings() {
               </div>
             </>
           )}
+
+          {/* Backup & Restore — admin-only (enforced by the backend too) */}
+          <div className="card" style={{ padding: "var(--space-md)" }}>
+            <div className="section-card-header">
+              <h3 className="card-title">{t("serverSettings.backupTitle")}</h3>
+            </div>
+            <p className="text-sm text-secondary" style={{ margin: "0 0 var(--space-md)" }}>
+              {t("serverSettings.backupDescription")}
+            </p>
+            <div className="flex-center" style={{ gap: "var(--space-md)", flexWrap: "wrap" }}>
+              <button
+                className="btn btn-primary"
+                onClick={() => exportMutation.mutate()}
+                disabled={exportMutation.isPending}
+              >
+                {exportMutation.isPending ? t("serverSettings.exporting") : t("serverSettings.exportBackup")}
+              </button>
+              <button
+                className="btn btn-ghost"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={importMutation.isPending}
+              >
+                {importMutation.isPending ? t("serverSettings.restoring") : t("serverSettings.restoreBackup")}
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="application/json,.json"
+                style={{ display: "none" }}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) void handleFileSelected(file);
+                }}
+              />
+            </div>
+            {selectedFile && !importMutation.isPending && (
+              <p className="text-sm text-secondary" style={{ margin: "var(--space-sm) 0 0" }}>
+                {t("serverSettings.selectedFile", { name: selectedFile.name })}
+              </p>
+            )}
+          </div>
         </div>
       )}
     </div>

@@ -11,6 +11,7 @@ import type { SoundID } from "../utils/audio";
 import { useI18n } from "../i18n";
 import { usePomodoroSyncSettings } from "../hooks/usePomodoroSyncSettings";
 import { SOUNDS } from "../utils/soundCatalog";
+import { ClockIcon } from "../components/icons";
 
 const FOCUS_PRESETS = [15, 25, 30, 45, 60];
 const BREAK_PRESETS = [5, 10, 15];
@@ -185,7 +186,7 @@ function Pomodoro({ onOpenSounds }: PomodoroProps) {
           marginBottom: "var(--space-lg)",
         }}
       >
-        <h2 className="page-heading" style={{ marginBottom: 0 }}>{t("pomodoro.title")}</h2>
+        <h2 className="page-heading" style={{ marginBottom: 0 }}><ClockIcon size={24} /> {t("pomodoro.title")}</h2>
       </div>
 
       <div

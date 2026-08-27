@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { deleteRecipe, listRecipes, resolveMediaUrl, type Recipe } from "../api/recipes";
 import { useI18n } from "../i18n";
+import { UtensilsIcon } from "../components/icons";
 
 const ALL_TAGS = ["quick", "vegan", "vegetarian", "breakfast", "dinner", "dessert", "soup", "salad"];
 
@@ -43,7 +44,7 @@ export default function RecipeList({ onOpen }: { onOpen: (recipe: Recipe) => voi
   return (
     <div className="animate-fade-in">
       <div className="flex-center" style={{ justifyContent: "space-between", marginBottom: "var(--space-md)" }}>
-        <h2 className="page-heading" style={{ marginBottom: 0 }}>{t("recipes.title")}</h2>
+        <h2 className="page-heading" style={{ marginBottom: 0 }}><UtensilsIcon size={24} /> {t("recipes.title")}</h2>
         <button className="btn btn-primary" onClick={() => onOpen({ id: "__new__" } as Recipe)}>
           {t("recipes.new")}
         </button>

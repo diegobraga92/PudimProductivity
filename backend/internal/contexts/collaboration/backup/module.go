@@ -14,7 +14,7 @@ func RegisterBackupRoutes(r chi.Router, repo Repository, appVersion string) {
 
 	r.Route("/api/v1/backup", func(r chi.Router) {
 		r.Group(func(r chi.Router) {
-			r.Use(httpx.RequireRole("admin", "user"))
+			r.Use(httpx.RequireRole("admin"))
 			r.Get("/export", handler.Export)
 			r.Post("/import", handler.Import)
 		})

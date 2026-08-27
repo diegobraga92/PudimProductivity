@@ -12,6 +12,7 @@ import TaskListShare from "../components/TaskListShare";
 import QuickAddForm from "../components/QuickAddForm";
 import { usePresence } from "../hooks/usePresence";
 import { useI18n } from "../i18n";
+import { FolderIcon } from "../components/icons";
 import { DEV_USER_ID } from "../api/client";
 
 export default function Lists() {
@@ -54,6 +55,7 @@ export default function Lists() {
       <div className="page-header">
         <div>
           <h1 className="page-heading" style={{ marginBottom: "0.25rem" }}>
+            <FolderIcon size={24} />
             {t("lists.title")}
           </h1>
           <p className="page-subtitle">

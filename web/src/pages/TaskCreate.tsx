@@ -4,6 +4,7 @@ import ScheduleFields from "../components/ScheduleFields";
 import RecurrenceDayPicker from "../components/RecurrenceDayPicker";
 import Modal from "../components/Modal";
 import { useI18n } from "../i18n";
+import { TasksIcon } from "../components/icons";
 import { COLOR_PALETTE } from "../utils/constants";
 
 interface TaskCreateProps {
@@ -147,6 +148,7 @@ export default function TaskCreate({ onCreated, onCancel }: TaskCreateProps) {
     <Modal onClose={onCancel} maxWidth={480}>
       <div className="flex-between" style={{ marginBottom: "var(--space-md)" }}>
         <h2 className="page-heading" style={{ marginBottom: 0 }}>
+          <TasksIcon size={24} />
           {t("tasks.newTaskTitle")}
         </h2>
         <button className="btn btn-ghost btn-sm" onClick={onCancel} aria-label={t("a11y.close")}>

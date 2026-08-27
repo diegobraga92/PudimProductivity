@@ -328,8 +328,9 @@ function AppInner() {
                   marginBottom: "var(--space-lg)",
                 }}
               >
-                <h2 style={{ fontSize: "var(--font-size-xl)", fontWeight: 700 }}>
-                  💚 {t("nav.health")}
+                <h2 className="page-heading" style={{ marginBottom: 0 }}>
+                  <HeartPulseIcon size={24} />
+                  {t("nav.health")}
                 </h2>
                 <span
                   className={`badge ${isBackendOk ? "badge-done" : "badge-habit"}`}
