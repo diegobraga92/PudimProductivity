@@ -2,7 +2,6 @@
 <resources>
     <string name="app_name">PudimProductivity</string>
 
-    <!-- Phase 10: home-screen widgets -->
     <string name="tasks_widget_label">Tarefas Pudim</string>
     <string name="tasks_widget_description">Tarefas de hoje com marcação rápida</string>
     <string name="habits_widget_label">Hábitos Pudim</string>

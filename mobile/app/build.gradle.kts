@@ -163,14 +163,14 @@ dependencies {
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 
-    // Phase 9c: offline-first — local SQLite persistence + WorkManager.
+    // local SQLite persistence + WorkManager.
     // (Room/KSP would require migrating off AGP 9's built-in Kotlin, which is
     // unsupported by KSP — see docs/adr/012. A hand-rolled SQLiteOpenHelper
     // layer with a Room-style DAO API gives the same offline capability with
     // zero annotation-processing build risk.)
     implementation("androidx.work:work-runtime-ktx:2.10.1")
 
-    // Phase 10: home-screen widgets — Jetpack Glance (Compose for widgets).
+    // Jetpack Glance (Compose for widgets).
     // 1.1.1 is the newest stable release (1.2/1.3 are pre-release only). Glance
     // needs no KSP, so it works with AGP 9's built-in Kotlin that blocked Room
     // (docs/adr/012). glance-material3 provides the M3 color scheme +

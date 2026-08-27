@@ -9,8 +9,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * JVM unit tests for the pure widget mapping logic (Phase 10). No Android
- * dependencies — the `build*` functions take plain local-DB entities.
+ * JVM unit tests for the pure widget mapping logic. No Android
+ * dependencies, the `build*` functions take plain local-DB entities.
  */
 class WidgetModelsTest {
 

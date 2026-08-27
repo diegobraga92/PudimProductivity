@@ -25,9 +25,6 @@
             </intent-filter>
         </activity>
 
-        <!-- Phase 10: home-screen widgets (Jetpack Glance). The system sends
-             APPWIDGET_UPDATE to these receivers; Glance renders the UI and
-             handles the actionRunCallback taps (checkboxes) internally. -->
         <receiver
             android:name=".widget.TasksWidgetReceiver"
             android:exported="true"
@@ -52,8 +49,6 @@
                 android:resource="@xml/habits_widget_info" />
         </receiver>
 
-        <!-- Phase 9b: FileProvider so the camera intent can write the photo
-             to app-private storage (androidx.core FileProvider). -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="com.pudimproductivity.fileprovider"
