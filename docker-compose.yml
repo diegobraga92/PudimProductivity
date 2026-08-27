@@ -9,10 +9,6 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-pudimproductivity}
     ports:
       - "${DB_PORT:-5433}:5432"
-    # Postgres 18+ images require a single mount at /var/lib/postgresql (data is
-    # stored in a major-version subdirectory, e.g. /var/lib/postgresql/18/docker).
-    # The old pre-18 path /var/lib/postgresql/data makes the entrypoint exit with
-    # "there appears to be PostgreSQL data in /var/lib/postgresql/data" on 18+.
     volumes:
       - pgdata:/var/lib/postgresql
     healthcheck:
@@ -21,10 +17,6 @@ services:
       timeout: 3s
       retries: 5
 
-  # Jaeger for OpenTelemetry traces (Phase 6). Start with:
-  #   docker compose --profile tracing up -d
-  # then open http://localhost:16686 to view spans. The backend exports spans
-  # over OTLP/HTTP when OTEL_EXPORTER_OTLP_ENDPOINT is set (see .env.example).
   jaeger:
     profiles:
       - tracing
@@ -44,27 +36,16 @@ services:
     restart: unless-stopped
     environment:
       PORT: "8080"
-      # Comma-separated CORS allow-list for cross-origin clients. The Electron
-      # desktop app serves the SPA from app://bundle — allow it to use the
-      # desktop app against this LAN deployment (see web/.env.desktop).
       CORS_ALLOWED_ORIGINS: "${CORS_ALLOWED_ORIGINS:-}"
       DATABASE_URL: "postgres://${POSTGRES_USER:-pudim}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-pudimproductivity}?sslmode=disable"
       REDIS_URL: "redis://redis:6379/0"
       LOG_LEVEL: "${LOG_LEVEL:-debug}"
-      # OpenTelemetry OTLP/HTTP endpoint. Empty by default (spans go to stdout
-      # only). Set to http://jaeger:4318 in .env and run `docker compose
-      # --profile tracing up` to view traces in Jaeger (http://localhost:16686).
       OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-}"
-      # Media storage (recipe images). Priority: S3_MEDIA_BUCKET (real S3 or
-      # any S3-compatible store) → local disk (MEDIA_STORAGE=local). Unset both
-      # to disable image uploads (degraded mode).
       S3_MEDIA_BUCKET: "${S3_MEDIA_BUCKET:-}"
       S3_MEDIA_REGION: "${S3_MEDIA_REGION:-us-east-1}"
       MEDIA_STORAGE: "${MEDIA_STORAGE:-}"
       MEDIA_LOCAL_DIR: "/data/media"
       MEDIA_PUBLIC_BASE_URL: "${MEDIA_PUBLIC_BASE_URL:-}"
-      # Soundscape ambient sounds: defaults ship in the image and are seeded
-      # into the soundsdata volume on startup (existing files are kept).
       SOUNDS_DIR: "/app/sounds"
       SOUNDS_BUNDLED_DIR: "/app/sounds-default"
     ports:
