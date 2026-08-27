@@ -72,7 +72,8 @@ object TasksWidget : GlanceAppWidget() {
         Localization.init(context)
         val snapshot = withContext(Dispatchers.IO) { WidgetData.loadTasks(context) }
         provideContent {
-            GlanceTheme(colors = WidgetColors.providers) {
+            // Follow the app's theme (System / Light / Dark), not just the system.
+            GlanceTheme(colors = WidgetColors.resolve(context)) {
                 TasksContent(snapshot)
             }
         }

@@ -55,6 +55,7 @@ import com.pudimproductivity.ui.screens.TaskListScreen
 import com.pudimproductivity.ui.theme.PudimProductivityTheme
 import com.pudimproductivity.ui.theme.ThemeMode
 import com.pudimproductivity.ui.theme.ThemePreferences
+import com.pudimproductivity.widget.WidgetUpdater
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -137,6 +138,8 @@ class MainActivity : ComponentActivity() {
                         onThemeModeChange = { mode ->
                             ThemePreferences.save(appContext, mode)
                             themeMode = mode
+                            // Refresh home-screen widgets so they pick up the new theme.
+                            lifecycleScope.launch { WidgetUpdater.updateAll(appContext) }
                         }
                     )
                 }

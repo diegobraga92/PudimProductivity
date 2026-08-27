@@ -39,6 +39,16 @@ private fun mediaLabel(t: String): String = when (t) {
     else -> t
 }
 
+/**
+ * Formats a library score the same way the web does (`Math.round(score * 10) / 10`
+ * — see web/src/pages/Library.tsx): one decimal at most, with a trailing ".0"
+ * dropped. So 92.33333333333333 shows as "92.3" and 92.0 as "92".
+ */
+internal fun formatScore(score: Double): String {
+    val rounded = Math.round(score * 10) / 10.0
+    return if (rounded % 1.0 == 0.0) rounded.toLong().toString() else rounded.toString()
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LibraryScreen(onBack: () -> Unit) {
@@ -95,7 +105,7 @@ fun LibraryScreen(onBack: () -> Unit) {
         year = item.release_year?.toString() ?: ""
         done = item.done
         notes = item.notes
-        score = item.score?.toString() ?: ""
+        score = item.score?.let { formatScore(it) } ?: ""
         scoreSource = item.score_source
         subtype = item.subtype
         formOpen = true
@@ -188,7 +198,9 @@ fun LibraryScreen(onBack: () -> Unit) {
                                 scope.launch {
                                     try {
                                         val yearValue = year.toIntOrNull()?.takeIf { it in 1800..2100 }
-                                        val scoreValue = score.toDoubleOrNull()?.takeIf { it in 0.0..100.0 }
+                                        val scoreValue = score.toDoubleOrNull()
+                                            ?.takeIf { it in 0.0..100.0 }
+                                            ?.let { Math.round(it * 10) / 10.0 }
                                         if (editing != null) {
                                             ApiClient.libraryService.updateItem(
                                                 editing!!.id,
@@ -450,23 +462,38 @@ private fun LibraryRowList(
                         modifier = Modifier.width(60.dp)
                     )
                     Text(
-                        text = item.score?.let { "★ $it" } ?: "—",
+                        text = item.score?.let { "★ ${formatScore(it)}" } ?: "—",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.width(72.dp)
                     )
                     Row(
-                        modifier = Modifier.width(150.dp),
+                        modifier = Modifier.width(170.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        OutlinedButton(onClick = { onEdit(item) }, modifier = Modifier.weight(1f)) {
-                            Text(Localization.text("common.edit"), style = MaterialTheme.typography.labelSmall)
+                        OutlinedButton(
+                            onClick = { onEdit(item) },
+                            modifier = Modifier.weight(1f),
+                            contentPadding = PaddingValues(horizontal = 12.dp)
+                        ) {
+                            Text(
+                                Localization.text("common.edit"),
+                                style = MaterialTheme.typography.labelSmall,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
                         }
-                        OutlinedButton(onClick = { onDelete(item) }, modifier = Modifier.weight(1f)) {
+                        OutlinedButton(
+                            onClick = { onDelete(item) },
+                            modifier = Modifier.weight(1f),
+                            contentPadding = PaddingValues(horizontal = 12.dp)
+                        ) {
                             Text(
                                 Localization.text("common.delete"),
                                 style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.error
+                                color = MaterialTheme.colorScheme.error,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                     }

@@ -548,7 +548,7 @@
   "widgets.tasks.allDoneShort": "all done",
   "widgets.tasks.noTasksShort": "no tasks",
   "widgets.tasks.doneOfTotal": "{done} of {total} done",
-  "widgets.habits.title": "Today's Habits",
+  "widgets.habits.title": "Habits",
   "widgets.habits.empty": "No habits scheduled today",
   "widgets.habits.open": "Open habits",
   "widgets.habits.complete": "Complete {title} for today",

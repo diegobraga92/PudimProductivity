@@ -34,8 +34,11 @@ import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import com.pudimproductivity.i18n.Localization
 
-/** Corner radius of the widget card (rounds the background on Android 12+). */
-internal val WidgetCornerRadius = 20.dp
+/**
+ * Corner radius of the widget card (rounds the background on Android 12+).
+ * Matches the app's card shape (`shapes.large` = 16.dp in ui/theme/Theme.kt).
+ */
+internal val WidgetCornerRadius = 16.dp
 
 /** Height of the pill-shaped progress bar. */
 internal val ProgressBarHeight = 8.dp
@@ -57,14 +60,16 @@ internal val WidgetPanelGap = 8.dp
  * responsive size — always one of the sizes in the widget's `SizeMode.Responsive`).
  */
 
-/** Rounded, padded brand card used as the root of every widget. */
+/** Rounded, padded brand card used as the root of every widget. The background
+ *  uses the app's `background` token — warm cream in light, dark navy in dark —
+ *  so the card reads as a piece of the app instead of a flat white slab. */
 @Composable
 internal fun WidgetCard(content: @Composable ColumnScope.() -> Unit) {
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
             .cornerRadius(WidgetCornerRadius)
-            .background(GlanceTheme.colors.surface)
+            .background(GlanceTheme.colors.background)
             .padding(CardHorizontalPadding)
     ) {
         content()
@@ -148,22 +153,23 @@ internal fun WidgetProgress(
     progress: Float,
     color: ColorProvider,
     modifier: GlanceModifier = GlanceModifier,
-    width: Dp? = null
+    width: Dp? = null,
+    height: Dp = ProgressBarHeight
 ) {
     val fraction = progress.coerceIn(0f, 1f)
     val barWidth = width ?: (LocalSize.current.width - CardHorizontalPadding * 2).coerceAtLeast(0.dp)
     Row(
         modifier = modifier
             .width(barWidth)
-            .height(ProgressBarHeight)
-            .cornerRadius(ProgressBarHeight / 2)
+            .height(height)
+            .cornerRadius(height / 2)
             .background(GlanceTheme.colors.surfaceVariant)
     ) {
         Box(
             modifier = GlanceModifier
                 .width(barWidth * fraction)
                 .fillMaxHeight()
-                .cornerRadius(ProgressBarHeight / 2)
+                .cornerRadius(height / 2)
                 .background(color)
         ) { }
     }
@@ -212,42 +218,6 @@ internal fun WidgetProgressPanel(
     }
 }
 
-/**
- * Compact donut-style ring showing the habit completion count, used by the
- * Habits widget's small layout. Glance 1.1.1 has no determinate circular
- * progress indicator, so the ring is a track-coloured disc with a
- * card-coloured hole and the "done/total" count in the centre.
- */
-@Composable
-internal fun WidgetProgressRing(
-    done: Int,
-    scheduled: Int,
-    color: ColorProvider
-) {
-    Box(
-        modifier = GlanceModifier
-            .size(36.dp)
-            .cornerRadius(18.dp)
-            .background(if (scheduled > 0) color else GlanceTheme.colors.surfaceVariant),
-        contentAlignment = Alignment.Center
-    ) {
-        // Card-coloured hole — both children are centred, so this reads as a ring.
-        Box(
-            modifier = GlanceModifier
-                .size(24.dp)
-                .cornerRadius(12.dp)
-                .background(GlanceTheme.colors.surface)
-        ) { }
-        Text(
-            text = "$done/$scheduled",
-            style = TextStyle(
-                color = GlanceTheme.colors.onSurface,
-                fontWeight = FontWeight.Bold
-            )
-        )
-    }
-}
-
 /** One row in a widget list: checkbox + title + optional trailing badge. */
 @Composable
 internal fun WidgetCheckRow(
@@ -289,21 +259,47 @@ internal fun WidgetCheckRow(
     }
 }
 
-/** Rounded pill used for streak counts (matches the app's StreakBadge accent). */
+/**
+ * Streak indicator mirroring the app's StreakBadge (ui/components/StreakBadge.kt):
+ * a fire emoji, the current count in the tertiary colour, and an optional
+ * muted "(best: N)" suffix — no pill background, exactly like in-app.
+ */
 @Composable
-internal fun WidgetBadge(text: String, modifier: GlanceModifier = GlanceModifier) {
-    Text(
-        text = text,
-        maxLines = 1,
-        modifier = modifier
-            .cornerRadius(8.dp)
-            .background(GlanceTheme.colors.primaryContainer)
-            .padding(horizontal = 6.dp, vertical = 2.dp),
-        style = TextStyle(
-            color = GlanceTheme.colors.onPrimaryContainer,
-            fontWeight = FontWeight.Bold
+internal fun WidgetStreakBadge(
+    count: Int,
+    best: Int,
+    modifier: GlanceModifier = GlanceModifier
+) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "🔥",
+            style = TextStyle(fontSize = 14.sp)
         )
-    )
+        Spacer(GlanceModifier.width(2.dp))
+        Text(
+            text = count.toString(),
+            maxLines = 1,
+            style = TextStyle(
+                color = GlanceTheme.colors.onTertiaryContainer,
+                fontWeight = FontWeight.Bold,
+                fontSize = 13.sp
+            )
+        )
+        if (best > count) {
+            Spacer(GlanceModifier.width(4.dp))
+            Text(
+                text = Localization.text("streak.best", "count" to best),
+                maxLines = 1,
+                style = TextStyle(
+                    color = GlanceTheme.colors.onSurfaceVariant,
+                    fontSize = 11.sp
+                )
+            )
+        }
+    }
 }
 
 /** Friendly empty state: emoji + message + one clear compact action pill. */

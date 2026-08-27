@@ -1,59 +1,99 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Static preview shown in the widget picker for the Today's Habits widget.
-     Mirrors the rendered card: cream background, header, green pill progress
-     bar, and habit rows with a streak badge. -->
+<!-- Static preview shown in the widget picker for the Habits widget.
+     Mirrors the rendered card: warm cream background, bold "Habits" heading,
+     segmented habit-green progress dots with a "done/total" count, and
+     web-style habit cards (white surface, 1px border, green checked checkbox,
+     app-style streak text). -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="250dp"
     android:height="110dp"
     android:viewportWidth="250"
     android:viewportHeight="110">
 
-    <!-- Cream card background -->
+    <!-- Card background (app brand cream) -->
     <path
         android:fillColor="#FEF6E9"
         android:pathData="M0,0h250v110h-250z" />
 
-    <!-- Header: title + count -->
-    <path
-        android:fillColor="#EA580C"
-        android:pathData="M12,16h84v10h-84z" />
-    <path
-        android:fillColor="#10B981"
-        android:pathData="M196,16h42v10h-42z" />
-
-    <!-- Pill progress track + fill -->
-    <path
-        android:fillColor="#F2E0D0"
-        android:pathData="M12,36 a4,4 0 0 1 4,-4 h218 a4,4 0 0 1 4,4 a4,4 0 0 1 -4,4 h-218 a4,4 0 0 1 -4,-4 z" />
-    <path
-        android:fillColor="#10B981"
-        android:pathData="M12,36 a4,4 0 0 1 4,-4 h120 a4,4 0 0 1 4,4 a4,4 0 0 1 -4,4 h-120 a4,4 0 0 1 -4,-4 z" />
-
-    <!-- Habit rows: checkbox + text + streak badge pill -->
-    <path
-        android:fillColor="#10B981"
-        android:pathData="M12,54h12v12h-12z" />
+    <!-- Bold "Habits" heading -->
     <path
         android:fillColor="#1F1B16"
-        android:pathData="M32,54h110v8h-110z" />
-    <path
-        android:fillColor="#FFDBC7"
-        android:pathData="M176,51 a5,5 0 0 1 5,-5 h34 a5,5 0 0 1 5,5 a5,5 0 0 1 -5,5 h-34 a5,5 0 0 1 -5,-5 z" />
-    <path
-        android:fillColor="#3B0A00"
-        android:pathData="M186,55h20v4h-20z" />
+        android:pathData="M12,14h58v11h-58z" />
 
+    <!-- Segmented progress dots: 2 done (green), 4 pending (outline) -->
     <path
         android:fillColor="#10B981"
-        android:pathData="M12,74h12v12h-12z" />
+        android:pathData="M16,31 a4,4 0 0 1 4,-4 h4 a4,4 0 0 1 4,4 a4,4 0 0 1 -4,4 h-4 a4,4 0 0 1 -4,-4 z" />
     <path
-        android:fillColor="#1F1B16"
-        android:pathData="M32,74h100v8h-100z" />
-
+        android:fillColor="#10B981"
+        android:pathData="M32,31 a4,4 0 0 1 4,-4 h4 a4,4 0 0 1 4,4 a4,4 0 0 1 -4,4 h-4 a4,4 0 0 1 -4,-4 z" />
     <path
         android:fillColor="#85736A"
-        android:pathData="M12,94h12v12h-12z" />
+        android:pathData="M48,31 a4,4 0 0 1 4,-4 h4 a4,4 0 0 1 4,4 a4,4 0 0 1 -4,4 h-4 a4,4 0 0 1 -4,-4 z" />
+    <path
+        android:fillColor="#85736A"
+        android:pathData="M64,31 a4,4 0 0 1 4,-4 h4 a4,4 0 0 1 4,4 a4,4 0 0 1 -4,4 h-4 a4,4 0 0 1 -4,-4 z" />
+    <path
+        android:fillColor="#85736A"
+        android:pathData="M80,31 a4,4 0 0 1 4,-4 h4 a4,4 0 0 1 4,4 a4,4 0 0 1 -4,4 h-4 a4,4 0 0 1 -4,-4 z" />
+    <path
+        android:fillColor="#85736A"
+        android:pathData="M96,31 a4,4 0 0 1 4,-4 h4 a4,4 0 0 1 4,4 a4,4 0 0 1 -4,4 h-4 a4,4 0 0 1 -4,-4 z" />
+
+    <!-- "2/5" done count -->
+    <path
+        android:fillColor="#10B981"
+        android:pathData="M116,32 a5,5 0 0 1 5,-5 h14 a5,5 0 0 1 5,5 a5,5 0 0 1 -5,5 h-14 a5,5 0 0 1 -5,-5 z" />
+
+    <!-- Habit card 1 (completed): white surface, 1px web border -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:strokeColor="#E2E8F0"
+        android:strokeWidth="2"
+        android:pathData="M12,48 a8,8 0 0 1 8,-8 h210 a8,8 0 0 1 8,8 a8,8 0 0 1 -8,8 h-210 a8,8 0 0 1 -8,-8 z" />
+    <path
+        android:fillColor="#10B981"
+        android:pathData="M20,52 a3,3 0 0 1 3,-3 h6 a3,3 0 0 1 3,3 a3,3 0 0 1 -3,3 h-6 a3,3 0 0 1 -3,-3 z" />
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2"
+        android:pathData="M23,58.5l1.5,1.5l3,-3.5" />
     <path
         android:fillColor="#1F1B16"
-        android:pathData="M32,94h80v8h-80z" />
+        android:pathData="M38,54h100v8h-100z" />
+    <path
+        android:fillColor="#B45309"
+        android:pathData="M176,56h5v4h-5z" />
+    <path
+        android:fillColor="#B45309"
+        android:pathData="M186,54h9v7h-9z" />
+
+    <!-- Habit card 2 (pending): outlined box -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:strokeColor="#E2E8F0"
+        android:strokeWidth="2"
+        android:pathData="M12,72 a8,8 0 0 1 8,-8 h210 a8,8 0 0 1 8,8 a8,8 0 0 1 -8,8 h-210 a8,8 0 0 1 -8,-8 z" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#85736A"
+        android:strokeWidth="2"
+        android:pathData="M21,77h10v10h-10z" />
+    <path
+        android:fillColor="#1F1B16"
+        android:pathData="M38,78h88v8h-88z" />
+
+    <!-- Third card clipped at the bottom: suggests the list scrolls taller -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:strokeColor="#E2E8F0"
+        android:strokeWidth="2"
+        android:pathData="M12,96 a8,8 0 0 1 8,-8 h210 a8,8 0 0 1 8,8 a8,8 0 0 1 -8,8 h-210 a8,8 0 0 1 -8,-8 z" />
+    <path
+        android:fillColor="#94A3B8"
+        android:pathData="M38,102h66v6h-66z" />
 </vector>
+
+
+
+
