@@ -3,22 +3,16 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+WEB_DIR="$ROOT_DIR/web"
 MOBILE_DIR="$ROOT_DIR/mobile"
 export ANDROID_HOME="${ANDROID_HOME:-$HOME/Android/Sdk}"
 AVD_NAME="Pixel_9_API_36"
 BOOT_TIMEOUT=120
 
-# ─── Colors ────────────────────────────────────────────────────────────────
-CYAN='\033[0;36m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-RED='\033[0;31m'
-NC='\033[0m'
-
-log_info()  { echo -e "${CYAN}[dev-mobile]${NC} $1"; }
-log_ok()    { echo -e "${GREEN}[dev-mobile]${NC} $1"; }
-log_warn()  { echo -e "${YELLOW}[dev-mobile]${NC} $1"; }
-log_error() { echo -e "${RED}[dev-mobile]${NC} $1"; }
+# ─── Colors & logging (shared helpers) ─────────────────────────────────────
+# shellcheck source=lib/common.sh
+source "$ROOT_DIR/scripts/lib/common.sh"
+PREFIX="mobile"
 
 # ─── Help ──────────────────────────────────────────────────────────────────
 usage() {
@@ -35,23 +29,24 @@ Options:
   --no-web        Skip web frontend — passed to run.sh
   --help          Show this help message and exit
 EOF
-    exit 0
 }
 
 # ─── Parse arguments ───────────────────────────────────────────────────────
 SKIP_EMULATOR=false
+DOCKER_REQUESTED=true
 DEV_SH_ARGS=()
 for arg in "$@"; do
     case "$arg" in
         --no-emulator)  SKIP_EMULATOR=true ;;
-        --no-db)        DEV_SH_ARGS+=("--no-db") ;;
+        --no-db)        DOCKER_REQUESTED=false; DEV_SH_ARGS+=("--no-db") ;;
         --no-web)       DEV_SH_ARGS+=("--no-web") ;;
-        --help)         usage ;;
-        *) log_warn "Unknown argument: $arg"; usage ;;
+        --help)         usage; exit 0 ;;
+        *) log_warn "Unknown argument: $arg"; usage >&2; exit 2 ;;
     esac
 done
 
-# Forward --no-web by default (mobile most commonly conflicts on port 3000)
+# Forward --no-web to run.sh by default: the mobile workflow doesn't need the
+# web dev server, so don't start it unless the user explicitly asks for it.
 has_web_arg=false
 for a in "${DEV_SH_ARGS[@]}"; do
     if [ "$a" = "--no-web" ]; then
@@ -64,7 +59,19 @@ if [ "$has_web_arg" = false ]; then
 fi
 
 # ─── Cleanup handler ───────────────────────────────────────────────────────
+# Runs on SIGINT/SIGTERM and on any exit (EXIT trap), so the emulator, the
+# run.sh stack and Docker are torn down even when an error path exits early.
+CLEANED=0
 cleanup() {
+    (( CLEANED )) && return 0
+    CLEANED=1
+
+    # Nothing was started yet (e.g. --help or an early error) — nothing to
+    # tear down.
+    if [ -z "${DEV_PID:-}" ]; then
+        return 0
+    fi
+
     echo ""
     log_info "Shutting down..."
 
@@ -86,27 +93,30 @@ cleanup() {
         pkill -9 -f "qemu.*${AVD_NAME}" 2>/dev/null || true
     fi
 
-    # 2. Stop the backend stack launched by run.sh
-    log_info "Stopping backend (go process)..."
-    pkill -9 -f "go run.*cmd/server" 2>/dev/null || true
-
-    log_info "Stopping frontend (vite)..."
-    pkill -9 -f "vite" 2>/dev/null || true
-
-    log_info "Stopping Docker services..."
-    docker compose -f "$ROOT_DIR/docker-compose.yml" down 2>/dev/null || true
-
-    # 3. Stop run.sh itself (if still alive after children are gone)
+    # 2. Stop run.sh first: its own cleanup tears down the backend, the
+    #    frontend and (only if it started them) the Docker services.
     if [ -n "${DEV_PID:-}" ]; then
+        log_info "Stopping run.sh (PID $DEV_PID)..."
         kill "$DEV_PID" 2>/dev/null || true
         wait "$DEV_PID" 2>/dev/null || true
     fi
 
+    # 3. Fallbacks in case run.sh already died without cleaning up.
+    #    The vite pattern is scoped to this repo's web dir so unrelated
+    #    dev servers are not killed.
+    pkill -9 -f "go run.*cmd/server" 2>/dev/null || true
+    pkill -9 -f "${WEB_DIR}.*vite" 2>/dev/null || true
+    if [ "$DOCKER_REQUESTED" = true ]; then
+        log_info "Stopping Docker services..."
+        docker compose -f "$ROOT_DIR/docker-compose.yml" down 2>/dev/null || true
+    fi
+
     log_ok "All services stopped. Goodbye!"
-    exit 0
 }
 
-trap cleanup SIGINT SIGTERM
+trap 'cleanup; exit 130' INT
+trap 'cleanup; exit 143' TERM
+trap 'cleanup' EXIT
 
 # ─── 1. Launch backend, database, and other services via run.sh ────────────
 log_info "Starting backend stack via run.sh..."
@@ -114,8 +124,9 @@ log_info "Starting backend stack via run.sh..."
 DEV_PID=$!
 log_ok "run.sh started (PID $DEV_PID)."
 
-# Give run.sh time to boot services before starting the emulator
-sleep 3
+# run.sh boots the backend and database in the background while the
+# emulator boots below — the two run in parallel, so there's nothing to
+# wait on here.
 
 # ─── 2. Start Android emulator ─────────────────────────────────────────────
 if [ "$SKIP_EMULATOR" = false ]; then
@@ -161,10 +172,7 @@ if [ "$SKIP_EMULATOR" = false ]; then
             log_ok "Emulator booted successfully."
         else
             log_error "Emulator did not boot within ${BOOT_TIMEOUT}s."
-            # Clean up the emulator process we started
-            if [ -n "${EMULATOR_PID:-}" ]; then
-                kill "$EMULATOR_PID" 2>/dev/null || true
-            fi
+            # The EXIT trap tears down the emulator, run.sh and Docker.
             exit 1
         fi
     fi
@@ -204,7 +212,7 @@ log_ok "  PudimProductivity mobile environment is running!"
 log_ok ""
 log_ok "  App:        installed on emulator/device"
 log_ok "  Backend:    http://localhost:8080"
-log_ok "  API Docs:   http://localhost:8080/api/v1/health"
+log_ok "  Backend Health: http://localhost:8080/api/v1/health"
 log_ok ""
 log_ok "  Press Ctrl+C to stop all services."
 log_ok "═══════════════════════════════════════════════════════════"

@@ -5,17 +5,10 @@ ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 WEB_DIR="$ROOT_DIR/web"
 BACKEND_DIR="$ROOT_DIR/backend"
 
-# ─── Colors ────────────────────────────────────────────────────────────────
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-CYAN='\033[0;36m'
-NC='\033[0m' # No Color
-
-log_info()  { echo -e "${CYAN}[dev]${NC} $1"; }
-log_ok()    { echo -e "${GREEN}[dev]${NC} $1"; }
-log_warn()  { echo -e "${YELLOW}[dev]${NC} $1"; }
-log_error() { echo -e "${RED}[dev]${NC} $1"; }
+# ─── Colors & logging (shared helpers) ─────────────────────────────────────
+# shellcheck source=lib/common.sh
+source "$ROOT_DIR/scripts/lib/common.sh"
+PREFIX="dev"
 
 # ─── Help ──────────────────────────────────────────────────────────────────
 usage() {
@@ -30,11 +23,23 @@ Options:
   --clean    Remove Docker volumes, node_modules, and Go build cache before starting
   --help     Show this help message and exit
 EOF
-    exit 0
 }
 
 # ─── Cleanup handler ───────────────────────────────────────────────────────
+# Runs on SIGINT/SIGTERM and on any exit (EXIT trap), so crashed background
+# children and early error paths tear the stack down too. CLEANED guards
+# against double-cleanup.
+CLEANED=0
 cleanup() {
+    (( CLEANED )) && return 0
+    CLEANED=1
+
+    # Nothing was started yet (e.g. --help or an early error) — nothing to
+    # tear down.
+    if [ -z "${BACKEND_PID:-}" ] && [ -z "${FRONTEND_PID:-}" ] && [ "${DOCKER_STARTED:-}" != "true" ]; then
+        return 0
+    fi
+
     echo ""
     log_info "Shutting down..."
 
@@ -65,10 +70,11 @@ cleanup() {
     fi
 
     log_ok "All services stopped. Goodbye!"
-    exit 0
 }
 
-trap cleanup SIGINT SIGTERM
+trap 'cleanup; exit 130' INT
+trap 'cleanup; exit 143' TERM
+trap 'cleanup' EXIT
 
 # ─── Parse arguments ───────────────────────────────────────────────────────
 SKIP_DOCKER=false
@@ -79,8 +85,8 @@ for arg in "$@"; do
         --no-db)  SKIP_DOCKER=true ;;
         --no-web) SKIP_WEB=true ;;
         --clean)  CLEAN=true ;;
-        --help)   usage ;;
-        *) log_warn "Unknown argument: $arg"; usage ;;
+        --help)   usage; exit 0 ;;
+        *) log_warn "Unknown argument: $arg"; usage >&2; exit 2 ;;
     esac
 done
 
@@ -125,7 +131,18 @@ else
     log_ok "go.sum found, skipping go mod download."
 fi
 
-# ─── 3. Start Docker services ──────────────────────────────────────────────
+# ─── 3. Export .env variables (required before starting any service) ────────
+if [ -f "$ROOT_DIR/.env" ]; then
+    set -a
+    source "$ROOT_DIR/.env"
+    set +a
+    log_ok ".env loaded into environment."
+else
+    log_error ".env file not found at $ROOT_DIR/.env"
+    exit 1
+fi
+
+# ─── 4. Start Docker services ──────────────────────────────────────────────
 if [ "$SKIP_DOCKER" = false ]; then
     log_info "Starting Docker services (postgres, redis)..."
     # `--wait` blocks until every started service passes its healthcheck.
@@ -138,25 +155,11 @@ else
     log_info "Skipping Docker services (--no-db)."
 fi
 
-# ─── 4. Export .env variables ──────────────────────────────────────────────
-if [ -f "$ROOT_DIR/.env" ]; then
-    set -a
-    source "$ROOT_DIR/.env"
-    set +a
-    log_ok ".env loaded into environment."
-else
-    log_error ".env file not found at $ROOT_DIR/.env"
-    exit 1
-fi
-
 # ─── 5. Start backend ──────────────────────────────────────────────────────
 log_info "Starting backend (go run ./cmd/server)..."
 (cd "$BACKEND_DIR" && go run ./cmd/server) &
 BACKEND_PID=$!
 log_ok "Backend started (PID $BACKEND_PID)."
-
-# Give the backend a moment to start
-sleep 2
 
 # ─── 6. Start frontend (unless --no-web) ────────────────────────────────────
 if [ "$SKIP_WEB" = false ]; then
@@ -168,14 +171,39 @@ else
     log_info "Skipping web frontend (--no-web)."
 fi
 
-# ─── 7. Print summary ──────────────────────────────────────────────────────
+# ─── 7. Wait for the backend health endpoint ────────────────────────────────
+# Replaces the old fixed `sleep 2` with a readiness poll. The first `go run`
+# compiles the backend, so allow generous time; this is informational only —
+# the frontend already started in parallel and we continue either way.
+if command -v curl >/dev/null 2>&1; then
+    log_info "Waiting for backend health check..."
+    backend_ready=false
+    poll_count=0
+    while [ "$poll_count" -lt 60 ]; do
+        if curl -fsS "http://localhost:8080/api/v1/health" >/dev/null 2>&1; then
+            backend_ready=true
+            break
+        fi
+        sleep 1
+        poll_count=$((poll_count + 1))
+    done
+    if [ "$backend_ready" = true ]; then
+        log_ok "Backend is healthy."
+    else
+        log_warn "Backend not responding on /api/v1/health after 60s — continuing (first build can be slow)."
+    fi
+else
+    log_warn "curl not found — skipping backend health check."
+fi
+
+# ─── 8. Print summary ──────────────────────────────────────────────────────
 echo ""
 log_ok "═══════════════════════════════════════════════════════════"
 log_ok "  PudimProductivity is running!"
 log_ok ""
 log_ok "  Frontend:  http://localhost:3000"
 log_ok "  Backend:   http://localhost:8080"
-log_ok "  API Docs:  http://localhost:8080/api/v1/health"
+log_ok "  Backend Health: http://localhost:8080/api/v1/health"
 log_ok ""
 log_ok "  Press Ctrl+C to stop all services."
 log_ok "═══════════════════════════════════════════════════════════"
