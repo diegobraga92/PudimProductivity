@@ -1,4 +1,4 @@
-// PudimProductivity — CI smoke load test.
+// PudimProductivity, CI smoke load test.
 //
 // A short, low-VU pass over the hottest task + habit endpoints. Runs in CI on
 // every backend push (see .github/workflows/backend-ci.yml → load-smoke job)

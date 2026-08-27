@@ -1,7 +1,7 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-# Dev overlay — cheapest possible shape: 1 replica each, dev image tags, plus an
+# Dev overlay, cheapest possible shape: 1 replica each, dev image tags, plus an
 # in-cluster ephemeral PostgreSQL so the GitOps demo runs end-to-end locally.
 resources:
   - ../../base

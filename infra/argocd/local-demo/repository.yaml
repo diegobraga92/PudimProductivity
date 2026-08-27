@@ -1,4 +1,4 @@
-# Local Kind demo — ArgoCD repository pointing at a local git daemon.
+# Local Kind demo, ArgoCD repository pointing at a local git daemon.
 #
 # For the local cluster demo we register a `git://` repo served by a host-side
 # git daemon (see README.md) so ArgoCD can sync without pushing to GitHub.

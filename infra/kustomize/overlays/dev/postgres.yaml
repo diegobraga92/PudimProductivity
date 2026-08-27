@@ -1,6 +1,4 @@
-# Local dev PostgreSQL for the in-cluster GitOps demo. Ephemeral (emptyDir) —
-# enough to exercise the full backend (migrations, health, CRUD) in the demo
-# cluster.
+# Local dev PostgreSQL for the in-cluster GitOps demo.
 apiVersion: apps/v1
 kind: Deployment
 metadata:

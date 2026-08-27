@@ -1,5 +1,5 @@
-# Local Kind demo — ArgoCD Application syncing the dev overlay from the local
-# git daemon (see repository.yaml + README.md). Auto-sync + prune + selfHeal are
+# Local Kind demo, ArgoCD Application syncing the dev overlay from the local
+# git daemon. Auto-sync + prune + selfHeal are
 # on so a git push to the local mirror triggers a rollout.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
