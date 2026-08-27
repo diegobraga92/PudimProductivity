@@ -329,6 +329,15 @@
   "recipes.create": "Create recipe",
   "recipes.saveChanges": "Save changes",
 
+  "tags.quick": "Quick",
+  "tags.vegan": "Vegan",
+  "tags.vegetarian": "Vegetarian",
+  "tags.breakfast": "Breakfast",
+  "tags.dinner": "Dinner",
+  "tags.dessert": "Dessert",
+  "tags.soup": "Soup",
+  "tags.salad": "Salad",
+
   "library.title": "Library",
   "library.addItem": "+ Add item",
   "library.editing": "Editing…",
@@ -338,6 +347,7 @@
   "library.filterStatus": "Filter by status",
   "library.filterSubtype": "Filter by genre / console",
   "library.filterSubtypeAll": "All genres / consoles",
+  "library.quickFilters": "Quick filters",
   "library.allTypes": "All types",
   "library.movie": "Movie",
   "library.series": "Series",

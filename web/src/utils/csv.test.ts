@@ -95,6 +95,13 @@ describe("parseScoreValue", () => {
     expect(parseScoreValue(" 42 ")).toBe(42);
   });
 
+  it("truncates long decimal scores to one decimal place", () => {
+    expect(parseScoreValue("82.23076923076923")).toBe(82.2);
+    expect(parseScoreValue("93.33333333333334")).toBe(93.3);
+    expect(parseScoreValue("8.7")).toBe(8.7);
+    expect(parseScoreValue("96")).toBe(96);
+  });
+
   it("returns null for empty, garbage or out-of-range values", () => {
     expect(parseScoreValue("")).toBeNull();
     expect(parseScoreValue("n/a")).toBeNull();

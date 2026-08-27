@@ -180,14 +180,16 @@ function Soundscape() {
           display: "flex",
           alignItems: "center",
           gap: "var(--space-sm)",
-          marginBottom: "var(--space-lg)",
+          marginBottom: "var(--space-md)",
         }}
       >
         <h2 className="page-heading" style={{ marginBottom: 0 }}><MusicIcon size={24} /> {t("soundscape.title")}</h2>
       </div>
 
-      {/* Frequency Visualizer */}
-      <Visualizer />
+      {/* Frequency Visualizer — only meaningful while a sound is actually
+          playing; hiding it when idle avoids a large empty strip between the
+          title and the Master volume card. */}
+      {playing.size > 0 && <Visualizer />}
 
       {/* Master Volume */}
       <div

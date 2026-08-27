@@ -77,13 +77,20 @@ export function parseYearValue(value: string): number | null {
   return n;
 }
 
-/** Parses a CSV score cell into a number on the 0-100 scale, or null. */
+/** Rounds a score to at most one decimal (matches the Library list display). */
+export function normalizeScore(score: number): number {
+  return Math.round(score * 10) / 10;
+}
+
+/** Parses a CSV score cell into a number on the 0-100 scale, or null. Long
+ *  decimals (e.g. provider averages like 82.23076923076923) are truncated to
+ *  one decimal place so the stored value matches the Library list formatting. */
 export function parseScoreValue(value: string): number | null {
   const v = value.trim();
   if (v === "") return null;
   const n = Number(v);
   if (!Number.isFinite(n) || n < 0 || n > 100) return null;
-  return n;
+  return normalizeScore(n);
 }
 
 // --- Auto-score batch application (CSV import) ---

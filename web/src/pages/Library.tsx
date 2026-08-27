@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   createLibraryItem,
   deleteLibraryItem,
@@ -36,11 +36,104 @@ const MEDIA_ICONS: Record<MediaType, string> = {
 
 /**
  * Library scores can arrive with long decimals (e.g. 93.33333333333334 from a
- * provider average). Round to at most one decimal for display so the table
- * cell never overflows. The stored value is left untouched.
+ * provider average). Round to at most one decimal everywhere — list display,
+ * the add/edit form and when saving — so the stored value never shows up as a
+ * long floating-point number.
  */
 const roundScore = (score: number): number => Math.round(score * 10) / 10;
 const formatScore = (score: number): string => String(roundScore(score));
+
+type SortKey = "name" | "media_type" | "subtype" | "release_year" | "score";
+
+/** Sortable table columns, in grid order (checkbox and actions stay fixed). */
+const SORTABLE_COLUMNS: { key: SortKey; labelKey: string }[] = [
+  { key: "name", labelKey: "common.name" },
+  { key: "media_type", labelKey: "common.type" },
+  { key: "subtype", labelKey: "common.subtype" },
+  { key: "release_year", labelKey: "common.year" },
+  { key: "score", labelKey: "common.score" },
+];
+
+/** Compares two library items by a sort key. Missing values always sort last. */
+function compareItems(a: LibraryItem, b: LibraryItem, key: SortKey): number {
+  switch (key) {
+    case "name":
+      return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+    case "media_type":
+      return a.media_type.localeCompare(b.media_type);
+    case "subtype": {
+      const sa = a.subtype ?? "";
+      const sb = b.subtype ?? "";
+      if (sa === sb) return 0;
+      if (sa === "") return 1;
+      if (sb === "") return -1;
+      return sa.localeCompare(sb, undefined, { sensitivity: "base" });
+    }
+    case "release_year": {
+      const ya = a.release_year;
+      const yb = b.release_year;
+      if (ya === yb) return 0;
+      if (ya == null) return 1;
+      if (yb == null) return -1;
+      return ya - yb;
+    }
+    case "score": {
+      const sa = a.score;
+      const sb = b.score;
+      if (sa === sb) return 0;
+      if (sa == null) return 1;
+      if (sb == null) return -1;
+      return sa - sb;
+    }
+  }
+}
+
+/** Clickable column header that toggles the table sort on click. */
+function SortableHeader({
+  label,
+  active,
+  dir,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  dir: "asc" | "desc";
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={label}
+      style={{
+        background: "none",
+        border: "none",
+        padding: 0,
+        margin: 0,
+        fontFamily: "var(--font-family)",
+        fontSize: "var(--font-size-sm)",
+        fontWeight: 600,
+        color: "inherit",
+        cursor: "pointer",
+        textAlign: "left",
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "0.3rem",
+        whiteSpace: "nowrap",
+      }}
+    >
+      {label}
+      <span
+        style={{
+          fontSize: "0.7em",
+          color: active ? "var(--color-primary)" : "var(--color-text-muted)",
+        }}
+      >
+        {active ? (dir === "asc" ? "▲" : "▼") : "↕"}
+      </span>
+    </button>
+  );
+}
 
 const EMPTY_FORM: CreateLibraryItemRequest = {
   name: "",
@@ -64,6 +157,8 @@ export default function Library() {
   const [typeFilter, setTypeFilter] = useState("");
   const [doneFilter, setDoneFilter] = useState("");
   const [subtypeFilter, setSubtypeFilter] = useState("");
+  // Table sort: default to alphabetical by name.
+  const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({ key: "name", dir: "asc" });
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<LibraryItem | null>(null);
   const [form, setForm] = useState<CreateLibraryItemRequest>(EMPTY_FORM);
@@ -95,10 +190,48 @@ export default function Library() {
     queryFn: () => listLibrarySubtypes((typeFilter || undefined) as MediaType | undefined),
   });
 
+  // Quick subtype filters, derived from the subtypes that actually exist in the
+  // user's items (same philosophy as the recipe tag chips). Each chip pairs the
+  // subtype with its media type so e.g. a Horror book is not confused with a
+  // Horror movie.
+  const { data: allItems = [] } = useQuery({
+    queryKey: ["library", "all"],
+    queryFn: () => listLibraryItems(),
+  });
+
+  const availableSubtypePairs = useMemo(() => {
+    const seen = new Set<string>();
+    const pairs: { media_type: MediaType; subtype: string }[] = [];
+    for (const item of allItems) {
+      if (!item.subtype) continue;
+      const key = `${item.media_type}:${item.subtype}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      pairs.push({ media_type: item.media_type, subtype: item.subtype });
+    }
+    // Same-named subtypes from different types stay adjacent (so the type icon
+    // disambiguation is obvious); within a subtype, order by media type.
+    return pairs.sort(
+      (a, b) =>
+        a.subtype.localeCompare(b.subtype) || a.media_type.localeCompare(b.media_type),
+    );
+  }, [allItems]);
+
+  // Sort the displayed items client-side (the list is fully loaded, no
+  // pagination). Missing values are kept at the end regardless of direction.
+  const sortedItems = useMemo(() => {
+    const dir = sort.dir === "asc" ? 1 : -1;
+    return [...items].sort((a, b) => compareItems(a, b, sort.key) * dir);
+  }, [items, sort]);
+
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["library"] });
 
   const create = useMutation({
-    mutationFn: () => createLibraryItem(form),
+    mutationFn: () =>
+      createLibraryItem({
+        ...form,
+        score: form.score != null ? roundScore(form.score) : null,
+      }),
     onSuccess: () => {
       invalidate();
       closeForm();
@@ -114,7 +247,7 @@ export default function Library() {
         done: form.done,
         notes: form.notes,
         subtype: form.subtype,
-        score: form.score,
+        score: form.score != null ? roundScore(form.score) : null,
         score_source: form.score_source,
       }),
     onSuccess: () => {
@@ -177,6 +310,25 @@ export default function Library() {
     setScoreError(null);
   }
 
+  /** Toggles a quick subtype chip: activates it (setting both the type and the
+   *  subtype filters) or, when already active, clears the pair. */
+  function toggleSubtypeFilter(mediaType: string, subtype: string) {
+    if (typeFilter === mediaType && subtypeFilter === subtype) {
+      setTypeFilter("");
+      setSubtypeFilter("");
+    } else {
+      setTypeFilter(mediaType);
+      setSubtypeFilter(subtype);
+    }
+  }
+
+  /** Toggles a column sort: re-sorting the same column flips the direction. */
+  function toggleSort(key: SortKey) {
+    setSort((prev) =>
+      prev.key === key ? { key, dir: prev.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" },
+    );
+  }
+
   /** Queries the configured rating provider for the form's current title. */
   async function lookUpScore() {
     const title = form.name.trim();
@@ -195,11 +347,12 @@ export default function Library() {
     }
   }
 
-  /** Applies a confirmed candidate's score + source to the form. */
+  /** Applies a confirmed candidate's score + source to the form. The score is
+   *  truncated to one decimal so the input shows exactly what will be saved. */
   function applyCandidate(candidate: ScoreCandidate) {
     setForm({
       ...form,
-      score: candidate.score,
+      score: roundScore(candidate.score),
       score_source: candidate.score_source,
       name: candidate.title.trim() ? candidate.title.trim() : form.name,
       release_year:
@@ -270,6 +423,32 @@ export default function Library() {
           ))}
         </select>
       </div>
+
+      {/* Quick subtype filters — derived from the subtypes that actually exist.
+          Each chip pairs the subtype with its media type so e.g. a Horror book
+          is not confused with a Horror movie. Clicking one narrows the list;
+          clicking it again clears the filter. */}
+      {availableSubtypePairs.length > 0 && (
+        <div className="flex-center" style={{ gap: "0.4rem", flexWrap: "wrap", marginBottom: "var(--space-lg)" }}>
+          <span className="text-sm text-secondary" style={{ fontWeight: 600 }}>
+            {t("library.quickFilters")}:
+          </span>
+          {availableSubtypePairs.map(({ media_type, subtype }) => {
+            const active = typeFilter === media_type && subtypeFilter === subtype;
+            return (
+              <button
+                key={`${media_type}:${subtype}`}
+                className={`badge ${active ? "badge-done" : "badge-habit"}`}
+                style={{ cursor: "pointer", border: "none", fontFamily: "var(--font-family)" }}
+                title={`${t(MEDIA_LABEL_KEYS[media_type])} · ${subtype}`}
+                onClick={() => toggleSubtypeFilter(media_type, subtype)}
+              >
+                {MEDIA_ICONS[media_type]} {subtype}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Add / edit form */}
       {formOpen && (
@@ -484,15 +663,19 @@ export default function Library() {
               </svg>
             </span>
           </label>
-          <span>{t("common.name")}</span>
-          <span>{t("common.type")}</span>
-          <span>{t("common.subtype")}</span>
-          <span>{t("common.year")}</span>
-          <span>{t("common.score")}</span>
+          {SORTABLE_COLUMNS.map((col) => (
+            <SortableHeader
+              key={col.key}
+              label={t(col.labelKey)}
+              active={sort.key === col.key}
+              dir={sort.dir}
+              onClick={() => toggleSort(col.key)}
+            />
+          ))}
           <span>{t("common.actions")}</span>
         </div>
 
-        {items.map((item) => (
+        {sortedItems.map((item) => (
           <div
             key={item.id}
             style={{
@@ -568,7 +751,11 @@ export default function Library() {
       {importOpen && (
         <LibraryCsvImport
           onClose={() => setImportOpen(false)}
-          onImported={() => invalidate()}
+          onImported={() => {
+            invalidate();
+            // The import is done — close the modal so the refreshed list is visible.
+            setImportOpen(false);
+          }}
         />
       )}
     </div>

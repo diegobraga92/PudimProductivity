@@ -1,10 +1,21 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { deleteRecipe, listRecipes, resolveMediaUrl, type Recipe } from "../api/recipes";
 import { useI18n } from "../i18n";
 import { UtensilsIcon } from "../components/icons";
 
-const ALL_TAGS = ["quick", "vegan", "vegetarian", "breakfast", "dinner", "dessert", "soup", "salad"];
+/** Maps the well-known default recipe tags to i18n label keys so they can be
+ *  translated (e.g. "quick" → "Rápida" in pt-BR). Custom tags are shown as-is. */
+const TAG_LABEL_KEYS: Record<string, string> = {
+  quick: "tags.quick",
+  vegan: "tags.vegan",
+  vegetarian: "tags.vegetarian",
+  breakfast: "tags.breakfast",
+  dinner: "tags.dinner",
+  dessert: "tags.dessert",
+  soup: "tags.soup",
+  salad: "tags.salad",
+};
 
 /** Maps recipe tags to a food emoji used for the cover placeholder. */
 const TAG_EMOJI: Record<string, string> = {
@@ -35,6 +46,27 @@ export default function RecipeList({ onOpen }: { onOpen: (recipe: Recipe) => voi
     queryFn: () =>
       listRecipes({ search: search || undefined, tags: tag ? [tag] : undefined, difficulty: difficulty || undefined }),
   });
+
+  // Fetch all recipes (no filters) so the tag filter options follow the tags
+  // that actually exist in the user's recipes instead of a pre-made list.
+  const { data: allRecipes = [] } = useQuery({
+    queryKey: ["recipes", "all"],
+    queryFn: () => listRecipes(),
+  });
+
+  const availableTags = useMemo(() => {
+    const seen = new Set<string>();
+    for (const r of allRecipes) {
+      for (const t2 of r.tags ?? []) seen.add(t2);
+    }
+    return [...seen].sort((a, b) => a.localeCompare(b));
+  }, [allRecipes]);
+
+  /** Translates a tag for display, falling back to the raw tag for custom ones. */
+  const tagLabel = (value: string): string => {
+    const key = TAG_LABEL_KEYS[value];
+    return key ? t(key) : value;
+  };
 
   const deleteMut = useMutation({
     mutationFn: (id: string) => deleteRecipe(id),
@@ -67,14 +99,14 @@ export default function RecipeList({ onOpen }: { onOpen: (recipe: Recipe) => voi
       </div>
 
       <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap", marginBottom: "var(--space-lg)" }}>
-        {ALL_TAGS.map((t) => (
+        {availableTags.map((t2) => (
           <button
-            key={t}
-            className={`badge ${tag === t ? "badge-done" : "badge-habit"}`}
+            key={t2}
+            className={`badge ${tag === t2 ? "badge-done" : "badge-habit"}`}
             style={{ cursor: "pointer", border: "none", fontFamily: "var(--font-family)" }}
-            onClick={() => setTag(tag === t ? null : t)}
+            onClick={() => setTag(tag === t2 ? null : t2)}
           >
-            #{t}
+            #{tagLabel(t2)}
           </button>
         ))}
       </div>
@@ -101,13 +133,13 @@ export default function RecipeList({ onOpen }: { onOpen: (recipe: Recipe) => voi
             <div className="flex-center" style={{ justifyContent: "space-between" }}>
               <span className="card-title">{r.title}</span>
               <span className={`badge ${r.difficulty === "easy" ? "badge-done" : r.difficulty === "medium" ? "badge-habit" : "badge-todo"}`}>
-                {r.difficulty}
+                {t(`recipes.${r.difficulty}`)}
               </span>
             </div>
             {r.description && <p style={{ color: "var(--color-text-secondary)", fontSize: "var(--font-size-sm)", margin: "0.35rem 0" }}>{r.description}</p>}
             <p style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)" }}>
               ⏱ {t("recipes.meta", { minutes: r.prep_time_minutes + r.cook_time_minutes, servings: r.servings })}
-              {r.tags?.length ? ` · ${r.tags.map((t2) => `#${t2}`).join(" ")}` : ""}
+              {r.tags?.length ? ` · ${r.tags.map((t2) => `#${tagLabel(t2)}`).join(" ")}` : ""}
             </p>
             <button
               className="btn btn-danger btn-sm"

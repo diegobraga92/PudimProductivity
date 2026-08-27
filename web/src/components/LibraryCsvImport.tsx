@@ -6,7 +6,16 @@ import {
   type CreateLibraryItemRequest,
   type ImportResult,
 } from "../api/library";
-import { applyAutoScoreResults, parseCsv, parseDoneValue, parseScoreValue, normalizeMediaType, parseYearValue, type MediaTypeValue } from "../utils/csv";
+import {
+  applyAutoScoreResults,
+  normalizeScore,
+  parseCsv,
+  parseDoneValue,
+  parseScoreValue,
+  normalizeMediaType,
+  parseYearValue,
+  type MediaTypeValue,
+} from "../utils/csv";
 import { useFeatureFlag } from "../hooks/useFeatureFlag";
 import { useI18n } from "../i18n";
 
@@ -138,18 +147,27 @@ export function LibraryCsvImport({ onClose, onImported }: LibraryCsvImportProps)
   }
 
   /** Resolves the effective value for a field at a data-row index. Auto-scored
-   *  values override whatever the column mapping produced. */
+   *  values override whatever the column mapping produced. Scores are truncated
+   *  to one decimal so the preview shows exactly what will be stored. */
   function resolve(field: FieldKey, rowIndex: number): string {
     const filled = autoFilled[rowIndex];
-    if (field === "score" && filled?.score != null) return String(filled.score);
+    if (field === "score" && filled?.score != null) return String(normalizeScore(filled.score));
     if (field === "score_source" && filled?.score_source) return filled.score_source;
     if (field === "release_year" && filled?.release_year != null) return String(filled.release_year);
     const m = mapping[field];
-    if (m === FIXED_VALUE) return fixed[field];
-    if (m === "" || m === null) return "";
-    const col = Number(m);
-    const cell = dataRows[rowIndex]?.[col];
-    return cell === undefined ? "" : cell;
+    let value: string;
+    if (m === FIXED_VALUE) value = fixed[field];
+    else if (m === "" || m === null) return "";
+    else {
+      const col = Number(m);
+      const cell = dataRows[rowIndex]?.[col];
+      value = cell === undefined ? "" : cell;
+    }
+    if (field === "score" && value !== "") {
+      const parsed = parseScoreValue(value);
+      if (parsed != null) return String(parsed);
+    }
+    return value;
   }
 
   /**
