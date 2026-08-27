@@ -232,7 +232,11 @@ private fun HabitRowItem(row: HabitRow) {
                 CheckBox(
                     checked = row.completedToday,
                     onCheckedChange = toggleHabitAction(row.id),
-                    colors = CheckboxDefaults.checkBoxColors(
+                    // Use the public, @Composable `colors` overload instead of the
+                    // @RestrictTo(LIBRARY_GROUP) `checkBoxColors` — the latter is
+                    // internal to the androidx.glance library group and fails lint
+                    // (RestrictedApi) when called from app code. They behave identically.
+                    colors = CheckboxDefaults.colors(
                         checkedColor = GlanceTheme.colors.secondary,
                         uncheckedColor = GlanceTheme.colors.outline
                     ),
