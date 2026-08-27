@@ -91,19 +91,22 @@ export function parseScoreValue(value: string): number | null {
 export interface AutoScoredValue {
   score: number;
   score_source: string;
+  release_year?: number;
 }
 
 export interface BatchScoreResult {
   index: number;
-  candidates?: { score: number; score_source: string }[] | null;
+  candidates?: { score: number; score_source: string; year?: number }[] | null;
   error?: string | null;
 }
 
 /**
  * Applies one batch score-lookup response to the requested rows. `targets`
  * maps each batch request index to a data-row index (the batch endpoint echoes
- * the request position). The top candidate fills the row; rows with no match
- * (no error, empty candidates) are counted separately from failed lookups.
+ * the request position). The top candidate fills the row (score, source and,
+ * when the provider reports one, the release year — matching the single-score
+ * flow); rows with no match (no error, empty candidates) are counted
+ * separately from failed lookups.
  */
 export function applyAutoScoreResults(
   targets: { requestIndex: number; row: number }[],
@@ -122,6 +125,9 @@ export function applyAutoScoreResults(
     }
     const top = res.candidates[0];
     fill[row] = { score: top.score, score_source: top.score_source };
+    if (top.year != null && top.year > 0) {
+      fill[row].release_year = top.year;
+    }
     found++;
   }
   return { fill, found, noRating };

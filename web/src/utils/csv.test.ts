@@ -120,6 +120,25 @@ describe("applyAutoScoreResults", () => {
     expect(noRating).toBe(0);
   });
 
+  it("fills the release year from the top candidate when the provider reports one", () => {
+    const { fill, found, noRating } = applyAutoScoreResults(
+      [
+        { requestIndex: 0, row: 1 },
+        { requestIndex: 1, row: 3 },
+      ],
+      [
+        { index: 0, candidates: [{ score: 90, score_source: "imdb", year: 1999 }] },
+        { index: 1, candidates: [{ score: 70, score_source: "imdb", year: 0 }] },
+      ],
+    );
+    expect(fill).toEqual({
+      1: { score: 90, score_source: "imdb", release_year: 1999 },
+      3: { score: 70, score_source: "imdb" },
+    });
+    expect(found).toBe(2);
+    expect(noRating).toBe(0);
+  });
+
   it("counts rows without matches separately from failed lookups", () => {
     const { fill, found, noRating } = applyAutoScoreResults(
       [{ requestIndex: 0, row: 1 }],

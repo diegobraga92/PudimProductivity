@@ -408,7 +408,6 @@
   "csv.autoScored": "⚡ {count} nota(s) preenchida(s)",
   "csv.autoScoreUnavailable": "A busca de notas está desativada. Ative-a nas Configurações do servidor.",
   "csv.noRating": "nenhuma nota encontrada",
-  "csv.skipReview": "Pular revisão — preencher notas e importar",
 
   "toast.newTask": "Nova tarefa",
   "toast.taskUpdated": "Tarefa atualizada",

@@ -408,7 +408,6 @@
   "csv.autoScored": "⚡ Filled {count} score(s)",
   "csv.autoScoreUnavailable": "Score lookup is disabled. Enable it in Server Settings.",
   "csv.noRating": "no rating found",
-  "csv.skipReview": "Skip review — auto-score & import",
 
   "toast.newTask": "New task",
   "toast.taskUpdated": "Task updated",

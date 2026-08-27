@@ -92,13 +92,12 @@ export function LibraryCsvImport({ onClose, onImported }: LibraryCsvImportProps)
   const [result, setResult] = useState<ImportResult | null>(null);
 
   // Auto-scoring (critic score lookup during import).
-  type AutoFill = { score: number; score_source: string };
+  type AutoFill = { score: number; score_source: string; release_year?: number };
   const [autoFilled, setAutoFilled] = useState<Record<number, AutoFill>>({});
   const [autoScoring, setAutoScoring] = useState(false);
   const [autoScoreError, setAutoScoreError] = useState<string | null>(null);
   const [autoScoredCount, setAutoScoredCount] = useState(0);
   const [noRatingCount, setNoRatingCount] = useState(0);
-  const [skipReview, setSkipReview] = useState(false);
   const scoreLookupEnabled = useFeatureFlag("library.score_lookup_enabled");
 
   const headers = hasHeader && rows.length > 0 ? rows[0] : rows[0]?.map((_, i) => `Column ${i + 1}`);
@@ -144,6 +143,7 @@ export function LibraryCsvImport({ onClose, onImported }: LibraryCsvImportProps)
     const filled = autoFilled[rowIndex];
     if (field === "score" && filled?.score != null) return String(filled.score);
     if (field === "score_source" && filled?.score_source) return filled.score_source;
+    if (field === "release_year" && filled?.release_year != null) return String(filled.release_year);
     const m = mapping[field];
     if (m === FIXED_VALUE) return fixed[field];
     if (m === "" || m === null) return "";
@@ -153,29 +153,20 @@ export function LibraryCsvImport({ onClose, onImported }: LibraryCsvImportProps)
   }
 
   /**
-   * Builds the import payload, collecting per-row validation errors. `fill` lets
-   * callers supply auto-scored values for the skip-review flow before React has
-   * committed the autoFilled state.
+   * Builds the import payload, collecting per-row validation errors. Auto-scored
+   * values are read from the committed `autoFilled` state via `resolve`.
    */
-  function buildItems(
-    fill: Record<number, AutoFill> = {},
-  ): { items: CreateLibraryItemRequest[]; rowErrors: string[] } {
+  function buildItems(): { items: CreateLibraryItemRequest[]; rowErrors: string[] } {
     const items: CreateLibraryItemRequest[] = [];
     const rowErrors: string[] = [];
     dataRows.forEach((_, i) => {
       const rowNum = i + 1;
-      const effective = (field: FieldKey): string => {
-        const f = fill[i];
-        if (field === "score" && f?.score != null) return String(f.score);
-        if (field === "score_source" && f?.score_source) return f.score_source;
-        return resolve(field, i);
-      };
-      const name = effective("name").trim();
+      const name = resolve("name", i).trim();
       if (!name) {
         rowErrors.push(t("csv.rowMissingName", { row: rowNum }));
         return;
       }
-      const mediaRaw = effective("media_type");
+      const mediaRaw = resolve("media_type", i);
       const mediaType = normalizeMediaType(mediaRaw);
       if (!mediaType) {
         rowErrors.push(t("csv.rowInvalidType", { row: rowNum, type: mediaRaw.trim() }));
@@ -184,12 +175,12 @@ export function LibraryCsvImport({ onClose, onImported }: LibraryCsvImportProps)
       items.push({
         name,
         media_type: mediaType,
-        release_year: parseYearValue(effective("release_year")),
-        done: parseDoneValue(effective("done")),
-        score: parseScoreValue(effective("score")),
-        score_source: effective("score_source").trim(),
-        subtype: effective("subtype").trim(),
-        notes: effective("notes"),
+        release_year: parseYearValue(resolve("release_year", i)),
+        done: parseDoneValue(resolve("done", i)),
+        score: parseScoreValue(resolve("score", i)),
+        score_source: resolve("score_source", i).trim(),
+        subtype: resolve("subtype", i).trim(),
+        notes: resolve("notes", i),
       });
     });
     return { items, rowErrors };
@@ -198,7 +189,7 @@ export function LibraryCsvImport({ onClose, onImported }: LibraryCsvImportProps)
   /**
    * Looks up critic scores for every row that has no score yet, using the batch
    * score endpoint in chunks of 100. Returns the auto-fill map (data-row index
-   * → score + source) plus simple stats for the UI.
+   * → score + source + release year) plus simple stats for the UI.
    */
   async function runAutoScore(): Promise<{ fill: Record<number, AutoFill>; found: number; noRating: number }> {
     const targets: { row: number; name: string; type: MediaTypeValue; year?: number }[] = [];
@@ -251,30 +242,12 @@ export function LibraryCsvImport({ onClose, onImported }: LibraryCsvImportProps)
     }
   }
 
-  /** Imports — running the auto-score first when "skip review" is checked. */
-  async function handleImport() {
+  /** Imports the current preview as-is. Auto-scoring is a separate, explicit
+   *  step (the "Auto-score" button) so the user can review the filled values in
+   *  the preview before committing. */
+  function handleImport() {
     setError(null);
-    let fill = autoFilled;
-    if (skipReview) {
-      if (!scoreLookupEnabled) {
-        setError(t("csv.autoScoreUnavailable"));
-        return;
-      }
-      setAutoScoring(true);
-      try {
-        const out = await runAutoScore();
-        fill = out.fill;
-        setAutoFilled(out.fill);
-        setAutoScoredCount(out.found);
-        setNoRatingCount(out.noRating);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : String(e));
-        return;
-      } finally {
-        setAutoScoring(false);
-      }
-    }
-    const { items } = buildItems(fill);
+    const { items } = buildItems();
     if (items.length === 0) return;
     mutation.mutate(items);
   }
@@ -407,14 +380,6 @@ export function LibraryCsvImport({ onClose, onImported }: LibraryCsvImportProps)
               >
                 {autoScoring ? t("csv.autoScoring") : t("csv.autoScore")}
               </button>
-              <label className="flex-center" style={{ gap: "0.3rem" }}>
-                <input
-                  type="checkbox"
-                  checked={skipReview}
-                  onChange={(e) => setSkipReview(e.target.checked)}
-                />
-                <span className="text-sm">{t("csv.skipReview")}</span>
-              </label>
               {autoScoredCount > 0 && (
                 <span className="text-sm" style={{ color: "var(--color-done)" }}>
                   {t("csv.autoScored", { count: autoScoredCount })}
@@ -500,9 +465,7 @@ export function LibraryCsvImport({ onClose, onImported }: LibraryCsvImportProps)
                   ? t("common.importing")
                   : autoScoring
                     ? t("csv.autoScoring")
-                    : skipReview
-                      ? `${t("csv.skipReview")} · ${t("csv.importCount", { count: preview.items.length })}`
-                      : t("csv.importCount", { count: preview.items.length })}
+                    : t("csv.importCount", { count: preview.items.length })}
               </button>
             </div>
           </>
