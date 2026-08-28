@@ -7,7 +7,7 @@ import com.pudimproductivity.widget.WidgetUpdater
 
 /**
  * Background sync worker. Scheduled periodically and on app
- * foreground; pushes local dirty rows and pulls incremental changes.
+ * foreground. Pushes local dirty rows and pulls incremental changes.
  */
 class SyncWorker(
     appContext: Context,

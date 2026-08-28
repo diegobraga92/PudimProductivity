@@ -1,7 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Background layer of the launcher icon: dark charcoal matching the desktop
-     app's Electron window chrome (desktop main.ts: backgroundColor #141414),
-     so the golden pudding reads the same way on desktop and on the launcher. -->
+<!-- Background layer of the launcher icon. -->
 <resources>
     <color name="ic_launcher_background">#141414</color>
 </resources>

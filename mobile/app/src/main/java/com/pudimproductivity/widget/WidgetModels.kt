@@ -8,29 +8,10 @@ import java.time.LocalDate
 /**
  * View-models and pure mapping functions for the home-screen widgets.
  *
- * The `build*` functions take plain local-DB entities (ADR 012) and return
+ * The `build*` functions take plain local-DB entities and return
  * small UI snapshots. They have no Android dependencies, so they can be
- * unit-tested on the JVM (see WidgetModelsTest.kt).
+ * unit-tested on the JVM.
  */
-
-/** One row in the "Today's Tasks" widget. */
-data class TaskRow(val id: String, val title: String, val done: Boolean)
-
-/** Full state for the "Today's Tasks" widget. */
-data class TasksSnapshot(
-    /**
-     * All rows in display order: pending first, then done (alphabetical within
-     * each group). Done rows stay visible so completed work reinforces
-     * progress — they render with a restrained strikethrough.
-     */
-    val visible: List<TaskRow>,
-    val done: Int,
-    val total: Int
-) {
-    /** Tasks still to complete — what the widget header should emphasise. */
-    val pending: List<TaskRow> get() = visible.filterNot { it.done }
-    val remaining: Int get() = pending.size
-}
 
 /** One row in the "Today's Habits" widget. */
 data class HabitRow(
@@ -47,25 +28,6 @@ data class HabitsSnapshot(
     val doneToday: Int,
     val scheduledToday: Int
 )
-
-/**
- * Pure mapping for the Tasks widget: only one-off tasks (no recurrence) are
- * shown — recurring habits live in the Habits widget. Rows are ordered
- * pending first, then done, each group alphabetically, so the widget can show
- * completed tasks without hiding the work still to do.
- */
-fun buildTasksSnapshot(tasks: List<LocalTask>): TasksSnapshot {
-    val rows = tasks
-        .filter { !it.deleted && it.list_id == null && it.recurrence_days.isNullOrEmpty() }
-        .sortedWith(compareBy({ it.status == "done" }, { it.title.lowercase() }))
-        .map { TaskRow(id = it.id, title = it.title, done = it.status == "done") }
-
-    return TasksSnapshot(
-        visible = rows,
-        done = rows.count { it.done },
-        total = rows.size
-    )
-}
 
 /**
  * Pure mapping for the Habits widget. A habit is shown when it is scheduled on

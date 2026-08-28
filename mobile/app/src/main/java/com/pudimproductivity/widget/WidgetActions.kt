@@ -23,33 +23,20 @@ import kotlinx.coroutines.withContext
 
 /**
  * Parameter keys shared between the widget composables and
- * [WidgetActionCallback] (simple types only — Glance parcels them with the
+ * [WidgetActionCallback] (simple types only, Glance parcels them with the
  * broadcast intent).
  */
 internal val KEY_ACTION = ActionParameters.Key<String>("action")
 internal val KEY_TASK_ID = ActionParameters.Key<String>("task_id")
-internal val KEY_DONE = ActionParameters.Key<Boolean>("done")
 
-internal const val ACTION_TOGGLE_TASK = "toggle_task"
 internal const val ACTION_TOGGLE_HABIT = "toggle_habit"
 
 /**
- * Deep-link keys for `actionStartActivity` → [MainActivity]. Named after the
- * intent extras the activity reads (`EXTRA_SCREEN` / `EXTRA_TASK_ID`); Glance
- * writes the parameters into the launched intent as typed extras.
+ * Deep-link key for `actionStartActivity` → [MainActivity]. Named after the
+ * intent extra the activity reads (`EXTRA_SCREEN`). Glance writes the
+ * parameter into the launched intent as a typed extra.
  */
 internal val EXTRA_SCREEN_KEY = ActionParameters.Key<String>(MainActivity.EXTRA_SCREEN)
-internal val EXTRA_TASK_ID_KEY = ActionParameters.Key<String>(MainActivity.EXTRA_TASK_ID)
-
-/** Checkbox action: mark a one-off task done / not done. */
-internal fun toggleTaskAction(taskId: String, done: Boolean) =
-    actionRunCallback<WidgetActionCallback>(
-        actionParametersOf(
-            KEY_ACTION to ACTION_TOGGLE_TASK,
-            KEY_TASK_ID to taskId,
-            KEY_DONE to done
-        )
-    )
 
 /** Checkbox action: complete / uncomplete a habit for today. */
 internal fun toggleHabitAction(taskId: String) =
@@ -60,12 +47,6 @@ internal fun toggleHabitAction(taskId: String) =
         )
     )
 
-/** Header / overflow tap: open the Tasks screen in the app. */
-internal fun openTasksAction() =
-    actionStartActivity<MainActivity>(
-        actionParametersOf(EXTRA_SCREEN_KEY to MainActivity.SCREEN_TASKS)
-    )
-
 /** Header / overflow tap: open the Habits screen in the app. */
 internal fun openHabitsAction() =
     actionStartActivity<MainActivity>(
@@ -74,11 +55,6 @@ internal fun openHabitsAction() =
 
 /**
  * Broadcast-receiver callback fired when a widget checkbox is tapped.
- *
- * Writes the change optimistically to the local DB with the same dirty-flag
- * semantics as `TaskRepository` (ADR 012), then enqueues a background sync so
- * the server converges. Glance invokes [onAction] in a coroutine off the main
- * thread; the DB writes are additionally dispatched to [Dispatchers.IO].
  */
 class WidgetActionCallback : ActionCallback {
 
@@ -89,37 +65,14 @@ class WidgetActionCallback : ActionCallback {
     ) {
         Localization.init(context)
         when (parameters[KEY_ACTION]) {
-            ACTION_TOGGLE_TASK -> {
-                val taskId = parameters[KEY_TASK_ID] ?: return
-                val done = parameters[KEY_DONE] ?: return
-                toggleTask(context, taskId, done)
-            }
             ACTION_TOGGLE_HABIT -> {
                 val taskId = parameters[KEY_TASK_ID] ?: return
                 toggleHabit(context, taskId)
             }
             else -> return
         }
-        // Re-render both widgets — either dataset may have changed.
-        TasksWidget.update(context, glanceId)
+        // Re-render the habits widget, the completion set may have changed.
         HabitsWidget.update(context, glanceId)
-    }
-
-    private suspend fun toggleTask(context: Context, taskId: String, done: Boolean) {
-        withContext(Dispatchers.IO) {
-            val db = LocalDatabase(context)
-            val existing = db.queryTaskById(taskId) ?: return@withContext
-            db.upsertTasks(
-                listOf(
-                    existing.copy(
-                        status = if (done) "done" else "todo",
-                        updated_at = Instant.now().toString(),
-                        dirty = true
-                    )
-                )
-            )
-        }
-        enqueueSync(context)
     }
 
     private suspend fun toggleHabit(context: Context, taskId: String) {

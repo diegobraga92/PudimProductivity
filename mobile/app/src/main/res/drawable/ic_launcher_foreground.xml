@@ -1,10 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  PudimProductivity launcher foreground: the same flan/pudding + "P" artwork as
-  the desktop app (desktop/assets/icon.svg) and the web favicon, translated and
-  scaled from the 512x512 source into the 108dp adaptive-icon viewport so the
-  whole pudding sits inside the safe zone (66dp circle) under any launcher mask.
-  The dark background comes from @color/ic_launcher_background.
+  PudimProductivity launcher foreground.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:aapt="http://schemas.android.com/aapt"

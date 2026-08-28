@@ -3,15 +3,12 @@ package com.pudimproductivity.api
 import retrofit2.http.GET
 import retrofit2.http.Query
 
-/** Incremental sync bundle (api/openapi/sync-v1.yaml). */
 data class SyncTask(
     val id: String,
     val title: String,
     val status: String,
     val recurrence_days: List<String>? = null,
     val list_id: String? = null,
-    // Planner scheduling fields — the sync endpoint returns them so the local
-    // DB can drive planner alarms offline.
     val start_time: String? = null,
     val end_time: String? = null,
     val color: String? = null,

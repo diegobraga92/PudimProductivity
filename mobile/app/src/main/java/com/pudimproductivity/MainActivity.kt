@@ -73,17 +73,15 @@ class MainActivity : ComponentActivity() {
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private lateinit var repository: TaskRepository
 
-    // Watched while the activity lives; flushes local dirty rows on
+    // Watched while the activity lives. Flushes local dirty rows on
     // reconnect (deregistered in onDestroy).
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
 
-    // Deep link targets from home-screen widget taps (see
-    // widget/TasksWidget.kt, widget/HabitsWidget.kt and [parseLaunch]).
+    // Deep link targets from home-screen widget taps.
     private val launchTarget = mutableStateOf<LaunchTarget?>(null)
 
     // Android 13+ notifications are a runtime permission. Planner alarms are
-    // silently dropped while it's denied, so ask up front; the alarm worker
-    // re-checks before posting. The callback is a no-op.
+    // silently dropped while it's denied, so ask up front.
     private val requestNotificationPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
@@ -112,7 +110,7 @@ class MainActivity : ComponentActivity() {
         TaskAlarmScheduler.schedule(applicationContext)
         requestNotificationPermissionIfNeeded()
 
-        // Reconnect hooks — flush offline edits the moment the device
+        // Reconnect hooks: flush offline edits the moment the device
         // regains a network and again when the real-time WebSocket reconnects.
         registerConnectivityCallback()
         observeSyncClientConnected()
@@ -123,7 +121,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             // Theme mode is Compose state, so switching it re-renders the whole
-            // app live; the choice is persisted via ThemePreferences.
+            // app live. The choice is persisted via ThemePreferences.
             val appContext = applicationContext
             var themeMode by remember { mutableStateOf(ThemePreferences.load(appContext)) }
             PudimProductivityTheme(mode = themeMode) {
@@ -147,7 +145,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /** Asks for POST_NOTIFICATIONS on Android 13+; no-op on older devices. */
+    /** Asks for POST_NOTIFICATIONS on Android 13+. */
     private fun requestNotificationPermissionIfNeeded() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) !=
@@ -177,12 +175,7 @@ class MainActivity : ComponentActivity() {
     }
 
     /**
-     * Also sync when the real-time WebSocket (re)connects — this covers
-     * "the server became reachable again" without any device-network change
-     * (e.g. the LAN backend restarts while Wi-Fi stays up). Debounced to
-     * coalesce flapping before the connection settles. Runs on [lifecycleScope]
-     * so the collector is cancelled with the activity (no accumulation across
-     * recreations).
+     * Also sync when the real-time WebSocket reconnects.
      */
     @OptIn(FlowPreview::class)
     private fun observeSyncClientConnected() {
@@ -212,25 +205,16 @@ class MainActivity : ComponentActivity() {
     private fun parseLaunch(intent: Intent?): LaunchTarget? {
         val screen = intent?.getStringExtra(EXTRA_SCREEN) ?: return null
         return when (screen) {
-            // Task detail needs the id; without it the tap falls back to no-op.
-            SCREEN_TASK_DETAIL -> intent.getStringExtra(EXTRA_TASK_ID)
-                ?.let { LaunchTarget(Screen.TaskDetail, it) }
-            SCREEN_TASKS -> LaunchTarget(Screen.TaskList, null)
             SCREEN_HABITS -> LaunchTarget(Screen.Habits, null)
-            SCREEN_TASK_CREATE -> LaunchTarget(Screen.TaskCreate, null)
             else -> null
         }
     }
 
     companion object {
-        // Widget deep-link extras — also used by the Glance widgets.
+        // Widget deep-link extras. Also used by the Glance widgets.
         const val EXTRA_SCREEN = "com.pudimproductivity.extra.SCREEN"
-        const val EXTRA_TASK_ID = "com.pudimproductivity.extra.TASK_ID"
 
-        const val SCREEN_TASKS = "tasks"
-        const val SCREEN_TASK_DETAIL = "task_detail"
         const val SCREEN_HABITS = "habits"
-        const val SCREEN_TASK_CREATE = "task_create"
     }
 }
 
@@ -427,7 +411,7 @@ private fun AppNavigation(
             }
         }
 
-        // "More" bottom sheet — secondary destinations.
+        // "More" bottom sheet for secondary destinations.
         if (moreSheetOpen) {
             ModalBottomSheet(onDismissRequest = { moreSheetOpen = false }) {
                 Column(modifier = Modifier.padding(bottom = 24.dp)) {

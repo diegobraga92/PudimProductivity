@@ -4,7 +4,7 @@ package com.pudimproductivity.local
  * Local entity mirroring the API `Task` shape, plus offline-sync bookkeeping:
  * `dirty` (1 = local change not yet pushed), `deleted` (1 = local tombstone) and
  * `synced` (1 = this id already exists on the server, so a push should UPDATE
- * rather than CREATE — an offline-created row that is also edited before its
+ * rather than CREATE, an offline-created row that is also edited before its
  * first push keeps synced=0 until a create succeeds).
  */
 data class LocalTask(
@@ -13,11 +13,6 @@ data class LocalTask(
     val status: String,
     val recurrence_days: List<String>? = null,
     val list_id: String? = null,
-    // Planner scheduling fields (mirror the API Task shape): start/end time,
-    // color, scheduled_date (one-off tasks) and alarm_minutes (offset before
-    // start_time). The mobile UI is read-only for schedules — they are
-    // configured on the web — but the alarm scheduler needs them locally so
-    // alarms fire even when the device is offline.
     val start_time: String? = null,
     val end_time: String? = null,
     val color: String? = null,

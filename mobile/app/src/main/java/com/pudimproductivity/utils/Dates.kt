@@ -14,15 +14,12 @@ fun getToday(): String {
  * Returns 7 ISO date strings (YYYY-MM-DD) for a rolling 7-day window anchored
  * to today (mirrors the web's `getRollingWindowDates`).
  *
- * Offset 0 returns the last 7 days ending today, with today as the final
- * column. This keeps habit streaks flowing continuously between calendar weeks
- * — on Monday you still see the previous week's completions instead of a hard
- * reset to a blank Monday–Sunday grid.
+ * Offset 0 returns the last 7 days ending today, with today as the final column.
  *
  * @param offset Offset relative to the current window:
  *   0 (default) = last 7 days ending today,
  *  -1 = the 7 days before that,
- *  +1 = the 7 days after that (future — usually not shown).
+ *  +1 = the 7 days after that.
  */
 fun getRollingWindowDates(offset: Int = 0): List<String> {
     val end = LocalDate.now().plusWeeks(offset.toLong())

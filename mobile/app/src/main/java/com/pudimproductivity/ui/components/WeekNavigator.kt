@@ -15,8 +15,7 @@ import com.pudimproductivity.utils.getRollingWindowDates
 /**
  * Single week selector shared by a list of habit cards (HabitScreen and the
  * Tasks screen's Habits tab). One navigator drives every heatmap in the list,
- * so the week only has to be chosen once instead of per card. The window is
- * rolling (last 7 days ending today), matching the web's habit heatmap.
+ * so the week only has to be chosen once instead of per card.
  */
 @Composable
 fun WeekNavigator(

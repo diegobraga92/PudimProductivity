@@ -35,7 +35,7 @@ private val FULL_DAY_KEYS = mapOf(
 )
 private val DEFAULT_COLOR = Color(0xFF3B82F6)
 
-// Grid hours: 6AM to 10PM (16 hourly slots), mirroring the web Planner.
+// Grid hours: 6AM to 10PM (16 hourly slots).
 private const val GRID_START_MINUTES = 6 * 60 // 6AM
 private const val HOUR_HEIGHT_DP = 60
 
@@ -93,9 +93,7 @@ private fun timeRangeLabel(task: Task): String {
 }
 
 /**
- * Mobile Planner: one day at a time, rendered exactly like the web Planner's
- * weekly grid (hour rows 6AM-10PM, coloured absolute-positioned task blocks)
- * but with a single day column instead of seven.
+ * Mobile Planner: one day at a time.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

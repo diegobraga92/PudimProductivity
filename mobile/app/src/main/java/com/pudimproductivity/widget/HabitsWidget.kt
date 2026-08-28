@@ -41,9 +41,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * Responsive breakpoints for the Habits widget. Every size renders the same
- * clean layout — a bold heading above a scrollable list of today's habits —
- * so resizing never produces a different-looking card.
+ * Responsive breakpoints for the Habits widget. Every size renders the same clean layout.
  */
 private val HABITS_SIZES = setOf(
     DpSize(250.dp, 50.dp),   // 4×1 compact strip (heading only)
@@ -109,8 +107,8 @@ private fun HabitsContent(snapshot: HabitsSnapshot) {
 }
 
 /**
- * Heading + segmented progress indicator. Rendered as the list's first item —
- * kept as a single Column because Glance lazy items must have exactly one child.
+ * Heading + segmented progress indicator. Rendered as the list's first item.
+ * Kept as a single Column because Glance lazy items must have exactly one child.
  */
 @Composable
 private fun HabitsHeader(snapshot: HabitsSnapshot) {
@@ -198,8 +196,7 @@ private fun HabitsProgress(snapshot: HabitsSnapshot) {
 }
 
 /**
- * One habit as a web-style card — mirrors the web's `.card-habit` (white
- * surface, --radius-md 12dp, 1px border). Glance has no border modifier, so
+ * One habit as a web-style card. Glance has no border modifier, so
  * the border is a 1dp ring of [WidgetColors.cardBorder] colour drawn behind a
  * surface-coloured card. The checkbox is the only tap target.
  */
@@ -233,9 +230,7 @@ private fun HabitRowItem(row: HabitRow) {
                     checked = row.completedToday,
                     onCheckedChange = toggleHabitAction(row.id),
                     // Use the public, @Composable `colors` overload instead of the
-                    // @RestrictTo(LIBRARY_GROUP) `checkBoxColors` — the latter is
-                    // internal to the androidx.glance library group and fails lint
-                    // (RestrictedApi) when called from app code. They behave identically.
+                    // @RestrictTo(LIBRARY_GROUP) `checkBoxColors`.
                     colors = CheckboxDefaults.colors(
                         checkedColor = GlanceTheme.colors.secondary,
                         uncheckedColor = GlanceTheme.colors.outline
@@ -266,7 +261,7 @@ private fun HabitRowItem(row: HabitRow) {
     }
 }
 
-/** Plain, non-interactive empty state — the widget only checks/unchecks habits. */
+/** Plain, non-interactive empty state, the widget only checks/unchecks habits. */
 @Composable
 private fun HabitsEmptyState() {
     Column(

@@ -44,74 +44,6 @@ class WidgetModelsTest {
         )
 
     @Test
-    fun `tasks snapshot excludes habits and deleted rows`() {
-        val snapshot = buildTasksSnapshot(
-            listOf(
-                task("1", "Buy milk"),
-                task("2", "Workout", recurrenceDays = listOf("mon")),
-                task("3", "Gone", deleted = true),
-                task("4", "Read", status = "done")
-            )
-        )
-
-        assertEquals(2, snapshot.total)
-        assertEquals(1, snapshot.done)
-        assertEquals(1, snapshot.pending.size)
-        assertEquals(1, snapshot.remaining)
-        assertEquals("Buy milk", snapshot.pending.first().title)
-        assertFalse(snapshot.pending.any { it.id == "4" })
-        // Done rows stay visible after pending ones (concept: completed work
-        // reinforces progress in the task list too).
-        assertEquals(listOf("Buy milk", "Read"), snapshot.visible.map { it.title })
-    }
-
-    @Test
-    fun `tasks snapshot sorts pending first then by title`() {
-        val snapshot = buildTasksSnapshot(
-            listOf(
-                task("1", "Zebra", status = "done"),
-                task("2", "Apple"),
-                task("3", "Banana")
-            )
-        )
-
-        assertEquals(listOf("Apple", "Banana"), snapshot.pending.map { it.title })
-        assertEquals(1, snapshot.done)
-        assertEquals(2, snapshot.remaining)
-    }
-
-    @Test
-    fun `tasks snapshot visible lists pending first then done`() {
-        val snapshot = buildTasksSnapshot(
-            listOf(
-                task("1", "Zebra", status = "done"),
-                task("2", "Apple"),
-                task("3", "Banana", status = "done"),
-                task("4", "Yak")
-            )
-        )
-
-        assertEquals(listOf("Apple", "Yak", "Banana", "Zebra"), snapshot.visible.map { it.title })
-        assertEquals(listOf("Apple", "Yak"), snapshot.pending.map { it.title })
-        assertEquals(2, snapshot.done)
-        assertEquals(4, snapshot.total)
-    }
-
-    @Test
-    fun `tasks snapshot remaining is zero when everything is done`() {
-        val snapshot = buildTasksSnapshot(
-            listOf(
-                task("1", "Read", status = "done"),
-                task("2", "Run", status = "done")
-            )
-        )
-
-        assertEquals(0, snapshot.remaining)
-        assertEquals(2, snapshot.done)
-        assertTrue(snapshot.pending.isEmpty())
-    }
-
-    @Test
     fun `habits snapshot shows scheduled and completed-today habits`() {
         val today = LocalDate.now()
         val todayDay = dayName(today)
@@ -215,21 +147,6 @@ class WidgetModelsTest {
         val row = snapshot.habits.first()
         assertEquals(0, row.streak)
         assertEquals(1, row.bestStreak)
-    }
-
-    @Test
-    fun `tasks snapshot excludes tasks that belong to a list`() {
-        val snapshot = buildTasksSnapshot(
-            listOf(
-                task("1", "Buy milk"),
-                task("2", "List item", listId = "list-1"),
-                task("3", "Workout", recurrenceDays = listOf("mon")),
-                task("4", "List habit", recurrenceDays = listOf("mon"), listId = "list-1")
-            )
-        )
-
-        assertEquals(1, snapshot.total)
-        assertEquals("Buy milk", snapshot.pending.first().title)
     }
 
     @Test

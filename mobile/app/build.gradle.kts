@@ -28,10 +28,6 @@ android {
         versionName = "0.0.1"
 
         // Backend URL.
-        // Priority: -P flag > local.properties > default emulator loopback.
-        //   ./gradlew -Papi.base.url=http://10.0.2.2:8080/api/v1 assembleDebug
-        //  or in mobile/local.properties:
-        //   api.base.url=http://192.168.3.99:8080/api/v1
         val apiBaseUrl: String = (project.findProperty("api.base.url") as String?)
             ?: readLocalProperty("api.base.url")
             ?: "http://10.0.2.2:8080/api/v1"
@@ -89,9 +85,9 @@ android {
     }
 }
 
-// i18n: copy the shared English/pt-BR dictionaries (single source of truth in
+// Copy the shared English/pt-BR dictionaries (single source of truth in
 // `shared/i18n/`) into the app assets so the Android UI and widgets use the
-// exact same strings as the web app. Runs before every build.
+// exact same strings as the web app.
 tasks.register("syncI18nAssets") {
     val sharedDir = rootProject.file("../shared/i18n")
     val assetsDir = file("src/main/assets/i18n")
@@ -116,10 +112,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("androidx.activity:activity-compose:1.9.3")
 
-    // Fragment (androidx.fragment:fragment-ktx). Not used directly, but pinned
-    // >= 1.3.0: androidx.activity's ActivityResult APIs (registerForActivityResult
-    // — used for the Android 13+ POST_NOTIFICATIONS permission prompt) require
-    // fragment >= 1.3.0 (lint: InvalidFragmentVersionForActivityResult).
+    // Fragment
     implementation("androidx.fragment:fragment-ktx:1.8.9")
 
     // Compose
@@ -140,17 +133,9 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 
     // local SQLite persistence + WorkManager.
-    // (Room/KSP would require migrating off AGP 9's built-in Kotlin, which is
-    // unsupported by KSP — see docs/adr/012. A hand-rolled SQLiteOpenHelper
-    // layer with a Room-style DAO API gives the same offline capability with
-    // zero annotation-processing build risk.)
     implementation("androidx.work:work-runtime-ktx:2.10.1")
 
     // Jetpack Glance (Compose for widgets).
-    // 1.1.1 is the newest stable release (1.2/1.3 are pre-release only). Glance
-    // needs no KSP, so it works with AGP 9's built-in Kotlin that blocked Room
-    // (docs/adr/012). glance-material3 provides the M3 color scheme +
-    // LinearProgressIndicator used by the task/habit widgets.
     implementation("androidx.glance:glance-appwidget:1.1.1")
     implementation("androidx.glance:glance-material3:1.1.1")
 

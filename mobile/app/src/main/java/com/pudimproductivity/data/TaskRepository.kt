@@ -21,7 +21,7 @@ import kotlinx.coroutines.withContext
 
 /**
  * Local-first repository. All reads come from the local SQLite
- * database (instant, works offline); writes are optimistic (row inserted with
+ * database (instant, works offline), writes are optimistic (row inserted with
  * `dirty=1`) and flushed to the server by [SyncManager] on the next sync.
  */
 class TaskRepository(private val context: Context, scope: CoroutineScope) {
@@ -69,8 +69,6 @@ class TaskRepository(private val context: Context, scope: CoroutineScope) {
             withContext(Dispatchers.IO) { TaskAlarmScheduler.rescheduleAll(context) }
         }
     }
-
-    // --- writes (optimistic, local-first) ---
 
     fun createTask(title: String, recurrenceDays: List<String>? = null, listId: String? = null) {
         val now = java.time.Instant.now().toString()
@@ -174,7 +172,7 @@ class TaskRepository(private val context: Context, scope: CoroutineScope) {
      * Pulls server changes into the local database and re-emits the flows,
      * without pushing local dirty rows. Used when a remote change is signaled
      * (WebSocket event) so changes made on other clients are reflected right
-     * away; the push path is covered by [refresh] on reconnect.
+     * away.
      */
     suspend fun pullAndRefresh() {
         try {
@@ -186,7 +184,7 @@ class TaskRepository(private val context: Context, scope: CoroutineScope) {
         }
     }
 
-    /** Fire-and-forget server flush; pulls + re-emits on success. */
+    /** Fire-and-forget server flush. */
     private fun triggerSync() {
         appScope.launch {
             try {

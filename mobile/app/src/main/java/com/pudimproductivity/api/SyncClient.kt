@@ -22,7 +22,7 @@ import okhttp3.WebSocketListener
 import org.json.JSONObject
 
 /**
- * A real-time task event from the backend sync hub (see api/ws/events-v1.json).
+ * A real-time task event from the backend sync hub.
  */
 data class WsEvent(
     val type: String,
@@ -32,16 +32,15 @@ data class WsEvent(
 )
 
 /**
- * Singleton WebSocket client mirroring the web client (web/src/api/sync.ts):
+ * Singleton WebSocket client mirroring the web client:
  *
  *  - Connects to `<API_BASE_URL>/ws?last_seq=N`.
  *  - Reconnects with exponential backoff on failure.
  *  - Persists the last sequence number in SharedPreferences so reconnects resume
- *    without missing events; a `stale` event signals a full REST refresh.
- *  - Exposes events as a [SharedFlow]; no replay of old events (clients keep
- *    their own state and treat `stale` as "refetch").
+ *    without missing events. A `stale` event signals a full REST refresh.
+ *  - Exposes events as a [SharedFlow].
  *
- * Start it once from Application/MainActivity — it lives for the app process.
+ * Start it once from Application/MainActivity, it lives for the app process.
  * Only an application-scoped [SharedPreferences] handle is retained (not a
  * Context) so no activity/application reference is leaked.
  */
@@ -60,8 +59,7 @@ object SyncClient {
     /**
      * Whether the WebSocket is currently connected to the backend. The app
      * watches this to flush local dirty rows and pull server changes the moment
-     * the connection is (re)established — the "reconnect to the server" hook for
-     * offline sync.
+     * the connection is reestablished.
      */
     val connected: StateFlow<Boolean> = _connected.asStateFlow()
 

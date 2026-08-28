@@ -14,11 +14,11 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 
 /**
- * Reports uncaught exceptions to the backend error beacon (POST /api/v1/errors)
+ * Reports uncaught exceptions to the backend error beacon
  * so client crashes appear in the server logs with their trace context.
  *
  * Installed once in MainActivity via Thread.setDefaultUncaughtExceptionHandler.
- * The report is best-effort (fire-and-forget); the default crash handler still
+ * The report is best-effort (fire-and-forget). The default crash handler still
  * runs afterwards.
  */
 object ErrorReporter {

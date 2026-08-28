@@ -39,11 +39,6 @@ private fun mediaLabel(t: String): String = when (t) {
     else -> t
 }
 
-/**
- * Formats a library score the same way the web does (`Math.round(score * 10) / 10`
- * — see web/src/pages/Library.tsx): one decimal at most, with a trailing ".0"
- * dropped. So 92.33333333333333 shows as "92.3" and 92.0 as "92".
- */
 internal fun formatScore(score: Double): String {
     val rounded = Math.round(score * 10) / 10.0
     return if (rounded % 1.0 == 0.0) rounded.toLong().toString() else rounded.toString()
@@ -329,12 +324,6 @@ fun LibraryScreen(onBack: () -> Unit) {
     }
 }
 
-
-/**
- * Library list rendered as table rows (mirrors the web's library list): a
- * header row followed by one bordered row per item, scrollable horizontally
- * when the columns don't fit the screen.
- */
 @Composable
 private fun LibraryRowList(
     items: List<LibraryItem>,
@@ -344,7 +333,7 @@ private fun LibraryRowList(
 ) {
     val borderColor = MaterialTheme.colorScheme.outlineVariant
     val shape = RoundedCornerShape(8.dp)
-    // Fixed table width so columns line up; scrolls horizontally on narrow screens.
+    // Fixed table width so columns line up. Scrolls horizontally on narrow screens.
     val tableWidth = 780.dp
 
     Row(

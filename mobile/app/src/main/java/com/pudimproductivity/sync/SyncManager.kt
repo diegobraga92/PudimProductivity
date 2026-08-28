@@ -19,21 +19,18 @@ import kotlinx.coroutines.withContext
 /**
  * Offline sync:
  *
- *  - **push** local dirty rows to the server via the existing REST endpoints
+ *  - pushes local dirty rows to the server via the existing REST endpoints
  *    (create/update/delete/complete). On success the rows are marked clean.
  *    HTTP 409 from a merge is treated as a conflict: the server
  *    state is pulled in the next pass and the local dirty flag is cleared.
- *  - **pull** incremental changes from `GET /api/v1/sync?since=...` and apply
- *    them to the local SQLite database (upsert active rows, tombstone deleted).
+ *  - pulls incremental changes from and apply them to the local SQLite database.
  *
  * Run from a WorkManager worker and on app foreground/connectivity restore.
  */
 class SyncManager(private val context: Context) {
 
     companion object {
-        // Serializes syncs across every SyncManager instance — the app repository,
-        // the WorkManager worker and the reconnect hooks all create their own —
-        // so push/pull never run concurrently against the same SQLite database.
+        // Serializes syncs across every SyncManager instance.
         private val syncMutex = Mutex()
     }
 
@@ -64,13 +61,10 @@ class SyncManager(private val context: Context) {
                 LocalTask(
                     id = t.id, title = t.title, status = t.status,
                     recurrence_days = t.recurrence_days, list_id = t.list_id,
-                    // Planner scheduling fields — needed locally so the alarm
-                    // scheduler (start_time − alarm_minutes) works offline.
                     start_time = t.start_time, end_time = t.end_time,
                     color = t.color, scheduled_date = t.scheduled_date,
                     alarm_minutes = t.alarm_minutes,
                     created_at = t.created_at, updated_at = t.updated_at,
-                    // Server rows exist remotely, so a later local edit is an UPDATE.
                     synced = true
                 )
             })
@@ -101,13 +95,13 @@ class SyncManager(private val context: Context) {
     }
 
 
-    /** Push locally created/updated/deleted rows; clear their dirty flags. */
+    /** Push locally created/updated/deleted rows, and clear their dirty flags. */
     private suspend fun pushLocalChanges() {
         val api = ApiClient.taskService
 
         // Deleted tasks first (tombstones). A tombstone whose id was never
         // created on the server (offline create then delete) is just dropped
-        // locally — there is nothing to delete remotely.
+        // locally.
         db.dirtyTasks().filter { it.deleted }.forEach { t ->
             try {
                 if (t.synced) {
@@ -165,10 +159,6 @@ class SyncManager(private val context: Context) {
             }
         }
 
-        // Dirty completions: un-completed locally = DELETE; added = POST complete.
-        // Tombstones are included so a local uncomplete actually reaches the
-        // server; a successful push marks the row clean (the pull pass then
-        // hard-deletes confirmed tombstones via deleted_completion_ids).
         db.dirtyCompletions().forEach { c ->
             try {
                 if (c.deleted) {

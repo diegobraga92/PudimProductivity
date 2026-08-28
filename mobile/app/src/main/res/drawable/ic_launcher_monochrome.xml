@@ -1,11 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Monochrome layer for Android 13+ themed launcher icons. Same design as the
-  desktop tray icon (desktop/assets/tray.svg): a single-color pudding silhouette
-  with the "P" knocked out. The launcher tints this layer; the even-odd fill
-  knocks the "P" stroke out while the hollow inside the "P" stays pudding
-  (matching the tray). Same scale/translate as ic_launcher_foreground so the
-  themed icon lines up with the colored one.
+  Monochrome layer for Android 13+ themed launcher icons.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"

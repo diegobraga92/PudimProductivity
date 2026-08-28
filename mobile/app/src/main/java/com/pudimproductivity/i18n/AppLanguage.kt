@@ -1,8 +1,7 @@
 package com.pudimproductivity.i18n
 
 /**
- * UI languages supported by the app. Codes match the shared dictionary files
- * in `shared/i18n/{code}.json`.
+ * UI languages supported by the app.
  */
 enum class AppLanguage(val code: String) {
     EN("en"),

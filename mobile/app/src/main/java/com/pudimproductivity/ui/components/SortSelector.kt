@@ -25,8 +25,7 @@ private fun sortLabelKey(option: SortOption): String = when (option) {
 }
 
 /**
- * Ordering dropdown for task/habit lists — the mobile counterpart of the web's
- * `SortSelect`. Shows the current option and lets the user pick another.
+ * Ordering dropdown for task/habit lists.
  */
 @Composable
 fun SortSelector(

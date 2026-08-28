@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   Notification small icon: alpha-only silhouette (the system tints it white),
-  so it must be a flat, high-contrast shape. Uses the tray-icon design — the
-  pudding silhouette with the "P" knocked out — framed to fill a 24dp canvas.
+  so it must be a flat, high-contrast shape.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"

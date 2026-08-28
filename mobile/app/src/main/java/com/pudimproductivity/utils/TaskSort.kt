@@ -3,9 +3,7 @@ package com.pudimproductivity.utils
 import com.pudimproductivity.api.Task
 
 /**
- * Task ordering options, mirroring the web app (web/src/utils/sort.ts). The
- * `key` values match the web's persisted `taskSort.*` localStorage values so
- * the mobile preference format stays aligned with the web.
+ * Task ordering options.
  */
 enum class SortOption(val key: String, val label: String) {
     ALPHA_ASC("alpha-asc", "Name A-Z"),
@@ -23,8 +21,7 @@ enum class SortOption(val key: String, val label: String) {
 }
 
 /**
- * Orders [tasks] by [option] using the same semantics as the web's `sortTasks`
- * (web/src/utils/sort.ts):
+ * Orders [tasks] by [option]:
  *  - alpha: by title (case-insensitive)
  *  - created: by `created_at` (ISO-8601 string compare)
  *  - time: scheduled tasks (with `start_time`) first, sorted by time;

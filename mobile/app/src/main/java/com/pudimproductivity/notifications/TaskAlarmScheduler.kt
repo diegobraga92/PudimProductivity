@@ -14,8 +14,7 @@ import java.util.concurrent.TimeUnit
 /**
  * Planner alarms: a habit with `start_time` and `alarm_minutes` fires a local
  * notification `alarm_minutes` before `start_time` on each of its recurrence
- * days, mirroring the web app's alarm semantics
- * (`web/src/hooks/useAlarmNotifier.ts`). The schedule is pulled into the local
+ * days, mirroring the web app's alarm semantics. The schedule is pulled into the local
  * DB by the sync worker, so alarms fire with the app closed and fully offline.
  */
 object TaskAlarmScheduler {
@@ -25,9 +24,7 @@ object TaskAlarmScheduler {
 
     /**
      * Full reschedule: cancels every pending task alarm and re-arms the next
-     * occurrence of each habit that has a planner alarm. Idempotent — call it
-     * at app start and after any sync/WebSocket refresh (see
-     * TaskRepository.refreshFromLocal).
+     * occurrence of each habit that has a planner alarm.
      */
     fun schedule(context: Context) {
         cancelAll(context)
@@ -38,7 +35,6 @@ object TaskAlarmScheduler {
             .forEach { scheduleTaskFor(context, it.id) }
     }
 
-    /** Alias used after data refreshes — same behavior as [schedule]. */
     fun rescheduleAll(context: Context) = schedule(context)
 
     /**
@@ -65,7 +61,7 @@ object TaskAlarmScheduler {
             .enqueueUniqueWork(WORK_PREFIX + taskId, ExistingWorkPolicy.REPLACE, request)
     }
 
-    /** Cancels pending alarms for every task the local DB knows, incl. tombstones. */
+    /** Cancels pending alarms for every task the local DB knows, including tombstones. */
     fun cancelAll(context: Context) {
         val wm = WorkManager.getInstance(context)
         LocalDatabase(context).queryAllTaskIds().forEach { wm.cancelUniqueWork(WORK_PREFIX + it) }
@@ -107,7 +103,7 @@ object TaskAlarmScheduler {
         return keys[date.dayOfWeek.value - 1]
     }
 
-    /** Parses "HH:MM" into minutes-of-day; null for malformed input. */
+    /** Parses "HH:MM" into minutes-of-day, null for malformed input. */
     internal fun parseTimeToMinutes(t: String): Int? {
         val parts = t.split(":")
         val h = parts.getOrNull(0)?.toIntOrNull() ?: return null

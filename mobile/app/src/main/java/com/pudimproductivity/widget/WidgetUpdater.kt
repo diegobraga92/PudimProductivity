@@ -11,7 +11,6 @@ import androidx.glance.appwidget.updateAll
 object WidgetUpdater {
 
     suspend fun updateAll(context: Context) {
-        TasksWidget.updateAll(context)
         HabitsWidget.updateAll(context)
     }
 }

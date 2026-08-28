@@ -14,7 +14,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 
-// Pudim brand palette — warm orange, aligned with the web design tokens.
 private val BrandOrange = Color(0xFFEA580C)
 private val BrandCream = Color(0xFFFEF6E9)
 

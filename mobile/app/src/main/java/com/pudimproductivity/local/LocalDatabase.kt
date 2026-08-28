@@ -8,14 +8,6 @@ import android.database.sqlite.SQLiteOpenHelper
 
 /**
  * Local SQLite database for offline-first operation.
- *
- * Chosen over Room because AGP 9.1's built-in Kotlin is incompatible with KSP
- * (Room's annotation processor) and migrating the whole build off built-in
- * Kotlin is unsupported by Kotlin 2.2.21 (see docs/adr/012). This exposes a
- * Room-style DAO API — `upsertTasks`, `queryTasks`, `markDirty` — with zero
- * annotation processing, so the offline architecture is identical to a Room
- * design and can be swapped to Room when the toolchain allows.
- *
  * Every table carries `dirty` (local change awaiting push) and `deleted`
  * (local or server tombstone) so the SyncManager can converge with the backend.
  */
@@ -23,11 +15,6 @@ class LocalDatabase(context: Context) : SQLiteOpenHelper(context.applicationCont
 
     companion object {
         const val DB_NAME = "pudim_offline.db"
-        // v2: added `synced` (exists-on-server) flag to tasks + task_lists so a
-        // push picks create vs update correctly for offline-created rows.
-        // v3: added planner scheduling columns (start_time, end_time, color,
-        // scheduled_date, alarm_minutes) so the local alarm scheduler can fire
-        // notifications offline.
         const val DB_VERSION = 3
 
         const val META_KEY_LAST_SYNC = "last_sync_ts"
@@ -46,18 +33,12 @@ class LocalDatabase(context: Context) : SQLiteOpenHelper(context.applicationCont
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         if (oldVersion < 2) {
-            // v2: synced flag distinguishes "exists on the server" so pushes pick
-            // create vs update correctly. Existing rows are treated as synced
-            // (they were pulled or previously pushed) — DEFAULT 0 would make them
-            // look like never-created rows, so backfill with 1.
             db.execSQL("ALTER TABLE tasks ADD COLUMN synced INTEGER NOT NULL DEFAULT 0")
             db.execSQL("ALTER TABLE task_lists ADD COLUMN synced INTEGER NOT NULL DEFAULT 0")
             db.execSQL("UPDATE tasks SET synced = 1")
             db.execSQL("UPDATE task_lists SET synced = 1")
         }
         if (oldVersion < 3) {
-            // v3: planner scheduling columns for the local alarm scheduler.
-            // Existing rows have no schedule — nullable columns default to NULL.
             db.execSQL("ALTER TABLE tasks ADD COLUMN start_time TEXT")
             db.execSQL("ALTER TABLE tasks ADD COLUMN end_time TEXT")
             db.execSQL("ALTER TABLE tasks ADD COLUMN color TEXT")

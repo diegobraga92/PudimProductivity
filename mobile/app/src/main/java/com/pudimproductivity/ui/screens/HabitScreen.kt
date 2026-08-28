@@ -30,7 +30,7 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
 
-// Habit ordering (mirrors web's Habits column sort, including time options).
+// Habit ordering.
 private const val HABIT_SORT_KEY = "taskSort.habits"
 
 private val HABIT_SORT_OPTIONS = listOf(

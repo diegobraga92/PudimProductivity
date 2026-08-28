@@ -8,8 +8,7 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 
 /**
- * In-app localization backed by the shared dictionary (`shared/i18n/en.json`
- * and `shared/i18n/pt-BR.json`, copied into `assets/i18n/` by Gradle).
+ * In-app localization backed by the shared dictionary, copied into `assets/i18n/`.
  *
  * [language] is Compose state, so any composable that calls [text] recomposes
  * when the user switches languages. Non-UI entry points (widgets, background
@@ -32,8 +31,7 @@ object Localization {
 
     /**
      * Loads the dictionaries from assets and the persisted language choice.
-     * Idempotent; safe to call from every entry point (activity, widget
-     * receivers, background workers).
+     * Idempotent.
      */
     fun init(context: Context) {
         synchronized(this) {

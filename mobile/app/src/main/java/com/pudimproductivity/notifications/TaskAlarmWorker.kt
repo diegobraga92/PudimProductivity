@@ -17,7 +17,7 @@ import com.pudimproductivity.local.LocalDatabase
  * Fires a planner alarm: posts a local notification for a habit whose
  * start_time minus alarm_minutes has arrived, then arms the next occurrence
  * (habits recur weekly). Scheduled by [TaskAlarmScheduler] via WorkManager, so
- * it fires even when the app is closed; the schedule lives in the local DB, so
+ * it fires even when the app is closed. The schedule lives in the local DB, so
  * it works fully offline.
  */
 class TaskAlarmWorker(
@@ -58,9 +58,6 @@ class TaskAlarmWorker(
 
         private fun post(context: Context, taskId: String, title: String, text: String) {
             ensureChannel(context)
-            // Android 13+ requires the runtime POST_NOTIFICATIONS permission; on
-            // older devices the user can still disable notifications in
-            // Settings. Post only when notifications can actually be shown.
             val permissionGranted = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
                 ContextCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) ==
                 PackageManager.PERMISSION_GRANTED

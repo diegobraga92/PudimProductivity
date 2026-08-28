@@ -18,7 +18,7 @@ import kotlinx.coroutines.launch
 
 /**
  * Share dialog for a task list. Owners can invite (editor/viewer) and
- * revoke access; all members see the member list with live presence dots.
+ * revoke access. All members see the member list with live presence dots.
  */
 @Composable
 fun TaskListShareDialog(

@@ -33,8 +33,8 @@ private fun getDayName(dateStr: String): String {
 /**
  * A 7-day habit completion heatmap with week navigation.
  *
- * The window is a rolling 7 days ending today (mirrors the web's habit
- * heatmap), so today is always the final column and gets a primary-colour ring.
+ * The window is a rolling 7 days ending today. 
+ * Today is always the final column and gets a primary-colour ring.
  *
  * @param recurrenceDays Days of the week this habit is scheduled (e.g. ["mon","wed","fri"])
  * @param completions List of ISO date strings (YYYY-MM-DA) for completed dates

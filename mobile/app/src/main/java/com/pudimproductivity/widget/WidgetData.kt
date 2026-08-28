@@ -5,14 +5,9 @@ import com.pudimproductivity.local.LocalDatabase
 import java.time.LocalDate
 
 /**
- * Loads widget state straight from the offline-first local SQLite DB — the
- * same source of truth the app UI uses (ADR 012). Widgets render instantly,
- * work offline, and never touch the network in the render path.
+ * Loads widget state straight from the offline-first local SQLite DB.
  */
 object WidgetData {
-
-    fun loadTasks(context: Context): TasksSnapshot =
-        buildTasksSnapshot(tasks = LocalDatabase(context).queryTasks())
 
     fun loadHabits(context: Context): HabitsSnapshot {
         val today = LocalDate.now()

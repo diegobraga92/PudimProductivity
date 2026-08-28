@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.asStateFlow
  * Runtime-configurable backend base URL.
  *
  * The URL is persisted in SharedPreferences so it survives app restarts and
- * can be changed from the in-app Server Settings screen — no rebuild needed.
+ * can be changed from the in-app Server Settings screen.
  * When no override is stored, the build-time default ([BuildConfig.API_BASE_URL],
  * injected via `buildConfigField` in app/build.gradle.kts) is used.
  *

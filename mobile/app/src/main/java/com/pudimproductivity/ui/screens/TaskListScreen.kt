@@ -38,8 +38,7 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
 
-// Task ordering keys + options (mirrors web's SortSelect; the web persists the
-// same keys "taskSort.todos"/"taskSort.habits").
+// Task ordering keys + options.
 private const val TODO_SORT_KEY = "taskSort.todos"
 private const val HABIT_SORT_KEY = "taskSort.habits"
 
@@ -65,8 +64,8 @@ fun TaskListScreen(
     onRecipes: () -> Unit,
     onLibrary: () -> Unit
 ) {
-    // Local-first — read straight from the local database via the
-    // repository's flows (instant + offline); writes go through the repository
+    // Local-first: read straight from the local database via the
+    // repository's flows (instant + offline). Writes go through the repository
     // (optimistic + dirty flag) and are flushed to the server on sync.
     val tasks by repository.tasks.collectAsState()
     val taskLists by repository.taskLists.collectAsState()
@@ -76,7 +75,7 @@ fun TaskListScreen(
     var selectedTab by remember { mutableStateOf(0) }
     var newTodoTitle by remember { mutableStateOf("") }
     var newListName by remember { mutableStateOf("") }
-    // To-Dos sub-view: 0 = open (unchecked), 1 = completed (mirrors the web).
+    // To-Dos sub-view: 0 = open (unchecked), 1 = completed.
     var todoFilter by remember { mutableStateOf(0) }
     // List currently open in the share dialog.
     var shareList by remember { mutableStateOf<TaskList?>(null) }
@@ -93,7 +92,7 @@ fun TaskListScreen(
         completions.groupBy({ it.task_id }, { it.completed_date })
     }
 
-    // WS events still arrive — pull the server's incremental
+    // WS events still arrive. It pulls the server's incremental
     // changes into the local DB so a change made on another client (e.g. web)
     // is reflected immediately, not just re-read from the stale local snapshot.
     @OptIn(FlowPreview::class)
@@ -117,7 +116,7 @@ fun TaskListScreen(
         if (todoFilter == 0) sortedTodoTasks.filter { it.status != "done" }
         else sortedTodoTasks.filter { it.status == "done" }
 
-    // Web-aligned to-do accent color (blue) — matches the web's todo cards.
+    // Web-aligned to-do accent color (blue).
     val todoAccent =
         if (MaterialTheme.colorScheme.background.luminance() < 0.5f) TodoAccentDark else TodoAccentLight
 
@@ -199,8 +198,7 @@ fun TaskListScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Offline banner — data is local-first, so the app stays
-            // usable; this just informs the user that sync is pending.
+            // Offline banner: data is local-first, so the app stays usable.
             if (!isOnline) {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
@@ -219,10 +217,6 @@ fun TaskListScreen(
 
             when (selectedTab) {
                 0 -> {
-                    // TODO TAB
-                    // Quick-add — always visible so switching Open/Completed
-                    // doesn't change the layout. New todos start unchecked, so
-                    // creating one from the "Completed" view jumps back to Open.
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),

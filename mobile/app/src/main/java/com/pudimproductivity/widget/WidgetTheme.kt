@@ -19,7 +19,7 @@ import com.pudimproductivity.ui.theme.ThemePreferences
  * Glance has its own theme system (it cannot reuse the Compose
  * [com.pudimproductivity.ui.theme.PudimProductivityTheme]), so the tokens are
  * re-declared here. The widgets pick the light/dark scheme the same way the
- * app does — from ThemePreferences (System / Light / Dark) — via [resolve].
+ * app does, from ThemePreferences (System / Light / Dark), via [resolve].
  */
 object WidgetColors {
 
