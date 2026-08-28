@@ -3,7 +3,6 @@ import { apiHeaders } from "./client";
 import type { components } from "./generated/tasks-v1";
 
 // Types are generated from api/openapi/tasks-v1.yaml (the source of truth).
-// Edit the spec, run `npm run generate:api`, and commit — CI fails on drift.
 export type Task = components["schemas"]["Task"];
 export type TaskStatus = components["schemas"]["TaskStatus"];
 export type RecurrenceDay = components["schemas"]["RecurrenceDay"];

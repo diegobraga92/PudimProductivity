@@ -13,8 +13,7 @@ async function handleError(response: Response, fallback: string): Promise<never>
 
 /**
  * Exports a full backup of the non-sensitive data as a downloadable JSON file.
- * The backend sends it with Content-Disposition: attachment; we return the
- * blob plus the suggested filename.
+ * The backend sends it with Content-Disposition: attachment.
  */
 export async function exportBackup(): Promise<{ blob: Blob; filename: string }> {
   const res = await fetch(`${config.apiBaseUrl}/backup/export`, {
@@ -31,7 +30,7 @@ export async function exportBackup(): Promise<{ blob: Blob; filename: string }> 
 
 /**
  * Restores a backup, replacing the current contents of every backed-up table.
- * The restore is transactional on the server — a malformed backup changes
+ * The restore is transactional on the server, a malformed backup changes
  * nothing.
  */
 export async function importBackup(file: File): Promise<BackupImportResult> {

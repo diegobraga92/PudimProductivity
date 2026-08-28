@@ -57,7 +57,7 @@ function Pomodoro({ onOpenSounds }: PomodoroProps) {
 
   const session = currentResp?.active ? currentResp.session : null;
 
-  // Sync local state from server — only on session identity, status or phase
+  // Sync local state from server, only on session identity, status or phase
   // change (continuous runs flip phase while status stays "running"), NOT on
   // every refetch (remaining_seconds changes every poll).
   useEffect(() => {
@@ -154,7 +154,7 @@ function Pomodoro({ onOpenSounds }: PomodoroProps) {
   const isPaused = localStatus === "paused";
   const isActive = isRunning || isPaused;
   const displayTime = localRemaining !== null ? localRemaining : (session?.remaining_seconds ?? 0);
-  // The progress ring uses the current segment's duration — the break duration
+  // The progress ring uses the current segment's duration, the break duration
   // while in a break phase, so continuous runs count down correctly.
   const currentPhase = session?.phase ?? "focus";
   const segmentMinutes =
@@ -169,7 +169,7 @@ function Pomodoro({ onOpenSounds }: PomodoroProps) {
   // page while the timer runs.
 
   // Desktop: prevent the OS from suspending while the focus timer runs so the
-  // countdown and audio stay accurate (Electron powerSaveBlocker; no-op in the
+  // countdown and audio stay accurate (Electron powerSaveBlocker. No-op in the
   // plain browser).
   useEffect(() => {
     window.desktop?.setPowerSaveBlocker?.(localStatus === "running");
@@ -371,7 +371,7 @@ function Pomodoro({ onOpenSounds }: PomodoroProps) {
         </div>
       </div>
 
-      {/* Ambient sound (pomodoro sync) — fully controllable from this page */}
+      {/* Ambient sound (pomodoro sync), fully controllable from this page */}
       <div
         className="card"
         style={{

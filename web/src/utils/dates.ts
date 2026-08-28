@@ -13,7 +13,7 @@ function formatLocalDate(d: Date): string {
 /**
  * Format a string like "YYYY-MM-DD" to a short display format e.g. "Jun 1".
  * Month abbreviations can be localized by passing the translated month list
- * (e.g. from the i18n dictionary); it defaults to English.
+ * (e.g. from the i18n dictionary). Defaults to English.
  */
 function formatShortDisplay(dateStr: string, months: string[] = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -52,9 +52,7 @@ export function getWeekDates(weekOffset = 0): string[] {
  *
  * Unlike getWeekDates (anchored to Monday), this window is anchored to today:
  * offset 0 returns the last 7 days ending today, with today as the final
- * column. This keeps habit streaks flowing continuously between calendar
- * weeks — on Monday you still see the previous week's completions instead of
- * a hard reset to a blank Monday–Sunday grid.
+ * column.
  *
  * @param offset - Offset relative to the current window:
  *   0 (default) = last 7 days ending today,

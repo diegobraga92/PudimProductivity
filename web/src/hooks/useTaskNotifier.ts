@@ -46,9 +46,7 @@ function fmt(event: WsEvent, t: Translate): { icon: string; title: string; body?
 }
 
 /**
- * Shows in-app toasts for real-time task events delivered over the WebSocket
- * stream. Events raised by any client appear here — this is the
- * "push notification" experience on the web.
+ * Shows in-app toasts for real-time task events delivered over the WebSocket stream.
  */
 export function useTaskNotifier(): void {
   const { pushToast } = useToast();

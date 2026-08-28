@@ -9,8 +9,7 @@ import { syncClient, type WsEvent } from "../api/sync";
  * - Applies presence.online / presence.offline events from the WebSocket
  *   stream in real time.
  *
- * Returns a `Map<listId, Set<userId>>` of online users. The `isOnline` helper
- * answers "is this user currently connected and able to access the list?".
+ * Returns a `Map<listId, Set<userId>>` of online users.
  */
 export function usePresence(listIds: string[]): {
   online: Map<string, Set<string>>;

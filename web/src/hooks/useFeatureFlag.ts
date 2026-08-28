@@ -21,7 +21,7 @@ export function useFeatureFlag(name: string): boolean {
         }
       })
       .catch(() => {
-        // Feature not found or error — default to disabled
+        // Feature not found or error. Default to disabled
         if (!cancelled) {
           setEnabled(false);
         }

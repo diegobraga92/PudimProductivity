@@ -6,7 +6,7 @@ export type SessionStatus = components["schemas"]["SessionStatus"];
 export type PomodoroSession = components["schemas"]["PomodoroSession"];
 export type StartSessionRequest = components["schemas"]["StartSessionRequest"];
 
-/** Response of GET /api/v1/pomodoro/current — an active-session discriminated union. */
+/** Response of GET /api/v1/pomodoro/current. */
 export type CurrentSessionResponse =
   paths["/api/v1/pomodoro/current"]["get"]["responses"]["200"]["content"]["application/json"];
 

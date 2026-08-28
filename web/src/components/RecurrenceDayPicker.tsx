@@ -10,7 +10,7 @@ interface RecurrenceDayPickerProps {
 }
 
 /**
- * Weekday toggle buttons for habit recurrence — shared by the create and edit
+ * Weekday toggle buttons for habit recurrence. Shared by the create and edit
  * task modals (extracted from TaskCreate).
  */
 export default function RecurrenceDayPicker({

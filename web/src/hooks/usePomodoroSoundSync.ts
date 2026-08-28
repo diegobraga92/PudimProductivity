@@ -12,8 +12,6 @@ import { usePomodoroSyncSettings } from "./usePomodoroSyncSettings";
  * Mounted once in App.tsx so it outlives the Pomodoro page: the selected sound
  * keeps playing while the timer runs even after the user navigates to another
  * tab, and stops when the timer is paused, completed, cancelled or stopped.
- * The sound only stops if the sync owns it — other manually-played layers in
- * the Soundscape mixer are never touched.
  */
 export function usePomodoroSoundSync(): void {
   const { enabled, sound } = usePomodoroSyncSettings();

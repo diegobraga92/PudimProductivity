@@ -41,7 +41,7 @@ export function resolveInitialLanguage(): Language {
     const saved = localStorage.getItem(LANGUAGE_STORAGE_KEY);
     if (saved === "en" || saved === "pt-BR") return saved;
   } catch {
-    // Storage unavailable — fall through to the browser locale.
+    // Storage unavailable, fall through to the browser locale.
   }
   return navigator.language?.toLowerCase().startsWith("pt") ? "pt-BR" : "en";
 }

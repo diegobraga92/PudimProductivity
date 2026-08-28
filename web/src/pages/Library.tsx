@@ -34,12 +34,6 @@ const MEDIA_ICONS: Record<MediaType, string> = {
   game: "🎮",
 };
 
-/**
- * Library scores can arrive with long decimals (e.g. 93.33333333333334 from a
- * provider average). Round to at most one decimal everywhere — list display,
- * the add/edit form and when saving — so the stored value never shows up as a
- * long floating-point number.
- */
 const roundScore = (score: number): number => Math.round(score * 10) / 10;
 const formatScore = (score: number): string => String(roundScore(score));
 
@@ -386,7 +380,7 @@ export default function Library() {
           value={typeFilter}
           onChange={(e) => {
             setTypeFilter(e.target.value);
-            // The subtype list is scoped by media type; drop a stale value
+            // The subtype list is scoped by media type. Drop a stale value
             // (e.g. a console filter while browsing movies).
             setSubtypeFilter("");
           }}
@@ -424,7 +418,7 @@ export default function Library() {
         </select>
       </div>
 
-      {/* Quick subtype filters — derived from the subtypes that actually exist.
+      {/* Quick subtype filters, derived from the subtypes that actually exist.
           Each chip pairs the subtype with its media type so e.g. a Horror book
           is not confused with a Horror movie. Clicking one narrows the list;
           clicking it again clears the filter. */}

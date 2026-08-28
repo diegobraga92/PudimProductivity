@@ -1,17 +1,12 @@
-/* ============================================
-   PudimProductivity — Design System v2.1
-   Clean, modern, with clear visual hierarchy
-   ============================================ */
-
 /* --- CSS Custom Properties --- */
 :root {
-  /* Primary palette — single accent color */
+  /* Primary palette */
   --color-primary: #EA580C;
   --color-primary-light: #F97316;
   --color-primary-dark: #C2410C;
   --color-primary-subtle: #FFF7ED;
 
-  /* Semantic colors — used sparingly for badges/accents only */
+  /* Semantic colors */
   --color-todo: #3B82F6;
   --color-todo-light: #EFF6FF;
   --color-habit: #F59E0B;
@@ -36,7 +31,7 @@
   /* Neutral palette */
   --color-bg: #FEF6E9;
   --color-surface: #FFFFFF;
-  --color-panel: #EEF2F6; /* panel container bg — slightly muted so cards stand out */
+  --color-panel: #EEF2F6; /* panel container bg, slightly muted so cards stand out */
   --color-border: #E2E8F0;
   --color-border-light: #F1F5F9;
   --color-text: #0F172A;
@@ -258,7 +253,7 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: var(--shadow-sm);
 }
 
-/* Category accent strips — border-left so they follow the card's rounded corners */
+/* Category accent strips, border-left so they follow the card's rounded corners */
 .card-todo {
   border-left: 3px solid var(--color-todo);
 }
@@ -273,7 +268,7 @@ h1, h2, h3, h4, h5, h6 {
   border-left-color: var(--color-list);
 }
 
-/* Habit cards — compact sidebar style, no inset border */
+/* Habit cards, compact sidebar style, no inset border */
 .card-habit {
   padding: 0.6rem 0.75rem;
   border: 1px solid var(--color-border);
@@ -523,7 +518,7 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 0.8rem;
 }
 
-/* --- Week Heatmap (Habit) — Pill Style --- */
+/* --- Week Heatmap (Habit), Pill Style --- */
 .week-heatmap {
   display: flex;
   gap: 0.3rem;
@@ -636,7 +631,7 @@ h1, h2, h3, h4, h5, h6 {
   overflow: hidden;
 }
 
-/* Column header — fixed band holding the title + controls */
+/* Column header, fixed band holding the title + controls */
 .task-column-header {
   flex-shrink: 0;
   display: flex;
@@ -656,7 +651,7 @@ h1, h2, h3, h4, h5, h6 {
   scrollbar-width: thin;
 }
 
-/* To-Dos sub-tabs (Open / Completed) — compact pill control, left-aligned */
+/* To-Dos sub-tabs (Open / Completed), compact pill control, left-aligned */
 .task-tabs {
   flex-shrink: 0;
   align-self: flex-start;
@@ -845,7 +840,7 @@ h1, h2, h3, h4, h5, h6 {
   filter: drop-shadow(0 2px 8px rgba(234, 88, 12, 0.22));
 }
 
-/* Inline SVG next to the title — the heading text is gradient-clipped, so the
+/* Inline SVG next to the title, the heading text is gradient-clipped, so the
    icon needs its own explicit color to pick up the brand accent. */
 .page-heading svg {
   flex-shrink: 0;
@@ -1108,10 +1103,6 @@ h1, h2, h3, h4, h5, h6 {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-text-muted);
 }
-/* ============================================
-   Design System v2.2 — Header, Responsive Nav,
-   Dark Mode, Recipe Thumbnails, A11y
-   ============================================ */
 
 /* --- Skip link (a11y) --- */
 .skip-link {
@@ -1588,11 +1579,6 @@ body {
   background: var(--color-border-light);
   color: var(--color-text);
 }
-
-
-/* ============================================
-   Design System v2.3 — Look & Feel Polish
-   ============================================ */
 
 /* --- Smooth scrolling (with reduced-motion respect) --- */
 html {

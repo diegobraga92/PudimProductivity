@@ -113,8 +113,7 @@ export function useAlarmNotifier(): void {
             console.debug(`[alarm] Firing alarm for "${task.title}" (${task.id}) at ${nowMinutes} min, alarm was ${alarmMinutes} min`);
             await playAlarmSound();
             fireAlarm(task);
-            // Native OS notification when running inside the Electron desktop
-            // app (no-op in the browser — the in-app toast still fires).
+            // Native OS notification when running inside the Electron desktop app.
             window.desktop?.notify?.({
               title: task.title,
               body: task.start_time ? tRef.current("alarm.desktopTime", { time: sanitizeTime(task.start_time) }) : undefined,
@@ -129,8 +128,7 @@ export function useAlarmNotifier(): void {
 
         lastCheckMinutes = nowMinutes;
       } catch (err) {
-        // API errors — log instead of silently swallowing so future
-        // alarm issues are diagnosable.
+        // API errors.
         console.debug("[alarm] check failed", err);
       }
     };

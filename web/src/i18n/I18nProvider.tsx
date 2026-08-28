@@ -17,7 +17,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     try {
       localStorage.setItem(LANGUAGE_STORAGE_KEY, next);
     } catch {
-      // Storage unavailable — keep the in-memory value only.
+      // Storage unavailable, keep the in-memory value only.
     }
   }, []);
 

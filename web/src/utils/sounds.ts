@@ -2,7 +2,7 @@ import { getSharedAudioContext, scheduleContextCleanup } from "./audioContext";
 
 /**
  * Lightweight utility for short UI feedback sounds.
- * Uses Web Audio API — no external files needed.
+ * Uses Web Audio API.
  */
 
 /**
@@ -78,7 +78,7 @@ export function playTodoCompletionSound(): void {
 
     scheduleContextCleanup(totalDuration * 1000 + 100);
   } catch {
-    // Web Audio API unavailable — silently ignore
+    // Web Audio API unavailable, ignore
   }
 }
 
@@ -140,7 +140,7 @@ export async function playAlarmSound(): Promise<void> {
   try {
     const ctx = getSharedAudioContext();
 
-    // Resume the context first — critical for alarms fired from timers
+    // Resume the context first, critical for alarms fired from timers
     // (no user gesture available). Without this, oscillators are scheduled
     // on a suspended context and produce silence.
     if (ctx.state === "suspended") {
@@ -152,7 +152,7 @@ export async function playAlarmSound(): Promise<void> {
     const gap = 0.12;
     const totalDuration = noteDuration * 3 + gap * 2 + 0.05;
 
-    // Envelope — moderate peak, clear and audible
+    // Envelope, moderate peak, clear and audible
     const gain = ctx.createGain();
     gain.connect(ctx.destination);
     gain.gain.setValueAtTime(0, now);
@@ -174,13 +174,13 @@ export async function playAlarmSound(): Promise<void> {
     // Clean up the context after the sound finishes
     scheduleContextCleanup(totalDuration * 1000 + 100);
   } catch {
-    // Web Audio API unavailable — silently ignore
+    // Web Audio API unavailable, silently ignore
   }
 }
 
 /**
  * Play a short low single-note ping to signal a regular to-do task uncompletion.
- * Uses G4 (392 Hz) with a quick attack and decay — a lower, softer tone
+ * Uses G4 (392 Hz) with a quick attack and decay, a lower, softer tone
  * distinct from the completion ping, signaling the action was reversed.
  */
 export function playTodoUncompletionSound(): void {
@@ -190,7 +190,7 @@ export function playTodoUncompletionSound(): void {
     const now = ctx.currentTime;
     const totalDuration = 0.2;
 
-    // Envelope — smooth bell-like attack and decay
+    // Envelope
     const gain = ctx.createGain();
     gain.connect(ctx.destination);
     gain.gain.setValueAtTime(0, now);
@@ -207,6 +207,6 @@ export function playTodoUncompletionSound(): void {
 
     scheduleContextCleanup(totalDuration * 1000 + 100);
   } catch {
-    // Web Audio API unavailable — silently ignore
+    // Web Audio API unavailable
   }
 }

@@ -38,9 +38,8 @@ import { useI18n } from "./i18n";
 import "./styles.css";
 
 // Secondary pages are code-split (React.lazy) so the initial bundle only
-// contains the app shell + Dashboard (the landing page). TaskList, Planner,
-// Pomodoro and Soundscape chunks load on demand. Run `npm run build:analyze`
-// to inspect chunk sizes.
+// contains the app shell + Dashboard (the landing page). 
+// Run `npm run build:analyze` to inspect chunk sizes.
 const TaskList = lazy(() => import("./pages/TaskList"));
 const Lists = lazy(() => import("./pages/Lists"));
 const Planner = lazy(() => import("./pages/Planner"));
@@ -87,7 +86,7 @@ function PageFallback() {
   );
 }
 
-/** Theme hook — resolves the system preference, then honors the manual toggle. */
+/** Theme hook: resolves the system preference, then honors the manual toggle. */
 function useTheme() {
   const [theme, setTheme] = useState<"light" | "dark">(() => {
     const saved = localStorage.getItem("theme");
@@ -133,11 +132,11 @@ function AppInner() {
   // timer runs, on any tab (mounted at the root so it survives navigation).
   usePomodoroSoundSync();
 
-  // In-app toast notifications for task events — the "push" channel on the
+  // In-app toast notifications for task events. The "push" channel on the
   // web, delivered over the same WebSocket stream.
   useTaskNotifier();
 
-  // Report client-side JS errors to the backend beacon (POST /api/v1/errors).
+  // Report client-side JS errors to the backend beacon.
   useErrorReporter();
 
   const { data: healthData } = useQuery<HealthResponse>({

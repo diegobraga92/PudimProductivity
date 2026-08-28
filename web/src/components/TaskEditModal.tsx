@@ -36,9 +36,8 @@ interface TaskEditModalProps {
 
 /**
  * Modal editor for a task or habit. Opens directly in edit mode (title focused)
- * with the full editable field set — title, habit recurrence days, planner
- * schedule, and status — plus a collapsible habit history (streak + weekly
- * heatmap). Replaces the old separate-page read-then-edit TaskDetail.
+ * with the full editable field set, plus a collapsible habit history (streak + weekly
+ * heatmap).
  */
 export default function TaskEditModal({
   taskId,
@@ -91,8 +90,7 @@ export default function TaskEditModal({
     task?.recurrence_days
   );
 
-  // Seed the form from the fetched task once (per mount — TaskList keys the
-  // modal by taskId so switching tasks remounts it).
+  // Seed the form from the fetched task once.
   useEffect(() => {
     if (!task || populated.current) return;
     populated.current = true;
@@ -182,7 +180,7 @@ export default function TaskEditModal({
 
     updateMutation.mutate({
       title: title.trim(),
-      // [] converts a habit back to a one-off; a day list keeps/creates a habit.
+      // [] converts a habit back to a one-off. A day list keeps/creates a habit.
       recurrence_days: isHabit ? selectedDays : [],
       start_time: showSchedule ? startTime : null,
       end_time: showSchedule ? endTime : null,

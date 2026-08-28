@@ -29,7 +29,7 @@ export default function Lists() {
     queryFn: listTaskLists,
   });
 
-  // Live presence — who is online per list.
+  // Live presence, who is online per list.
   const { online: onlineByList } = usePresence(taskLists.map((l) => l.id));
 
   const confirm = useConfirm();

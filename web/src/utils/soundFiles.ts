@@ -9,7 +9,7 @@ import config from "../config";
  *   GET /api/v1/sounds/{file} → audio bytes (Range-capable, CORS-enabled)
  *
  * This module fetches the catalog once and maps each SoundID to its playable
- * URL. Every sound in the catalog is file-backed; a sound whose file is
+ * URL. Every sound in the catalog is file-backed, a sound whose file is
  * unknown or fails to load simply does not play.
  */
 
@@ -36,9 +36,7 @@ let fileBySound: Partial<Record<SoundID, string>> = {};
 let loadPromise: Promise<void> | null = null;
 
 /**
- * Fetch the backend sound catalog. Safe to call multiple times — the network
- * request runs at most once and never throws (failures leave the catalog
- * empty).
+ * Fetch the backend sound catalog. Safe to call multiple times.
  */
 export function loadSoundCatalog(): Promise<void> {
   if (!loadPromise) {
@@ -56,7 +54,7 @@ export function loadSoundCatalog(): Promise<void> {
         }
         fileBySound = next;
       } catch {
-        // Backend unreachable or invalid response — leave the catalog empty.
+        // Backend unreachable or invalid response.
       }
     })();
   }

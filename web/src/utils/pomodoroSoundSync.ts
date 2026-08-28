@@ -56,7 +56,7 @@ export type SyncAction = "play" | "stop" | "idle";
 
 /**
  * Decides what the automation hook should do for a given timer status.
- * Disabled sync never touches the engine ("idle"); when enabled, the sound
+ * Disabled sync never touches the engine ("idle"). When enabled, the sound
  * plays while the timer runs and stops on any other status (paused, completed,
  * cancelled, no session).
  */

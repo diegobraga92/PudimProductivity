@@ -5,9 +5,7 @@ export type HealthResponse = components["schemas"]["HealthResponse"];
 
 /**
  * Dev-mode identity headers mirroring the backend's AuthMiddleware
- * (X-User-ID / X-User-Role). Mutating endpoints require role "user"; admin
- * endpoints (feature-flag toggles, score-provider settings) require "admin" —
- * the dev role is persisted in localStorage so the admin UI can switch it.
+ * (X-User-ID / X-User-Role).
  */
 export const DEV_USER_ID = "dev-user";
 const DEV_USER_ROLE = "user";

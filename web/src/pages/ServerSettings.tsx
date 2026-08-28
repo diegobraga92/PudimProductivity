@@ -55,7 +55,7 @@ export default function ServerSettings() {
   const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
   const [baseUrls, setBaseUrls] = useState<Record<string, string>>({});
   // Per-provider extra settings (e.g. IGDB's client_secret), keyed by provider
-  // name then setting key. Only non-empty entries are sent — empty = keep.
+  // name then setting key. Only non-empty entries are sent. empty = keep.
   const [settings, setSettings] = useState<Record<string, Record<string, string>>>({});
   const [lookupEnabled, setLookupEnabled] = useState(false);
   const [dirty, setDirty] = useState(false);
@@ -97,7 +97,7 @@ export default function ServerSettings() {
         }
         return {
           name: p.name,
-          // Empty input = keep the stored key; only send a new key when typed.
+          // Empty input = keep the stored key. Only send a new key when typed.
           api_key: apiKeys[p.name] ? apiKeys[p.name] : null,
           base_url: null,
           ...(Object.keys(settingsPayload).length > 0 ? { settings: settingsPayload } : {}),
@@ -149,7 +149,7 @@ export default function ServerSettings() {
     }
   }
 
-  // Backup & Restore — export a JSON snapshot of all non-sensitive data, or
+  // Backup & Restore. Export a JSON snapshot of all non-sensitive data, or
   // restore from a previous one (destructive, so it needs confirmation).
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -378,7 +378,7 @@ export default function ServerSettings() {
             </>
           )}
 
-          {/* Backup & Restore — admin-only (enforced by the backend too) */}
+          {/* Backup & Restore. admin-only (enforced by the backend too) */}
           <div className="card" style={{ padding: "var(--space-md)" }}>
             <div className="section-card-header">
               <h3 className="card-title">{t("serverSettings.backupTitle")}</h3>

@@ -102,7 +102,7 @@ describe("computeStreaks — timezone boundary edge case", () => {
     // The backend always stores dates as UTC ISO strings (YYYY-MM-DD).
     // As long as the client compares UTC ISO strings to UTC ISO strings
     // the streak is correct regardless of local TZ.
-    mockToday("2026-05-25"); // Noon UTC — local UTC-12 would still be May 24
+    mockToday("2026-05-25"); // Noon UTC
     // Backend sends these UTC date strings:
     const completions = ["2026-05-24", "2026-05-25"];
     const result = computeStreaks(completions);
@@ -116,7 +116,7 @@ describe("computeStreaks — scheduled days (habits)", () => {
   //           19th=Mon, 21st=Wed, 23rd=Fri, 24th=Sat
 
   it("keeps streak flowing across calendar weeks for a Mon/Wed/Fri habit", () => {
-    mockToday("2026-01-23"); // Friday — 6 scheduled days done over 2 weeks
+    mockToday("2026-01-23"); // Friday, 6 scheduled days done over 2 weeks
     const completions = [
       "2026-01-12", // Mon
       "2026-01-14", // Wed
@@ -130,7 +130,7 @@ describe("computeStreaks — scheduled days (habits)", () => {
   });
 
   it("skips non-scheduled days when today is not scheduled", () => {
-    mockToday("2026-01-24"); // Saturday — not a scheduled day
+    mockToday("2026-01-24"); // Saturday, not a scheduled day
     const completions = [
       "2026-01-12",
       "2026-01-14",
@@ -144,7 +144,7 @@ describe("computeStreaks — scheduled days (habits)", () => {
   });
 
   it("breaks the current streak when a scheduled day is missed", () => {
-    mockToday("2026-01-23"); // Friday — Wed Jan 14 was missed
+    mockToday("2026-01-23"); // Friday, Wed Jan 14 was missed
     const completions = [
       "2026-01-12", // Mon
       "2026-01-16", // Fri
@@ -175,8 +175,8 @@ describe("computeStreaks — scheduled days (habits)", () => {
   });
 
   it("keeps the streak alive when today is a non-scheduled day", () => {
-    mockToday("2026-01-20"); // Tuesday — not a scheduled day
-    const completions = ["2026-01-19"]; // Monday done; Tuesday not scheduled
+    mockToday("2026-01-20"); // Tuesday, not a scheduled day
+    const completions = ["2026-01-19"]; // Monday done, Tuesday not scheduled
     expect(computeStreaks(completions, ["mon", "wed", "fri"]))
       .toEqual({ current: 1, longest: 1 });
   });
@@ -204,7 +204,7 @@ describe("computeStreaks — scheduled days (habits)", () => {
 
 describe("isScheduledOn", () => {
   it("returns true when the date falls on a scheduled weekday", () => {
-    // 2026-05-25 is a Monday; 2026-05-27 is a Wednesday.
+    // 2026-05-25 is a Monday, 2026-05-27 is a Wednesday.
     expect(isScheduledOn("2026-05-25", ["mon", "wed", "fri"])).toBe(true);
     expect(isScheduledOn("2026-05-27", ["mon", "wed", "fri"])).toBe(true);
   });

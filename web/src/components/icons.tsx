@@ -2,12 +2,6 @@ import type { SVGProps } from "react";
 
 /**
  * Shared inline-SVG icon set for the app chrome (nav, header, drawer).
- *
- * Conventions (matching the existing inline SVGs in this codebase):
- *  - 24x24 viewBox, `stroke="currentColor"` so icons inherit their text color
- *    (e.g. the orange active nav accent), `fill="none"`, 1.8 stroke weight.
- *  - Decorative by design: every usage sits next to a text label, so the SVGs
- *    are `aria-hidden` and the surrounding text carries the accessible name.
  */
 export interface IconProps extends Omit<SVGProps<SVGSVGElement>, "width" | "height"> {
   size?: number;

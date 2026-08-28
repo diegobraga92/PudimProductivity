@@ -110,10 +110,7 @@ export interface BatchScoreResult {
 /**
  * Applies one batch score-lookup response to the requested rows. `targets`
  * maps each batch request index to a data-row index (the batch endpoint echoes
- * the request position). The top candidate fills the row (score, source and,
- * when the provider reports one, the release year — matching the single-score
- * flow); rows with no match (no error, empty candidates) are counted
- * separately from failed lookups.
+ * the request position).
  */
 export function applyAutoScoreResults(
   targets: { requestIndex: number; row: number }[],

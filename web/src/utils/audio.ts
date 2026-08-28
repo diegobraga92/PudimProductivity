@@ -3,8 +3,7 @@
  *
  * Plays the ambient sound loops (MP3 files served by the backend) through the
  * Web Audio graph so volume, reverb and the frequency visualizer apply. Every
- * sound in the catalog is backed by a real audio file — see ./soundFiles for
- * the catalog of backend URLs.
+ * sound in the catalog is backed by a real audio file.
  *
  * Sounds:
  *   - light-rain       : light rainfall
@@ -126,10 +125,6 @@ class SoundscapeEngine {
   /**
    * Play a looping audio file for a sound, routing it through the shared
    * gain → masterGain graph (volume, reverb and the visualizer apply).
-   *
-   * Returns false when no file URL is known yet for the sound (e.g. the
-   * backend catalog hasn't loaded) or file playback could not be started; in
-   * that case nothing is added to the active set.
    */
   play(id: SoundID, fadeIn = true): boolean {
     if (this.active.has(id)) return true;
@@ -149,8 +144,7 @@ class SoundscapeEngine {
     try {
       // MediaElementAudioSourceNode outputs silence unless the media is
       // CORS-clean. The desktop app loads from app://bundle and fetches the
-      // audio from the backend, so request anonymous (no-credential) CORS mode
-      // — the backend answers it via the global CORS middleware.
+      // audio from the backend, so request anonymous (no-credential) CORS mode.
       const element = new Audio();
       element.crossOrigin = "anonymous";
       element.loop = true;
@@ -166,7 +160,7 @@ class SoundscapeEngine {
 
       entry = { source, gain, element };
     } catch {
-      // File playback unavailable — drop the node and report failure.
+      // File playback unavailable.
       gain.disconnect();
       return false;
     }
@@ -174,7 +168,7 @@ class SoundscapeEngine {
     this.active.set(id, entry);
     void entry.element.play().catch(() => {
       // The file failed to load/autoplay (missing file, CORS failure or
-      // autoplay policy) — release the element and its node chain.
+      // autoplay policy).
       this.releaseEntry(entry);
       this.active.delete(id);
     });

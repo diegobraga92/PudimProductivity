@@ -1,7 +1,6 @@
 /**
- * Types for the Electron desktop bridge exposed via contextBridge
- * (see desktop/src/preload.ts). The global is absent in plain-browser builds —
- * all access must be optional-chained, e.g. window.desktop?.notify?.({...}).
+ * Types for the Electron desktop bridge exposed via contextBridge. 
+ * The global is absent in plain-browser builds, all access must be optional-chained.
  */
 interface DesktopBridge {
   platform: string;

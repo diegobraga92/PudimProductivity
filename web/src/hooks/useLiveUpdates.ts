@@ -66,7 +66,7 @@ export function useLiveUpdates(): void {
       queryClient.invalidateQueries({ queryKey: TASK_LISTS_KEY });
     };
 
-    // A task merge resolved — the payload is the winning task, so the cache
+    // A task merge resolved. The payload is the winning task, so the cache
     // converges exactly like task.updated.
     const handleMerge = (event: WsEvent) => {
       handleUpsert(event);

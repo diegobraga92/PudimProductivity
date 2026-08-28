@@ -4,7 +4,7 @@ import { useI18n } from "../i18n";
 
 /**
  * Renders the in-app toast stack (real-time task notifications). Reuses the
- * alarm toast styles; alarms themselves are rendered by AlarmToast.
+ * alarm toast styles. Alarms themselves are rendered by AlarmToast.
  */
 export function ToastStack() {
   const { toasts, dismissToast } = useToast();

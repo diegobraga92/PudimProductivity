@@ -112,7 +112,7 @@ describe("SyncClient connection lifecycle", () => {
     socketA.onclose?.();
     expect(MockWebSocket.instances).toHaveLength(1);
 
-    // Initial reconnect delay is 1s; a fresh socket must be opened.
+    // Initial reconnect delay is 1s. A fresh socket must be opened.
     vi.advanceTimersByTime(1_000);
     expect(MockWebSocket.instances).toHaveLength(2);
   });

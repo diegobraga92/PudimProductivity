@@ -198,7 +198,7 @@ export default function TaskList() {
           </div>
 
           <div className="task-column-body">
-            {/* Quick-add for todos — a new item always starts unchecked, so it
+            {/* Quick-add for todos, a new item always starts unchecked, so it
                 only belongs on the "Open" sub-tab */}
             {todoTab === "open" && (
               <QuickAddForm
@@ -390,7 +390,7 @@ export default function TaskList() {
         />
       )}
 
-      {/* Edit task / habit modal — opens directly in edit mode on card click */}
+      {/* Edit task / habit modal, opens directly in edit mode on card click */}
       {selectedTaskId && (
         <TaskEditModal
           key={selectedTaskId}
