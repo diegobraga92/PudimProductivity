@@ -114,6 +114,13 @@ class LocalDatabase(context: Context) : SQLiteOpenHelper(context.applicationCont
         }
     }
 
+    fun queryTaskIncludingDeleted(id: String): LocalTask? {
+        val db = readableDatabase
+        db.query("tasks", null, "id = ?", arrayOf(id), null, null, null).use { c ->
+            return if (c.moveToFirst()) readTask(c) else null
+        }
+    }
+
     fun markTaskDirty(id: String, dirty: Boolean = true) {
         writableDatabase.update("tasks", ContentValues().apply { put("dirty", if (dirty) 1 else 0) }, "id = ?", arrayOf(id))
     }
@@ -221,6 +228,23 @@ class LocalDatabase(context: Context) : SQLiteOpenHelper(context.applicationCont
         return out
     }
 
+    /** Returns a completion row regardless of its `deleted` flag (null when absent). */
+    fun queryCompletionIncludingDeleted(id: String): LocalCompletion? {
+        val db = readableDatabase
+        db.query("completions", null, "id = ?", arrayOf(id), null, null, null).use { c ->
+            return if (c.moveToFirst()) {
+                LocalCompletion(
+                    id = c.getString(c.getColumnIndexOrThrow("id")),
+                    task_id = c.getString(c.getColumnIndexOrThrow("task_id")),
+                    completed_date = c.getString(c.getColumnIndexOrThrow("completed_date")),
+                    created_at = c.getString(c.getColumnIndexOrThrow("created_at")),
+                    dirty = c.getInt(c.getColumnIndexOrThrow("dirty")) == 1,
+                    deleted = c.getInt(c.getColumnIndexOrThrow("deleted")) == 1
+                )
+            } else null
+        }
+    }
+
     /** All locally-changed completions (including tombstones) awaiting push. */
     fun dirtyCompletions(): List<LocalCompletion> {
         val db = readableDatabase
@@ -304,6 +328,26 @@ class LocalDatabase(context: Context) : SQLiteOpenHelper(context.applicationCont
             }
         }
         return out
+    }
+
+    /** Returns a task-list row regardless of its `deleted` flag (null when absent). */
+    fun queryTaskListIncludingDeleted(id: String): LocalTaskList? {
+        val db = readableDatabase
+        db.query("task_lists", null, "id = ?", arrayOf(id), null, null, null).use { c ->
+            return if (c.moveToFirst()) {
+                LocalTaskList(
+                    id = c.getString(c.getColumnIndexOrThrow("id")),
+                    name = c.getString(c.getColumnIndexOrThrow("name")),
+                    description = c.getString(c.getColumnIndexOrThrow("description")),
+                    owner_id = c.getString(c.getColumnIndexOrThrow("owner_id")),
+                    created_at = c.getString(c.getColumnIndexOrThrow("created_at")),
+                    updated_at = c.getString(c.getColumnIndexOrThrow("updated_at")),
+                    dirty = c.getInt(c.getColumnIndexOrThrow("dirty")) == 1,
+                    deleted = c.getInt(c.getColumnIndexOrThrow("deleted")) == 1,
+                    synced = c.getInt(c.getColumnIndexOrThrow("synced")) == 1
+                )
+            } else null
+        }
     }
 
     fun markTaskListDirty(id: String, dirty: Boolean = true) {

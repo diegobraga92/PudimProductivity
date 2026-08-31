@@ -57,30 +57,37 @@ class SyncManager(private val context: Context) {
             val bundle = ApiClient.syncService.getChanges(since)
             if (bundle.timestamp.isBlank()) return@withContext
 
-            db.upsertTasks(bundle.tasks.map { t ->
-                LocalTask(
-                    id = t.id, title = t.title, status = t.status,
-                    recurrence_days = t.recurrence_days, list_id = t.list_id,
-                    start_time = t.start_time, end_time = t.end_time,
-                    color = t.color, scheduled_date = t.scheduled_date,
-                    alarm_minutes = t.alarm_minutes,
-                    created_at = t.created_at, updated_at = t.updated_at,
-                    synced = true
-                )
-            })
-            db.upsertCompletions(bundle.completions.map { c ->
-                LocalCompletion(
-                    id = c.id, task_id = c.task_id,
-                    completed_date = c.completed_date, created_at = c.created_at
-                )
-            })
-            db.upsertTaskLists(bundle.task_lists.map { l ->
-                LocalTaskList(
-                    id = l.id, name = l.name, description = l.description,
-                    owner_id = l.owner_id, created_at = l.created_at, updated_at = l.updated_at,
-                    synced = true
-                )
-            })
+            db.upsertTasks(bundle.tasks
+                // Never resurrect a locally-deleted row.
+                .filterNot { t -> db.queryTaskIncludingDeleted(t.id)?.deleted == true }
+                .map { t ->
+                    LocalTask(
+                        id = t.id, title = t.title, status = t.status,
+                        recurrence_days = t.recurrence_days, list_id = t.list_id,
+                        start_time = t.start_time, end_time = t.end_time,
+                        color = t.color, scheduled_date = t.scheduled_date,
+                        alarm_minutes = t.alarm_minutes,
+                        created_at = t.created_at, updated_at = t.updated_at,
+                        synced = true
+                    )
+                })
+            db.upsertCompletions(bundle.completions
+                .filterNot { c -> db.queryCompletionIncludingDeleted(c.id)?.deleted == true }
+                .map { c ->
+                    LocalCompletion(
+                        id = c.id, task_id = c.task_id,
+                        completed_date = c.completed_date, created_at = c.created_at
+                    )
+                })
+            db.upsertTaskLists(bundle.task_lists
+                .filterNot { l -> db.queryTaskListIncludingDeleted(l.id)?.deleted == true }
+                .map { l ->
+                    LocalTaskList(
+                        id = l.id, name = l.name, description = l.description,
+                        owner_id = l.owner_id, created_at = l.created_at, updated_at = l.updated_at,
+                        synced = true
+                    )
+                })
             db.upsertShares(bundle.shares.map { s ->
                 LocalShare(list_id = s.list_id, shared_with = s.shared_with, role = s.role, created_at = s.created_at)
             })

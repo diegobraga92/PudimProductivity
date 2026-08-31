@@ -117,6 +117,24 @@ func TestSyncResponseConformsToContract(t *testing.T) {
 	if err := schema.Validate(instance); err != nil {
 		t.Errorf("sync response violates api/openapi/sync-v1.yaml: %v\nraw: %s", err, truncate(string(raw)))
 	}
+
+	// Tombstones must survive the wire mapping.
+	var bundle Bundle
+	if err := json.Unmarshal(raw, &bundle); err != nil {
+		t.Fatalf("sync response not valid JSON: %v", err)
+	}
+	if len(bundle.DeletedTaskIDs) != 1 || bundle.DeletedTaskIDs[0] != "00000000-0000-0000-0000-000000000002" {
+		t.Errorf("deleted_task_ids = %v, want the stub tombstone", bundle.DeletedTaskIDs)
+	}
+	if len(bundle.DeletedCompletionIDs) != 1 || bundle.DeletedCompletionIDs[0] != "00000000-0000-0000-0000-000000000004" {
+		t.Errorf("deleted_completion_ids = %v, want the stub tombstone", bundle.DeletedCompletionIDs)
+	}
+	if len(bundle.DeletedTaskListIDs) != 1 || bundle.DeletedTaskListIDs[0] != "00000000-0000-0000-0000-00000000000b" {
+		t.Errorf("deleted_task_list_ids = %v, want the stub tombstone", bundle.DeletedTaskListIDs)
+	}
+	if len(bundle.DeletedShareKeys) != 1 || bundle.DeletedShareKeys[0] != "00000000-0000-0000-0000-00000000000a:user-2" {
+		t.Errorf("deleted_share_keys = %v, want the stub tombstone", bundle.DeletedShareKeys)
+	}
 }
 
 func truncate(s string) string {

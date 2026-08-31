@@ -50,14 +50,26 @@ func toBundle(cs *ChangeSet) *Bundle {
 	for _, t := range cs.Tasks {
 		b.Tasks = append(b.Tasks, task.ToTaskResponse(t))
 	}
+	for _, id := range cs.DeletedTaskIDs {
+		b.DeletedTaskIDs = append(b.DeletedTaskIDs, id)
+	}
 	for _, c := range cs.Completions {
 		b.Completions = append(b.Completions, task.ToTaskCompletionResponse(c))
+	}
+	for _, id := range cs.DeletedCompletionIDs {
+		b.DeletedCompletionIDs = append(b.DeletedCompletionIDs, id)
 	}
 	for _, l := range cs.TaskLists {
 		b.TaskLists = append(b.TaskLists, tasklist.ToTaskListResponse(l))
 	}
+	for _, id := range cs.DeletedTaskListIDs {
+		b.DeletedTaskListIDs = append(b.DeletedTaskListIDs, id)
+	}
 	for _, s := range cs.Shares {
 		b.Shares = append(b.Shares, tasklist.ToMemberResponse(s))
+	}
+	for _, key := range cs.DeletedShareKeys {
+		b.DeletedShareKeys = append(b.DeletedShareKeys, key)
 	}
 	return b
 }
