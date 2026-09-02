@@ -8,4 +8,10 @@
    `/app/sounds`, the `soundsdata` volume) on startup. Existing files in the
    served directory are **never overwritten**, so to override a sound on a
    running deployment just drop a file with the same name into the volume.
-   
+
+## Replacing an existing sound
+
+Each catalog entry carries a cache-busting token (`File: "rain.mp3?v=2"`).
+When you replace a bundled sound, bump that `?v=` token in `domain.go` so
+previously-cached clients fetch the new bytes immediately instead of replaying
+the old file.

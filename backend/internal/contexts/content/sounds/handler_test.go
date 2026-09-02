@@ -24,6 +24,9 @@ func TestSoundsCatalog(t *testing.T) {
 		if rec.Code != http.StatusOK {
 			t.Fatalf("GET %s status = %d, want 200", path, rec.Code)
 		}
+		if got := rec.Header().Get("Cache-Control"); got != "no-store" {
+			t.Fatalf("GET %s Cache-Control = %q, want %q", path, got, "no-store")
+		}
 		var body struct {
 			Sounds []Sound `json:"sounds"`
 		}
@@ -59,6 +62,21 @@ func TestSoundsGetFile(t *testing.T) {
 	}
 	if string(got) != "fake-mp3-bytes" {
 		t.Fatalf("GET file body = %q, want %q", got, "fake-mp3-bytes")
+	}
+	if cc := rec.Header().Get("Cache-Control"); cc != "no-cache" {
+		t.Fatalf("GET file Cache-Control = %q, want %q", cc, "no-cache")
+	}
+
+	// The catalog advertises cache-busting query tokens (e.g. "rain.mp3?v=2");
+	// the handler must ignore the query and still serve the on-disk file.
+	req2 := httptest.NewRequest(http.MethodGet, "/api/v1/sounds/rain.mp3?v=2", nil)
+	rec2 := httptest.NewRecorder()
+	r.ServeHTTP(rec2, req2)
+	if rec2.Code != http.StatusOK {
+		t.Fatalf("GET versioned file status = %d, want 200", rec2.Code)
+	}
+	if got, _ := io.ReadAll(rec2.Body); string(got) != "fake-mp3-bytes" {
+		t.Fatalf("GET versioned file body = %q, want %q", got, "fake-mp3-bytes")
 	}
 }
 
