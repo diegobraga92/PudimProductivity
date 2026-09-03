@@ -316,6 +316,7 @@ export default function Planner({ onNavigate }: PlannerProps) {
                         textOverflow: "ellipsis",
                         display: "flex",
                         alignItems: "center",
+                        justifyContent: "center",
                         gap: "2px",
                         boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
                         opacity: isWeekdayCompleted ? 0.7 : 1,
