@@ -106,6 +106,7 @@ fun TaskListScreen(
 
     val todoTasks = tasks.filter { it.list_id == null && (it.recurrence_days == null || it.recurrence_days.isEmpty()) }
     val habitTasks = tasks.filter { it.list_id == null && it.recurrence_days != null && it.recurrence_days.isNotEmpty() }
+    val openTodoCount = todoTasks.count { it.status == "todo" }
 
     val sortedTodoTasks = sortTasks(todoTasks, todoSort)
     val sortedHabitTasks = sortTasks(habitTasks, habitSort)
@@ -182,7 +183,7 @@ fun TaskListScreen(
                 Tab(
                     selected = selectedTab == 0,
                     onClick = { selectedTab = 0 },
-                    text = { Text(Localization.text("mobile.tasks.toDo", "count" to todoTasks.size)) }
+                    text = { Text(Localization.text("mobile.tasks.toDo", "count" to openTodoCount)) }
                 )
                 Tab(
                     selected = selectedTab == 1,
