@@ -18,7 +18,9 @@ fun readLocalProperty(key: String): String? {
 
 android {
     namespace = "com.pudimproductivity"
-    compileSdk = 35
+    // AndroidX and OkHttp releases pulled in by the dependency updates declare
+    // minCompileSdk 37, so the app must compile against API 37 or later.
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.pudimproductivity"
