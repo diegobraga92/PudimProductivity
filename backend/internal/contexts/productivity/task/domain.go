@@ -146,11 +146,15 @@ func (t *Task) Update(
 	}
 
 	if recurrenceDays != nil {
-		if err := validateRecurrenceDays(*recurrenceDays); err != nil {
-			return err
-		}
+		if len(*recurrenceDays) == 0 {
+			t.RecurrenceDays = nil
+		} else {
+			if err := validateRecurrenceDays(*recurrenceDays); err != nil {
+				return err
+			}
 
-		t.RecurrenceDays = cloneStrings(*recurrenceDays)
+			t.RecurrenceDays = cloneStrings(*recurrenceDays)
+		}
 	}
 
 	if listID != nil {

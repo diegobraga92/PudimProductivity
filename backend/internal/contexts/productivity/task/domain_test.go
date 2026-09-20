@@ -239,18 +239,44 @@ func TestTask_Update_ClonesRecurrenceDays(t *testing.T) {
 	}
 }
 
-func TestTask_Update_EmptyRecurrenceDaysRejected(t *testing.T) {
+func TestTask_Update_EmptyRecurrenceDaysConvertsToOneOff(t *testing.T) {
 	task := mustNewTask(t, "Exercise", []string{"mon"})
+
+	if !task.IsHabit() {
+		t.Fatal("precondition: task should start as a habit")
+	}
 
 	empty := []string{}
 
-	err := task.Update(nil, nil, &empty, nil, nil, nil, nil, nil, nil)
-	if err == nil {
-		t.Fatal("expected error for empty recurrence days")
+	if err := task.Update(nil, nil, &empty, nil, nil, nil, nil, nil, nil); err != nil {
+		t.Fatalf("Update: %v", err)
 	}
 
-	if !task.IsHabit() {
-		t.Fatal("task should remain unchanged on error")
+	if task.IsHabit() {
+		t.Fatal("expected task to convert back to a one-off")
+	}
+
+	if task.RecurrenceDays != nil {
+		t.Errorf("RecurrenceDays: got %v, want nil", task.RecurrenceDays)
+	}
+}
+
+func TestTask_Update_TitleWithEmptyRecurrenceDays(t *testing.T) {
+	task := mustNewTask(t, "Ergométrico", nil)
+
+	newTitle := "Ergométrico (renamed)"
+	empty := []string{}
+
+	if err := task.Update(&newTitle, nil, &empty, nil, nil, nil, nil, nil, nil); err != nil {
+		t.Fatalf("Update: %v", err)
+	}
+
+	if task.Title != newTitle {
+		t.Errorf("Title: got %q, want %q", task.Title, newTitle)
+	}
+
+	if task.IsHabit() {
+		t.Fatal("expected task to remain a one-off")
 	}
 }
 
