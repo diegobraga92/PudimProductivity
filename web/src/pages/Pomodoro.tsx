@@ -82,7 +82,9 @@ function Pomodoro({ onOpenSounds }: PomodoroProps) {
 
   // Use a ref to avoid stale closure issues in the auto-stop effect
   const stopMutateRef = useRef(stopMutate);
-  stopMutateRef.current = stopMutate;
+  useEffect(() => {
+    stopMutateRef.current = stopMutate;
+  }, [stopMutate]);
 
   // Local ticking
   useEffect(() => {
