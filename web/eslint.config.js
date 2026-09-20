@@ -19,6 +19,12 @@ export default tseslint.config(
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
+      // New in eslint-plugin-react-hooks v7. These screens intentionally seed
+      // local state from an external source inside an effect (sessionStorage
+      // planner prefill, the in-memory soundscape store, and fetched server
+      // config/session state). Converting them to lazy initializers / derived
+      // state is a separate refactor, so keep the rule off for now.
+      'react-hooks/set-state-in-effect': 'off',
       'react-refresh/only-export-components': [
         'warn',
         { allowConstantExport: true },

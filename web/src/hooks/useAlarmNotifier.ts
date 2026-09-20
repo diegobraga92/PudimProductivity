@@ -53,7 +53,9 @@ export function useAlarmNotifier(): void {
   // Stable ref so the polling effect doesn't restart when the translation
   // function identity changes (and to satisfy exhaustive-deps).
   const tRef = useRef(t);
-  tRef.current = t;
+  useEffect(() => {
+    tRef.current = t;
+  }, [t]);
 
   useEffect(() => {
     firedRef.current = loadFiredAlarms();
