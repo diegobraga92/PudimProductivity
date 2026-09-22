@@ -1,3 +1,4 @@
+import type { SoundEntry } from "../api/sounds";
 import type { SoundID } from "./audio";
 
 /** A sound shipped with the app: its id, translation key and emoji icon. */
@@ -31,4 +32,48 @@ export const SOUNDS: BuiltinSound[] = [
  * settings before the backend catalog has loaded.
  */
 export const BUILTIN_SOUND_IDS: ReadonlySet<SoundID> = new Set(SOUNDS.map((s) => s.id));
+
+/** A sound ready to render: resolved label/icon plus where it came from. */
+export interface ResolvedSound {
+  id: SoundID;
+  /** Translated name (built-ins) or the user-supplied name (added sounds). */
+  label: string;
+  icon: string;
+  /** True for sounds added by the user, rather than shipped with the app. */
+  custom: boolean;
+}
+
+/** Emoji used when a user-added sound has no icon of its own. */
+const FALLBACK_ICON = "🎵";
+
+/**
+ * Merges the built-in sounds with the backend catalog into the list the UI
+ * renders. Built-ins come first, in catalog order and with translated labels;
+ * the sounds the user added follow, carrying their own stored name and icon.
+ *
+ * A backend entry whose id matches a built-in is ignored, so a hand-edited
+ * manifest can never produce two sounds with the same id.
+ */
+export function resolveSounds(
+  entries: readonly SoundEntry[],
+  t: (key: string) => string,
+): ResolvedSound[] {
+  const builtinIds = new Set<SoundID>(SOUNDS.map((s) => s.id));
+  const resolved: ResolvedSound[] = SOUNDS.map((s) => ({
+    id: s.id,
+    label: t(s.labelKey),
+    icon: s.icon,
+    custom: false,
+  }));
+  for (const entry of entries) {
+    if (builtinIds.has(entry.id)) continue;
+    resolved.push({
+      id: entry.id,
+      label: entry.label || entry.id,
+      icon: entry.icon || FALLBACK_ICON,
+      custom: entry.custom ?? true,
+    });
+  }
+  return resolved;
+}
 

@@ -16,7 +16,30 @@ type Sound struct {
 	File string `json:"file"`
 	// MIME is the audio content type (e.g. "audio/mpeg").
 	MIME string `json:"mime"`
+	// Label is the name of a sound added by the user. Built-in sounds leave it
+	// empty: their names are translated by the web client.
+	Label string `json:"label,omitempty"`
+	// Icon is the emoji of a sound added by the user.
+	Icon string `json:"icon,omitempty"`
+	// Custom marks sounds added by the user rather than shipped with the app.
+	Custom bool `json:"custom,omitempty"`
 }
+
+// UpdateSoundRequest is the JSON body of PUT /api/v1/sounds/{soundId}.
+type UpdateSoundRequest struct {
+	Label string `json:"label"`
+	Icon  string `json:"icon"`
+}
+
+const (
+	// maxLabelLen bounds a user-supplied sound name.
+	maxLabelLen = 60
+	// maxIconRunes keeps the icon an emoji rather than arbitrary text (some
+	// emoji sequences, like flags with a tag, use several runes).
+	maxIconRunes = 8
+	// defaultSoundIcon is used when the user does not pick an emoji.
+	defaultSoundIcon = "🎵"
+)
 
 // bundled builds a catalog entry for a sound shipped inside the image. Bundled
 // sounds are named after their id and carry the current cache-busting token.

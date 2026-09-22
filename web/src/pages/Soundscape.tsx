@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { deleteSound } from "../api/sounds";
 import {
   DEFAULT_MASTER_VOLUME,
   DEFAULT_SOUND_VOLUME,
@@ -6,7 +8,13 @@ import {
   type SoundID,
 } from "../utils/audio";
 import { deletePreset, getPresets, savePreset, type Preset } from "../utils/soundPresets";
-import { useSounds } from "../hooks/useSounds";
+import { DEFAULT_SYNC_SOUND } from "../utils/pomodoroSoundSync";
+import { type ResolvedSound } from "../utils/soundCatalog";
+import { SOUNDS_QUERY_KEY, useSounds } from "../hooks/useSounds";
+import { usePomodoroSyncSettings } from "../hooks/usePomodoroSyncSettings";
+import AddSoundModal from "../components/AddSoundModal";
+import { useConfirm } from "../components/useConfirm";
+import { useToast } from "../components/toastContext";
 import { useI18n } from "../i18n";
 import { MusicIcon } from "../components/icons";
 
@@ -84,6 +92,52 @@ function Soundscape() {
   const soundscape = getSoundscape();
 
   const { sounds, isLoading } = useSounds();
+
+  const queryClient = useQueryClient();
+  const confirm = useConfirm();
+  const { pushToast } = useToast();
+  const { sound: syncSound, setSound: setSyncSound } = usePomodoroSyncSettings();
+
+  // null = closed, {} = adding a sound, { sound } = editing that sound.
+  const [modal, setModal] = useState<{ sound?: ResolvedSound } | null>(null);
+
+  const deleteMutation = useMutation({
+    mutationFn: (sound: ResolvedSound) => deleteSound(sound.id),
+    onSuccess: (_result, sound) => {
+      void queryClient.invalidateQueries({ queryKey: SOUNDS_QUERY_KEY });
+      pushToast({ icon: "🗑", title: t("soundscape.soundDeleted", { name: sound.label }) });
+    },
+    onError: (err: unknown) => {
+      pushToast({
+        icon: "⚠️",
+        title: t("soundscape.deleteFailed"),
+        body: err instanceof Error ? err.message : undefined,
+      });
+    },
+  });
+
+  /** Confirms, then removes a sound the user added. */
+  const handleDelete = async (sound: ResolvedSound) => {
+    const ok = await confirm({
+      title: t("soundscape.deleteSound"),
+      message: t("soundscape.deleteConfirm", { name: sound.label }),
+      confirmLabel: t("common.delete"),
+      confirmVariant: "danger",
+    });
+    if (!ok) return;
+
+    // Stop it first so the engine does not keep a deleted file playing, and
+    // never leave the Pomodoro automation pointing at a missing sound.
+    soundscape.stop(sound.id, false);
+    setPlaying((prev) => {
+      const next = new Set(prev);
+      next.delete(sound.id);
+      return next;
+    });
+    if (syncSound === sound.id) setSyncSound(DEFAULT_SYNC_SOUND);
+
+    deleteMutation.mutate(sound);
+  };
 
   /** Re-reads the stored presets (the single place that mirrors localStorage). */
   const refreshPresets = useCallback(() => {
@@ -164,11 +218,19 @@ function Soundscape() {
         style={{
           display: "flex",
           alignItems: "center",
+          justifyContent: "space-between",
           gap: "var(--space-sm)",
           marginBottom: "var(--space-md)",
         }}
       >
         <h2 className="page-heading" style={{ marginBottom: 0 }}><MusicIcon size={24} /> {t("soundscape.title")}</h2>
+        <button
+          className="btn btn-primary"
+          onClick={() => setModal({})}
+          style={{ fontSize: "var(--font-size-sm)" }}
+        >
+          {t("soundscape.addSound")}
+        </button>
       </div>
 
       {/* Frequency Visualizer, only meaningful while a sound is actually playing. */}
@@ -265,8 +327,49 @@ function Soundscape() {
                   }}
                 >
                   {sound.icon} {sound.label}
+                  {sound.custom && (
+                    <span
+                      style={{
+                        marginLeft: "0.4rem",
+                        fontSize: "var(--font-size-xs)",
+                        fontWeight: 500,
+                        color: "var(--color-text-muted)",
+                      }}
+                    >
+                      {t("soundscape.custom")}
+                    </span>
+                  )}
                 </div>
               </div>
+
+              {/* Rename/delete, only for sounds the user added */}
+              {sound.custom && (
+                <>
+                  <button
+                    className="btn btn-ghost"
+                    onClick={() => setModal({ sound })}
+                    title={t("soundscape.editSound")}
+                    style={{ fontSize: "var(--font-size-xs)", padding: "var(--space-xs)" }}
+                  >
+                    ✎
+                  </button>
+                  <button
+                    className="btn btn-ghost"
+                    onClick={() => {
+                      void handleDelete(sound);
+                    }}
+                    disabled={deleteMutation.isPending}
+                    title={t("soundscape.deleteSound")}
+                    style={{
+                      fontSize: "var(--font-size-xs)",
+                      color: "var(--color-danger, #e74c3c)",
+                      padding: "var(--space-xs)",
+                    }}
+                  >
+                    ✕
+                  </button>
+                </>
+              )}
 
               {/* Volume Slider */}
               <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", minWidth: "100px" }}>
@@ -369,6 +472,8 @@ function Soundscape() {
       >
         💡 {t("soundscape.tip")}
       </div>
+
+      {modal && <AddSoundModal sound={modal.sound} onClose={() => setModal(null)} />}
     </div>
   );
 }
