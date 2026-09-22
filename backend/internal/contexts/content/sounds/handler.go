@@ -79,8 +79,13 @@ func (h *Handler) resolve(file string) (string, bool) {
 	return path, true
 }
 
-// maxUploadBytes caps an uploaded sound at 10 MB.
-const maxUploadBytes = 10 << 20
+// maxUploadBytes caps the whole multipart request body. It must stay in sync
+// with nginx's client_max_body_size and leaves headroom over maxSoundFileBytes
+// for the multipart encoding (boundaries and part headers).
+const maxUploadBytes = 12 << 20
+
+// maxSoundFileBytes is the user-facing cap on an uploaded audio file.
+const maxSoundFileBytes = 10 << 20
 
 // Create stores an uploaded audio file plus its metadata as a new sound. The
 // request is multipart/form-data with "label", "icon" (optional) and "file".
@@ -108,12 +113,17 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	file, _, err := r.FormFile("file")
+	file, header, err := r.FormFile("file")
 	if err != nil {
 		httpx.WriteError(w, http.StatusBadRequest, "an audio file is required")
 		return
 	}
 	defer func() { _ = file.Close() }()
+
+	if header.Size > maxSoundFileBytes {
+		httpx.WriteError(w, http.StatusRequestEntityTooLarge, "sound file is too large (max 10 MB)")
+		return
+	}
 
 	mime, ext, ok := detectAudioFormat(file)
 	if !ok {

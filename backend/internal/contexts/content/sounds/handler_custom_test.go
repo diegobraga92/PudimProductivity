@@ -175,13 +175,33 @@ func TestSoundsCreateRejectsInvalidUploads(t *testing.T) {
 	}
 }
 
+func TestSoundsCreateAcceptsUploadLargerThanOneMegabyte(t *testing.T) {
+	r, _ := newTestRouter(t)
+
+	// nginx only lets 12 MB through (web/nginx.conf), so a file heavier than
+	// its 1 MB default must reach the handler and be stored.
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, multipartUpload(t, map[string]string{"label": "Big Rain"}, "file", id3Audio(2<<20)))
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("status = %d, want 201 (body: %s)", rec.Code, rec.Body.String())
+	}
+}
+
 func TestSoundsCreateRejectsOversizedUpload(t *testing.T) {
 	r, _ := newTestRouter(t)
 
-	// One byte past the cap: MaxBytesReader must stop the multipart parse.
+	// A file past the user-facing cap is rejected by the handler, even though
+	// the request body is still small enough to parse.
 	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, multipartUpload(t, map[string]string{"label": "Huge"}, "file", id3Audio(maxSoundFileBytes)))
+	if rec.Code != http.StatusRequestEntityTooLarge {
+		t.Fatalf("oversize file status = %d, want 413 (body: %s)", rec.Code, rec.Body.String())
+	}
+
+	// Past the request cap: MaxBytesReader must stop the multipart parse.
+	rec = httptest.NewRecorder()
 	r.ServeHTTP(rec, multipartUpload(t, map[string]string{"label": "Huge"}, "file", id3Audio(maxUploadBytes)))
 	if rec.Code != http.StatusRequestEntityTooLarge {
-		t.Fatalf("status = %d, want 413 (body: %s)", rec.Code, rec.Body.String())
+		t.Fatalf("oversize request status = %d, want 413 (body: %s)", rec.Code, rec.Body.String())
 	}
 }
