@@ -7,10 +7,12 @@ import (
 	"path/filepath"
 )
 
-// TODO: Check if this is necessary
-
 // SeedBundledDefaults copies the default sound library shipped inside the
 // image (bundledDir) into the served directory (dir) when files are missing.
+//
+// Only known audio files are seeded: anything else in bundledDir (READMEs,
+// manifests) is ignored so it never lands in the served directory, and files
+// already present in dir are kept as-is so operator overrides survive.
 func SeedBundledDefaults(bundledDir, dir string) error {
 	if bundledDir == "" || dir == "" {
 		return nil
@@ -28,6 +30,9 @@ func SeedBundledDefaults(bundledDir, dir string) error {
 	for _, e := range entries {
 		if e.IsDir() {
 			continue
+		}
+		if _, ok := mimeForFile(e.Name()); !ok {
+			continue // not an audio asset (e.g. the directory README)
 		}
 		dst := filepath.Join(dir, e.Name())
 		if _, err := os.Stat(dst); err == nil {

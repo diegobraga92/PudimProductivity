@@ -1,45 +1,30 @@
 /**
  * Soundscape audio engine.
  *
- * Plays the ambient sound loops (MP3 files served by the backend) through the
- * Web Audio graph so volume, reverb and the frequency visualizer apply. Every
- * sound in the catalog is backed by a real audio file.
+ * Plays the ambient sound loops (audio files served by the backend) through the
+ * Web Audio graph so volume, reverb and the frequency visualizer apply.
  *
- * Sounds:
- *   - light-rain       : light rainfall
- *   - rain             : steady rain
- *   - rain-and-thunder : rain with distant thunder
- *   - strong-rain      : heavy rain
- *   - stronger-rain    : storm downpour
- *   - fire             : crackling fire
- *   - fire-and-thunder : fire with distant thunder
- *   - ocean            : waves
+ * The engine is catalog-agnostic: it plays any id it is given as long as
+ * ./soundFiles knows a file for it. The built-in ids and their labels live in
+ * ./soundCatalog, and saved mixes live in ./soundPresets.
  */
 
 import { getSoundFile } from "./soundFiles";
 
-export type SoundID =
-  | "light-rain"
-  | "rain"
-  | "rain-and-thunder"
-  | "strong-rain"
-  | "stronger-rain"
-  | "fire"
-  | "fire-and-thunder"
-  | "ocean";
+/**
+ * Identifier of a sound in the library. Built-in ids are the names shipped with
+ * the app; sounds added by the user get their own ids from the backend catalog.
+ */
+export type SoundID = string;
 
-export type PresetID = string;
+/** Default level of a sound's own volume slider (0–1). */
+export const DEFAULT_SOUND_VOLUME = 0.5;
 
-interface Preset {
-  id: PresetID;
-  label: string;
-  sounds: Partial<Record<SoundID, boolean>>;
-  volumes: Partial<Record<SoundID, number>>;
-  masterVolume: number;
-}
+/** Default master output level (0–1), matching the initial slider position. */
+export const DEFAULT_MASTER_VOLUME = 0.5;
 
 interface ActiveSource {
-  /** Media-element node for the looping MP3. */
+  /** Media-element node for the looping audio file. */
   source: MediaElementAudioSourceNode;
   gain: GainNode;
   /** The looping audio element. */
@@ -49,7 +34,10 @@ interface ActiveSource {
 /** How long (seconds) to fade in/out a sound when playing/stopping. */
 const FADE_DURATION = 0.5;
 
-const LS_PRESETS_KEY = "soundscape_presets";
+/** Clamps a gain level into the valid 0–1 range. */
+function clamp01(v: number): number {
+  return Math.max(0, Math.min(1, v));
+}
 
 class SoundscapeEngine {
   private ctx: AudioContext | null = null;
@@ -58,9 +46,6 @@ class SoundscapeEngine {
   private reverbGain: GainNode | null = null;
   private reverbNode: ConvolverNode | null = null;
   private analyserNode: AnalyserNode | null = null;
-
-  // Per-sound volume state
-  private soundVolumes: Partial<Record<SoundID, number>> = {};
 
   /**
    * Ensure the AudioContext exists (must be called from a user gesture).
@@ -71,7 +56,7 @@ class SoundscapeEngine {
     if (!this.ctx) {
       this.ctx = new AudioContext({ latencyHint: "playback" });
       this.masterGain = this.ctx.createGain();
-      this.masterGain.gain.value = 0.5;
+      this.masterGain.gain.value = DEFAULT_MASTER_VOLUME;
 
       // Reverb: subtle wet send off the master bus.
       this.reverbGain = this.ctx.createGain();
@@ -125,8 +110,11 @@ class SoundscapeEngine {
   /**
    * Play a looping audio file for a sound, routing it through the shared
    * gain → masterGain graph (volume, reverb and the visualizer apply).
+   *
+   * The caller owns the level: pass the sound's current volume so the fade-in
+   * lands on it directly instead of jumping once the slider state catches up.
    */
-  play(id: SoundID, fadeIn = true): boolean {
+  play(id: SoundID, volume = DEFAULT_SOUND_VOLUME): boolean {
     if (this.active.has(id)) return true;
 
     const file = getSoundFile(id);
@@ -135,9 +123,10 @@ class SoundscapeEngine {
       return false;
     }
 
+    const level = clamp01(volume);
     const ctx = this.ensureContext();
     const gain = ctx.createGain();
-    gain.gain.value = fadeIn ? 0 : (this.soundVolumes[id] ?? 0.5);
+    gain.gain.value = 0;
     gain.connect(this.masterGain!);
 
     let entry: ActiveSource;
@@ -152,11 +141,8 @@ class SoundscapeEngine {
       const source = ctx.createMediaElementSource(element);
       source.connect(gain);
 
-      if (fadeIn) {
-        const targetVol = this.soundVolumes[id] ?? 0.5;
-        gain.gain.setValueAtTime(0, ctx.currentTime);
-        gain.gain.linearRampToValueAtTime(targetVol, ctx.currentTime + FADE_DURATION);
-      }
+      gain.gain.setValueAtTime(0, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(level, ctx.currentTime + FADE_DURATION);
 
       entry = { source, gain, element };
     } catch {
@@ -217,75 +203,24 @@ class SoundscapeEngine {
   /** Set master volume (0–1). */
   setVolume(v: number): void {
     if (this.masterGain) {
-      this.masterGain.gain.value = Math.max(0, Math.min(1, v));
+      this.masterGain.gain.value = clamp01(v);
     }
   }
 
-  /** Set volume for a specific sound (0–1). */
+  /**
+   * Live-updates the volume of a playing sound (0–1). No-op when it is not
+   * playing: the caller owns the level and passes it to `play` next time.
+   */
   setSoundVolume(id: SoundID, v: number): void {
-    this.soundVolumes[id] = v;
     const entry = this.active.get(id);
     if (entry) {
-      entry.gain.gain.value = Math.max(0, Math.min(1, v));
+      entry.gain.gain.value = clamp01(v);
     }
   }
 
   /** Check if a sound is currently playing. */
   isPlaying(id: SoundID): boolean {
     return this.active.has(id);
-  }
-
-  // ─── Presets ───────────────────────────────────────────────
-
-  /** Load presets from localStorage. */
-  private loadPresets(): Preset[] {
-    try {
-      const raw = localStorage.getItem(LS_PRESETS_KEY);
-      if (!raw) return [];
-      return JSON.parse(raw) as Preset[];
-    } catch {
-      return [];
-    }
-  }
-
-  /** Save presets to localStorage. */
-  private savePresets(presets: Preset[]): void {
-    localStorage.setItem(LS_PRESETS_KEY, JSON.stringify(presets));
-  }
-
-  /** Get all saved presets. */
-  getPresets(): Preset[] {
-    return this.loadPresets();
-  }
-
-  /**
-   * Save current mix as a preset.
-   * Returns the generated id.
-   */
-  savePreset(
-    label: string,
-    currentSounds: Partial<Record<SoundID, boolean>>,
-    currentVolumes: Partial<Record<SoundID, number>>,
-    masterVol: number,
-  ): PresetID {
-    const presets = this.loadPresets();
-    const id = `preset_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-    const preset: Preset = {
-      id,
-      label,
-      sounds: { ...currentSounds },
-      volumes: { ...currentVolumes },
-      masterVolume: masterVol,
-    };
-    presets.push(preset);
-    this.savePresets(presets);
-    return id;
-  }
-
-  /** Delete a preset by id. */
-  deletePreset(id: PresetID): void {
-    const presets = this.loadPresets().filter((p) => p.id !== id);
-    this.savePresets(presets);
   }
 }
 

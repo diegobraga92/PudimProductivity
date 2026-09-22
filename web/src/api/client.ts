@@ -23,14 +23,22 @@ export function setDevRole(role: "admin" | "user") {
   localStorage.setItem(DEV_ROLE_KEY, role);
 }
 
-/** Returns headers for API calls, defaulting to the dev user identity. */
-export function apiHeaders(extra?: Record<string, string>): Record<string, string> {
+/**
+ * Returns identity headers without a Content-Type, for requests whose body sets
+ * its own. Most importantly FormData uploads, where the browser has to add the
+ * multipart boundary itself.
+ */
+export function apiIdentityHeaders(extra?: Record<string, string>): Record<string, string> {
   return {
-    "Content-Type": "application/json",
     "X-User-ID": DEV_USER_ID,
     "X-User-Role": getDevRole(),
     ...extra,
   };
+}
+
+/** Returns headers for JSON API calls, defaulting to the dev user identity. */
+export function apiHeaders(extra?: Record<string, string>): Record<string, string> {
+  return { "Content-Type": "application/json", ...apiIdentityHeaders(), ...extra };
 }
 
 /**

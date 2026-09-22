@@ -1,6 +1,6 @@
 import type { SessionStatus } from "../api/pomodoro";
 import type { SoundID } from "./audio";
-import { SOUNDS } from "./soundCatalog";
+import { BUILTIN_SOUND_IDS } from "./soundCatalog";
 
 /**
  * Pomodoro ↔ Soundscape sync settings.
@@ -15,7 +15,16 @@ export const POMODORO_SYNC_ENABLED_KEY = "soundscape_pomodoro_enabled";
 export const POMODORO_SYNC_SOUND_KEY = "soundscape_pomodoro_sound";
 export const DEFAULT_SYNC_SOUND: SoundID = "rain";
 
-const VALID_SOUND_IDS = new Set<SoundID>(SOUNDS.map((s) => s.id));
+// Built-in ids are always valid. `setValidSoundIds` adds the ids from the
+// fetched backend catalog (sounds added by the user) once it is available.
+let validSoundIds = new Set<SoundID>(BUILTIN_SOUND_IDS);
+
+/** Replaces the known sound ids with the built-ins plus the fetched catalog. */
+export function setValidSoundIds(ids: Iterable<SoundID>): void {
+  const next = new Set<SoundID>(BUILTIN_SOUND_IDS);
+  for (const id of ids) next.add(id);
+  validSoundIds = next;
+}
 
 export function getPomodoroSyncEnabled(): boolean {
   return localStorage.getItem(POMODORO_SYNC_ENABLED_KEY) === "true";
@@ -29,7 +38,7 @@ export function setPomodoroSyncEnabled(enabled: boolean): void {
 export function getPomodoroSyncSound(): SoundID {
   const raw = localStorage.getItem(POMODORO_SYNC_SOUND_KEY);
   const id = raw as SoundID;
-  return id && VALID_SOUND_IDS.has(id) ? id : DEFAULT_SYNC_SOUND;
+  return id && validSoundIds.has(id) ? id : DEFAULT_SYNC_SOUND;
 }
 
 export function setPomodoroSyncSound(sound: SoundID): void {
