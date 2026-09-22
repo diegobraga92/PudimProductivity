@@ -39,9 +39,18 @@ func (h *Handler) GetFile(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, path)
 }
 
+// validateFile reports whether file is a safe, single-segment sound file name.
+// It rejects empty names and anything that could escape the sound root.
+func validateFile(file string) bool {
+	if file == "" || file == "." || strings.Contains(file, "..") || strings.ContainsAny(file, `/\`) {
+		return false
+	}
+	return true
+}
+
 // resolve validates file and returns the absolute path under the sound root.
 func (h *Handler) resolve(file string) (string, bool) {
-	if file == "" || file == "." || strings.Contains(file, "..") || strings.ContainsAny(file, `/\`) {
+	if !validateFile(file) {
 		return "", false
 	}
 	path := filepath.Join(h.dir, file)

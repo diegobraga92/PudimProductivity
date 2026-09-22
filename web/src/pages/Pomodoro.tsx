@@ -10,7 +10,7 @@ import {
 import type { SoundID } from "../utils/audio";
 import { useI18n } from "../i18n";
 import { usePomodoroSyncSettings } from "../hooks/usePomodoroSyncSettings";
-import { SOUNDS } from "../utils/soundCatalog";
+import { useSounds } from "../hooks/useSounds";
 import { ClockIcon } from "../components/icons";
 
 const FOCUS_PRESETS = [15, 25, 30, 45, 60];
@@ -39,6 +39,7 @@ function Pomodoro({ onOpenSounds }: PomodoroProps) {
     setEnabled: setSoundEnabled,
     setSound: setSoundId,
   } = usePomodoroSyncSettings();
+  const { sounds } = useSounds();
   const [focusMinutes, setFocusMinutes] = useState(25);
   const [breakMinutes, setBreakMinutes] = useState(5);
   const [continuous, setContinuous] = useState<boolean>(
@@ -456,9 +457,9 @@ function Pomodoro({ onOpenSounds }: PomodoroProps) {
               onChange={(e) => setSoundId(e.target.value as SoundID)}
               style={{ flex: 1 }}
             >
-              {SOUNDS.map((s) => (
+              {sounds.map((s) => (
                 <option key={s.id} value={s.id}>
-                  {s.icon} {t(s.labelKey)}
+                  {s.icon} {s.label}
                 </option>
               ))}
             </select>

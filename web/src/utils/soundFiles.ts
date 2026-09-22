@@ -1,68 +1,55 @@
-import type { SoundID } from "./audio";
 import config from "../config";
+import type { SoundID } from "./audio";
 
 /**
- * Soundscape ambient sounds are served as audio files (MP3 loops) by the
+ * Soundscape ambient sounds are served as audio files (e.g. MP3 loops) by the
  * backend:
  *
  *   GET /api/v1/sounds        → { "sounds": [{ "id": "rain", "file": "rain.mp3", … }] }
  *   GET /api/v1/sounds/{file} → audio bytes (Range-capable, CORS-enabled)
  *
- * This module fetches the catalog once and maps each SoundID to its playable
- * URL. Every sound in the catalog is file-backed, a sound whose file is
- * unknown or fails to load simply does not play.
+ * This module fetches that catalog and maps each sound id to its playable URL.
+ * The audio engine is catalog-agnostic: a sound whose file is unknown simply
+ * does not play.
  */
 
-interface SoundCatalogEntry {
-  id: string;
+/** One entry in the backend sound catalog. */
+export interface SoundCatalogEntry {
+  id: SoundID;
   file: string;
   mime: string;
+  /** Name given by the user (user-added sounds only). */
+  label?: string;
+  /** Emoji given by the user (user-added sounds only). */
+  icon?: string;
+  /** True for sounds added by the user rather than shipped with the app. */
+  custom?: boolean;
 }
 
-/** SoundIDs the engine knows how to play (must match web/src/utils/audio.ts). */
-const KNOWN_SOUND_IDS: ReadonlySet<SoundID> = new Set<SoundID>([
-  "light-rain",
-  "rain",
-  "rain-and-thunder",
-  "strong-rain",
-  "stronger-rain",
-  "fire",
-  "fire-and-thunder",
-  "ocean",
-]);
-
-/** Populated once the backend catalog is fetched; SoundID → playable URL. */
 let fileBySound: Partial<Record<SoundID, string>> = {};
-let loadPromise: Promise<void> | null = null;
 
-/**
- * Fetch the backend sound catalog. Safe to call multiple times.
- */
-export function loadSoundCatalog(): Promise<void> {
-  if (!loadPromise) {
-    loadPromise = (async () => {
-      try {
-        const res = await fetch(`${config.apiBaseUrl}/sounds`);
-        if (!res.ok) return;
-        const data = (await res.json()) as { sounds?: SoundCatalogEntry[] };
-        const next: Partial<Record<SoundID, string>> = {};
-        for (const entry of data.sounds ?? []) {
-          const id = entry.id as SoundID;
-          if (KNOWN_SOUND_IDS.has(id) && entry.file) {
-            next[id] = `${config.apiBaseUrl}/sounds/${entry.file}`;
-          }
-        }
-        fileBySound = next;
-      } catch {
-        // Backend unreachable or invalid response.
-      }
-    })();
+/** Fetches the backend sound catalog (empty when the backend is unreachable). */
+export async function fetchSoundCatalog(): Promise<SoundCatalogEntry[]> {
+  const res = await fetch(`${config.apiBaseUrl}/sounds`);
+  if (!res.ok) return [];
+  const data = (await res.json()) as { sounds?: SoundCatalogEntry[] };
+  return data.sounds ?? [];
+}
+
+/** Rebuilds the sound id to playable URL map from a fetched catalog. */
+export function setSoundFileMap(entries: SoundCatalogEntry[]): void {
+  const next: Partial<Record<SoundID, string>> = {};
+  for (const entry of entries) {
+    if (entry.id && entry.file) {
+      next[entry.id] = `${config.apiBaseUrl}/sounds/${entry.file}`;
+    }
   }
-  return loadPromise;
+  fileBySound = next;
 }
 
 /** Returns the backend URL for a sound, or undefined when no file is known. */
 export function getSoundFile(id: SoundID): string | undefined {
   return fileBySound[id];
 }
+
 

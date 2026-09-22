@@ -1,17 +1,21 @@
 import type { SoundID } from "./audio";
 
-export interface SoundDef {
+/** A sound shipped with the app: its id, translation key and emoji icon. */
+export interface BuiltinSound {
   id: SoundID;
   labelKey: string;
   icon: string;
 }
 
 /**
- * The soundscape catalog shared by the Soundscape page and the Pomodoro page
- * (its "ambient sound" picker). Kept in sync with KNOWN_SOUND_IDS in
- * ./soundFiles and the SoundID union in ./audio.
+ * The built-in sound library.
+ *
+ * Ids are the stable identifiers bundled by the backend (`DefaultCatalog` in
+ * `backend/internal/contexts/content/sounds/domain.go`). Labels are translated
+ * through `labelKey`, sounds the user added themselves come from the backend
+ * catalog (see `hooks/useSounds`) and carry their own stored name instead.
  */
-export const SOUNDS: SoundDef[] = [
+export const SOUNDS: BuiltinSound[] = [
   { id: "light-rain", labelKey: "soundscape.lightRain", icon: "🌧️" },
   { id: "rain", labelKey: "soundscape.rainSound", icon: "🌧️" },
   { id: "rain-and-thunder", labelKey: "soundscape.rainAndThunder", icon: "⛈️" },
@@ -21,3 +25,10 @@ export const SOUNDS: SoundDef[] = [
   { id: "fire-and-thunder", labelKey: "soundscape.fireAndThunder", icon: "🔥⛈️" },
   { id: "ocean", labelKey: "soundscape.ocean", icon: "🌊" },
 ];
+
+/**
+ * Ids of the built-in sounds. Used as the always-valid fallback for persisted
+ * settings before the backend catalog has loaded.
+ */
+export const BUILTIN_SOUND_IDS: ReadonlySet<SoundID> = new Set(SOUNDS.map((s) => s.id));
+

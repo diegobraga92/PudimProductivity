@@ -2,8 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { getCurrentSession, type SessionStatus } from "../api/pomodoro";
 import { getSoundscape } from "../utils/audio";
-import { loadSoundCatalog } from "../utils/soundFiles";
 import { resolveSyncAction } from "../utils/pomodoroSoundSync";
+import { useSounds } from "./useSounds";
 import { usePomodoroSyncSettings } from "./usePomodoroSyncSettings";
 
 /**
@@ -26,10 +26,10 @@ export function usePomodoroSoundSync(): void {
 
   const status: SessionStatus | null = data?.active ? data.session.status : null;
 
-  // Prime the backend sound file catalog once so the looped MP3s are used.
-  useEffect(() => {
-    void loadSoundCatalog();
-  }, []);
+  // Prime the backend sound file catalog so the looped audio files are used.
+  // The hook also mirrors the catalog into the engine's URL map and refreshes
+  // the set of ids the persisted sync setting may reference.
+  useSounds();
 
   useEffect(() => {
     const action = resolveSyncAction(enabled, status);

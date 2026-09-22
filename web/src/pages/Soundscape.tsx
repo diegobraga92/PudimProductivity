@@ -1,8 +1,13 @@
-import { useEffect, useRef, useState } from "react";
-import { getSoundscape, type SoundID, type PresetID } from "../utils/audio";
-import { loadSoundCatalog } from "../utils/soundFiles";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  DEFAULT_MASTER_VOLUME,
+  DEFAULT_SOUND_VOLUME,
+  getSoundscape,
+  type SoundID,
+} from "../utils/audio";
+import { deletePreset, getPresets, savePreset, type Preset } from "../utils/soundPresets";
+import { useSounds } from "../hooks/useSounds";
 import { useI18n } from "../i18n";
-import { SOUNDS } from "../utils/soundCatalog";
 import { MusicIcon } from "../components/icons";
 
 /** Canvas-based frequency visualizer. */
@@ -70,36 +75,27 @@ function Visualizer() {
 function Soundscape() {
   const { t } = useI18n();
   const [playing, setPlaying] = useState<Set<SoundID>>(new Set());
-  const [masterVolume, setMasterVolume] = useState(0.5);
-  const [volumes, setVolumes] = useState<Record<SoundID, number>>({
-    "light-rain": 0.5,
-    rain: 0.5,
-    "rain-and-thunder": 0.5,
-    "strong-rain": 0.5,
-    "stronger-rain": 0.5,
-    fire: 0.5,
-    "fire-and-thunder": 0.5,
-    ocean: 0.5,
-  });
-  const [presets, setPresets] = useState<{ id: PresetID; label: string }[]>([]);
+  const [masterVolume, setMasterVolume] = useState(DEFAULT_MASTER_VOLUME);
+  const [volumes, setVolumes] = useState<Record<SoundID, number>>({});
+  // Read the stored presets lazily on first render. 
+  // Refreshes after save/delete happen in the event handlers.
+  const [presets, setPresets] = useState<Preset[]>(getPresets);
 
   const soundscape = getSoundscape();
 
-  // Fetch the backend sound file catalog once so sound buttons play the real
-  // audio loops served by the backend.
-  useEffect(() => {
-    void loadSoundCatalog();
-  }, []);
+  const { sounds, isLoading } = useSounds();
 
-  // Load presets on mount
-  useEffect(() => {
-    setPresets(soundscape.getPresets().map((p) => ({ id: p.id, label: p.label })));
-  }, [soundscape]);
+  /** Re-reads the stored presets (the single place that mirrors localStorage). */
+  const refreshPresets = useCallback(() => {
+    setPresets(getPresets());
+  }, []);
 
   // Sync master volume
   useEffect(() => {
     soundscape.setVolume(masterVolume);
   }, [masterVolume, soundscape]);
+
+  const volumeFor = (id: SoundID): number => volumes[id] ?? DEFAULT_SOUND_VOLUME;
 
   const toggle = (id: SoundID) => {
     if (playing.has(id)) {
@@ -110,8 +106,7 @@ function Soundscape() {
         next.delete(id);
         return next;
       });
-    } else if (soundscape.play(id)) {
-      soundscape.setSoundVolume(id, volumes[id]);
+    } else if (soundscape.play(id, volumeFor(id))) {
       setPlaying((prev) => new Set(prev).add(id));
     }
   };
@@ -121,56 +116,46 @@ function Soundscape() {
     soundscape.setSoundVolume(id, v);
   };
 
-  /** Save current mix as a preset. */
-  const savePreset = () => {
+  /** Save the current mix as a preset. */
+  const handleSavePreset = () => {
     const label = prompt(t("soundscape.presetPrompt"));
     if (!label) return;
     const currentSounds: Partial<Record<SoundID, boolean>> = {};
-    for (const id of SOUNDS.map((s) => s.id)) {
-      currentSounds[id] = playing.has(id);
-    }
-    soundscape.savePreset(label, currentSounds, volumes, masterVolume);
-    setPresets(soundscape.getPresets().map((p) => ({ id: p.id, label: p.label })));
+    for (const id of playing) currentSounds[id] = true;
+    savePreset(label, currentSounds, volumes, masterVolume);
+    refreshPresets();
   };
 
-  /** Load a preset. */
-  const loadPreset = (presetId: PresetID) => {
-    const allPresets = soundscape.getPresets();
-    const preset = allPresets.find((p) => p.id === presetId);
-    if (!preset) return;
-
-    // Stop all current sounds
+  /** Load a preset: stop everything, then replay the mix it stored. */
+  const handleLoadPreset = (preset: Preset) => {
     for (const id of playing) {
       soundscape.stop(id, false);
     }
     setPlaying(new Set());
 
-    // Apply preset
+    // Restore the stored levels first so each sound fades in at its own level.
+    const newVolumes = { ...volumes };
+    for (const [id, v] of Object.entries(preset.volumes)) {
+      if (v !== undefined) newVolumes[id] = v;
+    }
+
     const newPlaying = new Set<SoundID>();
-    for (const id of SOUNDS.map((s) => s.id)) {
-      if (preset.sounds[id] && soundscape.play(id)) {
-        const vol = preset.volumes[id] ?? 0.5;
-        soundscape.setSoundVolume(id, vol);
+    for (const [id, on] of Object.entries(preset.sounds)) {
+      if (!on) continue;
+      if (soundscape.play(id, preset.volumes[id] ?? DEFAULT_SOUND_VOLUME)) {
         newPlaying.add(id);
       }
     }
 
-    // Restore volumes
-    const newVolumes = { ...volumes };
-    for (const id of SOUNDS.map((s) => s.id)) {
-      if (preset.volumes[id] !== undefined) {
-        newVolumes[id] = preset.volumes[id];
-      }
-    }
     setVolumes(newVolumes);
     setPlaying(newPlaying);
     setMasterVolume(preset.masterVolume);
   };
 
   /** Delete a preset. */
-  const deletePreset = (presetId: PresetID) => {
-    soundscape.deletePreset(presetId);
-    setPresets(soundscape.getPresets().map((p) => ({ id: p.id, label: p.label })));
+  const handleDeletePreset = (presetId: string) => {
+    deletePreset(presetId);
+    refreshPresets();
   };
 
   return (
@@ -239,7 +224,7 @@ function Soundscape() {
           gap: "var(--space-sm)",
         }}
       >
-        {SOUNDS.map((sound) => {
+        {sounds.map((sound) => {
           const isOn = playing.has(sound.id);
           return (
             <div
@@ -259,6 +244,7 @@ function Soundscape() {
               <button
                 className={`btn ${isOn ? "btn-primary" : "btn-ghost"}`}
                 onClick={() => toggle(sound.id)}
+                disabled={isLoading}
                 style={{
                   minWidth: "80px",
                   fontSize: "var(--font-size-base)",
@@ -278,7 +264,7 @@ function Soundscape() {
                     textOverflow: "ellipsis",
                   }}
                 >
-                  {sound.icon} {t(sound.labelKey)}
+                  {sound.icon} {sound.label}
                 </div>
               </div>
 
@@ -290,7 +276,7 @@ function Soundscape() {
                   min="0"
                   max="1"
                   step="0.01"
-                  value={volumes[sound.id]}
+                  value={volumeFor(sound.id)}
                   onChange={(e) => changeVolume(sound.id, parseFloat(e.target.value))}
                   style={{ flex: 1, accentColor: "var(--color-primary)" }}
                 />
@@ -322,7 +308,7 @@ function Soundscape() {
               {t("soundscape.presets")}
             </div>
           </div>
-          <button className="btn btn-primary" onClick={savePreset} style={{ fontSize: "var(--font-size-xs)" }}>
+          <button className="btn btn-primary" onClick={handleSavePreset} style={{ fontSize: "var(--font-size-xs)" }}>
             {t("soundscape.saveCurrent")}
           </button>
         </div>
@@ -345,7 +331,7 @@ function Soundscape() {
           >
             <button
               className="btn btn-ghost"
-              onClick={() => loadPreset(p.id)}
+              onClick={() => handleLoadPreset(p)}
               style={{
                 flex: 1,
                 textAlign: "left",
@@ -357,7 +343,7 @@ function Soundscape() {
             </button>
             <button
               className="btn btn-ghost"
-              onClick={() => deletePreset(p.id)}
+              onClick={() => handleDeletePreset(p.id)}
               style={{
                 fontSize: "var(--font-size-xs)",
                 color: "var(--color-danger, #e74c3c)",
