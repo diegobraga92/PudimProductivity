@@ -113,6 +113,8 @@
   "status.issues": "Issues",
   "status.checking": "Checking backend status...",
   "status.version": "Version",
+  "status.backendVersion": "Backend",
+  "status.desktopVersion": "Desktop app",
   "status.database": "Database",
 
   "week.prev": "Prev",

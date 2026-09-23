@@ -32,6 +32,18 @@ npm run package       # full installers (AppImage/deb on Linux, dmg/zip on macOS
 npm run package:dir   # unpacked app only 
 ```
 
+## Updating
+
+Packaged builds are versioned from the repository-root
+[`VERSION`](../VERSION) file. Bump it and propagate before packaging so the
+installer version changes:
+
+```bash
+echo 1.0.1 > ../VERSION
+node ../scripts/sync-version.mjs
+npm run package
+```
+
 ## Deploy with a LAN backend
 
 To use the desktop app with the backend running in another server:

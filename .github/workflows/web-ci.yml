@@ -7,6 +7,14 @@ on:
       - "web/**"
       - "api/**"
       - "shared/**"
+      - "VERSION"
+      - "scripts/sync-version.mjs"
+      - "backend/internal/version/**"
+      - "desktop/package.json"
+      - "desktop/src/generated-version.ts"
+      - "api/openapi/health-v1.yaml"
+      - "web/src/api/generated/health-v1.ts"
+      - "mobile/app/build.gradle.kts"
       - ".github/workflows/web-ci.yml"
       - ".github/workflows/container-scan.yml"
       - ".github/actions/setup-node/action.yml"
@@ -16,6 +24,14 @@ on:
       - "web/**"
       - "api/**"
       - "shared/**"
+      - "VERSION"
+      - "scripts/sync-version.mjs"
+      - "backend/internal/version/**"
+      - "desktop/package.json"
+      - "desktop/src/generated-version.ts"
+      - "api/openapi/health-v1.yaml"
+      - "web/src/api/generated/health-v1.ts"
+      - "mobile/app/build.gradle.kts"
       - ".github/workflows/web-ci.yml"
       - ".github/workflows/container-scan.yml"
       - ".github/actions/setup-node/action.yml"
@@ -93,6 +109,17 @@ jobs:
         run: npm run generate:api
       - name: Fail if generated clients drifted from the spec
         run: git diff --exit-code -- src/api/generated
+
+  version-drift:
+    name: Version Single-Source Drift Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-node
+        with:
+          cache-dependency-path: web/package-lock.json
+      - name: Fail if generated version copies drifted from VERSION
+        run: node scripts/sync-version.mjs --check
 
   container-scan:
     name: Container Scan (Trivy)

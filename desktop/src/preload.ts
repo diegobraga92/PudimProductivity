@@ -6,6 +6,7 @@
  * renderer-side types).
  */
 import { contextBridge, ipcRenderer } from "electron";
+import { APP_VERSION } from "./generated-version";
 
 /** Reads a `--flag=value` from additionalArguments passed by the main process. */
 function argValue(prefix: string): string | null {
@@ -16,7 +17,7 @@ function argValue(prefix: string): string | null {
 // Empty string = no override configured; web/src/config.ts then falls back to
 // the build-time VITE_API_BASE_URL baked from web/.env.desktop.
 const apiBaseUrl = argValue("--pudim-api-base-url=") ?? "";
-const appVersion = argValue("--pudim-app-version=") ?? "0.0.1";
+const appVersion = argValue("--pudim-app-version=") ?? APP_VERSION;
 
 contextBridge.exposeInMainWorld("desktop", {
   platform: process.platform,

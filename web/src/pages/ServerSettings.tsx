@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import {
   getScoreProviders,
   saveScoreProviders,
@@ -73,8 +73,9 @@ export default function ServerSettings() {
   });
 
   // Populate the form whenever fresh config arrives.
-  useEffect(() => {
-    if (!data) return;
+  const [syncedConfig, setSyncedConfig] = useState<ScoreProvidersConfig | null>(null);
+  if (data && data !== syncedConfig) {
+    setSyncedConfig(data);
     setAssignments({
       movie: data.movie_provider,
       series: data.series_provider,
@@ -83,7 +84,7 @@ export default function ServerSettings() {
     });
     setLookupEnabled(data.lookup_enabled);
     setDirty(false);
-  }, [data]);
+  }
 
   const save = useMutation({
     mutationFn: async (): Promise<ScoreProvidersConfig> => {

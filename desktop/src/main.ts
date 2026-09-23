@@ -19,6 +19,7 @@ import {
   powerSaveBlocker,
   protocol,
   screen,
+  session,
   shell,
   Tray,
 } from "electron";
@@ -73,6 +74,31 @@ function readSettings(): Record<string, unknown> {
 
 function writeSettings(patch: Record<string, unknown>): void {
   writeJsonFile(settingsFilePath(), { ...readSettings(), ...patch });
+}
+
+/**
+ * Drops Chromium's on-disk caches when the app version changed.
+ *
+ * Must run before createWindow() so the renderer can never read a cached
+ * response from the previous version.
+ */
+async function clearStaleCachesOnVersionChange(): Promise<void> {
+  const version = app.getVersion();
+  const stored = readSettings().lastRunVersion;
+  const previous = typeof stored === "string" ? stored : undefined;
+  if (previous === version) return;
+
+  try {
+    await session.defaultSession.clearCache();
+    await session.defaultSession.clearCodeCaches({});
+  } catch (err) {
+    console.warn("[desktop] failed to clear caches after version change", err);
+  }
+
+  writeSettings({ lastRunVersion: version });
+  console.log(
+    `[desktop] version changed ${previous ?? "(first run)"} -> ${version}; caches cleared`,
+  );
 }
 
 /**
@@ -411,16 +437,54 @@ function createApplicationMenu(): void {
 
 // ─── Lifecycle ──────────────────────────────────────────────────────────────
 
-const gotSingleInstanceLock = app.requestSingleInstanceLock();
+const gotSingleInstanceLock = app.requestSingleInstanceLock({ launchedVersion: app.getVersion() });
 
 if (!gotSingleInstanceLock) {
   app.quit();
 } else {
-  app.on("second-instance", () => {
+  app.on("second-instance", (_event, _argv, _workingDirectory, additionalData) => {
+    const launchedVersion =
+      typeof additionalData === "object" && additionalData !== null
+        ? (additionalData as { launchedVersion?: unknown }).launchedVersion
+        : undefined;
+
+    // Offer to restart so the new binary actually takes over instead of
+    // silently showing the old UI.
+    if (
+      app.isPackaged &&
+      typeof launchedVersion === "string" &&
+      launchedVersion !== app.getVersion()
+    ) {
+      const choice = dialog.showMessageBoxSync({
+        type: "info",
+        title: "Update installed",
+        message: `PudimProductivity ${launchedVersion} was installed. Restart to use it?`,
+        buttons: ["Restart now", "Later"],
+        defaultId: 0,
+        cancelId: 1,
+      });
+      if (choice === 0) {
+        // For AppImages execPath points into the mounted squashfs, so relaunch
+        // the original AppImage file instead (electron-builder's documented
+        // option). For .deb/.dmg/nsis installs execPath is already the updated
+        // binary.
+        app.relaunch({
+          execPath: process.env.APPIMAGE ?? process.execPath,
+          args: process.argv.slice(1),
+        });
+        app.exit(0);
+        return;
+      }
+    }
+
     showMainWindow();
   });
 
-  void app.whenReady().then(() => {
+  void app.whenReady().then(async () => {
+    // Before the window exists, so the renderer can never pick up cached bytes
+    // from a previous version.
+    await clearStaleCachesOnVersionChange();
+
     const distDir = resolveDistDir();
     registerAppProtocol(distDir);
     registerIpcHandlers();
@@ -428,6 +492,7 @@ if (!gotSingleInstanceLock) {
     createWindow();
     createTray();
     setupAutoUpdater();
+    console.log(`[desktop] PudimProductivity ${app.getVersion()} ready`);
 
     // macOS dock convention: re-create the window when the dock icon is clicked.
     app.on("activate", () => {

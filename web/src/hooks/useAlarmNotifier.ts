@@ -51,7 +51,8 @@ export function useAlarmNotifier(): void {
   const { t } = useI18n();
   const firedRef = useRef<Set<string>>(new Set());
   // Stable ref so the polling effect doesn't restart when the translation
-  // function identity changes (and to satisfy exhaustive-deps).
+  // function identity changes (and to satisfy exhaustive-deps). Refs must not be
+  // written during render, so the sync happens in an effect.
   const tRef = useRef(t);
   useEffect(() => {
     tRef.current = t;
