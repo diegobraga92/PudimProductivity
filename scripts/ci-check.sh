@@ -414,6 +414,18 @@ else
     skip "docker compose config (Docker not available)"
 fi
 
+# ── 4e. Version single source of truth ────────────────────────────────────
+log_info "Checking for version drift..."
+if command -v node &> /dev/null; then
+    if node "$SCRIPTS_DIR/sync-version.mjs" --check; then
+        pass "version single-source"
+    else
+        fail "version single-source"
+    fi
+else
+    skip "version single-source (Node.js not available)"
+fi
+
 # ═══════════════════════════════════════════════════════════════════════════
 # Summary
 # ═══════════════════════════════════════════════════════════════════════════

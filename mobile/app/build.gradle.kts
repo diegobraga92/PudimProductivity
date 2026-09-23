@@ -16,6 +16,12 @@ fun readLocalProperty(key: String): String? {
     }
 }
 
+val appVersion: String = rootProject.file("../VERSION").readText().trim()
+
+val appVersionCode: Int = appVersion.split(".").let { (major, minor, patch) ->
+    major.toInt() * 10_000 + minor.toInt() * 100 + patch.toInt()
+}
+
 android {
     namespace = "com.pudimproductivity"
     // AndroidX and OkHttp releases pulled in by the dependency updates declare
@@ -26,8 +32,8 @@ android {
         applicationId = "com.pudimproductivity"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.0.1"
+        versionCode = appVersionCode
+        versionName = appVersion
 
         // Backend URL.
         val apiBaseUrl: String = (project.findProperty("api.base.url") as String?)

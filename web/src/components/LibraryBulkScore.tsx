@@ -58,7 +58,62 @@ export function LibraryBulkScore({ items, skippedCount, onSaved, onClose }: Libr
 
   const busy = searching || saving;
 
-  const runLookup = useCallback(async () => {
+  /** Fetches score candidates for every target. Pure: it touches no React state,
+   * so the mount effect below triggers no synchronous re-render. */
+  const fetchCandidates = useCallback(async () => {
+    const found: Record<string, ScoreCandidate[]> = {};
+    const failed: Record<string, string> = {};
+    for (let start = 0; start < targets.length; start += MAX_BATCH_LOOKUP) {
+      const chunk = targets.slice(start, start + MAX_BATCH_LOOKUP);
+      const resp = await searchLibraryScoresBatch(
+        chunk.map((item) => ({
+          name: item.name,
+          type: item.media_type,
+          year: item.release_year ?? null,
+        })),
+      );
+      for (const result of resp.results) {
+        const item = chunk[result.index];
+        if (!item) continue;
+        if (result.error) failed[item.id] = result.error;
+        else if (result.candidates.length > 0) found[item.id] = result.candidates;
+      }
+    }
+    return { found, failed };
+  }, [targets]);
+
+  /** Applies a finished lookup to the dialog state. */
+  const applyLookupResult = useCallback(
+    (found: Record<string, ScoreCandidate[]>, failed: Record<string, string>) => {
+      setMatches(found);
+      setErrors(failed);
+      const initial: Record<string, number> = {};
+      for (const id of Object.keys(found)) initial[id] = 0;
+      setChosen(initial);
+    },
+    [],
+  );
+
+  // Start the lookup as soon as the dialog opens.
+  useEffect(() => {
+    let cancelled = false;
+    fetchCandidates()
+      .then(({ found, failed }) => {
+        if (!cancelled) applyLookupResult(found, failed);
+      })
+      .catch(() => {
+        if (!cancelled) setLookupFailed(true);
+      })
+      .finally(() => {
+        if (!cancelled) setSearching(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [applyLookupResult, fetchCandidates]);
+
+  /** Clears the previous results and starts a fresh lookup (Retry button). */
+  const retryLookup = useCallback(() => {
     setSearching(true);
     setLookupFailed(false);
     setMatches({});
@@ -66,41 +121,11 @@ export function LibraryBulkScore({ items, skippedCount, onSaved, onClose }: Libr
     setChosen({});
     setSavedCount(0);
     setSaveErrors([]);
-    try {
-      const found: Record<string, ScoreCandidate[]> = {};
-      const failed: Record<string, string> = {};
-      for (let start = 0; start < targets.length; start += MAX_BATCH_LOOKUP) {
-        const chunk = targets.slice(start, start + MAX_BATCH_LOOKUP);
-        const resp = await searchLibraryScoresBatch(
-          chunk.map((item) => ({
-            name: item.name,
-            type: item.media_type,
-            year: item.release_year ?? null,
-          })),
-        );
-        for (const result of resp.results) {
-          const item = chunk[result.index];
-          if (!item) continue;
-          if (result.error) failed[item.id] = result.error;
-          else if (result.candidates.length > 0) found[item.id] = result.candidates;
-        }
-      }
-      setMatches(found);
-      setErrors(failed);
-      const initial: Record<string, number> = {};
-      for (const id of Object.keys(found)) initial[id] = 0;
-      setChosen(initial);
-    } catch {
-      setLookupFailed(true);
-    } finally {
-      setSearching(false);
-    }
-  }, [targets]);
-
-  // Start the lookup as soon as the dialog opens.
-  useEffect(() => {
-    void runLookup();
-  }, [runLookup]);
+    void fetchCandidates()
+      .then(({ found, failed }) => applyLookupResult(found, failed))
+      .catch(() => setLookupFailed(true))
+      .finally(() => setSearching(false));
+  }, [applyLookupResult, fetchCandidates]);
 
   // Close on Escape and lock body scroll while the dialog is open.
   useEffect(() => {
@@ -209,7 +234,7 @@ export function LibraryBulkScore({ items, skippedCount, onSaved, onClose }: Libr
               <button className="btn btn-ghost" onClick={onClose}>
                 {t("common.close")}
               </button>
-              <button className="btn" onClick={() => void runLookup()}>
+              <button className="btn" onClick={retryLookup}>
                 {t("common.retry")}
               </button>
             </div>

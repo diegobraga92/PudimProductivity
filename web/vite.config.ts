@@ -1,6 +1,14 @@
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import { visualizer } from "rollup-plugin-visualizer";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const appVersion = readFileSync(
+  join(dirname(fileURLToPath(import.meta.url)), "..", "VERSION"),
+  "utf8",
+).trim();
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
@@ -10,6 +18,7 @@ export default defineConfig(({ mode }) => {
   const analyze = env.ANALYZE === "1";
 
   return {
+    define: { __APP_VERSION__: JSON.stringify(appVersion) },
     // rollup-plugin-visualizer is opt-in: `ANALYZE=1 npm run build` emits
     // dist/stats.html with a treemap of chunk sizes (see package.json
     // build:analyze). Normal builds are unaffected.

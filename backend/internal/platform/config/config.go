@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/diegobraga92/pudimproductivity/backend/internal/version"
 )
 
 type Config struct {
@@ -68,7 +70,7 @@ func LoadConfig() Config {
 		RedisURL:      getEnv("REDIS_URL", ""),
 		RedisCacheTTL: getEnvDuration("REDIS_CACHE_TTL", 30*time.Second),
 		LogLevel:      getEnv("LOG_LEVEL", "debug"),
-		Version:       getEnv("VERSION", "0.0.1"),
+		Version:       getEnv("VERSION", version.Value),
 	}
 }
 

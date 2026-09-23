@@ -1,7 +1,8 @@
 {
   "name": "pudimproductivity-desktop",
+  "desktopName": "com.pudimproductivity.app",
   "private": true,
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "PudimProductivity desktop app — Electron wrapper around the React web client",
   "author": {
     "name": "PudimProductivity contributors",
@@ -15,13 +16,15 @@
   },
   "main": "dist-electron/main.js",
   "scripts": {
-    "build": "npm run build:web && npm run build:shell && npm run icons",
+    "build": "npm run version:sync && npm run build:web && npm run build:shell && npm run icons",
     "build:web": "npm --prefix ../web run build:desktop",
     "build:shell": "tsc -p tsconfig.json",
     "icons": "node scripts/generate-icons.mjs",
     "dev": "npm run build && electron .",
     "package": "npm run build && node scripts/copy-web.mjs && electron-builder",
     "package:dir": "npm run build && node scripts/copy-web.mjs && electron-builder --dir",
+    "version:sync": "node ../scripts/sync-version.mjs",
+    "version:check": "node ../scripts/sync-version.mjs --check",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

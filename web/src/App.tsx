@@ -162,6 +162,7 @@ function AppInner() {
   };
 
   const isBackendOk = healthData?.status === "ok" && healthData?.db === "connected";
+  const desktopVersion = window.desktop?.versions.app;
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
@@ -338,7 +339,7 @@ function AppInner() {
                 </span>
               </div>
 
-              {!healthData && (
+              {!healthData && !desktopVersion && (
                 <div className="card" style={{ textAlign: "center", padding: "var(--space-xl)" }}>
                   <p style={{ color: "var(--color-text-secondary)" }}>
                     {t("status.checking")}
@@ -346,7 +347,7 @@ function AppInner() {
                 </div>
               )}
 
-              {healthData && (
+              {(healthData || desktopVersion) && (
                 <div
                   style={{
                     display: "grid",
@@ -354,35 +355,47 @@ function AppInner() {
                     gap: "var(--space-md)",
                   }}
                 >
-                  <div className="stat-card">
-                    <div
-                      className="stat-card-value"
-                      style={{
-                        color: healthData.status === "ok" ? "var(--color-done)" : "var(--color-warning)",
-                      }}
-                    >
-                      {healthData.status}
+                  {healthData && (
+                    <>
+                      <div className="stat-card">
+                        <div
+                          className="stat-card-value"
+                          style={{
+                            color: healthData.status === "ok" ? "var(--color-done)" : "var(--color-warning)",
+                          }}
+                        >
+                          {healthData.status}
+                        </div>
+                        <div className="stat-card-label">{t("nav.status")}</div>
+                      </div>
+                      <div className="stat-card">
+                        <div className="stat-card-value" style={{ fontSize: "var(--font-size-lg)" }}>
+                          v{healthData.version}
+                        </div>
+                        <div className="stat-card-label">{t("status.backendVersion")}</div>
+                      </div>
+                      <div className="stat-card">
+                        <div
+                          className="stat-card-value"
+                          style={{
+                            color: healthData.db === "connected" ? "var(--color-done)" : "var(--color-danger)",
+                            fontSize: "var(--font-size-sm)",
+                          }}
+                        >
+                          {healthData.db}
+                        </div>
+                        <div className="stat-card-label">{t("status.database")}</div>
+                      </div>
+                    </>
+                  )}
+                  {desktopVersion && (
+                    <div className="stat-card">
+                      <div className="stat-card-value" style={{ fontSize: "var(--font-size-lg)" }}>
+                        v{desktopVersion}
+                      </div>
+                      <div className="stat-card-label">{t("status.desktopVersion")}</div>
                     </div>
-                    <div className="stat-card-label">{t("nav.status")}</div>
-                  </div>
-                  <div className="stat-card">
-                    <div className="stat-card-value" style={{ fontSize: "var(--font-size-lg)" }}>
-                      v{healthData.version}
-                    </div>
-                    <div className="stat-card-label">{t("status.version")}</div>
-                  </div>
-                  <div className="stat-card">
-                    <div
-                      className="stat-card-value"
-                      style={{
-                        color: healthData.db === "connected" ? "var(--color-done)" : "var(--color-danger)",
-                        fontSize: "var(--font-size-sm)",
-                      }}
-                    >
-                      {healthData.db}
-                    </div>
-                    <div className="stat-card-label">{t("status.database")}</div>
-                  </div>
+                  )}
                 </div>
               )}
             </div>

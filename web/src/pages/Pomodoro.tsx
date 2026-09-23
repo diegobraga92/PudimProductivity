@@ -58,19 +58,16 @@ function Pomodoro({ onOpenSounds }: PomodoroProps) {
 
   const session = currentResp?.active ? currentResp.session : null;
 
-  // Sync local state from server, only on session identity, status or phase
-  // change (continuous runs flip phase while status stays "running"), NOT on
-  // every refetch (remaining_seconds changes every poll).
-  useEffect(() => {
-    if (session) {
-      setLocalRemaining(session.remaining_seconds);
-      setLocalStatus(session.status);
-    } else {
-      setLocalRemaining(null);
-      setLocalStatus(null);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session?.id, session?.status, session?.phase]);
+  // Sync local state from the server session, only on session identity, status
+  // or phase change (continuous runs flip phase while status stays "running"),
+  // NOT on every refetch (remaining_seconds changes every poll).
+  const sessionKey = session ? `${session.id}:${session.status}:${session.phase}` : null;
+  const [syncedSessionKey, setSyncedSessionKey] = useState<string | null>(null);
+  if (sessionKey !== syncedSessionKey) {
+    setSyncedSessionKey(sessionKey);
+    setLocalRemaining(session?.remaining_seconds ?? null);
+    setLocalStatus(session?.status ?? null);
+  }
 
   const stopMutate = useMutation({
     mutationFn: stopSession,
@@ -81,9 +78,12 @@ function Pomodoro({ onOpenSounds }: PomodoroProps) {
     },
   });
 
-  // Use a ref to avoid stale closure issues in the auto-stop effect
+  // Use a ref to avoid stale closure issues in the auto-stop effect (synced in an
+  // effect: refs must not be written during render).
   const stopMutateRef = useRef(stopMutate);
-  stopMutateRef.current = stopMutate;
+  useEffect(() => {
+    stopMutateRef.current = stopMutate;
+  });
 
   // Local ticking
   useEffect(() => {

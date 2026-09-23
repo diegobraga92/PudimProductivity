@@ -12,18 +12,45 @@ interface TaskCreateProps {
   onCancel: () => void;
 }
 
+interface PlannerPrefill {
+  day?: RecurrenceDay;
+  start_time?: string;
+  end_time?: string;
+}
+
+/**
+ * Reads the prefill written when an empty planner cell is clicked. Pure: it never
+ * consumes the key, so it is safe to call from a state initializer that React may
+ * invoke twice in development.
+ */
+function parsePlannerPrefill(): PlannerPrefill | null {
+  const raw = sessionStorage.getItem("planner_prefill");
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as PlannerPrefill;
+  } catch {
+    // Ignore parse errors
+    return null;
+  }
+}
+
 export default function TaskCreate({ onCreated, onCancel }: TaskCreateProps) {
   const { t } = useI18n();
+  // Read the planner prefill once, before the first render, so the fields below
+  // can be seeded from it directly instead of via a state-syncing effect.
+  const [prefill] = useState(parsePlannerPrefill);
   const [title, setTitle] = useState("");
   const [isHabit, setIsHabit] = useState(false);
-  const [selectedDays, setSelectedDays] = useState<RecurrenceDay[]>([]);
+  const [selectedDays, setSelectedDays] = useState<RecurrenceDay[]>(() =>
+    prefill?.day ? [prefill.day] : []
+  );
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   // Scheduling fields
-  const [showSchedule, setShowSchedule] = useState(false);
-  const [startTime, setStartTime] = useState("09:00");
-  const [endTime, setEndTime] = useState("10:00");
+  const [showSchedule, setShowSchedule] = useState(() => prefill !== null);
+  const [startTime, setStartTime] = useState(() => prefill?.start_time || "09:00");
+  const [endTime, setEndTime] = useState(() => prefill?.end_time || "10:00");
   const [color, setColor] = useState(COLOR_PALETTE[0]);
   const [scheduledDate, setScheduledDate] = useState("");
   const [alarmMinutes, setAlarmMinutes] = useState("");
@@ -31,29 +58,11 @@ export default function TaskCreate({ onCreated, onCancel }: TaskCreateProps) {
   // Which field a validation error belongs to, so it can be highlighted.
   const [errorField, setErrorField] = useState<"title" | "days" | "schedule" | null>(null);
 
-  // Check for planner prefill data
+  // The prefill is one-shot: consume it once mounted. The removal stays in an
+  // effect because it is a side effect, not a state update.
   useEffect(() => {
-    const prefillJson = sessionStorage.getItem("planner_prefill");
-    if (prefillJson) {
-      try {
-        const prefill = JSON.parse(prefillJson);
-        setShowSchedule(true);
-        setStartTime(prefill.start_time || "09:00");
-        setEndTime(prefill.end_time || "10:00");
-        setColor(COLOR_PALETTE[0]);
-
-        // Map the day to the scheduled date for one-off tasks
-        // For habits, we set the day
-        if (prefill.day) {
-          setSelectedDays([prefill.day as RecurrenceDay]);
-        }
-
-        sessionStorage.removeItem("planner_prefill");
-      } catch {
-        // Ignore parse errors
-      }
-    }
-  }, []);
+    if (prefill) sessionStorage.removeItem("planner_prefill");
+  }, [prefill]);
 
   const toggleDay = (day: RecurrenceDay) => {
     setSelectedDays((prev) =>
