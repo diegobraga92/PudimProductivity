@@ -33,7 +33,7 @@
   "devDependencies": {
     "@resvg/resvg-js": "^2.6.2",
     "@types/node": "^26.6.1",
-    "electron": "^44.4.1",
+    "electron": "^44.4.2",
     "electron-builder": "^26.15.3",
     "typescript": "~7.0.2"
   }

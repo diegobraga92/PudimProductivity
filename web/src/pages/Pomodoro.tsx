@@ -83,7 +83,7 @@ function Pomodoro({ onOpenSounds }: PomodoroProps) {
   const stopMutateRef = useRef(stopMutate);
   useEffect(() => {
     stopMutateRef.current = stopMutate;
-  });
+  }, [stopMutate]);
 
   // Local ticking
   useEffect(() => {

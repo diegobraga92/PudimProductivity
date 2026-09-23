@@ -25,13 +25,18 @@ export interface SoundEntry {
   custom?: boolean;
 }
 
-/** Largest upload the backend accepts (mirrors maxUploadBytes in Go). */
+/** Largest audio file the backend accepts (mirrors maxSoundFileBytes in Go). */
 export const MAX_SOUND_BYTES = 10 * 1024 * 1024;
 
 /** Audio formats the backend accepts, as a file-input accept list. */
 export const SOUND_FILE_ACCEPT = ".mp3,.ogg,.m4a,.wav";
 
 async function handleError(response: Response, fallback: string): Promise<never> {
+  // A reverse proxy in front of the backend answers 413 with an HTML page, so
+  // the JSON body cannot be used to explain the failure.
+  if (response.status === 413) {
+    throw new Error("That file is too large (max 10 MB).");
+  }
   const body = await response.json().catch(() => null);
   throw new Error(body?.error || fallback);
 }
