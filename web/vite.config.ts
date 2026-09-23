@@ -5,10 +5,23 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const appVersion = readFileSync(
-  join(dirname(fileURLToPath(import.meta.url)), "..", "VERSION"),
-  "utf8",
-).trim();
+/**
+ * Reads the canonical app version from the `VERSION` file one level above the
+ * web project (see scripts/sync-version.mjs).
+ */
+function readAppVersion(): string {
+  const file = join(dirname(fileURLToPath(import.meta.url)), "..", "VERSION");
+  try {
+    return readFileSync(file, "utf8").trim();
+  } catch {
+    throw new Error(
+      `Cannot read the app version from ${file}: the repository-root VERSION file ` +
+        "must be available next to the web/ directory (see web/Dockerfile).",
+    );
+  }
+}
+
+const appVersion = readAppVersion();
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");

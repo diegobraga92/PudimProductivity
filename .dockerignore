@@ -1,5 +1,6 @@
-# Build context is the repository root (see web/Dockerfile), but only two trees
-# are required: web/ and the shared i18n dictionary. Whitelist those and drop
+# Build context is the repository root (see web/Dockerfile), but only three
+# inputs are required: web/, the shared i18n dictionary, and the canonical
+# VERSION file that vite.config.ts reads as ../VERSION. Whitelist those and drop
 # everything else — including .env (secrets), .git, and large local artifacts
 # such as node_modules and dist.
 #
@@ -11,6 +12,7 @@
 !shared/
 !shared/i18n/
 !shared/i18n/**
+!VERSION
 
 # Local artifacts inside the whitelisted trees.
 web/node_modules/

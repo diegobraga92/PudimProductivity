@@ -8,6 +8,7 @@ RUN npm ci
 
 COPY web/ ./
 COPY shared/ ../shared/
+COPY VERSION ../VERSION
 RUN npm run build
 
 # https://hub.docker.com/_/nginx/tags?name=alpine

@@ -73,6 +73,7 @@ Run all PudimProductivity CI checks locally.
 Options:
   --skip-mobile        Skip Android / Gradle checks
   --skip-integration   Skip Docker-dependent integration tests (go test)
+  --skip-container     Skip building the web container image (Docker)
   --help               Show this help message and exit
 EOF
 }
@@ -80,11 +81,13 @@ EOF
 # ─── Parse arguments ───────────────────────────────────────────────────────
 SKIP_MOBILE=false
 SKIP_INTEGRATION=false
+SKIP_CONTAINER=false
 
 for arg in "$@"; do
     case "$arg" in
         --skip-mobile)      SKIP_MOBILE=true ;;
         --skip-integration) SKIP_INTEGRATION=true ;;
+        --skip-container)   SKIP_CONTAINER=true ;;
         --help)             usage; exit 0 ;;
         *) log_warn "Unknown argument: $arg"; usage >&2; exit 2 ;;
     esac
@@ -424,6 +427,24 @@ if command -v node &> /dev/null; then
     fi
 else
     skip "version single-source (Node.js not available)"
+fi
+
+# ── 4f. Web container image build ─────────────────────────────────────────
+log_info "Building the web container image..."
+if [ "$SKIP_CONTAINER" = true ]; then
+    skip "web container build (--skip-container)"
+elif ! command -v docker &> /dev/null; then
+    skip "web container build (Docker not available)"
+else
+    CONTAINER_LOG=$(mktemp)
+    if docker build -t pudim-web:ci -f "$WEB_DIR/Dockerfile" "$ROOT_DIR" >"$CONTAINER_LOG" 2>&1; then
+        pass "web container build"
+    else
+        log_error "web container build failed — last lines:"
+        tail -25 "$CONTAINER_LOG"
+        fail "web container build"
+    fi
+    rm -f "$CONTAINER_LOG"
 fi
 
 # ═══════════════════════════════════════════════════════════════════════════
