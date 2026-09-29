@@ -272,6 +272,7 @@
   "pomodoro.continuousDesc": "Auto-start breaks and keep looping until stopped",
   "pomodoro.soundSync": "🎧 Ambient sound",
   "pomodoro.soundSyncDesc": "Auto-play this sound while the timer runs",
+  "pomodoro.manageSounds": "Manage sounds",
   "pomodoro.mediaSync": "🎵 System media player",
   "pomodoro.mediaSyncDesc": "Play when the timer starts and pause when it stops",
   "pomodoro.mediaPlayer": "Player:",

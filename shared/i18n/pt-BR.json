@@ -272,6 +272,7 @@
   "pomodoro.continuousDesc": "Iniciar intervalos automaticamente e repetir até parar",
   "pomodoro.soundSync": "🎧 Som ambiente",
   "pomodoro.soundSyncDesc": "Reproduzir este som enquanto o cronômetro estiver ativo",
+  "pomodoro.manageSounds": "Gerenciar sons",
   "pomodoro.mediaSync": "🎵 Player de mídia do sistema",
   "pomodoro.mediaSyncDesc": "Reproduzir ao iniciar o cronômetro e pausar ao parar",
   "pomodoro.mediaPlayer": "Player:",

@@ -2,7 +2,7 @@
   "name": "pudimproductivity-desktop",
   "desktopName": "com.pudimproductivity.app",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "PudimProductivity desktop app — Electron wrapper around the React web client",
   "author": {
     "name": "PudimProductivity contributors",

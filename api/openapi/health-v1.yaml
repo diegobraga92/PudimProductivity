@@ -50,7 +50,7 @@ components:
         version:
           type: string
           description: Application version.
-          example: "1.0.0"
+          example: "1.1.0"
         db:
           type: string
           enum: [connected, disconnected]

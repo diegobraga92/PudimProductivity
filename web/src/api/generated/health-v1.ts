@@ -37,7 +37,7 @@ export interface components {
             status: "ok" | "degraded" | "down";
             /**
              * @description Application version.
-             * @example 1.0.0
+             * @example 1.1.0
              */
             version: string;
             /**
