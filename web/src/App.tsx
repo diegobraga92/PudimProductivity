@@ -32,6 +32,7 @@ import { useAlarmNotifier } from "./hooks/useAlarmNotifier";
 import { useErrorReporter } from "./hooks/useErrorReporter";
 import { useLiveUpdates } from "./hooks/useLiveUpdates";
 import { usePomodoroSoundSync } from "./hooks/usePomodoroSoundSync";
+import { usePomodoroMediaSync } from "./hooks/usePomodoroMediaSync";
 import { useTaskNotifier } from "./hooks/useTaskNotifier";
 import Dashboard from "./pages/Dashboard";
 import { useI18n } from "./i18n";
@@ -131,6 +132,9 @@ function AppInner() {
   // Global pomodoro → sound automation: plays the synced sound whenever the
   // timer runs, on any tab (mounted at the root so it survives navigation).
   usePomodoroSoundSync();
+
+  // Desktop only: sends play/pause to the OS media player with the timer.
+  usePomodoroMediaSync();
 
   // In-app toast notifications for task events. The "push" channel on the
   // web, delivered over the same WebSocket stream.

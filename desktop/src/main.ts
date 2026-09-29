@@ -27,6 +27,7 @@ import type { MenuItemConstructorOptions, Rectangle } from "electron";
 import { autoUpdater } from "electron-updater";
 import fs from "node:fs";
 import path from "node:path";
+import { control, isMediaControlSupported, isPlayerctlAvailable, listPlayers } from "./media";
 
 const APP_SCHEME = "app";
 const APP_HOST = "bundle"; // app://bundle/index.html
@@ -380,6 +381,27 @@ function registerIpcHandlers(): void {
       powerSaveBlockId = null;
     }
   });
+
+  ipcMain.handle("desktop:media-status", async () => {
+    const supported = isMediaControlSupported();
+    return { supported, available: supported && (await isPlayerctlAvailable()) };
+  });
+
+  ipcMain.handle("desktop:media-list", async () => ({ players: await listPlayers() }));
+
+  ipcMain.handle(
+    "desktop:media-control",
+    async (_event, options: { action?: unknown; player?: unknown }) => {
+      if (options?.action !== "play" && options?.action !== "pause") {
+        return { ok: false, reason: "error", message: "unsupported action" };
+      }
+      const player =
+        typeof options.player === "string" && options.player.length > 0
+          ? options.player
+          : undefined;
+      return control(options.action, player);
+    }
+  );
 
   ipcMain.on("desktop:flash-frame", (_event, active: unknown) => {
     if (active) {

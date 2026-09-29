@@ -22,6 +22,15 @@ interface DesktopBridge {
   setPowerSaveBlocker: (active: boolean) => void;
   /** Flashes the taskbar/dock while an alarm is pending. */
   flashFrame: (active: boolean) => void;
+  /** Reports whether media control is supported and playerctl is installed. */
+  mediaStatus: () => Promise<{ supported: boolean; available: boolean }>;
+  /** Lists the MPRIS players playerctl can reach. */
+  mediaListPlayers: () => Promise<{ players: string[] }>;
+  /** Sends play or pause to the system media player. */
+  mediaControl: (options: {
+    action: "play" | "pause";
+    player?: string;
+  }) => Promise<{ ok: boolean; reason?: "unavailable" | "no-players" | "error"; message?: string }>;
 }
 
 interface Window {

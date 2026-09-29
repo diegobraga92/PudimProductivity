@@ -34,5 +34,9 @@ contextBridge.exposeInMainWorld("desktop", {
   setLoginItem: (enabled: boolean) => ipcRenderer.invoke("desktop:set-login-item", enabled),
   setPowerSaveBlocker: (active: boolean) =>
     ipcRenderer.invoke("desktop:set-power-save", active),
+  mediaStatus: () => ipcRenderer.invoke("desktop:media-status"),
+  mediaListPlayers: () => ipcRenderer.invoke("desktop:media-list"),
+  mediaControl: (options: { action: "play" | "pause"; player?: string }) =>
+    ipcRenderer.invoke("desktop:media-control", options),
   flashFrame: (active: boolean) => ipcRenderer.send("desktop:flash-frame", active),
 });

@@ -10,6 +10,9 @@ import {
 import type { SoundID } from "../utils/audio";
 import { useI18n } from "../i18n";
 import { usePomodoroSyncSettings } from "../hooks/usePomodoroSyncSettings";
+import { usePomodoroMediaSettings } from "../hooks/usePomodoroMediaSettings";
+import { useSystemMediaPlayers } from "../hooks/useSystemMediaPlayers";
+import { AUTO_PLAYER } from "../utils/pomodoroMediaSync";
 import { useSounds } from "../hooks/useSounds";
 import { ClockIcon } from "../components/icons";
 
@@ -40,6 +43,20 @@ function Pomodoro({ onOpenSounds }: PomodoroProps) {
     setSound: setSoundId,
   } = usePomodoroSyncSettings();
   const { sounds } = useSounds();
+  const {
+    enabled: mediaEnabled,
+    player: mediaPlayer,
+    setEnabled: setMediaEnabled,
+    setPlayer: setMediaPlayer,
+  } = usePomodoroMediaSettings();
+  const {
+    availability: mediaAvailability,
+    players: mediaPlayers,
+    recheck: recheckMedia,
+  } = useSystemMediaPlayers();
+  const mediaReady = mediaAvailability === "available";
+  // Hidden in the browser and on platforms playerctl cannot serve.
+  const showMediaControl = mediaAvailability !== "unsupported";
   const [focusMinutes, setFocusMinutes] = useState(25);
   const [breakMinutes, setBreakMinutes] = useState(5);
   const [continuous, setContinuous] = useState<boolean>(
@@ -463,6 +480,147 @@ function Pomodoro({ onOpenSounds }: PomodoroProps) {
                 </option>
               ))}
             </select>
+          </div>
+        )}
+
+        {showMediaControl && (
+          <div
+            style={{
+              marginTop: "var(--space-md)",
+              paddingTop: "var(--space-md)",
+              borderTop: "1px solid var(--color-border-light)",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "var(--space-sm)",
+              }}
+            >
+              <div>
+                <div style={{ fontWeight: 600, fontSize: "var(--font-size-sm)" }}>
+                  {t("pomodoro.mediaSync")}
+                </div>
+                <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)" }}>
+                  {t("pomodoro.mediaSyncDesc")}
+                </div>
+              </div>
+              <label
+                style={{
+                  position: "relative",
+                  display: "inline-block",
+                  width: "44px",
+                  height: "24px",
+                  cursor: mediaReady ? "pointer" : "not-allowed",
+                  flexShrink: 0,
+                }}
+                title={mediaAvailability === "missing" ? t("pomodoro.mediaMissing") : undefined}
+              >
+                <input
+                  type="checkbox"
+                  checked={mediaReady && mediaEnabled}
+                  disabled={!mediaReady}
+                  onChange={(e) => setMediaEnabled(e.target.checked)}
+                  style={{ display: "none" }}
+                />
+                <span
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    borderRadius: "24px",
+                    opacity: mediaReady ? 1 : 0.45,
+                    background:
+                      mediaReady && mediaEnabled ? "var(--color-primary)" : "var(--color-border)",
+                    transition: "background var(--transition-fast)",
+                  }}
+                >
+                  <span
+                    style={{
+                      position: "absolute",
+                      top: "2px",
+                      left: mediaReady && mediaEnabled ? "22px" : "2px",
+                      width: "20px",
+                      height: "20px",
+                      borderRadius: "50%",
+                      background: "white",
+                      transition: "left var(--transition-fast)",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+                    }}
+                  />
+                </span>
+              </label>
+            </div>
+
+            {mediaAvailability === "missing" && (
+              <div
+                role="alert"
+                style={{
+                  marginTop: "var(--space-sm)",
+                  padding: "var(--space-sm)",
+                  borderRadius: "var(--radius-sm)",
+                  border: "1px solid var(--color-warning)",
+                  background: "var(--color-warning-light)",
+                  fontSize: "var(--font-size-xs)",
+                }}
+              >
+                <div style={{ fontWeight: 600, color: "var(--color-warning)" }}>
+                  ⚠️ {t("pomodoro.mediaMissing")}
+                </div>
+                <div style={{ color: "var(--color-text-secondary)", marginTop: "2px" }}>
+                  {t("pomodoro.mediaMissingHint")}
+                </div>
+                <code style={{ display: "block", marginTop: "6px" }}>sudo apt install playerctl</code>
+                <button
+                  className="btn"
+                  onClick={recheckMedia}
+                  style={{ marginTop: "var(--space-sm)", fontSize: "var(--font-size-xs)" }}
+                >
+                  {t("pomodoro.mediaRecheck")}
+                </button>
+              </div>
+            )}
+
+            {mediaReady && mediaEnabled && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "var(--space-sm)",
+                  marginTop: "var(--space-sm)",
+                }}
+              >
+                <span style={{ fontSize: "var(--font-size-sm)", fontWeight: 500, whiteSpace: "nowrap" }}>
+                  {t("pomodoro.mediaPlayer")}
+                </span>
+                <select
+                  className="select"
+                  value={mediaPlayer}
+                  onChange={(e) => setMediaPlayer(e.target.value)}
+                  style={{ flex: 1 }}
+                >
+                  <option value={AUTO_PLAYER}>{t("pomodoro.mediaAuto")}</option>
+                  {mediaPlayers.map((name) => (
+                    <option key={name} value={name}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {mediaReady && mediaEnabled && mediaPlayers.length === 0 && (
+              <div
+                style={{
+                  marginTop: "var(--space-sm)",
+                  fontSize: "var(--font-size-xs)",
+                  color: "var(--color-text-muted)",
+                }}
+              >
+                {t("pomodoro.mediaNoPlayers")}
+              </div>
+            )}
           </div>
         )}
 
