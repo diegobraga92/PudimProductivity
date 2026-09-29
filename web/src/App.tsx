@@ -314,7 +314,7 @@ function AppInner() {
               (selectedRecipeId ? (
                 <RecipeDetail recipeId={selectedRecipeId} onBack={() => setSelectedRecipeId(null)} />
               ) : (
-                <RecipeList onOpen={(r) => setSelectedRecipeId(r.id)} />
+                <RecipeList onNew={() => setSelectedRecipeId("__new__")} onEdit={(id) => setSelectedRecipeId(id)} />
               ))}
 
             {page === "library" && <Library />}

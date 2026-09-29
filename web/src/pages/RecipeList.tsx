@@ -1,45 +1,24 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { deleteRecipe, listRecipes, resolveMediaUrl, type Recipe } from "../api/recipes";
+import { deleteRecipe, listRecipes, resolveMediaUrl } from "../api/recipes";
 import { useI18n } from "../i18n";
 import { UtensilsIcon } from "../components/icons";
+import RecipeViewModal from "../components/RecipeViewModal";
+import { difficultyBadgeClass, recipeEmoji, tagLabelKey, totalMinutes } from "../utils/recipeDisplay";
 
-/** Maps the well-known default recipe tags to i18n label keys so they can be
- *  translated (e.g. "quick" → "Rápida" in pt-BR). Custom tags are shown as-is. */
-const TAG_LABEL_KEYS: Record<string, string> = {
-  quick: "tags.quick",
-  vegan: "tags.vegan",
-  vegetarian: "tags.vegetarian",
-  breakfast: "tags.breakfast",
-  dinner: "tags.dinner",
-  dessert: "tags.dessert",
-  soup: "tags.soup",
-  salad: "tags.salad",
-};
-
-/** Maps recipe tags to a food emoji used for the cover placeholder. */
-const TAG_EMOJI: Record<string, string> = {
-  breakfast: "🍳",
-  dinner: "🥘",
-  dessert: "🍰",
-  vegan: "🥗",
-  vegetarian: "🥦",
-  soup: "🍜",
-  salad: "🥗",
-  quick: "⚡",
-};
-
-function recipeEmoji(r: Recipe): string {
-  const tag = (r.tags ?? []).find((t) => TAG_EMOJI[t]);
-  return tag ? TAG_EMOJI[tag] : "🍽️";
+interface RecipeListProps {
+  onNew: () => void;
+  onEdit: (recipeId: string) => void;
 }
 
-export default function RecipeList({ onOpen }: { onOpen: (recipe: Recipe) => void }) {
+export default function RecipeList({ onNew, onEdit }: RecipeListProps) {
   const queryClient = useQueryClient();
   const { t } = useI18n();
   const [search, setSearch] = useState("");
   const [tag, setTag] = useState<string | null>(null);
   const [difficulty, setDifficulty] = useState<string | null>(null);
+  // Recipe whose read-only detail modal is open (null = none).
+  const [viewingId, setViewingId] = useState<string | null>(null);
 
   const { data: recipes = [], isLoading } = useQuery({
     queryKey: ["recipes", search, tag, difficulty],
@@ -64,20 +43,24 @@ export default function RecipeList({ onOpen }: { onOpen: (recipe: Recipe) => voi
 
   /** Translates a tag for display, falling back to the raw tag for custom ones. */
   const tagLabel = (value: string): string => {
-    const key = TAG_LABEL_KEYS[value];
+    const key = tagLabelKey(value);
     return key ? t(key) : value;
   };
 
   const deleteMut = useMutation({
     mutationFn: (id: string) => deleteRecipe(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["recipes"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["recipes"] });
+      // The modal can be showing the recipe that was just deleted.
+      setViewingId(null);
+    },
   });
 
   return (
     <div className="animate-fade-in">
       <div className="flex-center" style={{ justifyContent: "space-between", marginBottom: "var(--space-md)" }}>
         <h2 className="page-heading" style={{ marginBottom: 0 }}><UtensilsIcon size={24} /> {t("recipes.title")}</h2>
-        <button className="btn btn-primary" onClick={() => onOpen({ id: "__new__" } as Recipe)}>
+        <button className="btn btn-primary" onClick={onNew}>
           {t("recipes.new")}
         </button>
       </div>
@@ -122,7 +105,20 @@ export default function RecipeList({ onOpen }: { onOpen: (recipe: Recipe) => voi
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "var(--space-md)" }}>
         {recipes.map((r) => (
-          <div key={r.id} className="card" style={{ cursor: "pointer" }} onClick={() => onOpen(r)}>
+          <div
+            key={r.id}
+            className="card card-interactive"
+            role="button"
+            tabIndex={0}
+            aria-label={t("recipes.openDetails", { title: r.title })}
+            onClick={() => setViewingId(r.id)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                setViewingId(r.id);
+              }
+            }}
+          >
             {resolveMediaUrl(r.image_url) ? (
               <img src={resolveMediaUrl(r.image_url)!} alt={r.title} className="recipe-thumb" loading="lazy" />
             ) : (
@@ -132,13 +128,13 @@ export default function RecipeList({ onOpen }: { onOpen: (recipe: Recipe) => voi
             )}
             <div className="flex-center" style={{ justifyContent: "space-between" }}>
               <span className="card-title">{r.title}</span>
-              <span className={`badge ${r.difficulty === "easy" ? "badge-done" : r.difficulty === "medium" ? "badge-habit" : "badge-todo"}`}>
+              <span className={`badge ${difficultyBadgeClass(r.difficulty)}`}>
                 {t(`recipes.${r.difficulty}`)}
               </span>
             </div>
             {r.description && <p style={{ color: "var(--color-text-secondary)", fontSize: "var(--font-size-sm)", margin: "0.35rem 0" }}>{r.description}</p>}
             <p style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)" }}>
-              ⏱ {t("recipes.meta", { minutes: r.prep_time_minutes + r.cook_time_minutes, servings: r.servings })}
+              ⏱ {t("recipes.meta", { minutes: totalMinutes(r), servings: r.servings })}
               {r.tags?.length ? ` · ${r.tags.map((t2) => `#${tagLabel(t2)}`).join(" ")}` : ""}
             </p>
             <button
@@ -153,6 +149,17 @@ export default function RecipeList({ onOpen }: { onOpen: (recipe: Recipe) => voi
           </div>
         ))}
       </div>
+
+      {viewingId && (
+        <RecipeViewModal
+          recipeId={viewingId}
+          onClose={() => setViewingId(null)}
+          onEdit={(id) => {
+            setViewingId(null);
+            onEdit(id);
+          }}
+        />
+      )}
     </div>
   );
 }

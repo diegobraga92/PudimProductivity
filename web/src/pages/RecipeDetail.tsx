@@ -1,15 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  applySavedRecipe,
   createRecipe,
   generateRecipeUploadURL,
   getRecipe,
+  recipeDetailKey,
   resolveMediaUrl,
   updateRecipe,
   uploadToPresignedUrl,
 } from "../api/recipes";
 import { useI18n } from "../i18n";
 import { UtensilsIcon } from "../components/icons";
+import { formValuesFromRecipe } from "../utils/recipeForm";
 
 type IngredientRow = { name: string; quantity: string; unit: string };
 type StepRow = { instruction: string };
@@ -19,8 +22,8 @@ export default function RecipeDetail({ recipeId, onBack }: { recipeId: string; o
   const queryClient = useQueryClient();
   const { t } = useI18n();
 
-  const { data: recipe } = useQuery({
-    queryKey: ["recipe", recipeId],
+  const { data: recipe, isFetching } = useQuery({
+    queryKey: recipeDetailKey(recipeId),
     queryFn: () => getRecipe(recipeId),
     enabled: !isNew,
   });
@@ -52,26 +55,27 @@ export default function RecipeDetail({ recipeId, onBack }: { recipeId: string; o
     };
   }, [previewUrl]);
 
-  // Hydrate the form once the fetched recipe arrives (edit mode).
-  const [hydrated, setHydrated] = useState(false);
-  if (recipe && !hydrated && !isNew) {
-    setTitle(recipe.title);
-    setDescription(recipe.description ?? "");
-    setDifficulty(recipe.difficulty);
-    setPrep(recipe.prep_time_minutes);
-    setCook(recipe.cook_time_minutes);
-    setServings(recipe.servings);
-    setTags((recipe.tags ?? []).join(", "));
-    setIngredients(
-      recipe.ingredients?.length
-        ? recipe.ingredients.map((i) => ({ name: i.name, quantity: i.quantity ?? "", unit: i.unit ?? "" }))
-        : []
-    );
-    setSteps(recipe.steps?.length ? recipe.steps.map((s) => ({ instruction: s.instruction })) : []);
-    setImageUrl(recipe.image_url ?? "");
-    setSourceUrl(recipe.source_url ?? "");
-    setHydrated(true);
-  }
+  // Populate the form from the fetched recipe. The effect runs again while a
+  // background refetch is in flight - the cached copy may be stale, e.g. right
+  // after saving - and stops as soon as the form holds non-fetching data, so
+  // in-progress edits are never overwritten.
+  const hydratedFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (isNew || !recipe || hydratedFor.current === recipe.id) return;
+    const values = formValuesFromRecipe(recipe);
+    setTitle(values.title);
+    setDescription(values.description);
+    setDifficulty(values.difficulty);
+    setPrep(values.prep);
+    setCook(values.cook);
+    setServings(values.servings);
+    setTags(values.tags);
+    setIngredients(values.ingredients);
+    setSteps(values.steps);
+    setImageUrl(values.imageUrl);
+    setSourceUrl(values.sourceUrl);
+    if (!isFetching) hydratedFor.current = recipe.id;
+  }, [isNew, recipe, isFetching]);
 
   const saveMut = useMutation({
     mutationFn: async () => {
@@ -112,8 +116,8 @@ export default function RecipeDetail({ recipeId, onBack }: { recipeId: string; o
         source_url: sourceUrl.trim() || null,
       });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["recipes"] });
+    onSuccess: (saved) => {
+      applySavedRecipe(queryClient, saved);
       onBack();
     },
     onError: (err: Error) => setSaveError(err.message),

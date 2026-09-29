@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { Recipe } from "./recipes";
 
 const storage = new Map<string, string>();
 const storageStub = {
@@ -129,3 +130,44 @@ describe("desktop absolute API base", () => {
     );
   });
 });
+
+describe("recipe detail cache", () => {
+  const stored: Recipe = {
+    id: "r1",
+    title: "YouTube curry",
+    description: "From a video",
+    difficulty: "easy",
+    prep_time_minutes: 10,
+    cook_time_minutes: 25,
+    servings: 2,
+    source_url: "https://www.youtube.com/watch?v=8ryJyIg0qIo&t=1s",
+    created_at: "2026-09-29T14:13:24Z",
+    updated_at: "2026-09-29T14:13:24Z",
+  };
+
+  it("seeds the detail entry so a reopened recipe shows the saved source URL", async () => {
+    const { QueryClient } = await import("@tanstack/react-query");
+    const queryClient = new QueryClient();
+    // The cache still holds the copy that was fetched before the edit.
+    queryClient.setQueryData(recipes.recipeDetailKey("r1"), { ...stored, source_url: null });
+
+    recipes.applySavedRecipe(queryClient, stored);
+
+    const cached = queryClient.getQueryData(recipes.recipeDetailKey("r1")) as {
+      source_url?: string | null;
+    };
+    expect(cached.source_url).toBe("https://www.youtube.com/watch?v=8ryJyIg0qIo&t=1s");
+  });
+
+  it("marks the saved recipe stale and refreshes the recipe lists", async () => {
+    const { QueryClient } = await import("@tanstack/react-query");
+    const queryClient = new QueryClient();
+    queryClient.setQueryData(["recipes", "all"], [stored]);
+
+    recipes.applySavedRecipe(queryClient, stored);
+
+    expect(queryClient.getQueryState(recipes.recipeDetailKey("r1"))?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryState(["recipes", "all"])?.isInvalidated).toBe(true);
+  });
+});
+

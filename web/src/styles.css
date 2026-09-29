@@ -253,6 +253,17 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: var(--shadow-sm);
 }
 
+/* Clickable card (opens a detail modal). The whole surface is the click target,
+   so the focus ring has to stay visible for keyboard users. */
+.card-interactive {
+  cursor: pointer;
+}
+
+.card-interactive:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
 /* Category accent strips, border-left so they follow the card's rounded corners */
 .card-todo {
   border-left: 3px solid var(--color-todo);
@@ -1462,6 +1473,93 @@ h1, h2, h3, h4, h5, h6 {
   color: rgba(255, 255, 255, 0.9);
   background: linear-gradient(135deg, var(--color-primary-light), var(--color-primary-dark));
   margin-bottom: var(--space-sm);
+}
+
+/* --- Recipe detail modal (read-only view) --- */
+.recipe-modal-hero {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  display: block;
+  margin-bottom: var(--space-md);
+  background: var(--color-border-light);
+}
+
+.recipe-modal-hero-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+  color: rgba(255, 255, 255, 0.9);
+  background: linear-gradient(135deg, var(--color-primary-light), var(--color-primary-dark));
+}
+
+.recipe-modal-title {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+}
+
+.recipe-modal-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  margin: var(--space-sm) 0 var(--space-md);
+}
+
+.recipe-stat-label {
+  display: block;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.recipe-stat-value {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.recipe-section-title {
+  display: block;
+  margin: var(--space-md) 0 var(--space-xs);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.recipe-ingredient-row {
+  display: flex;
+  gap: var(--space-sm);
+  padding: 0.25rem 0;
+  font-size: var(--font-size-sm);
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.recipe-ingredient-amount {
+  min-width: 6.5rem;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.recipe-step-row {
+  display: flex;
+  gap: var(--space-sm);
+  padding: 0.3rem 0;
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+}
+
+.recipe-step-number {
+  min-width: 1.4rem;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.recipe-source-link {
+  display: inline-block;
+  font-size: var(--font-size-sm);
+  color: var(--color-primary);
+  word-break: break-all;
 }
 
 /* --- Dark Mode --- */

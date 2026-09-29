@@ -3,6 +3,8 @@ import { useEffect, type ReactNode } from "react";
 interface ModalProps {
   onClose: () => void;
   maxWidth?: number;
+  /** Accessible name of the dialog, read out by screen readers on open. */
+  ariaLabel?: string;
   children: ReactNode;
 }
 
@@ -11,7 +13,7 @@ interface ModalProps {
  * .modal-backdrop/.modal-dialog styling. Closes on Escape or backdrop click,
  * and locks body scroll while open. Mount/unmount controls visibility.
  */
-export default function Modal({ onClose, maxWidth = 440, children }: ModalProps) {
+export default function Modal({ onClose, maxWidth = 440, ariaLabel, children }: ModalProps) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -34,6 +36,7 @@ export default function Modal({ onClose, maxWidth = 440, children }: ModalProps)
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
+        aria-label={ariaLabel}
       >
         {children}
       </div>

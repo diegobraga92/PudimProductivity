@@ -1,3 +1,4 @@
+import type { QueryClient } from "@tanstack/react-query";
 import config, { apiOrigin, mediaBaseUrl } from "../config";
 import { apiHeaders } from "./client";
 import type { components } from "./generated/recipes-v1";
@@ -7,6 +8,12 @@ export type Recipe = components["schemas"]["Recipe"];
 export type CreateRecipeRequest = components["schemas"]["CreateRecipeRequest"];
 export type UploadURLRequest = components["schemas"]["UploadURLRequest"];
 export type UploadURL = components["schemas"]["UploadURL"];
+
+// React Query key for a single recipe. Exported so the editor screen and the
+// cache helpers below cannot drift apart.
+export function recipeDetailKey(recipeId: string) {
+  return ["recipe", recipeId] as const;
+}
 
 async function handleError(response: Response, fallback: string): Promise<never> {
   const body = await response.json().catch(() => null);
@@ -59,6 +66,18 @@ export async function updateRecipe(recipeId: string, req: CreateRecipeRequest): 
   });
   if (!res.ok) await handleError(res, `Failed to update recipe: ${res.status}`);
   return res.json() as Promise<Recipe>;
+}
+
+// Reconciles the React Query cache after a recipe was saved. Writing the server
+// response into the detail entry is what makes a reopened recipe show what was
+// just saved: without it the cache keeps the pre-save copy and the editor
+// hydrates from stale values (e.g. an empty source_url).
+export function applySavedRecipe(queryClient: QueryClient, saved: Recipe): void {
+  queryClient.setQueryData(recipeDetailKey(saved.id), saved);
+  // Mark the seeded entry stale as well: it renders immediately while the next
+  // mount revalidates it against the server.
+  queryClient.invalidateQueries({ queryKey: recipeDetailKey(saved.id) });
+  queryClient.invalidateQueries({ queryKey: ["recipes"] });
 }
 
 export async function deleteRecipe(recipeId: string): Promise<void> {
