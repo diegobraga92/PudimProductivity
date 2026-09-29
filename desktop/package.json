@@ -18,7 +18,7 @@
   "scripts": {
     "build": "npm run version:sync && npm run build:web && npm run build:shell && npm run icons",
     "build:web": "npm --prefix ../web run build:desktop",
-    "build:shell": "tsc -p tsconfig.json",
+    "build:shell": "tsc -p tsconfig.json && node scripts/check-preload.mjs",
     "icons": "node scripts/generate-icons.mjs",
     "dev": "npm run build && electron .",
     "package": "npm run build && node scripts/copy-web.mjs && electron-builder",

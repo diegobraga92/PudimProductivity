@@ -4,9 +4,14 @@
  * Runs sandboxed with contextIsolation enabled. Exposes a minimal, whitelisted
  * API on window.desktop for the React app (see web/src/desktop.d.ts for the
  * renderer-side types).
+ *
+ * Must stay a single file: the sandboxed `require` only resolves a whitelist of
+ * built-ins, so a relative import aborts the whole script with "module not found"
+ * and leaves window.desktop undefined (every desktop feature then disappears
+ * silently). Values come from additionalArguments instead — desktop/scripts/
+ * check-preload.mjs guards the compiled output in CI.
  */
 import { contextBridge, ipcRenderer } from "electron";
-import { APP_VERSION } from "./generated-version";
 
 /** Reads a `--flag=value` from additionalArguments passed by the main process. */
 function argValue(prefix: string): string | null {
@@ -17,7 +22,9 @@ function argValue(prefix: string): string | null {
 // Empty string = no override configured; web/src/config.ts then falls back to
 // the build-time VITE_API_BASE_URL baked from web/.env.desktop.
 const apiBaseUrl = argValue("--pudim-api-base-url=") ?? "";
-const appVersion = argValue("--pudim-app-version=") ?? APP_VERSION;
+// Always passed by createWindow() as app.getVersion(). Empty means "unknown":
+// web/src/App.tsx simply hides the desktop-version card in that case.
+const appVersion = argValue("--pudim-app-version=") ?? "";
 
 contextBridge.exposeInMainWorld("desktop", {
   platform: process.platform,
