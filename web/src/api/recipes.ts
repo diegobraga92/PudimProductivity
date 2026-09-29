@@ -1,4 +1,4 @@
-import config from "../config";
+import config, { apiOrigin, mediaBaseUrl } from "../config";
 import { apiHeaders } from "./client";
 import type { components } from "./generated/recipes-v1";
 
@@ -11,6 +11,13 @@ export type UploadURL = components["schemas"]["UploadURL"];
 async function handleError(response: Response, fallback: string): Promise<never> {
   const body = await response.json().catch(() => null);
   throw new Error(body?.error || fallback);
+}
+
+// Resolves a URL returned by the API against the API origin. Absolute URLs pass
+// through unchanged.
+function toAbsoluteApiUrl(url: string): string {
+  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(url)) return url;
+  return new URL(url, apiOrigin()).toString();
 }
 
 export async function listRecipes(params?: {
@@ -62,11 +69,7 @@ export async function deleteRecipe(recipeId: string): Promise<void> {
   if (!res.ok) await handleError(res, `Failed to delete recipe: ${res.status}`);
 }
 
-/**
- * Requests a short-lived presigned PUT URL to upload a recipe image directly
- * to object storage. Requires the recipe to already exist. Throws when the
- * backend has no storage backend configured (HTTP 503).
- */
+// Requests a presigned image upload URL. Requires the recipe to exist.
 export async function generateRecipeUploadURL(
   recipeId: string,
   req: UploadURLRequest
@@ -77,12 +80,13 @@ export async function generateRecipeUploadURL(
     body: JSON.stringify(req),
   });
   if (!res.ok) await handleError(res, `Failed to get upload URL: ${res.status}`);
-  return res.json() as Promise<UploadURL>;
+  const upload = (await res.json()) as UploadURL;
+  return { ...upload, url: toAbsoluteApiUrl(upload.url) };
 }
 
-/** Uploads a file directly to a presigned S3 PUT URL. */
+// Uploads a file to a presigned PUT URL.
 export async function uploadToPresignedUrl(presignedUrl: string, file: File): Promise<void> {
-  const res = await fetch(presignedUrl, {
+  const res = await fetch(toAbsoluteApiUrl(presignedUrl), {
     method: "PUT",
     headers: { "Content-Type": file.type || "application/octet-stream" },
     body: file,
@@ -90,13 +94,10 @@ export async function uploadToPresignedUrl(presignedUrl: string, file: File): Pr
   if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
 }
 
-/**
- * Resolves a stored media value to a displayable URL. Full URLs pass through;
- * object keys (returned by the upload flow) are prefixed with the configured
- * media base URL. Returns null when the value can't be resolved.
- */
+// Resolves a stored media value to a displayable URL. Full URLs pass through,
+// object keys are prefixed with the media base. Returns null when empty.
 export function resolveMediaUrl(value: string | null | undefined): string | null {
   if (!value) return null;
   if (/^https?:\/\//.test(value) || value.startsWith("data:")) return value;
-  return config.mediaBaseUrl ? `${config.mediaBaseUrl.replace(/\/+$/, "")}/${value}` : null;
+  return `${mediaBaseUrl()}/${value.replace(/^\/+/, "")}`;
 }

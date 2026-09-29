@@ -31,6 +31,9 @@ func NewFilesystemUploader(dir, publicBaseURL string) (*FilesystemUploader, erro
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return nil, fmt.Errorf("media: create local media directory: %w", err)
 	}
+	if err := probeWritable(dir); err != nil {
+		return nil, fmt.Errorf("media: local media directory %q is not writable: %w", dir, err)
+	}
 	if publicBaseURL == "" {
 		publicBaseURL = "/api/v1/media"
 	}
@@ -106,4 +109,18 @@ func (u *FilesystemUploader) Delete(ctx context.Context, key string) error {
 // resolve returns the absolute path for key under the media root.
 func (u *FilesystemUploader) resolve(key string) string {
 	return filepath.Join(u.dir, filepath.FromSlash(key))
+}
+
+// probeWritable verifies the directory accepts new files.
+func probeWritable(dir string) error {
+	f, err := os.CreateTemp(dir, ".media-write-probe-*")
+	if err != nil {
+		return err
+	}
+	name := f.Name()
+	if err := f.Close(); err != nil {
+		_ = os.Remove(name)
+		return err
+	}
+	return os.Remove(name)
 }

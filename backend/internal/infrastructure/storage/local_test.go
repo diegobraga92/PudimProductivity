@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"os"
 	"testing"
 	"time"
 )
@@ -65,5 +66,17 @@ func TestFilesystemUploader_StorageRoundTrip(t *testing.T) {
 	}
 	if _, err := up.Get(context.Background(), key); err == nil {
 		t.Fatal("expected ErrNotFound after delete")
+	}
+}
+
+func TestNewFilesystemUploader_UnwritableDir(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.Chmod(dir, 0o500); err != nil {
+		t.Fatalf("chmod: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(dir, 0o700) })
+
+	if _, err := NewFilesystemUploader(dir, ""); err == nil {
+		t.Skip("directory permissions are not enforced for this user")
 	}
 }

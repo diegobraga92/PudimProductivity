@@ -12,3 +12,16 @@ const config = {
 
 export default config;
 
+// Absolute origin of the API, for relative bases like "/api/v1" and for the
+// absolute base the desktop shell passes.
+export function apiOrigin(): string {
+  return new URL(config.apiBaseUrl, window.location.origin).origin;
+}
+
+// Base URL for stored media keys. Uses the configured S3/CDN base when set,
+// otherwise derives it from the API base served by local storage.
+export function mediaBaseUrl(): string {
+  if (config.mediaBaseUrl) return config.mediaBaseUrl.replace(/\/+$/, "");
+  const base = config.apiBaseUrl.replace(/\/+$/, "");
+  return new URL(`${base}/media`, window.location.origin).toString().replace(/\/+$/, "");
+}
