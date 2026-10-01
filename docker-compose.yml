@@ -78,7 +78,7 @@ services:
         condition: service_healthy
 
   redis:
-    image: redis:7-alpine  # https://hub.docker.com/_/redis/tags?name=alpine
+    image: redis:8-alpine  # https://hub.docker.com/_/redis/tags?name=alpine
     container_name: pudim-redis
     restart: unless-stopped
     ports:
