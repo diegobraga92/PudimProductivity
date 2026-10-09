@@ -447,6 +447,24 @@ else
     rm -f "$CONTAINER_LOG"
 fi
 
+# ── 4g. Dependabot config ecosystem options ───────────────────────────────
+# GitHub validates .github/dependabot.yml server-side once it lands on the
+# default branch and rejects the whole file when an option is not supported for
+# an ecosystem (e.g. cooldown.semver-major-days under github-actions), which
+# silently stops every update entry — catch that before the push.
+log_info "Validating .github/dependabot.yml ecosystem options..."
+if [ ! -f "$ROOT_DIR/.github/dependabot.yml" ]; then
+    skip "dependabot config (no .github/dependabot.yml)"
+elif ! command -v node &> /dev/null; then
+    skip "dependabot config (Node.js not available)"
+else
+    if node "$SCRIPTS_DIR/check-dependabot.mjs"; then
+        pass "dependabot config"
+    else
+        fail "dependabot config"
+    fi
+fi
+
 # ═══════════════════════════════════════════════════════════════════════════
 # Summary
 # ═══════════════════════════════════════════════════════════════════════════
