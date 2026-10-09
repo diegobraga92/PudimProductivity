@@ -1,0 +1,227 @@
+openapi: "3.2.0"
+info:
+  title: Meal Planner API
+  version: "0.1.0"
+  license:
+    name: MIT
+    url: https://github.com/diegobraga92/PudimProductivity/blob/main/LICENSE
+
+servers:
+  - url: /
+    description: Current server
+
+paths:
+  /api/v1/meal-plan:
+    get:
+      operationId: listMealPlanItems
+      summary: List meal plan items
+      description: Returns every item of the recurring weekly meal plan.
+      security: []
+      tags:
+        - Meal Planner
+      responses:
+        "200":
+          description: A list of meal plan items.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MealPlanItem"
+        "500":
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    post:
+      operationId: createMealPlanItem
+      summary: Create a meal plan item
+      description: |
+        Creates one independent item per selected day. Adding the same food to
+        several days is a batch insert. Each item is afterwards edited or
+        deleted on its own.
+      security: []
+      tags:
+        - Meal Planner
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMealPlanItemRequest"
+      responses:
+        "201":
+          description: Items created, one per selected day.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MealPlanItem"
+        "400":
+          description: Validation error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/meal-plan/{itemId}:
+    put:
+      operationId: updateMealPlanItem
+      summary: Update a meal plan item
+      description: Replaces the mutable fields of a single item.
+      security: []
+      tags:
+        - Meal Planner
+      parameters:
+        - $ref: "#/components/parameters/itemId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateMealPlanItemRequest"
+      responses:
+        "200":
+          description: Item updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MealPlanItem"
+        "400":
+          description: Validation error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Item not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    delete:
+      operationId: deleteMealPlanItem
+      summary: Delete a meal plan item
+      security: []
+      tags:
+        - Meal Planner
+      parameters:
+        - $ref: "#/components/parameters/itemId"
+      responses:
+        "204":
+          description: Item deleted.
+        "404":
+          description: Item not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  parameters:
+    itemId:
+      name: itemId
+      in: path
+      required: true
+      description: The meal plan item UUID.
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    Day:
+      type: string
+      enum: [mon, tue, wed, thu, fri, sat, sun]
+      description: Weekday column of the weekly template.
+
+    Meal:
+      type: string
+      enum: [breakfast, lunch, dinner, snack]
+      description: Meal slot row of the weekly template.
+
+    CreateMealPlanItemRequest:
+      type: object
+      required: [days, meal, name, calories]
+      properties:
+        days:
+          type: array
+          minItems: 1
+          description: Day columns to add the item to.
+          items:
+            $ref: "#/components/schemas/Day"
+        meal:
+          $ref: "#/components/schemas/Meal"
+        name:
+          type: string
+        amount:
+          type: string
+          description: Free-text portion, e.g. "1 cup".
+        calories:
+          type: integer
+          minimum: 0
+        recipe_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Optional linked recipe.
+
+    UpdateMealPlanItemRequest:
+      type: object
+      required: [day, meal, name, calories]
+      properties:
+        day:
+          $ref: "#/components/schemas/Day"
+        meal:
+          $ref: "#/components/schemas/Meal"
+        name:
+          type: string
+        amount:
+          type: string
+        calories:
+          type: integer
+          minimum: 0
+        recipe_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Optional linked recipe.
+
+    MealPlanItem:
+      type: object
+      required: [id, day, meal, name, amount, calories, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        day:
+          $ref: "#/components/schemas/Day"
+        meal:
+          $ref: "#/components/schemas/Meal"
+        name:
+          type: string
+        amount:
+          type: string
+        calories:
+          type: integer
+          minimum: 0
+        recipe_id:
+          type: string
+          format: uuid
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string

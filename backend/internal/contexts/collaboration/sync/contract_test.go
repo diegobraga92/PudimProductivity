@@ -132,6 +132,18 @@ func TestWsEventsConformToContract(t *testing.T) {
 		{eventbus.EventRecipeDeleted, map[string]interface{}{
 			"id": "00000000-0000-0000-0000-000000000001",
 		}},
+		{eventbus.EventMealPlanItemCreated, map[string]interface{}{
+			"id": "00000000-0000-0000-0000-000000000001", "day": "mon", "meal": "breakfast",
+			"name": "Oatmeal", "amount": "1 cup", "calories": 320,
+			"recipe_id": "00000000-0000-0000-0000-0000000000aa",
+		}},
+		{eventbus.EventMealPlanItemUpdated, map[string]interface{}{
+			"id": "00000000-0000-0000-0000-000000000001", "day": "tue", "meal": "dinner",
+			"name": "Pasta", "calories": 640, "recipe_id": nil,
+		}},
+		{eventbus.EventMealPlanItemDeleted, map[string]interface{}{
+			"id": "00000000-0000-0000-0000-000000000001",
+		}},
 	}
 
 	for i, p := range payloads {

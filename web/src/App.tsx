@@ -15,6 +15,7 @@ import {
   FolderIcon,
   GlobeIcon,
   HeartPulseIcon,
+  MealPlanIcon,
   MenuIcon,
   MoonIcon,
   MoreIcon,
@@ -48,10 +49,11 @@ const Pomodoro = lazy(() => import("./pages/Pomodoro"));
 const Soundscape = lazy(() => import("./pages/Soundscape"));
 const RecipeList = lazy(() => import("./pages/RecipeList"));
 const RecipeDetail = lazy(() => import("./pages/RecipeDetail"));
+const MealPlanner = lazy(() => import("./pages/MealPlanner"));
 const Library = lazy(() => import("./pages/Library"));
 const ServerSettings = lazy(() => import("./pages/ServerSettings"));
 
-type Page = "dashboard" | "tasks" | "lists" | "planner" | "pomodoro" | "soundscape" | "recipes" | "library" | "health" | "settings";
+type Page = "dashboard" | "tasks" | "lists" | "planner" | "pomodoro" | "soundscape" | "recipes" | "mealPlan" | "library" | "health" | "settings";
 
 type NavItem = {
   id: Page;
@@ -68,6 +70,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: "pomodoro", labelKey: "nav.timer", icon: ClockIcon },
   { id: "soundscape", labelKey: "nav.sounds", icon: MusicIcon },
   { id: "recipes", labelKey: "nav.recipes", icon: UtensilsIcon },
+  { id: "mealPlan", labelKey: "nav.mealPlan", icon: MealPlanIcon },
   { id: "library", labelKey: "nav.library", icon: FilmIcon },
 ];
 
@@ -316,6 +319,8 @@ function AppInner() {
               ) : (
                 <RecipeList onNew={() => setSelectedRecipeId("__new__")} onEdit={(id) => setSelectedRecipeId(id)} />
               ))}
+
+            {page === "mealPlan" && <MealPlanner />}
 
             {page === "library" && <Library />}
 

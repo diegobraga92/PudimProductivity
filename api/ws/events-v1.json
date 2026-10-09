@@ -31,6 +31,9 @@
             "recipe.created",
             "recipe.updated",
             "recipe.deleted",
+            "mealplan.item.created",
+            "mealplan.item.updated",
+            "mealplan.item.deleted",
             "stale"
           ]
         },
@@ -167,6 +170,39 @@
     "recipeRef": {
       "type": "object",
       "description": "Minimal reference for deleted recipe.",
+      "required": ["id"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" }
+      }
+    },
+
+    "mealPlanItem": {
+      "type": "object",
+      "description": "Meal plan item for sync.",
+      "required": ["id", "day", "meal", "name", "calories"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "day": {
+          "type": "string",
+          "enum": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+        },
+        "meal": {
+          "type": "string",
+          "enum": ["breakfast", "lunch", "dinner", "snack"]
+        },
+        "name": { "type": "string" },
+        "amount": { "type": "string" },
+        "calories": { "type": "integer", "minimum": 0 },
+        "recipe_id": {
+          "anyOf": [{ "type": "string", "format": "uuid" }, { "type": "null" }],
+          "description": "Linked recipe ID, or null."
+        }
+      }
+    },
+
+    "mealPlanItemRef": {
+      "type": "object",
+      "description": "Minimal reference for a deleted meal plan item.",
       "required": ["id"],
       "properties": {
         "id": { "type": "string", "format": "uuid" }
@@ -414,6 +450,30 @@
           "properties": {
             "type": { "const": "recipe.deleted" },
             "payload": { "$ref": "#/$defs/recipeRef" }
+          },
+          "required": ["payload"]
+        },
+        {
+          "description": "Meal plan item created. Payload: mealPlanItem.",
+          "properties": {
+            "type": { "const": "mealplan.item.created" },
+            "payload": { "$ref": "#/$defs/mealPlanItem" }
+          },
+          "required": ["payload"]
+        },
+        {
+          "description": "Meal plan item updated. Payload: mealPlanItem.",
+          "properties": {
+            "type": { "const": "mealplan.item.updated" },
+            "payload": { "$ref": "#/$defs/mealPlanItem" }
+          },
+          "required": ["payload"]
+        },
+        {
+          "description": "Meal plan item deleted. Payload: mealPlanItemRef.",
+          "properties": {
+            "type": { "const": "mealplan.item.deleted" },
+            "payload": { "$ref": "#/$defs/mealPlanItemRef" }
           },
           "required": ["payload"]
         },
