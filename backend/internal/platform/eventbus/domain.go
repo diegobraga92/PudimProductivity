@@ -26,6 +26,10 @@ const (
 	EventRecipeUpdated EventType = "recipe.updated"
 	EventRecipeDeleted EventType = "recipe.deleted"
 
+	EventMealPlanItemCreated EventType = "mealplan.item.created"
+	EventMealPlanItemUpdated EventType = "mealplan.item.updated"
+	EventMealPlanItemDeleted EventType = "mealplan.item.deleted"
+
 	EventTaskListShared   EventType = "tasklist.shared"
 	EventTaskListUnshared EventType = "tasklist.unshared"
 	EventTaskMerged       EventType = "task.merged"

@@ -104,6 +104,17 @@ export function UtensilsIcon(props: IconProps) {
   );
 }
 
+/** Meal planner — bowl with steam. */
+export function MealPlanIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M3 11h18a9 9 0 0 1-9 9 9 9 0 0 1-9-9Z" />
+      <path d="M9 7.5c0-1.5 1.5-2 1.5-4" />
+      <path d="M14.5 7.5c0-1.5 1.5-2 1.5-4" />
+    </Icon>
+  );
+}
+
 /** Library — film reel. */
 export function FilmIcon(props: IconProps) {
   return (

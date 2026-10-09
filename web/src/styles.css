@@ -1802,3 +1802,217 @@ html {
   padding: 0 0.5rem;
 }
 
+
+/* ============================================================================
+   Meal planner — weekly slot x day grid
+   ============================================================================ */
+
+.meal-plan-total-chip {
+  padding: 0.35rem 0.85rem;
+  border-radius: var(--radius-full);
+  background: var(--color-primary-subtle);
+  border: 1px solid var(--color-border);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.meal-plan-scroll {
+  overflow-x: auto;
+  padding-bottom: var(--space-sm);
+}
+
+.meal-plan-grid {
+  display: grid;
+  grid-template-columns: 104px repeat(7, minmax(136px, 1fr)) 92px;
+  min-width: 1060px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.meal-plan-corner,
+.meal-plan-dayhead,
+.meal-plan-weekhead,
+.meal-plan-rowlabel,
+.meal-plan-rowtotal {
+  padding: 0.5rem 0.6rem;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
+  border-right: 1px solid var(--color-border);
+}
+
+.meal-plan-dayhead,
+.meal-plan-weekhead {
+  text-align: center;
+  color: var(--color-text-secondary);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.meal-plan-weekhead {
+  border-right: none;
+  border-left: 1px solid var(--color-border);
+}
+
+.meal-plan-rowlabel {
+  display: flex;
+  align-items: center;
+  color: var(--color-text);
+  border-left: 3px solid var(--color-primary-light);
+}
+
+.meal-plan-rowtotal {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-left: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.meal-plan-total-label {
+  border-left: 3px solid transparent;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.meal-plan-cell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  min-height: 96px;
+  padding: 0.4rem;
+  border-right: 1px solid var(--color-border-light);
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.meal-plan-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0.35rem 0.45rem;
+  border-radius: var(--radius-sm);
+  background: var(--color-primary-subtle);
+  border: 1px solid var(--color-border);
+  font-size: var(--font-size-xs);
+}
+
+.meal-plan-chip-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-xs);
+}
+
+.meal-plan-chip-name {
+  font-weight: 600;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.meal-plan-chip-kcal {
+  flex: 0 0 auto;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.meal-plan-chip-amount,
+.meal-plan-chip-recipe {
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meal-plan-chip-recipe {
+  color: var(--color-primary-dark);
+  font-weight: 600;
+}
+
+.meal-plan-chip-actions {
+  display: flex;
+  gap: var(--space-xs);
+  margin-top: 2px;
+}
+
+.meal-plan-chip-actions .btn {
+  padding: 0.1rem 0.35rem;
+  font-size: var(--font-size-xs);
+}
+
+.meal-plan-add {
+  margin-top: auto;
+  padding: 0.2rem;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-family: var(--font-family);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.meal-plan-add:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary-dark);
+  background: var(--color-primary-subtle);
+}
+
+.meal-plan-daytotal {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.55rem 0.4rem;
+  background: var(--color-bg);
+  border-right: 1px solid var(--color-border);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.meal-plan-grandtotal {
+  background: var(--color-primary-subtle);
+  color: var(--color-primary-dark);
+}
+
+.meal-plan-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-sm);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.meal-plan-daypicker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.meal-plan-daybtn {
+  padding: 0.25rem 0.6rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-family: var(--font-family);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.meal-plan-daybtn.active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+}
+

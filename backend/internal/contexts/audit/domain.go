@@ -35,6 +35,10 @@ const (
 	ActionRecipeUpdated = "recipe.updated"
 	ActionRecipeDeleted = "recipe.deleted"
 
+	ActionMealPlanItemCreated = "mealplan.item.created"
+	ActionMealPlanItemUpdated = "mealplan.item.updated"
+	ActionMealPlanItemDeleted = "mealplan.item.deleted"
+
 	ActionScoreProviderUpdated = "score_provider.updated"
 )
 
@@ -46,6 +50,7 @@ const (
 	ResourcePomodoro       = "pomodoro"
 	ResourceLibraryItems   = "library_items"
 	ResourceRecipes        = "recipes"
+	ResourceMealPlanItems  = "meal_plan_items"
 	ResourceScoreProviders = "score_providers"
 )
 

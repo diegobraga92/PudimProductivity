@@ -28,6 +28,7 @@ import (
 	"github.com/diegobraga92/pudimproductivity/backend/internal/contexts/content/recipe"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/contexts/content/scoring"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/contexts/content/sounds"
+	"github.com/diegobraga92/pudimproductivity/backend/internal/contexts/productivity/mealplan"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/contexts/productivity/pomodoro"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/contexts/productivity/task"
 	"github.com/diegobraga92/pudimproductivity/backend/internal/contexts/productivity/tasklist"
@@ -233,9 +234,12 @@ func main() {
 	}
 	sounds.RegisterSoundsRoutes(r, soundsDir, sounds.DefaultCatalog)
 
-	// Phase 5a: Recipes — depends on the media uploader (optional) for images.
 	if pool != nil {
 		recipe.RegisterRecipeRoutes(r, postgres.NewRecipeRepository(pool), auditService, composite, uploads)
+	}
+
+	if pool != nil {
+		mealplan.RegisterMealPlanRoutes(r, postgres.NewMealPlanRepository(pool), auditService, composite)
 	}
 
 	if pool != nil {
