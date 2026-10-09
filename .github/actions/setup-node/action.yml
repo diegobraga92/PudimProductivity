@@ -1,4 +1,5 @@
 name: Setup Node
+description: Install the Node version from .nvmrc and cache npm downloads
 
 inputs:
   node-version-file:

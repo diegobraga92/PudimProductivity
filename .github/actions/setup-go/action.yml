@@ -1,4 +1,5 @@
 name: Setup Go
+description: Install the newest patch release of the Go minor declared in go.mod
 
 inputs:
   go-version-file:
@@ -8,7 +9,28 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Resolve the Go major.minor from go.mod
+      id: resolve
+      shell: bash
+      env:
+        GO_VERSION_FILE: ${{ inputs.go-version-file }}
+      run: |
+        # go.mod has to carry a full version (the module graph requires a
+        # comparable one, and `go mod tidy` normalises it), but CI should always
+        # compile and scan with the *newest patch* of that minor.
+        version=$(sed -n 's/^go \([0-9][0-9.]*\).*/\1/p' "$GO_VERSION_FILE" | head -n 1)
+        if [ -z "$version" ]; then
+          echo "::error::no 'go' directive found in $GO_VERSION_FILE"
+          exit 1
+        fi
+        minor=$(printf '%s' "$version" | cut -d. -f1,2)
+        echo "Installing the newest patch release of go$minor"
+        echo "minor=$minor" >> "$GITHUB_OUTPUT"
     - uses: actions/setup-go@v7
       with:
-        go-version-file: ${{ inputs.go-version-file }}
+        # A major.minor selector plus check-latest always resolves to the latest
+        # matching patch release, even when the runner's tool cache is behind.
+        go-version: ${{ steps.resolve.outputs.minor }}
+        check-latest: true
         cache: true
+

@@ -20,7 +20,7 @@ export interface paths {
         /**
          * Create a meal plan item
          * @description Creates one independent item per selected day. Adding the same food to
-         *     several days is a batch insert; each item is afterwards edited or
+         *     several days is a batch insert. Each item is afterwards edited or
          *     deleted on its own.
          */
         post: operations["createMealPlanItem"];

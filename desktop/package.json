@@ -36,5 +36,9 @@
     "electron": "^44.5.1",
     "electron-builder": "^26.15.3",
     "typescript": "~7.0.2"
+  },
+  "overrides": {
+    "http-cache-semantics": "^4.3.0",
+    "global-agent": "^4.1.3"
   }
 }

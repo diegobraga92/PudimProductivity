@@ -1,4 +1,5 @@
 name: Setup Java + Gradle
+description: Install Temurin JDK and set up the Gradle caches
 
 inputs:
   java-version:

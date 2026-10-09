@@ -4,79 +4,120 @@ updates:
   - package-ecosystem: gomod
     directory: "/backend"
     schedule:
-      interval: weekly
-      day: monday
+      interval: monthly
       time: "06:00"
       timezone: America/Sao_Paulo
     open-pull-requests-limit: 5
+    cooldown:
+      default-days: 5
+      semver-major-days: 30
+      semver-minor-days: 7
+      semver-patch-days: 3
     labels: ["dependencies", "backend"]
     commit-message:
       prefix: "chore"
       include: scope
     groups:
       go-minor-patch:
+        applies-to: version-updates
         patterns: ["*"]
         update-types: ["minor", "patch"]
+      go-major:
+        applies-to: version-updates
+        patterns: ["*"]
+        update-types: ["major"]
+      go-security:
+        applies-to: security-updates
+        patterns: ["*"]
 
   - package-ecosystem: npm
     directory: "/web"
     schedule:
-      interval: weekly
-      day: monday
+      interval: monthly
       time: "06:15"
       timezone: America/Sao_Paulo
     open-pull-requests-limit: 10
+    cooldown:
+      default-days: 5
+      semver-major-days: 30
+      semver-minor-days: 7
+      semver-patch-days: 3
     labels: ["dependencies", "web"]
     commit-message:
       prefix: "chore"
       include: scope
     groups:
       web-minor-patch:
+        applies-to: version-updates
         patterns: ["*"]
         update-types: ["minor", "patch"]
+      web-major:
+        applies-to: version-updates
+        patterns: ["*"]
+        update-types: ["major"]
+      web-security:
+        applies-to: security-updates
+        patterns: ["*"]
 
   - package-ecosystem: npm
     directory: "/desktop"
     schedule:
-      interval: weekly
-      day: monday
+      interval: monthly
       time: "06:30"
       timezone: America/Sao_Paulo
     open-pull-requests-limit: 10
+    cooldown:
+      default-days: 5
+      semver-major-days: 30
+      semver-minor-days: 7
+      semver-patch-days: 3
     labels: ["dependencies", "desktop"]
     commit-message:
       prefix: "chore"
       include: scope
     groups:
       desktop-minor-patch:
+        applies-to: version-updates
         patterns: ["*"]
         update-types: ["minor", "patch"]
+      desktop-major:
+        applies-to: version-updates
+        patterns: ["*"]
+        update-types: ["major"]
+      desktop-security:
+        applies-to: security-updates
+        patterns: ["*"]
 
+  # /mobile: version updates are switched off (open-pull-requests-limit: 0), so
+  # only security updates open PRs.
   - package-ecosystem: gradle
     directory: "/mobile"
     schedule:
-      interval: weekly
-      day: tuesday
-      time: "06:00"
+      interval: monthly
+      time: "06:45"
       timezone: America/Sao_Paulo
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 0
     labels: ["dependencies", "mobile"]
     commit-message:
       prefix: "chore"
       include: scope
     groups:
-      gradle-minor-patch:
+      gradle-security:
+        applies-to: security-updates
         patterns: ["*"]
-        update-types: ["minor", "patch"]
 
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
-      interval: weekly
-      day: tuesday
-      time: "06:15"
+      interval: monthly
+      time: "07:00"
       timezone: America/Sao_Paulo
     open-pull-requests-limit: 5
+    cooldown:
+      default-days: 5
+      semver-major-days: 30
+      semver-minor-days: 7
+      semver-patch-days: 3
     labels: ["dependencies", "ci"]
     commit-message:
       prefix: "chore"
@@ -85,12 +126,13 @@ updates:
       github-actions:
         patterns: ["*"]
 
+  # Docker base images have no entry in the dependency graph, so they never
+  # receive security updates.
   - package-ecosystem: docker
     directory: "/backend"
     schedule:
-      interval: weekly
-      day: wednesday
-      time: "06:00"
+      interval: monthly
+      time: "07:15"
       timezone: America/Sao_Paulo
     open-pull-requests-limit: 5
     labels: ["dependencies", "backend", "docker"]
@@ -104,9 +146,8 @@ updates:
   - package-ecosystem: docker
     directory: "/web"
     schedule:
-      interval: weekly
-      day: wednesday
-      time: "06:15"
+      interval: monthly
+      time: "07:30"
       timezone: America/Sao_Paulo
     open-pull-requests-limit: 5
     labels: ["dependencies", "web", "docker"]
@@ -120,9 +161,8 @@ updates:
   - package-ecosystem: docker-compose
     directory: "/"
     schedule:
-      interval: weekly
-      day: wednesday
-      time: "06:30"
+      interval: monthly
+      time: "07:45"
       timezone: America/Sao_Paulo
     open-pull-requests-limit: 5
     labels: ["dependencies", "docker"]

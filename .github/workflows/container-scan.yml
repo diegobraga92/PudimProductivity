@@ -26,11 +26,24 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Build Docker image
-        run: docker build -t ${{ inputs.image-name }}:ci -f ${{ inputs.dockerfile }} ${{ inputs.build-context }}
-      - name: Run Trivy
+        # --pull so the scan reflects today's base image instead of cached.
+        run: docker build --pull -t ${{ inputs.image-name }}:ci -f ${{ inputs.dockerfile }} ${{ inputs.build-context }}
+      - name: Run Trivy (fail on fixable CRITICAL/HIGH)
+        # Findings without an upstream fix cannot be actioned by a dependency
+        # bump, so they are reported by the next step instead of turning every
+        # unrelated pull request red.
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ inputs.image-name }}:ci
           format: table
           exit-code: "1"
           severity: CRITICAL,HIGH
+          ignore-unfixed: true
+      - name: Run Trivy (informational, includes unfixed)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ inputs.image-name }}:ci
+          format: table
+          exit-code: "0"
+          severity: CRITICAL,HIGH
+          ignore-unfixed: false

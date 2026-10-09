@@ -1,0 +1,78 @@
+name: Security Scan (scheduled)
+
+on:
+  schedule:
+    # Mondays 09:00 UTC. Early warning for fixable CVEs landing in a Go patch
+    # release or in a Docker base image, instead of discovering them through a
+    # red Trivy gate on an unrelated pull request.
+    - cron: "0 9 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  govulncheck:
+    name: Vulnerability Scan (govulncheck)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-go
+      - name: Download dependencies
+        run: go mod download
+      - name: Run govulncheck
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
+  container-scan-backend:
+    name: Container Scan (pudim-backend)
+    uses: ./.github/workflows/container-scan.yml
+    with:
+      image-name: pudim-backend
+      dockerfile: backend/Dockerfile
+      build-context: backend/
+
+  container-scan-web:
+    name: Container Scan (pudim-web)
+    uses: ./.github/workflows/container-scan.yml
+    with:
+      image-name: pudim-web
+      dockerfile: web/Dockerfile
+      build-context: .
+
+  report:
+    name: Report failures as an issue
+    needs: [govulncheck, container-scan-backend, container-scan-web]
+    if: failure()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Create or update the tracking issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          gh label create security-scan --force --color 0e8a16 \
+            --description "Opened by the scheduled security scan" > /dev/null
+          BODY=$(printf '%s\n' \
+            "The scheduled security scan found vulnerabilities that have a fix available." \
+            "" \
+            "- Failing run: ${RUN_URL}" \
+            "- Fix: bump the affected dependency and re-run." \
+            "" \
+            'Base-image bumps only arrive with the monthly dependency round (on the 1st). To get one now: Insights > Dependency graph > Dependabot > "Check for updates".')
+          EXISTING=$(gh issue list --label security-scan --state open --json number --jq '.[0].number // empty')
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --body "$BODY"
+          else
+            gh issue create \
+              --title "Scheduled security scan found fixable vulnerabilities" \
+              --label security-scan \
+              --body "$BODY"
+          fi

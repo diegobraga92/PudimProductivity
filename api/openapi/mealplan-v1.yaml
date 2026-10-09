@@ -164,9 +164,8 @@ components:
           type: integer
           minimum: 0
         recipe_id:
-          type: string
+          type: [string, "null"]
           format: uuid
-          nullable: true
           description: Optional linked recipe.
 
     UpdateMealPlanItemRequest:
@@ -185,9 +184,8 @@ components:
           type: integer
           minimum: 0
         recipe_id:
-          type: string
+          type: [string, "null"]
           format: uuid
-          nullable: true
           description: Optional linked recipe.
 
     MealPlanItem:
@@ -209,9 +207,8 @@ components:
           type: integer
           minimum: 0
         recipe_id:
-          type: string
+          type: [string, "null"]
           format: uuid
-          nullable: true
         created_at:
           type: string
           format: date-time
