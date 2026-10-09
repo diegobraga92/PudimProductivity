@@ -7,6 +7,9 @@ import {
   MEAL_ORDER,
   MEAL_PLAN_DAYS,
   mealLabelKey,
+  MEAL_PLAN_TONES,
+  toneClass,
+  toneForName,
   totalCalories,
 } from "./mealPlan";
 
@@ -80,5 +83,27 @@ describe("caloriesByMeal", () => {
     expect(totals.dinner).toBe(0);
     expect(totals.snack).toBe(0);
     expect(Object.keys(totals)).toEqual(MEAL_ORDER);
+  });
+});
+
+describe("toneForName", () => {
+  it("is stable for a food and ignores case and padding", () => {
+    expect(toneForName("  oats ")).toBe(toneForName("OATS"));
+    expect(toneClass("Oats")).toBe(`tone-${toneForName("Oats")}`);
+  });
+
+  it("stays inside the tone range", () => {
+    for (const name of ["Oats", "Rice and beans", "Grilled chicken", "Pizza", "", "🥗"]) {
+      expect(toneForName(name)).toBeGreaterThanOrEqual(1);
+      expect(toneForName(name)).toBeLessThanOrEqual(MEAL_PLAN_TONES);
+    }
+  });
+
+  it("spreads a realistic plan over most tones", () => {
+    const names = [
+      "Oats", "Rice and beans", "Grilled chicken", "Pasta",
+      "Salad", "Soup", "Omelette", "Tuna sandwich",
+    ];
+    expect(new Set(names.map(toneForName)).size).toBeGreaterThan(3);
   });
 });

@@ -24,6 +24,7 @@ func RegisterMealPlanRoutes(r chi.Router, repo Repository, auditLogger audit.Log
 			r.Post("/", handler.CreateItem)
 			r.Put("/{itemId}", handler.UpdateItem)
 			r.Delete("/{itemId}", handler.DeleteItem)
+			r.Delete("/", handler.ClearItems)
 		})
 	})
 

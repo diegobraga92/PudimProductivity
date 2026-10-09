@@ -18,4 +18,6 @@ type Repository interface {
 	Update(ctx context.Context, item *Item) error
 	// Delete removes an item by id.
 	Delete(ctx context.Context, id string) error
+	// DeleteAll removes every item, returning the ids that existed.
+	DeleteAll(ctx context.Context) ([]string, error)
 }

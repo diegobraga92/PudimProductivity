@@ -12,6 +12,7 @@ type fakeRepo struct {
 	batches  [][]*Item
 	updated  *Item
 	deleted  string
+	clearIDs []string
 	listable []*Item
 }
 
@@ -31,6 +32,8 @@ func (f *fakeRepo) Delete(_ context.Context, id string) error {
 	f.deleted = id
 	return nil
 }
+
+func (f *fakeRepo) DeleteAll(_ context.Context) ([]string, error) { return f.clearIDs, nil }
 
 type auditSpy struct {
 	actions []string
@@ -149,5 +152,40 @@ func TestListDelegatesToRepository(t *testing.T) {
 	}
 	if len(items) != 1 || items[0].ID != "id-1" {
 		t.Fatalf("unexpected items: %+v", items)
+	}
+}
+
+func TestClearRemovesEveryItem(t *testing.T) {
+	repo := &fakeRepo{clearIDs: []string{"id-1", "id-2"}}
+	spyAudit := &auditSpy{}
+	spyBus := &busSpy{}
+	service := NewService(repo, spyAudit, spyBus)
+
+	if err := service.Clear(context.Background()); err != nil {
+		t.Fatalf("Clear: %v", err)
+	}
+	if len(spyAudit.actions) != 1 || spyAudit.actions[0] != audit.ActionMealPlanItemsCleared {
+		t.Fatalf("audit actions = %v", spyAudit.actions)
+	}
+	if len(spyBus.types) != 2 {
+		t.Fatalf("events = %v, want 2", spyBus.types)
+	}
+	for _, typ := range spyBus.types {
+		if typ != eventbus.EventMealPlanItemDeleted {
+			t.Fatalf("unexpected event type %q", typ)
+		}
+	}
+}
+
+func TestClearOnEmptyPlanIsSilent(t *testing.T) {
+	spyAudit := &auditSpy{}
+	spyBus := &busSpy{}
+	service := NewService(&fakeRepo{}, spyAudit, spyBus)
+
+	if err := service.Clear(context.Background()); err != nil {
+		t.Fatalf("Clear: %v", err)
+	}
+	if len(spyAudit.actions) != 0 || len(spyBus.types) != 0 {
+		t.Fatalf("empty clear logged %v and published %v", spyAudit.actions, spyBus.types)
 	}
 }

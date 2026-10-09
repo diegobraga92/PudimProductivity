@@ -55,3 +55,11 @@ export async function deleteMealPlanItem(itemId: string): Promise<void> {
   });
   if (!res.ok) await handleError(res, `Failed to delete meal: ${res.status}`);
 }
+
+export async function clearMealPlanItems(): Promise<void> {
+  const res = await fetch(`${config.apiBaseUrl}/meal-plan`, {
+    method: "DELETE",
+    headers: apiHeaders(),
+  });
+  if (!res.ok) await handleError(res, `Failed to clear meal plan: ${res.status}`);
+}

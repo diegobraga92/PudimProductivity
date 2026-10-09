@@ -102,6 +102,26 @@ func (s *MealPlanService) Update(ctx context.Context, id string, in UpdateInput)
 	return item, nil
 }
 
+// Clear removes the whole template, publishing one delete event per item.
+func (s *MealPlanService) Clear(ctx context.Context) error {
+	ids, err := s.repo.DeleteAll(ctx)
+	if err != nil {
+		return fmt.Errorf("clear meal plan: %w", err)
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+
+	log.Info().Ctx(ctx).Int("count", len(ids)).Msg("meal plan cleared")
+	s.audit.Log(ctx, audit.ActionMealPlanItemsCleared, audit.ResourceMealPlanItems, "", nil, map[string]any{
+		"count": len(ids),
+	})
+	for _, id := range ids {
+		s.publish(ctx, eventbus.EventMealPlanItemDeleted, map[string]any{"id": id})
+	}
+	return nil
+}
+
 func (s *MealPlanService) Delete(ctx context.Context, id string) error {
 	if err := s.repo.Delete(ctx, id); err != nil {
 		return err // ErrNotFound passes through

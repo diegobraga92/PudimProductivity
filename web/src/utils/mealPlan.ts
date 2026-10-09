@@ -61,3 +61,21 @@ export function caloriesByMeal(items: MealPlanItem[]): Record<Meal, number> {
   }
   return totals;
 }
+
+/** Number of automatic chip tones; keep in sync with the --tone-* tokens. */
+export const MEAL_PLAN_TONES = 6;
+
+/** Stable tone (1-based) for a food name, so a dish keeps its colour everywhere. */
+export function toneForName(name: string): number {
+  const key = name.trim().toLowerCase();
+  let hash = 0;
+  for (let i = 0; i < key.length; i += 1) {
+    hash = (hash * 31 + key.charCodeAt(i)) % 1000003;
+  }
+  return (hash % MEAL_PLAN_TONES) + 1;
+}
+
+/** Chip class selecting that tone. */
+export function toneClass(name: string): string {
+  return `tone-${toneForName(name)}`;
+}

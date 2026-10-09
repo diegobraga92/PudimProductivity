@@ -69,6 +69,24 @@ func TestMealPlanRepository_BatchListUpdateDelete(t *testing.T) {
 	if err := repo.Delete(ctx, updated.ID); err != mealplandomain.ErrNotFound {
 		t.Fatalf("second Delete: want ErrNotFound, got %v", err)
 	}
+
+	cleared, err := repo.DeleteAll(ctx)
+	if err != nil {
+		t.Fatalf("DeleteAll: %v", err)
+	}
+	if len(cleared) != 1 || cleared[0] != items[1].ID {
+		t.Fatalf("DeleteAll = %v, want [%s]", cleared, items[1].ID)
+	}
+	remaining, err := repo.List(ctx)
+	if err != nil {
+		t.Fatalf("List after DeleteAll: %v", err)
+	}
+	if len(remaining) != 0 {
+		t.Fatalf("List after DeleteAll = %d items, want 0", len(remaining))
+	}
+	if again, err := repo.DeleteAll(ctx); err != nil || len(again) != 0 {
+		t.Fatalf("second DeleteAll = %v, %v; want no ids and no error", again, err)
+	}
 }
 
 func TestMealPlanRepository_RecipeLinkClearedWhenRecipeDeleted(t *testing.T) {

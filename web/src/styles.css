@@ -14,6 +14,14 @@
   --color-list: #10B981;
   --color-list-light: #ECFDF5;
 
+  /* Meal plan chip tones, assigned automatically per food */
+  --tone-1: #0284C7;
+  --tone-2: #059669;
+  --tone-3: #D97706;
+  --tone-4: #E11D48;
+  --tone-5: #7C3AED;
+  --tone-6: #0D9488;
+
   /* Status colors */
   --color-done: #10B981;
   --color-done-bg: #ECFDF5;
@@ -1576,6 +1584,13 @@ h1, h2, h3, h4, h5, h6 {
   --color-list: #34D399;
   --color-list-light: #022C22;
 
+  --tone-1: #38BDF8;
+  --tone-2: #34D399;
+  --tone-3: #FBBF24;
+  --tone-4: #FB7185;
+  --tone-5: #A78BFA;
+  --tone-6: #2DD4BF;
+
   --color-done: #34D399;
   --color-done-bg: #022C22;
   --color-danger: #F87171;
@@ -1616,6 +1631,13 @@ h1, h2, h3, h4, h5, h6 {
     --color-habit-light: #451A03;
     --color-list: #34D399;
     --color-list-light: #022C22;
+
+    --tone-1: #38BDF8;
+    --tone-2: #34D399;
+    --tone-3: #FBBF24;
+    --tone-4: #FB7185;
+    --tone-5: #A78BFA;
+    --tone-6: #2DD4BF;
 
     --color-done: #34D399;
     --color-done-bg: #022C22;
@@ -1894,12 +1916,32 @@ html {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  width: 100%;
   padding: 0.35rem 0.45rem;
   border-radius: var(--radius-sm);
-  background: var(--color-primary-subtle);
   border: 1px solid var(--color-border);
+  border-left: 4px solid var(--chip-tone, var(--color-primary-light));
+  background: color-mix(in srgb, var(--chip-tone, var(--color-primary)) 12%, var(--color-surface));
+  color: inherit;
+  font: inherit;
   font-size: var(--font-size-xs);
+  text-align: left;
+  cursor: pointer;
+  transition: all var(--transition-fast);
 }
+
+.meal-plan-chip:hover,
+.meal-plan-chip:focus-visible {
+  border-color: var(--chip-tone, var(--color-primary));
+  box-shadow: var(--shadow-sm);
+}
+
+.meal-plan-chip.tone-1 { --chip-tone: var(--tone-1); }
+.meal-plan-chip.tone-2 { --chip-tone: var(--tone-2); }
+.meal-plan-chip.tone-3 { --chip-tone: var(--tone-3); }
+.meal-plan-chip.tone-4 { --chip-tone: var(--tone-4); }
+.meal-plan-chip.tone-5 { --chip-tone: var(--tone-5); }
+.meal-plan-chip.tone-6 { --chip-tone: var(--tone-6); }
 
 .meal-plan-chip-head {
   display: flex;
@@ -1929,19 +1971,8 @@ html {
 }
 
 .meal-plan-chip-recipe {
-  color: var(--color-primary-dark);
+  color: var(--color-text-secondary);
   font-weight: 600;
-}
-
-.meal-plan-chip-actions {
-  display: flex;
-  gap: var(--space-xs);
-  margin-top: 2px;
-}
-
-.meal-plan-chip-actions .btn {
-  padding: 0.1rem 0.35rem;
-  font-size: var(--font-size-xs);
 }
 
 .meal-plan-add {

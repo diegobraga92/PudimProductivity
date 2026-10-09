@@ -105,6 +105,24 @@ func (r *MealPlanRepository) Update(ctx context.Context, item *mealplandomain.It
 	return nil
 }
 
+func (r *MealPlanRepository) DeleteAll(ctx context.Context) ([]string, error) {
+	rows, err := r.pool.Query(ctx, `DELETE FROM meal_plan_items RETURNING id`)
+	if err != nil {
+		return nil, fmt.Errorf("delete meal plan items: %w", err)
+	}
+	defer rows.Close()
+
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
+}
+
 func (r *MealPlanRepository) Delete(ctx context.Context, id string) error {
 	tag, err := r.pool.Exec(ctx, `DELETE FROM meal_plan_items WHERE id = $1`, id)
 	if err != nil {

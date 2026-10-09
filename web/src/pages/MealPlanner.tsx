@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Fragment, useMemo, useState, type FormEvent } from "react";
 import {
+  clearMealPlanItems,
   createMealPlanItem,
   deleteMealPlanItem,
   listMealPlanItems,
@@ -23,6 +24,7 @@ import {
   MEAL_ORDER,
   MEAL_PLAN_DAYS,
   mealLabelKey,
+  toneClass,
   totalCalories,
 } from "../utils/mealPlan";
 
@@ -55,22 +57,22 @@ export default function MealPlanner() {
   const mealTotals = caloriesByMeal(items);
   const weeklyTotal = totalCalories(items);
 
-  const deleteMut = useMutation({
-    mutationFn: (itemId: string) => deleteMealPlanItem(itemId),
+  const clearMut = useMutation({
+    mutationFn: clearMealPlanItems,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: MEAL_PLAN_KEY }),
     onError: (err: Error) => setError(err.message),
   });
 
-  async function handleDelete(item: MealPlanItem) {
+  async function handleClear() {
     const confirmed = await confirm({
-      title: t("mealPlan.deleteTitle"),
-      message: t("mealPlan.deleteMessage", { name: item.name }),
-      confirmLabel: t("common.delete"),
+      title: t("mealPlan.clearTitle"),
+      message: t("mealPlan.clearMessage", { count: items.length }),
+      confirmLabel: t("mealPlan.clearConfirm"),
       confirmVariant: "danger",
     });
     if (confirmed) {
       setError(null);
-      deleteMut.mutate(item.id);
+      clearMut.mutate();
     }
   }
 
@@ -80,9 +82,16 @@ export default function MealPlanner() {
         <h2 className="page-heading" style={{ marginBottom: 0 }}>
           <MealPlanIcon size={24} /> {t("mealPlan.title")}
         </h2>
-        <span className="meal-plan-total-chip">
-          {t("mealPlan.weeklyTotal")}: {t("mealPlan.kcal", { calories: weeklyTotal })}
-        </span>
+        <div className="flex-center" style={{ gap: "var(--space-sm)" }}>
+          {items.length > 0 && (
+            <button className="btn btn-ghost btn-sm" onClick={handleClear} disabled={clearMut.isPending}>
+              🗑 {t("mealPlan.clearPlan")}
+            </button>
+          )}
+          <span className="meal-plan-total-chip">
+            {t("mealPlan.weeklyTotal")}: {t("mealPlan.kcal", { calories: weeklyTotal })}
+          </span>
+        </div>
       </div>
 
       <p className="text-sm text-secondary" style={{ marginTop: 0, marginBottom: "var(--space-lg)" }}>
@@ -118,7 +127,13 @@ export default function MealPlanner() {
                 return (
                   <div key={`${meal}-${day}`} className="meal-plan-cell">
                     {cellItems.map((cellItem) => (
-                      <div key={cellItem.id} className="meal-plan-chip">
+                      <button
+                        key={cellItem.id}
+                        type="button"
+                        className={`meal-plan-chip ${toneClass(cellItem.name)}`}
+                        aria-label={t("mealPlan.editItemAria", { name: cellItem.name })}
+                        onClick={() => setEditor({ mode: "edit", item: cellItem })}
+                      >
                         <div className="meal-plan-chip-head">
                           <span className="meal-plan-chip-name">{cellItem.name}</span>
                           <span className="meal-plan-chip-kcal">
@@ -136,18 +151,7 @@ export default function MealPlanner() {
                             🍽 {recipeTitles.get(cellItem.recipe_id) ?? t("mealPlan.recipeMissing")}
                           </span>
                         )}
-                        <div className="meal-plan-chip-actions">
-                          <button
-                            className="btn btn-ghost btn-sm"
-                            onClick={() => setEditor({ mode: "edit", item: cellItem })}
-                          >
-                            {t("common.edit")}
-                          </button>
-                          <button className="btn btn-ghost btn-sm" onClick={() => handleDelete(cellItem)}>
-                            {t("common.delete")}
-                          </button>
-                        </div>
-                      </div>
+                      </button>
                     ))}
                     <button
                       className="meal-plan-add"
@@ -203,6 +207,7 @@ interface MealItemModalProps {
 function MealItemModal({ target, onClose }: MealItemModalProps) {
   const { t } = useI18n();
   const queryClient = useQueryClient();
+  const confirm = useConfirm();
 
   const existing = target.mode === "edit" ? target.item : null;
   const [days, setDays] = useState<MealPlanDay[]>(target.mode === "create" ? [target.day] : []);
@@ -240,6 +245,15 @@ function MealItemModal({ target, onClose }: MealItemModalProps) {
     onError: (err: Error) => setError(err.message),
   });
 
+  const deleteMut = useMutation({
+    mutationFn: (itemId: string) => deleteMealPlanItem(itemId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: MEAL_PLAN_KEY });
+      onClose();
+    },
+    onError: (err: Error) => setError(err.message),
+  });
+
   function toggleDay(day: MealPlanDay) {
     setDays((current) =>
       current.includes(day) ? current.filter((d) => d !== day) : [...current, day]
@@ -263,6 +277,20 @@ function MealItemModal({ target, onClose }: MealItemModalProps) {
     }
     setError(null);
     saveMut.mutate();
+  }
+
+  async function handleDelete() {
+    if (!existing) return;
+    const confirmed = await confirm({
+      title: t("mealPlan.deleteTitle"),
+      message: t("mealPlan.deleteMessage", { name: existing.name }),
+      confirmLabel: t("common.delete"),
+      confirmVariant: "danger",
+    });
+    if (confirmed) {
+      setError(null);
+      deleteMut.mutate(existing.id);
+    }
   }
 
   return (
@@ -362,6 +390,19 @@ function MealItemModal({ target, onClose }: MealItemModalProps) {
           <button type="submit" className="btn btn-primary" disabled={saveMut.isPending}>
             {saveMut.isPending ? t("common.saving") : existing ? t("common.save") : t("mealPlan.add")}
           </button>
+          {existing && (
+            <>
+              <div style={{ flex: 1 }} />
+              <button
+                type="button"
+                className="btn btn-danger"
+                onClick={handleDelete}
+                disabled={deleteMut.isPending}
+              >
+                🗑 {t("common.delete")}
+              </button>
+            </>
+          )}
         </div>
       </form>
     </Modal>

@@ -88,4 +88,5 @@ type Service interface {
 	List(ctx context.Context) ([]*Item, error)
 	Update(ctx context.Context, id string, in UpdateInput) (*Item, error)
 	Delete(ctx context.Context, id string) error
+	Clear(ctx context.Context) error
 }

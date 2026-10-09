@@ -67,6 +67,23 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+    delete:
+      operationId: clearMealPlanItems
+      summary: Clear the meal plan
+      description: Removes every item of the weekly template in one operation.
+      security: []
+      tags:
+        - Meal Planner
+      responses:
+        "204":
+          description: All items removed. The body is empty.
+        "500":
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /api/v1/meal-plan/{itemId}:
     put:
       operationId: updateMealPlanItem

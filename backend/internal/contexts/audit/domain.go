@@ -35,9 +35,10 @@ const (
 	ActionRecipeUpdated = "recipe.updated"
 	ActionRecipeDeleted = "recipe.deleted"
 
-	ActionMealPlanItemCreated = "mealplan.item.created"
-	ActionMealPlanItemUpdated = "mealplan.item.updated"
-	ActionMealPlanItemDeleted = "mealplan.item.deleted"
+	ActionMealPlanItemCreated  = "mealplan.item.created"
+	ActionMealPlanItemUpdated  = "mealplan.item.updated"
+	ActionMealPlanItemDeleted  = "mealplan.item.deleted"
+	ActionMealPlanItemsCleared = "mealplan.items.cleared"
 
 	ActionScoreProviderUpdated = "score_provider.updated"
 )

@@ -80,3 +80,12 @@ func (h *Handler) DeleteItem(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
+
+func (h *Handler) ClearItems(w http.ResponseWriter, r *http.Request) {
+	if err := h.service.Clear(r.Context()); err != nil {
+		log.Error().Err(err).Msg("clear meal plan items failed")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to clear meal plan")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}

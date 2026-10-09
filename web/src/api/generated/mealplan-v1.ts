@@ -24,7 +24,11 @@ export interface paths {
          *     deleted on its own.
          */
         post: operations["createMealPlanItem"];
-        delete?: never;
+        /**
+         * Clear the meal plan
+         * @description Removes every item of the weekly template in one operation.
+         */
+        delete: operations["clearMealPlanItems"];
         options?: never;
         head?: never;
         patch?: never;
@@ -174,6 +178,33 @@ export interface operations {
             };
             /** @description Validation error. */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    clearMealPlanItems: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description All items removed. The body is empty. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Internal server error. */
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };
