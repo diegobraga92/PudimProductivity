@@ -16,8 +16,8 @@ import { AUTO_PLAYER } from "../utils/pomodoroMediaSync";
 import { useSounds } from "../hooks/useSounds";
 import { ClockIcon } from "../components/icons";
 
-const FOCUS_PRESETS = [15, 25, 30, 45, 60];
-const BREAK_PRESETS = [5, 10, 15];
+const FOCUS_PRESETS = [15, 25, 30, 45, 60, 90, 120];
+const BREAK_PRESETS = [5, 10, 15, 20, 25, 30];
 const RING_RADIUS = 96;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 const LS_CONTINUOUS = "pomodoro_continuous";
@@ -266,7 +266,7 @@ function Pomodoro({ onOpenSounds }: PomodoroProps) {
           >
             <span
               style={{
-                fontSize: "3.25rem",
+                fontSize: displayTime >= 6000 ? "2.5rem" : "3.25rem",
                 fontWeight: 700,
                 fontVariantNumeric: "tabular-nums",
                 letterSpacing: "2px",
@@ -655,66 +655,57 @@ function Pomodoro({ onOpenSounds }: PomodoroProps) {
             {t("pomodoro.settings")}
           </h3>
 
-          <div
-            style={{
-              display: "flex",
-              gap: "var(--space-lg)",
-              flexWrap: "wrap",
-              justifyContent: "center",
-            }}
-          >
+          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-md)" }}>
             {/* Focus Duration */}
-            <div>
-              <label
+            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)" }}>
+              <span
                 style={{
-                  display: "block",
                   fontSize: "var(--font-size-sm)",
                   fontWeight: 500,
-                  marginBottom: "var(--space-xs)",
+                  whiteSpace: "nowrap",
                   color: "var(--color-text-secondary)",
                 }}
               >
                 {t("pomodoro.focusMinutes")}
-              </label>
-              <div style={{ display: "flex", gap: "0.25rem", flexWrap: "wrap" }}>
+              </span>
+              <select
+                className="select"
+                value={focusMinutes}
+                onChange={(e) => setFocusMinutes(Number(e.target.value))}
+                style={{ flex: 1 }}
+              >
                 {FOCUS_PRESETS.map((m) => (
-                  <button
-                    key={m}
-                    className={`btn btn-sm ${focusMinutes === m ? "btn-primary" : ""}`}
-                    onClick={() => setFocusMinutes(m)}
-                    style={{ minWidth: "40px" }}
-                  >
+                  <option key={m} value={m}>
                     {m}
-                  </button>
+                  </option>
                 ))}
-              </div>
+              </select>
             </div>
 
             {/* Break Duration */}
-            <div>
-              <label
+            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)" }}>
+              <span
                 style={{
-                  display: "block",
                   fontSize: "var(--font-size-sm)",
                   fontWeight: 500,
-                  marginBottom: "var(--space-xs)",
+                  whiteSpace: "nowrap",
                   color: "var(--color-text-secondary)",
                 }}
               >
                 {t("pomodoro.breakMinutes")}
-              </label>
-              <div style={{ display: "flex", gap: "0.25rem", flexWrap: "wrap" }}>
+              </span>
+              <select
+                className="select"
+                value={breakMinutes}
+                onChange={(e) => setBreakMinutes(Number(e.target.value))}
+                style={{ flex: 1 }}
+              >
                 {BREAK_PRESETS.map((m) => (
-                  <button
-                    key={m}
-                    className={`btn btn-sm ${breakMinutes === m ? "btn-primary" : ""}`}
-                    onClick={() => setBreakMinutes(m)}
-                    style={{ minWidth: "40px" }}
-                  >
+                  <option key={m} value={m}>
                     {m}
-                  </button>
+                  </option>
                 ))}
-              </div>
+              </select>
             </div>
           </div>
 
