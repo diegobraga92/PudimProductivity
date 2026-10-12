@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   getCurrentSession,
   startSession,
@@ -13,6 +13,7 @@ import { usePomodoroSyncSettings } from "../hooks/usePomodoroSyncSettings";
 import { usePomodoroMediaSettings } from "../hooks/usePomodoroMediaSettings";
 import { useSystemMediaPlayers } from "../hooks/useSystemMediaPlayers";
 import { AUTO_PLAYER } from "../utils/pomodoroMediaSync";
+import { queryKeys } from "../utils/queryKeys";
 import { useSounds } from "../hooks/useSounds";
 import { ClockIcon } from "../components/icons";
 
@@ -26,6 +27,25 @@ function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
   return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+}
+
+/** Label + control row used by the settings/preset cards. */
+function SettingRow({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="flex-center" style={{ gap: "var(--space-sm)" }}>
+      <span
+        style={{
+          fontSize: "var(--font-size-sm)",
+          fontWeight: 500,
+          whiteSpace: "nowrap",
+          color: "var(--color-text-secondary)",
+        }}
+      >
+        {label}
+      </span>
+      {children}
+    </div>
+  );
 }
 
 interface PomodoroProps {
@@ -66,9 +86,8 @@ function Pomodoro({ onOpenSounds }: PomodoroProps) {
   const [localStatus, setLocalStatus] = useState<string | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Fetch current session on mount and every 30s
   const { data: currentResp, isLoading } = useQuery({
-    queryKey: ["pomodoro", "current"],
+    queryKey: queryKeys.pomodoroCurrent,
     queryFn: getCurrentSession,
     refetchInterval: 30_000,
   });
@@ -657,17 +676,7 @@ function Pomodoro({ onOpenSounds }: PomodoroProps) {
 
           <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-md)" }}>
             {/* Focus Duration */}
-            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)" }}>
-              <span
-                style={{
-                  fontSize: "var(--font-size-sm)",
-                  fontWeight: 500,
-                  whiteSpace: "nowrap",
-                  color: "var(--color-text-secondary)",
-                }}
-              >
-                {t("pomodoro.focusMinutes")}
-              </span>
+            <SettingRow label={t("pomodoro.focusMinutes")}>
               <select
                 className="select"
                 value={focusMinutes}
@@ -680,20 +689,10 @@ function Pomodoro({ onOpenSounds }: PomodoroProps) {
                   </option>
                 ))}
               </select>
-            </div>
+            </SettingRow>
 
             {/* Break Duration */}
-            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)" }}>
-              <span
-                style={{
-                  fontSize: "var(--font-size-sm)",
-                  fontWeight: 500,
-                  whiteSpace: "nowrap",
-                  color: "var(--color-text-secondary)",
-                }}
-              >
-                {t("pomodoro.breakMinutes")}
-              </span>
+            <SettingRow label={t("pomodoro.breakMinutes")}>
               <select
                 className="select"
                 value={breakMinutes}
@@ -706,7 +705,7 @@ function Pomodoro({ onOpenSounds }: PomodoroProps) {
                   </option>
                 ))}
               </select>
-            </div>
+            </SettingRow>
           </div>
 
           {/* Continuous mode */}

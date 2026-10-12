@@ -20,6 +20,7 @@ import SortSelect from "./SortSelect";
 import { usePersistedSort } from "../hooks/usePersistedSort";
 import { useI18n } from "../i18n";
 import { sortTasks } from "../utils/sort";
+import { invalidateTaskLists } from "../utils/queryKeys";
 import {
   playTodoCompletionSound,
   playTodoUncompletionSound,
@@ -88,7 +89,7 @@ export default function ListDetailPanel({ listId, onListDeleted }: ListDetailPan
     mutationFn: (name: string) => updateTaskList(listId, { name }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["taskList", listId] });
-      queryClient.invalidateQueries({ queryKey: ["taskLists"] });
+      invalidateTaskLists(queryClient);
       setEditingName(false);
     },
   });

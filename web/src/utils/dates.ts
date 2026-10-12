@@ -3,7 +3,7 @@
  * This avoids the UTC offset issue where .toISOString() can return
  * the wrong date for users in negative UTC offsets late in the evening.
  */
-function formatLocalDate(d: Date): string {
+export function formatLocalDate(d: Date): string {
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
@@ -111,4 +111,13 @@ export function sanitizeTime(t: string | null | undefined): string {
   const parts = t.split(":");
   if (parts.length < 2) return "";
   return `${parts[0]}:${parts[1]}`;
+}
+
+/**
+ * Minutes since midnight for an "HH:MM" (or "HH:MM:SS") time string. Missing or
+ * invalid parts default to 0 so a bare hour still parses.
+ */
+export function parseTimeToMinutes(t: string): number {
+  const [h, m] = sanitizeTime(t).split(":").map(Number);
+  return (h || 0) * 60 + (m || 0);
 }

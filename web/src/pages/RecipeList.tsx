@@ -4,7 +4,7 @@ import { deleteRecipe, listRecipes, resolveMediaUrl } from "../api/recipes";
 import { useI18n } from "../i18n";
 import { UtensilsIcon } from "../components/icons";
 import RecipeViewModal from "../components/RecipeViewModal";
-import { difficultyBadgeClass, recipeEmoji, tagLabelKey, totalMinutes } from "../utils/recipeDisplay";
+import { difficultyBadgeClass, recipeEmoji, tagLabel, totalMinutes } from "../utils/recipeDisplay";
 
 interface RecipeListProps {
   onNew: () => void;
@@ -40,12 +40,6 @@ export default function RecipeList({ onNew, onEdit }: RecipeListProps) {
     }
     return [...seen].sort((a, b) => a.localeCompare(b));
   }, [allRecipes]);
-
-  /** Translates a tag for display, falling back to the raw tag for custom ones. */
-  const tagLabel = (value: string): string => {
-    const key = tagLabelKey(value);
-    return key ? t(key) : value;
-  };
 
   const deleteMut = useMutation({
     mutationFn: (id: string) => deleteRecipe(id),
@@ -89,7 +83,7 @@ export default function RecipeList({ onNew, onEdit }: RecipeListProps) {
             style={{ cursor: "pointer", border: "none", fontFamily: "var(--font-family)" }}
             onClick={() => setTag(tag === t2 ? null : t2)}
           >
-            #{tagLabel(t2)}
+            #{tagLabel(t, t2)}
           </button>
         ))}
       </div>
@@ -135,7 +129,7 @@ export default function RecipeList({ onNew, onEdit }: RecipeListProps) {
             {r.description && <p style={{ color: "var(--color-text-secondary)", fontSize: "var(--font-size-sm)", margin: "0.35rem 0" }}>{r.description}</p>}
             <p style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)" }}>
               ⏱ {t("recipes.meta", { minutes: totalMinutes(r), servings: r.servings })}
-              {r.tags?.length ? ` · ${r.tags.map((t2) => `#${tagLabel(t2)}`).join(" ")}` : ""}
+              {r.tags?.length ? ` · ${r.tags.map((t2) => `#${tagLabel(t, t2)}`).join(" ")}` : ""}
             </p>
             <button
               className="btn btn-danger btn-sm"

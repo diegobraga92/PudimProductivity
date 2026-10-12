@@ -1,12 +1,4 @@
-/**
- * Format a Date as YYYY-MM-DD using local timezone.
- */
-function formatLocalDate(d: Date): string {
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
+import { formatLocalDate } from "./dates";
 
 // JS Date.getDay(): 0 = Sunday, 1 = Monday, ... 6 = Saturday
 const DAY_NAMES = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
@@ -77,7 +69,6 @@ export function computeStreaks(
     scheduledDays = valid.length > 0 ? valid : undefined;
   }
 
-  // Sort dates ascending and deduplicate
   const sorted = [...completions].sort();
   const dateSet = new Set(sorted);
   const uniqueDates = [...new Set(sorted)].sort();

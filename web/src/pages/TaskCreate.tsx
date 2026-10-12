@@ -3,6 +3,7 @@ import { createTask, parseTask, type RecurrenceDay } from "../api/tasks";
 import ScheduleFields from "../components/ScheduleFields";
 import RecurrenceDayPicker from "../components/RecurrenceDayPicker";
 import Modal from "../components/Modal";
+import FormActions from "../components/FormActions";
 import { useI18n } from "../i18n";
 import { TasksIcon } from "../components/icons";
 import { COLOR_PALETTE } from "../utils/constants";
@@ -276,7 +277,7 @@ export default function TaskCreate({ onCreated, onCancel }: TaskCreateProps) {
           )}
         </div>
 
-        <div style={{ display: "flex", gap: "0.5rem" }}>
+        <FormActions>
           <button
             type="submit"
             className="btn btn-primary"
@@ -291,7 +292,7 @@ export default function TaskCreate({ onCreated, onCancel }: TaskCreateProps) {
           >
             {t("common.cancel")}
           </button>
-        </div>
+        </FormActions>
       </form>
     </Modal>
   );

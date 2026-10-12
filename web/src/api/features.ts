@@ -1,4 +1,4 @@
-import config from "../config";
+import { request } from "./client";
 
 export interface FeatureFlag {
   id: string;
@@ -8,11 +8,7 @@ export interface FeatureFlag {
 }
 
 export async function getFeature(name: string): Promise<FeatureFlag> {
-  const response = await fetch(`${config.apiBaseUrl}/features/${encodeURIComponent(name)}`);
-
-  if (!response.ok) {
-    throw new Error(`Failed to get feature flag: ${response.status}`);
-  }
-
-  return response.json() as Promise<FeatureFlag>;
+  return request<FeatureFlag>(`/features/${encodeURIComponent(name)}`, {
+    action: "get feature flag",
+  });
 }

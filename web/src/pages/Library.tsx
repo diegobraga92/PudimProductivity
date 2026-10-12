@@ -14,30 +14,19 @@ import {
 } from "../api/library";
 import { LibraryBulkScore } from "../components/LibraryBulkScore";
 import { LibraryCsvImport } from "../components/LibraryCsvImport";
+import Checkbox from "../components/Checkbox";
 import { FilmIcon } from "../components/icons";
 import Modal from "../components/Modal";
 import { useConfirm } from "../components/useConfirm";
 import { useFeatureFlag } from "../hooks/useFeatureFlag";
 import { useI18n } from "../i18n";
+import { normalizeScore } from "../utils/csv";
+import { MEDIA_ICONS, MEDIA_LABEL_KEYS, MEDIA_TYPES } from "../utils/media";
 
-const MEDIA_TYPES: MediaType[] = ["movie", "series", "book", "game"];
+const formatScore = (score: number): string => String(normalizeScore(score));
 
-const MEDIA_LABEL_KEYS: Record<MediaType, string> = {
-  movie: "library.movie",
-  series: "library.series",
-  book: "library.book",
-  game: "library.game",
-};
-
-const MEDIA_ICONS: Record<MediaType, string> = {
-  movie: "🎬",
-  series: "📺",
-  book: "📚",
-  game: "🎮",
-};
-
-const roundScore = (score: number): number => Math.round(score * 10) / 10;
-const formatScore = (score: number): string => String(roundScore(score));
+/** Shared column track list for the library table header and rows. */
+const LIBRARY_GRID = "28px minmax(160px, 2fr) 90px 130px 70px 80px 170px";
 
 type SortKey = "name" | "media_type" | "subtype" | "release_year" | "score";
 
@@ -142,6 +131,72 @@ const EMPTY_FORM: CreateLibraryItemRequest = {
   score_source: "",
 };
 
+/** One row of the library table: selection checkbox, fields and row actions. */
+function LibraryRow({
+  item,
+  selected,
+  onSelect,
+  onToggleDone,
+  onEdit,
+  onDelete,
+}: {
+  item: LibraryItem;
+  selected: boolean;
+  onSelect: (checked: boolean) => void;
+  onToggleDone: (done: boolean) => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const { t } = useI18n();
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: LIBRARY_GRID,
+        gap: "var(--space-sm)",
+        alignItems: "center",
+        padding: "0.5rem var(--space-md)",
+        borderBottom: "1px solid var(--color-border-light)",
+        background: selected ? "var(--color-primary-subtle)" : undefined,
+        minWidth: 640,
+      }}
+    >
+      <Checkbox checked={selected} onChange={onSelect} title={t("library.selectBulk")} />
+      <div style={{ minWidth: 0 }}>
+        <p className="card-title" style={{ margin: 0, fontSize: "var(--font-size-sm)" }}>
+          {item.name}
+        </p>
+        {item.notes && (
+          <p className="text-sm text-secondary" style={{ margin: "0.1rem 0 0" }} title={item.notes}>
+            📝 {item.notes.length > 60 ? `${item.notes.slice(0, 60)}…` : item.notes}
+          </p>
+        )}
+      </div>
+      <span className="text-sm">
+        {MEDIA_ICONS[item.media_type]} {t(MEDIA_LABEL_KEYS[item.media_type] ?? "common.type")}
+      </span>
+      <span className="text-sm" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        {item.subtype || <span style={{ color: "var(--color-text-muted)" }}>—</span>}
+      </span>
+      <span className="text-sm">{item.release_year ?? "—"}</span>
+      <span className="text-sm" style={{ overflowWrap: "anywhere" }}>
+        {item.score != null ? `★ ${formatScore(item.score)}` : "—"}
+      </span>
+      <div className="flex-center" style={{ gap: "0.35rem" }}>
+        <Checkbox
+          checked={item.done}
+          onChange={onToggleDone}
+          title={item.done ? t("library.markNotDone") : t("library.markDone")}
+        />
+        <button className="btn btn-sm" onClick={onEdit}>{t("common.edit")}</button>
+        <button className="btn btn-danger btn-sm" onClick={onDelete}>
+          {t("common.delete")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function Library() {
   const queryClient = useQueryClient();
   const { t } = useI18n();
@@ -234,7 +289,7 @@ export default function Library() {
     mutationFn: () =>
       createLibraryItem({
         ...form,
-        score: form.score != null ? roundScore(form.score) : null,
+        score: form.score != null ? normalizeScore(form.score) : null,
       }),
     onSuccess: () => {
       invalidate();
@@ -251,7 +306,7 @@ export default function Library() {
         done: form.done,
         notes: form.notes,
         subtype: form.subtype,
-        score: form.score != null ? roundScore(form.score) : null,
+        score: form.score != null ? normalizeScore(form.score) : null,
         score_source: form.score_source,
       }),
     onSuccess: () => {
@@ -279,6 +334,16 @@ export default function Library() {
     },
   });
 
+  /** Adds or removes one row from the bulk-selection set. */
+  function toggleSelected(id: string, checked: boolean) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }
+
   const saving = create.isPending || update.isPending;
   const saveError = create.error ?? update.error ?? toggleDone.error ?? del.error ?? bulkDelete.error;
 
@@ -299,7 +364,7 @@ export default function Library() {
       done: item.done,
       notes: item.notes,
       subtype: item.subtype ?? "",
-      score: item.score != null ? roundScore(item.score) : null,
+      score: item.score != null ? normalizeScore(item.score) : null,
       score_source: item.score_source ?? "",
     });
     setScoreHits(null);
@@ -356,7 +421,7 @@ export default function Library() {
   function applyCandidate(candidate: ScoreCandidate) {
     setForm({
       ...form,
-      score: roundScore(candidate.score),
+      score: normalizeScore(candidate.score),
       score_source: candidate.score_source,
       name: candidate.title.trim() ? candidate.title.trim() : form.name,
       release_year:
@@ -663,7 +728,7 @@ export default function Library() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "28px minmax(160px, 2fr) 90px 130px 70px 80px 170px",
+            gridTemplateColumns: LIBRARY_GRID,
             gap: "var(--space-sm)",
             alignItems: "center",
             padding: "0.5rem var(--space-md)",
@@ -674,20 +739,13 @@ export default function Library() {
             minWidth: 640,
           }}
         >
-          <label className="checkbox-wrapper" title={t("library.selectAll")}>
-            <input
-              type="checkbox"
-              checked={items.length > 0 && selected.size === items.length}
-              onChange={(e) =>
-                setSelected(e.target.checked ? new Set(items.map((i) => i.id)) : new Set())
-              }
-            />
-            <span className="checkbox-custom" aria-hidden="true">
-              <svg viewBox="0 0 24 24" width="12" height="12">
-                <path fill="none" stroke="currentColor" strokeWidth="3" d="M20 6L9 17l-5-5" />
-              </svg>
-            </span>
-          </label>
+          <Checkbox
+            checked={items.length > 0 && selected.size === items.length}
+            onChange={(checked) =>
+              setSelected(checked ? new Set(items.map((i) => i.id)) : new Set())
+            }
+            title={t("library.selectAll")}
+          />
           {SORTABLE_COLUMNS.map((col) => (
             <SortableHeader
               key={col.key}
@@ -701,75 +759,15 @@ export default function Library() {
         </div>
 
         {sortedItems.map((item) => (
-          <div
+          <LibraryRow
             key={item.id}
-            style={{
-              display: "grid",
-              gridTemplateColumns: "28px minmax(160px, 2fr) 90px 130px 70px 80px 170px",
-              gap: "var(--space-sm)",
-              alignItems: "center",
-              padding: "0.5rem var(--space-md)",
-              borderBottom: "1px solid var(--color-border-light)",
-              background: selected.has(item.id) ? "var(--color-primary-subtle)" : undefined,
-              minWidth: 640,
-            }}
-          >
-            <label className="checkbox-wrapper" title={t("library.selectBulk")}>
-              <input
-                type="checkbox"
-                checked={selected.has(item.id)}
-                onChange={(e) => {
-                  const next = new Set(selected);
-                  if (e.target.checked) next.add(item.id);
-                  else next.delete(item.id);
-                  setSelected(next);
-                }}
-              />
-              <span className="checkbox-custom" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="12" height="12">
-                  <path fill="none" stroke="currentColor" strokeWidth="3" d="M20 6L9 17l-5-5" />
-                </svg>
-              </span>
-            </label>
-            <div style={{ minWidth: 0 }}>
-              <p className="card-title" style={{ margin: 0, fontSize: "var(--font-size-sm)" }}>
-                {item.name}
-              </p>
-              {item.notes && (
-                <p className="text-sm text-secondary" style={{ margin: "0.1rem 0 0" }} title={item.notes}>
-                  📝 {item.notes.length > 60 ? `${item.notes.slice(0, 60)}…` : item.notes}
-                </p>
-              )}
-            </div>
-            <span className="text-sm">
-              {MEDIA_ICONS[item.media_type]} {t(MEDIA_LABEL_KEYS[item.media_type] ?? "common.type")}
-            </span>
-            <span className="text-sm" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {item.subtype || <span style={{ color: "var(--color-text-muted)" }}>—</span>}
-            </span>
-            <span className="text-sm">{item.release_year ?? "—"}</span>
-            <span className="text-sm" style={{ overflowWrap: "anywhere" }}>
-              {item.score != null ? `★ ${formatScore(item.score)}` : "—"}
-            </span>
-            <div className="flex-center" style={{ gap: "0.35rem" }}>
-              <label className="checkbox-wrapper" title={item.done ? t("library.markNotDone") : t("library.markDone")}>
-                <input
-                  type="checkbox"
-                  checked={item.done}
-                  onChange={(e) => toggleDone.mutate({ id: item.id, done: e.target.checked })}
-                />
-                <span className="checkbox-custom" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" width="12" height="12">
-                    <path fill="none" stroke="currentColor" strokeWidth="3" d="M20 6L9 17l-5-5" />
-                  </svg>
-                </span>
-              </label>
-              <button className="btn btn-sm" onClick={() => openEdit(item)}>{t("common.edit")}</button>
-              <button className="btn btn-danger btn-sm" onClick={() => del.mutate(item.id)}>
-                {t("common.delete")}
-              </button>
-            </div>
-          </div>
+            item={item}
+            selected={selected.has(item.id)}
+            onSelect={(checked) => toggleSelected(item.id, checked)}
+            onToggleDone={(done) => toggleDone.mutate({ id: item.id, done })}
+            onEdit={() => openEdit(item)}
+            onDelete={() => del.mutate(item.id)}
+          />
         ))}
       </div>
 

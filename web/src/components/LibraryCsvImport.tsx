@@ -18,8 +18,7 @@ import {
 } from "../utils/csv";
 import { useFeatureFlag } from "../hooks/useFeatureFlag";
 import { useI18n } from "../i18n";
-
-const MEDIA_TYPES = ["movie", "series", "book", "game"] as const;
+import { MEDIA_TYPES } from "../utils/media";
 
 type FieldKey = "name" | "media_type" | "release_year" | "done" | "notes" | "score" | "score_source" | "subtype";
 

@@ -1,4 +1,5 @@
 import type { SessionStatus } from "../api/pomodoro";
+import { createExternalStore } from "./externalStore";
 
 /**
  * Pomodoro to system media player sync settings.
@@ -13,13 +14,15 @@ export const POMODORO_MEDIA_PLAYER_KEY = "soundscape_pomodoro_media_player";
 /** Empty string lets playerctl choose, which follows the last active player. */
 export const AUTO_PLAYER = "";
 
+const store = createExternalStore();
+
 export function getPomodoroMediaEnabled(): boolean {
   return localStorage.getItem(POMODORO_MEDIA_ENABLED_KEY) === "true";
 }
 
 export function setPomodoroMediaEnabled(enabled: boolean): void {
   localStorage.setItem(POMODORO_MEDIA_ENABLED_KEY, String(enabled));
-  emit();
+  store.emit();
 }
 
 export function getPomodoroMediaPlayer(): string {
@@ -28,26 +31,14 @@ export function getPomodoroMediaPlayer(): string {
 
 export function setPomodoroMediaPlayer(player: string): void {
   localStorage.setItem(POMODORO_MEDIA_PLAYER_KEY, player);
-  emit();
+  store.emit();
 }
 
 /** Detection state of the desktop media bridge. */
 export type MediaAvailability = "checking" | "available" | "unsupported" | "missing";
 
-type Listener = () => void;
-const listeners = new Set<Listener>();
-
 /** Subscribes to setting changes. Returns an unsubscribe function. */
-export function subscribe(listener: Listener): () => void {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-}
-
-function emit(): void {
-  for (const listener of listeners) listener();
-}
+export const subscribe = store.subscribe;
 
 export type MediaSyncAction = "play" | "pause" | "idle";
 

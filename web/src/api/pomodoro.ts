@@ -1,4 +1,4 @@
-import config from "../config";
+import { request } from "./client";
 import type { components, paths } from "./generated/pomodoro-v1";
 
 // Types are generated from api/openapi/pomodoro-v1.yaml (the source of truth).
@@ -10,81 +10,42 @@ export type StartSessionRequest = components["schemas"]["StartSessionRequest"];
 export type CurrentSessionResponse =
   paths["/api/v1/pomodoro/current"]["get"]["responses"]["200"]["content"]["application/json"];
 
-/**
- * Starts a new pomodoro session. Cancels any existing session.
- */
+/** Starts a new pomodoro session. Cancels any existing session. */
 export async function startSession(req: StartSessionRequest): Promise<PomodoroSession> {
-  const response = await fetch(`${config.apiBaseUrl}/pomodoro/start`, {
+  return request<PomodoroSession>("/pomodoro/start", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(req),
+    action: "start session",
   });
-
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({ error: "Unknown error" }));
-    throw new Error(err.error || `Failed to start session: ${response.status}`);
-  }
-
-  return response.json() as Promise<PomodoroSession>;
 }
 
-/**
- * Gets the current session state.
- */
+/** Gets the current session state. */
 export async function getCurrentSession(): Promise<CurrentSessionResponse> {
-  const response = await fetch(`${config.apiBaseUrl}/pomodoro/current`);
-
-  if (!response.ok) {
-    throw new Error(`Failed to get current session: ${response.status}`);
-  }
-
-  return response.json() as Promise<CurrentSessionResponse>;
+  return request<CurrentSessionResponse>("/pomodoro/current", {
+    action: "get current session",
+  });
 }
 
-/**
- * Pauses the current session.
- */
+/** Pauses the current session. */
 export async function pauseSession(): Promise<PomodoroSession> {
-  const response = await fetch(`${config.apiBaseUrl}/pomodoro/pause`, {
+  return request<PomodoroSession>("/pomodoro/pause", {
     method: "POST",
+    action: "pause session",
   });
-
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({ error: "Unknown error" }));
-    throw new Error(err.error || `Failed to pause session: ${response.status}`);
-  }
-
-  return response.json() as Promise<PomodoroSession>;
 }
 
-/**
- * Resumes the current session.
- */
+/** Resumes the current session. */
 export async function resumeSession(): Promise<PomodoroSession> {
-  const response = await fetch(`${config.apiBaseUrl}/pomodoro/resume`, {
+  return request<PomodoroSession>("/pomodoro/resume", {
     method: "POST",
+    action: "resume session",
   });
-
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({ error: "Unknown error" }));
-    throw new Error(err.error || `Failed to resume session: ${response.status}`);
-  }
-
-  return response.json() as Promise<PomodoroSession>;
 }
 
-/**
- * Stops (completes/cancels) the current session.
- */
+/** Stops (completes/cancels) the current session. */
 export async function stopSession(): Promise<PomodoroSession> {
-  const response = await fetch(`${config.apiBaseUrl}/pomodoro/stop`, {
+  return request<PomodoroSession>("/pomodoro/stop", {
     method: "POST",
+    action: "stop session",
   });
-
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({ error: "Unknown error" }));
-    throw new Error(err.error || `Failed to stop session: ${response.status}`);
-  }
-
-  return response.json() as Promise<PomodoroSession>;
 }

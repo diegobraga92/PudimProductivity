@@ -1,20 +1,22 @@
 interface CheckboxProps {
   checked: boolean;
-  onChange: () => void;
+  onChange: (checked: boolean) => void;
   disabled?: boolean;
+  title?: string;
 }
 
 export default function Checkbox({
   checked,
   onChange,
   disabled = false,
+  title,
 }: CheckboxProps) {
   return (
-    <label className="checkbox-wrapper" onClick={(e) => e.stopPropagation()}>
+    <label className="checkbox-wrapper" title={title} onClick={(e) => e.stopPropagation()}>
       <input
         type="checkbox"
         checked={checked}
-        onChange={onChange}
+        onChange={(e) => onChange(e.target.checked)}
         disabled={disabled}
       />
       <span className="checkbox-custom">

@@ -114,7 +114,7 @@ export default function AddSoundModal({ sound, onClose }: AddSoundModalProps) {
 
         <div style={{ marginBottom: "var(--space-md)" }}>
           <label className="form-label">{t("soundscape.soundIcon")}</label>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", flexWrap: "wrap" }}>
+          <div className="flex-center" style={{ gap: "0.35rem", flexWrap: "wrap" }}>
             <input
               className="input"
               type="text"

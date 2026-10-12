@@ -6,25 +6,17 @@ import {
   type ScoreCandidate,
 } from "../api/library";
 import { useI18n } from "../i18n";
+import { normalizeScore } from "../utils/csv";
+import { MEDIA_ICONS } from "../utils/media";
 import { useToast } from "./toastContext";
 
 const MAX_BATCH_LOOKUP = 100;
-
-const MEDIA_ICONS: Record<string, string> = {
-  movie: "🎬",
-  series: "📺",
-  book: "📚",
-  game: "🎮",
-};
-
-/** Rounds a score to one decimal (matches the Library list display). */
-const roundScore = (score: number): number => Math.round(score * 10) / 10;
 
 /** Human-friendly label for a candidate, e.g. "Alien (1979) · ★ 8.5 (imdb)". */
 function candidateLabel(candidate: ScoreCandidate): string {
   const year = candidate.year && candidate.year > 0 ? ` (${candidate.year})` : "";
   const source = candidate.score_source ? ` (${candidate.score_source})` : "";
-  return `${candidate.title}${year} · ★ ${roundScore(candidate.score)}${source}`;
+  return `${candidate.title}${year} · ★ ${normalizeScore(candidate.score)}${source}`;
 }
 
 interface LibraryBulkScoreProps {
@@ -153,7 +145,7 @@ export function LibraryBulkScore({ items, skippedCount, onSaved, onClose }: Libr
       if (!candidate) continue;
       try {
         await updateLibraryItem(item.id, {
-          score: roundScore(candidate.score),
+          score: normalizeScore(candidate.score),
           score_source: candidate.score_source,
         });
         ok++;
@@ -290,7 +282,7 @@ export function LibraryBulkScore({ items, skippedCount, onSaved, onClose }: Libr
                     }}
                   >
                     <span className="text-sm" style={{ overflowWrap: "anywhere" }}>
-                      {MEDIA_ICONS[item.media_type] ?? ""} {item.name}
+                      {MEDIA_ICONS[item.media_type]} {item.name}
                       {item.release_year ? ` (${item.release_year})` : ""}
                     </span>
                     {hasMatch ? (

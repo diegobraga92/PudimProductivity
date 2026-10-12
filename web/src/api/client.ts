@@ -53,3 +53,40 @@ export async function getHealth(): Promise<HealthResponse> {
 
   return response.json() as Promise<HealthResponse>;
 }
+
+/** Turns an error response body (`{ error }` from the backend) into an Error. */
+export async function apiError(response: Response, fallback: string): Promise<Error> {
+  const body = await response.json().catch(() => null);
+  return new Error(body?.error || fallback);
+}
+
+export interface RequestOptions {
+  /** Short verb phrase used in the generic error, e.g. "list recipes". */
+  action: string;
+  method?: string;
+  /** Overrides the default JSON identity headers (e.g. multipart uploads). */
+  headers?: Record<string, string>;
+  body?: BodyInit | null;
+  /** Message thrown for 404 responses (defaults to the generic message). */
+  notFound?: string;
+  /** Message thrown for 413 responses (reverse proxies reply with an HTML page). */
+  tooLarge?: string;
+}
+
+/**
+ * Single entry point for JSON API calls.
+ */
+export async function request<T>(path: string, opts: RequestOptions): Promise<T> {
+  const { action, notFound, tooLarge, headers, ...init } = opts;
+  const response = await fetch(`${config.apiBaseUrl}${path}`, {
+    ...init,
+    headers: headers ?? apiHeaders(),
+  });
+  if (!response.ok) {
+    if (notFound && response.status === 404) throw new Error(notFound);
+    if (tooLarge && response.status === 413) throw new Error(tooLarge);
+    throw await apiError(response, `Failed to ${action}: ${response.status}`);
+  }
+  if (response.status === 204) return undefined as T;
+  return (await response.json()) as T;
+}

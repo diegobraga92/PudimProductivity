@@ -1,14 +1,9 @@
 import config from "../config";
-import { apiHeaders } from "./client";
+import { apiError, apiHeaders, request } from "./client";
 
 export interface BackupImportResult {
   restored_at: string;
   row_counts: Record<string, number>;
-}
-
-async function handleError(response: Response, fallback: string): Promise<never> {
-  const body = await response.json().catch(() => null);
-  throw new Error(body?.error || fallback);
 }
 
 /**
@@ -19,7 +14,7 @@ export async function exportBackup(): Promise<{ blob: Blob; filename: string }> 
   const res = await fetch(`${config.apiBaseUrl}/backup/export`, {
     headers: apiHeaders(),
   });
-  if (!res.ok) await handleError(res, `Failed to export backup: ${res.status}`);
+  if (!res.ok) throw await apiError(res, `Failed to export backup: ${res.status}`);
 
   const blob = await res.blob();
   const disposition = res.headers.get("Content-Disposition") ?? "";
@@ -34,11 +29,10 @@ export async function exportBackup(): Promise<{ blob: Blob; filename: string }> 
  * nothing.
  */
 export async function importBackup(file: File): Promise<BackupImportResult> {
-  const res = await fetch(`${config.apiBaseUrl}/backup/import`, {
+  return request<BackupImportResult>("/backup/import", {
     method: "POST",
-    headers: apiHeaders(),
     body: file,
+    action: "import backup",
   });
-  if (!res.ok) await handleError(res, `Failed to import backup: ${res.status}`);
-  return res.json() as Promise<BackupImportResult>;
 }
+

@@ -4,6 +4,7 @@ import { listTaskLists, type TaskList } from "../api/taskLists";
 import { useHabitCompletions } from "../hooks/useHabitCompletions";
 import { computeStreaks, isScheduledOn } from "../utils/streaks";
 import { getToday } from "../utils/dates";
+import { queryKeys } from "../utils/queryKeys";
 import { useI18n } from "../i18n";
 
 interface DashboardProps {
@@ -14,17 +15,17 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   const { t } = useI18n();
 
   const { data: todoTasks = [] } = useQuery<Task[]>({
-    queryKey: ["tasks", "one-off"],
+    queryKey: queryKeys.tasksOneOff,
     queryFn: () => listTasks(undefined, "one-off"),
   });
 
   const { data: habitTasks = [] } = useQuery<Task[]>({
-    queryKey: ["tasks", "habit"],
+    queryKey: queryKeys.tasksHabit,
     queryFn: () => listTasks(undefined, "habit"),
   });
 
   const { data: taskLists = [] } = useQuery<TaskList[]>({
-    queryKey: ["taskLists"],
+    queryKey: queryKeys.taskLists,
     queryFn: listTaskLists,
   });
 

@@ -6,7 +6,7 @@ import {
   difficultyBadgeClass,
   ingredientAmount,
   recipeEmoji,
-  tagLabelKey,
+  tagLabel,
   totalMinutes,
 } from "../utils/recipeDisplay";
 import Modal from "./Modal";
@@ -43,12 +43,6 @@ export default function RecipeViewModal({ recipeId, onClose, onEdit }: RecipeVie
     },
     onError: (err: Error) => setDeleteError(err.message),
   });
-
-  /** Translates a tag for display, falling back to the raw tag for custom ones. */
-  const tagLabel = (value: string): string => {
-    const key = tagLabelKey(value);
-    return key ? t(key) : value;
-  };
 
   async function handleDelete() {
     const confirmed = await confirm({
@@ -131,7 +125,7 @@ export default function RecipeViewModal({ recipeId, onClose, onEdit }: RecipeVie
           {recipe.tags?.length ? (
             <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
               {recipe.tags.map((tag) => (
-                <span key={tag} className="badge badge-habit">#{tagLabel(tag)}</span>
+                <span key={tag} className="badge badge-habit">#{tagLabel(t, tag)}</span>
               ))}
             </div>
           ) : null}

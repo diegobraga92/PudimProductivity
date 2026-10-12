@@ -1,5 +1,6 @@
 import type { SessionStatus } from "../api/pomodoro";
 import type { SoundID } from "./audio";
+import { createExternalStore } from "./externalStore";
 import { BUILTIN_SOUND_IDS } from "./soundCatalog";
 
 /**
@@ -19,6 +20,8 @@ export const DEFAULT_SYNC_SOUND: SoundID = "rain";
 // fetched backend catalog (sounds added by the user) once it is available.
 let validSoundIds = new Set<SoundID>(BUILTIN_SOUND_IDS);
 
+const store = createExternalStore();
+
 /** Replaces the known sound ids with the built-ins plus the fetched catalog. */
 export function setValidSoundIds(ids: Iterable<SoundID>): void {
   const next = new Set<SoundID>(BUILTIN_SOUND_IDS);
@@ -32,7 +35,7 @@ export function getPomodoroSyncEnabled(): boolean {
 
 export function setPomodoroSyncEnabled(enabled: boolean): void {
   localStorage.setItem(POMODORO_SYNC_ENABLED_KEY, String(enabled));
-  emit();
+  store.emit();
 }
 
 export function getPomodoroSyncSound(): SoundID {
@@ -43,23 +46,11 @@ export function getPomodoroSyncSound(): SoundID {
 
 export function setPomodoroSyncSound(sound: SoundID): void {
   localStorage.setItem(POMODORO_SYNC_SOUND_KEY, sound);
-  emit();
+  store.emit();
 }
-
-type Listener = () => void;
-const listeners = new Set<Listener>();
 
 /** Subscribes to sync-setting changes. Returns an unsubscribe function. */
-export function subscribe(listener: Listener): () => void {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-}
-
-function emit(): void {
-  for (const listener of listeners) listener();
-}
+export const subscribe = store.subscribe;
 
 export type SyncAction = "play" | "stop" | "idle";
 

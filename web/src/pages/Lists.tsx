@@ -14,6 +14,7 @@ import { usePresence } from "../hooks/usePresence";
 import { useI18n } from "../i18n";
 import { FolderIcon } from "../components/icons";
 import { DEV_USER_ID } from "../api/client";
+import { invalidateTaskLists, queryKeys } from "../utils/queryKeys";
 
 export default function Lists() {
   const queryClient = useQueryClient();
@@ -23,9 +24,8 @@ export default function Lists() {
   // Which list's share dialog is open.
   const [shareListId, setShareListId] = useState<string | null>(null);
 
-  // Fetch task lists
   const { data: taskLists = [] } = useQuery<TaskList[]>({
-    queryKey: ["taskLists"],
+    queryKey: queryKeys.taskLists,
     queryFn: listTaskLists,
   });
 
@@ -37,7 +37,7 @@ export default function Lists() {
   const createListMutation = useMutation({
     mutationFn: (name: string) => createTaskList({ name }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["taskLists"] });
+      invalidateTaskLists(queryClient);
       setNewListName("");
     },
   });
@@ -45,7 +45,7 @@ export default function Lists() {
   const deleteListMutation = useMutation({
     mutationFn: deleteTaskList,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["taskLists"] });
+      invalidateTaskLists(queryClient);
       setSelectedListForDetail(null);
     },
   });
@@ -165,7 +165,7 @@ export default function Lists() {
             <ListDetailPanel
               listId={selectedListForDetail}
               onListDeleted={() => {
-                queryClient.invalidateQueries({ queryKey: ["taskLists"] });
+                invalidateTaskLists(queryClient);
                 setSelectedListForDetail(null);
               }}
             />

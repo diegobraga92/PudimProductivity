@@ -1,5 +1,4 @@
-import config from "../config";
-import { apiHeaders } from "./client";
+import { request } from "./client";
 import type { components } from "./generated/library-v1";
 
 // Types are generated from api/openapi/library-v1.yaml.
@@ -10,71 +9,56 @@ export type UpdateLibraryItemRequest = components["schemas"]["UpdateLibraryItemR
 export type ImportResult = components["schemas"]["ImportResult"];
 export type ScoreCandidate = components["schemas"]["ScoreCandidate"];
 
-async function handleError(response: Response, fallback: string): Promise<never> {
-  const body = await response.json().catch(() => null);
-  throw new Error(body?.error || fallback);
-}
-
-export async function listLibraryItems(type?: MediaType, done?: boolean, subtype?: string): Promise<LibraryItem[]> {
+export async function listLibraryItems(
+  type?: MediaType,
+  done?: boolean,
+  subtype?: string,
+): Promise<LibraryItem[]> {
   const params = new URLSearchParams();
   if (type) params.set("type", type);
   if (done !== undefined) params.set("done", String(done));
   if (subtype) params.set("subtype", subtype);
   const qs = params.toString();
-  const res = await fetch(`${config.apiBaseUrl}/library${qs ? `?${qs}` : ""}`);
-  if (!res.ok) await handleError(res, `Failed to list library: ${res.status}`);
-  return res.json() as Promise<LibraryItem[]>;
+  return request<LibraryItem[]>(`/library${qs ? `?${qs}` : ""}`, { action: "list library" });
 }
 
 /** Distinct genre/console values for the subtype filter, optionally by type. */
 export async function listLibrarySubtypes(type?: MediaType): Promise<string[]> {
   const qs = type ? `?type=${encodeURIComponent(type)}` : "";
-  const res = await fetch(`${config.apiBaseUrl}/library/subtypes${qs}`);
-  if (!res.ok) await handleError(res, `Failed to list subtypes: ${res.status}`);
-  return res.json() as Promise<string[]>;
+  return request<string[]>(`/library/subtypes${qs}`, { action: "list subtypes" });
 }
 
 export async function createLibraryItem(req: CreateLibraryItemRequest): Promise<LibraryItem> {
-  const res = await fetch(`${config.apiBaseUrl}/library`, {
+  return request<LibraryItem>("/library", {
     method: "POST",
-    headers: apiHeaders(),
     body: JSON.stringify(req),
+    action: "add item",
   });
-  if (!res.ok) await handleError(res, `Failed to add item: ${res.status}`);
-  return res.json() as Promise<LibraryItem>;
 }
 
 export async function updateLibraryItem(
   itemId: string,
   req: UpdateLibraryItemRequest,
 ): Promise<LibraryItem> {
-  const res = await fetch(`${config.apiBaseUrl}/library/${itemId}`, {
+  return request<LibraryItem>(`/library/${itemId}`, {
     method: "PUT",
-    headers: apiHeaders(),
     body: JSON.stringify(req),
+    action: "update item",
   });
-  if (!res.ok) await handleError(res, `Failed to update item: ${res.status}`);
-  return res.json() as Promise<LibraryItem>;
 }
 
 export async function deleteLibraryItem(itemId: string): Promise<void> {
-  const res = await fetch(`${config.apiBaseUrl}/library/${itemId}`, {
-    method: "DELETE",
-    headers: apiHeaders(),
-  });
-  if (!res.ok) await handleError(res, `Failed to delete item: ${res.status}`);
+  return request<void>(`/library/${itemId}`, { method: "DELETE", action: "delete item" });
 }
 
 export async function importLibraryItems(req: {
   items: CreateLibraryItemRequest[];
 }): Promise<ImportResult> {
-  const res = await fetch(`${config.apiBaseUrl}/library/import`, {
+  return request<ImportResult>("/library/import", {
     method: "POST",
-    headers: apiHeaders(),
     body: JSON.stringify(req),
+    action: "import items",
   });
-  if (!res.ok) await handleError(res, `Failed to import items: ${res.status}`);
-  return res.json() as Promise<ImportResult>;
 }
 
 /**
@@ -89,9 +73,9 @@ export async function searchLibraryScores(
 ): Promise<ScoreCandidate[]> {
   const params = new URLSearchParams({ query, type });
   if (year != null) params.set("year", String(year));
-  const res = await fetch(`${config.apiBaseUrl}/library/score/search?${params}`);
-  if (!res.ok) await handleError(res, `Failed to look up score: ${res.status}`);
-  return res.json() as Promise<ScoreCandidate[]>;
+  return request<ScoreCandidate[]>(`/library/score/search?${params}`, {
+    action: "look up score",
+  });
 }
 
 export type ScoreBatchItem = components["schemas"]["ScoreBatchItem"];
@@ -101,12 +85,12 @@ export type ScoreBatchResponse = components["schemas"]["ScoreBatchResponse"];
  * Looks up scores for many titles at once (used by the CSV import auto-scoring
  * flow). Per-item failures come back inline in each result's error field.
  */
-export async function searchLibraryScoresBatch(items: ScoreBatchItem[]): Promise<ScoreBatchResponse> {
-  const res = await fetch(`${config.apiBaseUrl}/library/score/batch`, {
+export async function searchLibraryScoresBatch(
+  items: ScoreBatchItem[],
+): Promise<ScoreBatchResponse> {
+  return request<ScoreBatchResponse>("/library/score/batch", {
     method: "POST",
-    headers: apiHeaders(),
     body: JSON.stringify({ items }),
+    action: "look up scores",
   });
-  if (!res.ok) await handleError(res, `Failed to look up scores: ${res.status}`);
-  return res.json() as Promise<ScoreBatchResponse>;
 }

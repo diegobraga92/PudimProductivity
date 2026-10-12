@@ -2,12 +2,7 @@ import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { syncClient, type WsEvent } from "../api/sync";
 import type { Task } from "../api/tasks";
-
-const ONE_OFF_KEY = ["tasks", "one-off"] as const;
-const HABIT_KEY = ["tasks", "habit"] as const;
-const SCHEDULED_KEY = ["scheduledTasks"] as const;
-const COMPLETIONS_KEY = ["habitCompletions"] as const;
-const TASK_LISTS_KEY = ["taskLists"] as const;
+import { invalidateTaskLists, queryKeys } from "../utils/queryKeys";
 
 function isHabit(task: Task): boolean {
   return Boolean(task.recurrence_days && task.recurrence_days.length > 0);
@@ -36,47 +31,47 @@ export function useLiveUpdates(): void {
     const handleUpsert = (event: WsEvent) => {
       const task = event.payload as unknown as Task;
       if (!task?.id) return;
-      const key = isHabit(task) ? HABIT_KEY : ONE_OFF_KEY;
+      const key = isHabit(task) ? queryKeys.tasksHabit : queryKeys.tasksOneOff;
       queryClient.setQueryData<Task[]>(key, (old) => upsertTask(old, task));
       // The task may have moved between one-off/habit, so reconcile both.
-      const otherKey = isHabit(task) ? ONE_OFF_KEY : HABIT_KEY;
+      const otherKey = isHabit(task) ? queryKeys.tasksOneOff : queryKeys.tasksHabit;
       queryClient.setQueryData<Task[]>(otherKey, (old) =>
         old ? removeTask(old, task.id) : old
       );
-      queryClient.invalidateQueries({ queryKey: SCHEDULED_KEY });
+      queryClient.invalidateQueries({ queryKey: queryKeys.scheduledTasks });
     };
 
     const handleDeleted = (event: WsEvent) => {
       const { id } = (event.payload ?? {}) as { id?: string };
       if (!id) return;
-      queryClient.setQueryData<Task[]>(ONE_OFF_KEY, (old) => removeTask(old, id));
-      queryClient.setQueryData<Task[]>(HABIT_KEY, (old) => removeTask(old, id));
-      queryClient.invalidateQueries({ queryKey: SCHEDULED_KEY });
+      queryClient.setQueryData<Task[]>(queryKeys.tasksOneOff, (old) => removeTask(old, id));
+      queryClient.setQueryData<Task[]>(queryKeys.tasksHabit, (old) => removeTask(old, id));
+      queryClient.invalidateQueries({ queryKey: queryKeys.scheduledTasks });
     };
 
     const handleCompletionChanged = () => {
-      queryClient.invalidateQueries({ queryKey: COMPLETIONS_KEY });
-      queryClient.invalidateQueries({ queryKey: SCHEDULED_KEY });
+      queryClient.invalidateQueries({ queryKey: queryKeys.habitCompletions });
+      queryClient.invalidateQueries({ queryKey: queryKeys.scheduledTasks });
     };
 
     const handleStale = () => {
-      queryClient.invalidateQueries({ queryKey: ["tasks"] });
-      queryClient.invalidateQueries({ queryKey: COMPLETIONS_KEY });
-      queryClient.invalidateQueries({ queryKey: SCHEDULED_KEY });
-      queryClient.invalidateQueries({ queryKey: TASK_LISTS_KEY });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasksAll });
+      queryClient.invalidateQueries({ queryKey: queryKeys.habitCompletions });
+      queryClient.invalidateQueries({ queryKey: queryKeys.scheduledTasks });
+      invalidateTaskLists(queryClient);
     };
 
     // A task merge resolved. The payload is the winning task, so the cache
     // converges exactly like task.updated.
     const handleMerge = (event: WsEvent) => {
       handleUpsert(event);
-      queryClient.invalidateQueries({ queryKey: SCHEDULED_KEY });
+      queryClient.invalidateQueries({ queryKey: queryKeys.scheduledTasks });
     };
 
     // Membership changed (list shared with me / unshared). Refresh the list
     // picker and any tasks cached under that list.
     const handleShareChanged = (event: WsEvent) => {
-      queryClient.invalidateQueries({ queryKey: TASK_LISTS_KEY });
+      invalidateTaskLists(queryClient);
       const payload = (event.payload ?? {}) as { list_id?: string };
       if (payload.list_id) {
         queryClient.invalidateQueries({

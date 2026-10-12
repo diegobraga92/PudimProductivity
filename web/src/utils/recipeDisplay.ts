@@ -2,7 +2,7 @@ import type { Recipe } from "../api/recipes";
 
 /** Maps the well-known default recipe tags to i18n label keys so they can be
  *  translated (e.g. "quick" → "Rápida" in pt-BR). Custom tags are shown as-is. */
-export const TAG_LABEL_KEYS: Record<string, string> = {
+const TAG_LABEL_KEYS: Record<string, string> = {
   quick: "tags.quick",
   vegan: "tags.vegan",
   vegetarian: "tags.vegetarian",
@@ -14,7 +14,7 @@ export const TAG_LABEL_KEYS: Record<string, string> = {
 };
 
 /** Maps recipe tags to a food emoji used for the cover placeholder. */
-export const TAG_EMOJI: Record<string, string> = {
+const TAG_EMOJI: Record<string, string> = {
   breakfast: "🍳",
   dinner: "🥘",
   dessert: "🍰",
@@ -38,6 +38,12 @@ const DEFAULT_EMOJI = "🍽️";
 /** i18n key for a known tag, or null for a custom tag that is shown verbatim. */
 export function tagLabelKey(tag: string): string | null {
   return TAG_LABEL_KEYS[tag] ?? null;
+}
+
+/** Translates a tag for display, falling back to the raw tag for custom ones. */
+export function tagLabel(t: (key: string) => string, value: string): string {
+  const key = tagLabelKey(value);
+  return key ? t(key) : value;
 }
 
 /** Emoji used as the cover placeholder when the recipe has no image. */

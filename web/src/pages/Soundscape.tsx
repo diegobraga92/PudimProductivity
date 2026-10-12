@@ -372,7 +372,7 @@ function Soundscape() {
               )}
 
               {/* Volume Slider */}
-              <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", minWidth: "100px" }}>
+              <div className="flex-center" style={{ gap: "0.35rem", minWidth: "100px" }}>
                 <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)" }}>🔉</span>
                 <input
                   type="range"

@@ -12,21 +12,8 @@ import { searchLibraryScores } from "../api/library";
 import { useConfirm } from "../components/useConfirm";
 import { useToast } from "../components/toastContext";
 import { SettingsIcon } from "../components/icons";
+import ScoreProviderTable from "../components/ScoreProviderTable";
 import { useI18n } from "../i18n";
-
-const MEDIA_TYPES = ["movie", "series", "game", "book"] as const;
-const MEDIA_LABEL_KEYS: Record<(typeof MEDIA_TYPES)[number], string> = {
-  movie: "library.movie",
-  series: "library.series",
-  game: "library.game",
-  book: "library.book",
-};
-const MEDIA_ICONS: Record<(typeof MEDIA_TYPES)[number], string> = {
-  movie: "🎬",
-  series: "📺",
-  game: "🎮",
-  book: "📚",
-};
 
 // Labels for the extra per-provider settings fields returned by the backend
 // (score_providers.settings JSONB). Keys without an entry fall back to the raw
@@ -100,7 +87,8 @@ export default function ServerSettings() {
           name: p.name,
           // Empty input = keep the stored key. Only send a new key when typed.
           api_key: apiKeys[p.name] ? apiKeys[p.name] : null,
-          base_url: null,
+          // Empty input = keep the stored URL, same rule as the API key.
+          base_url: baseUrls[p.name] ? baseUrls[p.name] : null,
           ...(Object.keys(settingsPayload).length > 0 ? { settings: settingsPayload } : {}),
         };
       });
@@ -202,9 +190,6 @@ export default function ServerSettings() {
     }
   };
 
-  const providerOptions = (mediaType: (typeof MEDIA_TYPES)[number]) =>
-    (data?.providers ?? []).filter((p) => p.supported_types.includes(mediaType));
-
   return (
     <div className="animate-fade-in">
       <h2 className="page-heading"><SettingsIcon size={24} /> {t("serverSettings.title")}</h2>
@@ -235,7 +220,7 @@ export default function ServerSettings() {
           {data && (
             <>
               <div className="card" style={{ padding: "var(--space-md)" }}>
-                <div className="flex-center" style={{ justifyContent: "space-between", marginBottom: "0.4rem" }}>
+                <div className="flex-between" style={{ marginBottom: "0.4rem" }}>
                   <h3 style={{ margin: 0, fontSize: "var(--font-size-lg)" }}>{t("serverSettings.scoreLookup")}</h3>
                   <label className="flex-center" style={{ gap: "0.35rem" }}>
                     <input
@@ -250,42 +235,14 @@ export default function ServerSettings() {
                   {t("serverSettings.scoreLookupDesc")}
                 </p>
 
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "var(--font-size-sm)" }}>
-                  <thead>
-                    <tr>
-                      <th style={{ textAlign: "left", padding: "0.25rem 0.5rem", borderBottom: "1px solid var(--color-border-light)" }}>
-                        {t("serverSettings.mediaType")}
-                      </th>
-                      <th style={{ textAlign: "left", padding: "0.25rem 0.5rem", borderBottom: "1px solid var(--color-border-light)" }}>
-                        {t("serverSettings.provider")}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {MEDIA_TYPES.map((mt) => (
-                      <tr key={mt}>
-                        <td style={{ padding: "0.35rem 0.5rem" }}>
-                          {MEDIA_ICONS[mt]} {t(MEDIA_LABEL_KEYS[mt])}
-                        </td>
-                        <td style={{ padding: "0.35rem 0.5rem" }}>
-                          <select
-                            className="select"
-                            style={{ minWidth: 180 }}
-                            value={assignments[mt]}
-                            onChange={(e) => { setAssignments({ ...assignments, [mt]: e.target.value }); setDirty(true); }}
-                          >
-                            <option value="">{t("serverSettings.providerNone")}</option>
-                            {providerOptions(mt).map((p) => (
-                              <option key={p.name} value={p.name}>
-                                {p.name}
-                              </option>
-                            ))}
-                          </select>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <ScoreProviderTable
+                  providers={data.providers}
+                  assignments={assignments}
+                  onAssign={(mt, name) => {
+                    setAssignments({ ...assignments, [mt]: name });
+                    setDirty(true);
+                  }}
+                />
               </div>
 
 

@@ -4,7 +4,7 @@ import { listScheduledTasks, type Task } from "../api/tasks";
 import { useAlarm } from "../components/useAlarm";
 import { useI18n } from "../i18n";
 import { playAlarmSound } from "../utils/sounds";
-import { getToday, sanitizeTime } from "../utils/dates";
+import { getToday, parseTimeToMinutes, sanitizeTime } from "../utils/dates";
 
 const CHECK_INTERVAL_MS = 15_000;
 const FIRED_ALARMS_KEY = "pudim_fired_alarms";
@@ -13,11 +13,6 @@ const DAY_INDEX_TO_KEY = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as co
 function isTodayRecurrenceDay(task: Task): boolean {
   const todayKey = DAY_INDEX_TO_KEY[new Date().getDay()];
   return (task.recurrence_days ?? []).includes(todayKey);
-}
-
-function parseTimeToMinutes(t: string): number {
-  const [h, m] = t.split(":").map(Number);
-  return h * 60 + (m || 0);
 }
 
 function loadFiredAlarms(): Set<string> {

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useConfirm } from "./useConfirm";
+import FormActions from "./FormActions";
 import {
   getTask,
   updateTask,
@@ -309,7 +310,7 @@ export default function TaskEditModal({
             )}
 
             {/* Actions */}
-            <div style={{ display: "flex", gap: "0.5rem", marginTop: "var(--space-md)" }}>
+            <FormActions className="mt-md">
               <button type="submit" className="btn btn-primary" disabled={updateMutation.isPending}>
                 {updateMutation.isPending ? t("common.saving") : "💾 " + t("common.save")}
               </button>
@@ -325,7 +326,7 @@ export default function TaskEditModal({
               >
                 🗑 {t("common.delete")}
               </button>
-            </div>
+            </FormActions>
           </form>
 
           {/* Habit history — collapsible so weekly completion stays available */}

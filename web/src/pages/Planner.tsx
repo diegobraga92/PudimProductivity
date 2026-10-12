@@ -5,10 +5,11 @@ import {
   type Task,
 } from "../api/tasks";
 import { useHabitCompletions } from "../hooks/useHabitCompletions";
-import { getWeekDates, formatWeekRange, sanitizeTime } from "../utils/dates";
+import { getWeekDates, formatWeekRange, parseTimeToMinutes, sanitizeTime } from "../utils/dates";
 import { useI18n, useMonthNames } from "../i18n";
 import { DAY_OPTIONS } from "../utils/constants";
 import { CalendarIcon } from "../components/icons";
+import { hexToRgba, isLightColor } from "../utils/color";
 
 const DAYS = DAY_OPTIONS.map((d) => d.value);
 
@@ -20,27 +21,6 @@ const HOURS = Array.from({ length: 16 }, (_, i) => {
     value: `${String(h).padStart(2, "0")}:00`,
   };
 });
-
-function parseTimeToMinutes(t: string): number {
-  const [h, m] = sanitizeTime(t).split(":").map(Number);
-  return h * 60 + m;
-}
-
-function hexToRgba(hex: string, alpha: number): string {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
-
-/** True when a hex color is light enough to need dark text on top. */
-function isLightColor(hex: string): boolean {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
-  return luminance > 160;
-}
 
 interface PlannerProps {
   onNavigate: (view: string) => void;

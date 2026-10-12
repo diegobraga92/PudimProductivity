@@ -181,7 +181,7 @@ export default function RecipeDetail({ recipeId, onBack }: { recipeId: string; o
           ) : (
             <div
               className="recipe-thumb-placeholder"
-              style={{ width: 96, height: 72, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+              style={{ width: 96, height: 72, flexShrink: 0 }}
             >
               🍽️
             </div>

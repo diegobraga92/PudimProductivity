@@ -25,6 +25,7 @@ import { useI18n } from "../i18n";
 import { computeStreaks } from "../utils/streaks";
 import { getRollingWindowDates, formatWeekRange } from "../utils/dates";
 import { sortTasks } from "../utils/sort";
+import { invalidateTasks, queryKeys } from "../utils/queryKeys";
 import {
   playHabitCompletionSound,
   playTodoCompletionSound,
@@ -47,15 +48,13 @@ export default function TaskList() {
     setWeekOffset(newOffset);
   }, []);
 
-  // Fetch unassigned one-off tasks
   const { data: todoTasks = [], isLoading: todoLoading, error: todoError } = useQuery<Task[]>({
-    queryKey: ["tasks", "one-off"],
+    queryKey: queryKeys.tasksOneOff,
     queryFn: () => listTasks(undefined, "one-off"),
   });
 
-  // Fetch unassigned habit tasks
   const { data: habitTasks = [], isLoading: habitLoading, error: habitError } = useQuery<Task[]>({
-    queryKey: ["tasks", "habit"],
+    queryKey: queryKeys.tasksHabit,
     queryFn: () => listTasks(undefined, "habit"),
   });
 
@@ -72,8 +71,7 @@ export default function TaskList() {
   const deleteMutation = useMutation({
     mutationFn: deleteTask,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tasks", "one-off"] });
-      queryClient.invalidateQueries({ queryKey: ["tasks", "habit"] });
+      invalidateTasks(queryClient);
     },
   });
 
@@ -87,8 +85,7 @@ export default function TaskList() {
       return updateTask(id, { status: status === "done" ? "todo" : "done" });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tasks", "one-off"] });
-      queryClient.invalidateQueries({ queryKey: ["tasks", "habit"] });
+      invalidateTasks(queryClient);
     },
   });
 
@@ -103,14 +100,14 @@ export default function TaskList() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["habitCompletions"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.habitCompletions });
     },
   });
 
   const createTodoMutation = useMutation({
     mutationFn: (title: string) => createTask({ title }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tasks", "one-off"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasksOneOff });
       setNewTodoTitle("");
     },
   });
@@ -118,7 +115,6 @@ export default function TaskList() {
   // Tasks and habits now open in edit modals (rendered at the bottom of this
   // component) instead of swapping the whole page.
 
-  // Sort tasks based on selected sort options
   // To-Dos are split into two sub-tabs so completed items don't clutter the
   // unchecked view; sorting is shared across both lists.
   const openTodos = todoTasks.filter((t) => t.status === "todo");
@@ -382,8 +378,7 @@ export default function TaskList() {
       {showCreate && (
         <TaskCreate
           onCreated={() => {
-            queryClient.invalidateQueries({ queryKey: ["tasks", "one-off"] });
-            queryClient.invalidateQueries({ queryKey: ["tasks", "habit"] });
+            invalidateTasks(queryClient);
             setShowCreate(false);
           }}
           onCancel={() => setShowCreate(false)}
@@ -397,12 +392,10 @@ export default function TaskList() {
           taskId={selectedTaskId}
           onClose={() => setSelectedTaskId(null)}
           onUpdated={() => {
-            queryClient.invalidateQueries({ queryKey: ["tasks", "one-off"] });
-            queryClient.invalidateQueries({ queryKey: ["tasks", "habit"] });
+            invalidateTasks(queryClient);
           }}
           onDeleted={() => {
-            queryClient.invalidateQueries({ queryKey: ["tasks", "one-off"] });
-            queryClient.invalidateQueries({ queryKey: ["tasks", "habit"] });
+            invalidateTasks(queryClient);
             setSelectedTaskId(null);
           }}
         />
