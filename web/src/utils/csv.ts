@@ -1,9 +1,4 @@
-/**
- * Minimal CSV parser (RFC 4180-ish): handles quoted fields, escaped quotes
- * (""), commas and newlines inside quotes, CRLF/LF line endings and an
- * optional UTF-8 BOM. Returns rows as arrays of strings. Trailing empty rows
- * (e.g. from a final newline) are dropped.
- */
+/** Minimal RFC 4180 CSV parser: quotes, escaped quotes, embedded newlines, CRLF/LF, BOM; drops trailing empty rows. */
 export function parseCsv(text: string): string[][] {
   const rows: string[][] = [];
   let row: string[] = [];
@@ -82,9 +77,7 @@ export function normalizeScore(score: number): number {
   return Math.round(score * 10) / 10;
 }
 
-/** Parses a CSV score cell into a number on the 0-100 scale, or null. Long
- *  decimals (e.g. provider averages like 82.23076923076923) are truncated to
- *  one decimal place so the stored value matches the Library list formatting. */
+/** CSV score cell -> 0-100 number (truncated to 1 decimal, matching the Library) or null. */
 export function parseScoreValue(value: string): number | null {
   const v = value.trim();
   if (v === "") return null;
@@ -107,11 +100,7 @@ export interface BatchScoreResult {
   error?: string | null;
 }
 
-/**
- * Applies one batch score-lookup response to the requested rows. `targets`
- * maps each batch request index to a data-row index (the batch endpoint echoes
- * the request position).
- */
+/** Applies one batch score response; targets maps request index -> data-row index. */
 export function applyAutoScoreResults(
   targets: { requestIndex: number; row: number }[],
   results: BatchScoreResult[],

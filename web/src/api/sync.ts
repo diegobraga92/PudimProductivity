@@ -1,8 +1,6 @@
 import config from "../config";
 
-/**
- * WebSocket event types pushed by the backend sync hub (see api/ws/events-v1.json).
- */
+/** WebSocket event types pushed by the backend sync hub. */
 type WsEventType =
   | "task.created"
   | "task.updated"
@@ -37,15 +35,8 @@ function buildWsUrl(lastSeq: number): string {
   return `${wsBase}/ws?last_seq=${lastSeq}`;
 }
 
-/**
- * Singleton WebSocket client for real-time task updates.
- *
- * - Auto-reconnects with exponential backoff.
- * - Tracks the last-seen sequence number (sessionStorage) so reconnects resume
- *   without missing events; a `stale` event triggers a full REST refresh.
- * - Reference-counted: `connect()`/`close()` are safe to call from multiple
- *   consumers; the socket is only torn down when the last consumer disconnects.
- */
+/** Singleton WebSocket client: auto-reconnects, resumes from the last-seen seq, reference-counted
+ * connect/close, and lets a `stale` event trigger a full REST refresh. */
 export class SyncClient {
   private ws: WebSocket | null = null;
   private lastSeq = 0;

@@ -7,8 +7,7 @@ export type ScoreProvidersUpdate = components["schemas"]["ScoreProvidersUpdate"]
 
 /** Reads the effective score-provider configuration (API keys masked). */
 export async function getScoreProviders(): Promise<ScoreProvidersConfig> {
-  // Admin GETs must still send the dev identity headers: the backend defaults
-  // requests without X-User-Role to "user", which would 403 here.
+  // Admin GETs need the identity headers: without X-User-Role the backend assumes "user" and 403s.
   return request<ScoreProvidersConfig>("/admin/score-providers", {
     action: "load score provider settings",
   });

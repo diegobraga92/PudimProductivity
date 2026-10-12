@@ -19,9 +19,7 @@ import Dashboard from "./pages/Dashboard";
 import { useI18n } from "./i18n";
 import "./styles.css";
 
-// Secondary pages are code-split (React.lazy) so the initial bundle only
-// contains the app shell + Dashboard (the landing page).
-// Run `npm run build:analyze` to inspect chunk sizes.
+// Secondary pages are React.lazy code-split, so the initial bundle is just the shell + Dashboard.
 const TaskList = lazy(() => import("./pages/TaskList"));
 const Lists = lazy(() => import("./pages/Lists"));
 const Planner = lazy(() => import("./pages/Planner"));

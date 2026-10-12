@@ -19,11 +19,7 @@ interface PlannerPrefill {
   end_time?: string;
 }
 
-/**
- * Reads the prefill written when an empty planner cell is clicked. Pure: it never
- * consumes the key, so it is safe to call from a state initializer that React may
- * invoke twice in development.
- */
+/** Reads the planner prefill without consuming it, so it is safe in a state initializer. */
 function parsePlannerPrefill(): PlannerPrefill | null {
   const raw = sessionStorage.getItem("planner_prefill");
   if (!raw) return null;
@@ -37,8 +33,7 @@ function parsePlannerPrefill(): PlannerPrefill | null {
 
 export default function TaskCreate({ onCreated, onCancel }: TaskCreateProps) {
   const { t } = useI18n();
-  // Read the planner prefill once, before the first render, so the fields below
-  // can be seeded from it directly instead of via a state-syncing effect.
+  // Read the prefill before first render to seed the fields directly.
   const [prefill] = useState(parsePlannerPrefill);
   const [title, setTitle] = useState("");
   const [isHabit, setIsHabit] = useState(false);
@@ -59,8 +54,7 @@ export default function TaskCreate({ onCreated, onCancel }: TaskCreateProps) {
   // Which field a validation error belongs to, so it can be highlighted.
   const [errorField, setErrorField] = useState<"title" | "days" | "schedule" | null>(null);
 
-  // The prefill is one-shot: consume it once mounted. The removal stays in an
-  // effect because it is a side effect, not a state update.
+  // One-shot: consume the prefill once mounted (a side effect, hence an effect).
   useEffect(() => {
     if (prefill) sessionStorage.removeItem("planner_prefill");
   }, [prefill]);

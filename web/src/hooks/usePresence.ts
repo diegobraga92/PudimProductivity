@@ -2,15 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { getListPresence } from "../api/collab";
 import { syncClient, type WsEvent } from "../api/sync";
 
-/**
- * Tracks which users are online for a set of task lists.
- *
- * - Bootstraps from the REST presence snapshot (`GET /presence/{listId}`).
- * - Applies presence.online / presence.offline events from the WebSocket
- *   stream in real time.
- *
- * Returns a `Map<listId, Set<userId>>` of online users.
- */
+/** Online users per list: REST snapshot + presence.online/offline events -> Map<listId, Set<userId>>. */
 export function usePresence(listIds: string[]): {
   online: Map<string, Set<string>>;
   isOnline: (listId: string, userId: string) => boolean;
@@ -36,8 +28,7 @@ export function usePresence(listIds: string[]): {
     });
   }, []);
 
-  // REST snapshot: presence.online events are only emitted when a user
-  // connects, so a page loaded later must bootstrap from the endpoint.
+  // online events only fire on connect, so a later page load bootstraps from the REST snapshot.
   const refresh = useCallback(
     async (listId: string) => {
       try {

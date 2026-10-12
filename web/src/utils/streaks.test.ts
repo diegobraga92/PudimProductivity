@@ -1,8 +1,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { computeStreaks, isScheduledOn } from "./streaks";
 
-// Helper: freeze Date.now() and new Date() to a fixed instant.
-// Uses noon local time to avoid timezone boundary issues with formatLocalDate().
+// Freeze Date.now()/new Date() at noon local time to dodge timezone boundaries.
 function mockToday(isoDate: string) {
   const [y, m, d] = isoDate.split("-").map(Number);
   const fixed = new Date(y, m - 1, d, 12, 0, 0, 0); // noon local time
@@ -98,10 +97,7 @@ describe("computeStreaks — duplicate completions", () => {
 
 describe("computeStreaks — timezone boundary edge case", () => {
   it("uses UTC date string consistently (no local-TZ offset drift)", () => {
-    // Simulate a user at UTC-12 where local midnight lags UTC by 12 hours.
-    // The backend always stores dates as UTC ISO strings (YYYY-MM-DD).
-    // As long as the client compares UTC ISO strings to UTC ISO strings
-    // the streak is correct regardless of local TZ.
+    // UTC-12 user: comparing UTC ISO date strings keeps the streak correct regardless of local TZ.
     mockToday("2026-05-25"); // Noon UTC
     // Backend sends these UTC date strings:
     const completions = ["2026-05-24", "2026-05-25"];
@@ -112,8 +108,7 @@ describe("computeStreaks — timezone boundary edge case", () => {
 });
 
 describe("computeStreaks — scheduled days (habits)", () => {
-  // Jan 2026: 5th=Mon, 7th=Wed, 9th=Fri, 12th=Mon, 14th=Wed, 16th=Fri,
-  //           19th=Mon, 21st=Wed, 23rd=Fri, 24th=Sat
+  // Jan 2026: 5th=Mon, 7th=Wed, 9th=Fri, 12th=Mon, 14th=Wed, 16th=Fri, 19th=Mon, 21st=Wed, 23rd=Fri, 24th=Sat
 
   it("keeps streak flowing across calendar weeks for a Mon/Wed/Fri habit", () => {
     mockToday("2026-01-23"); // Friday, 6 scheduled days done over 2 weeks
@@ -164,8 +159,7 @@ describe("computeStreaks — scheduled days (habits)", () => {
       "2026-01-05",
       "2026-01-07",
       "2026-01-09",
-      // Week 2 (Jan 12–18) entirely missed
-      // Week 3 fully completed
+      // Week 2 (Jan 12-18) entirely missed; week 3 fully completed
       "2026-01-19",
       "2026-01-21",
       "2026-01-23",

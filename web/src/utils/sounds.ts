@@ -101,11 +101,7 @@ export function playHabitUncompletionSound(): void {
   }
 }
 
-/**
- * Repeating three-beep alarm (E5 → G5 → A5) signalling an upcoming scheduled
- * habit. Async because an AudioContext created outside a user gesture (e.g.
- * from a timer) starts suspended and must be resumed before it will play.
- */
+/** Repeating three-beep alarm (E5-G5-A5); async because a timer-created AudioContext starts suspended. */
 export async function playAlarmSound(): Promise<void> {
   try {
     const ctx = getSharedAudioContext();

@@ -8,8 +8,7 @@ export type Meal = components["schemas"]["Meal"];
 export type CreateMealPlanItemRequest = components["schemas"]["CreateMealPlanItemRequest"];
 export type UpdateMealPlanItemRequest = components["schemas"]["UpdateMealPlanItemRequest"];
 
-// React Query key for the whole template. The page reads it with this exact key
-// so live invalidation and the fetch cannot drift apart.
+// React Query key for the whole template, so invalidation and the fetch cannot drift apart.
 export const MEAL_PLAN_KEY = ["mealPlan"] as const;
 
 export async function listMealPlanItems(): Promise<MealPlanItem[]> {

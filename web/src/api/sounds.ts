@@ -1,15 +1,6 @@
 import { apiIdentityHeaders, request } from "./client";
 
-/**
- * Sound library management API.
- *
- *   GET    /api/v1/sounds      → catalog (built-in sounds + user-added sounds)
- *   POST   /api/v1/sounds      → multipart upload (label, icon, file)
- *   PUT    /api/v1/sounds/{id} → rename / re-icon a user-added sound
- *   DELETE /api/v1/sounds/{id} → remove a user-added sound
- *
- * Built-in sounds cannot be modified: the backend answers 409 for them.
- */
+/** Sound library API. Built-in sounds are immutable (the backend answers 409) and uploads are multipart. */
 
 /** One entry in the backend sound catalog. */
 export interface SoundEntry {
@@ -30,8 +21,7 @@ export const MAX_SOUND_BYTES = 10 * 1024 * 1024;
 /** Audio formats the backend accepts, as a file-input accept list. */
 export const SOUND_FILE_ACCEPT = ".mp3,.ogg,.m4a,.wav";
 
-// A reverse proxy in front of the backend answers 413 with an HTML page, so the
-// JSON body cannot be used to explain the failure.
+// A reverse proxy answers 413 with an HTML page, so the JSON body cannot explain the failure.
 const TOO_LARGE = "That file is too large (max 10 MB).";
 
 /** Adds a sound: its name, icon and audio file in one multipart request. */

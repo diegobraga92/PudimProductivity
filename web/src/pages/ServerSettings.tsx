@@ -15,20 +15,13 @@ import { SettingsIcon } from "../components/icons";
 import ScoreProviderTable from "../components/ScoreProviderTable";
 import { useI18n } from "../i18n";
 
-// Labels for the extra per-provider settings fields returned by the backend
-// (score_providers.settings JSONB). Keys without an entry fall back to the raw
-// field name.
+// Labels for the extra per-provider fields (score_providers.settings); unknown keys show raw.
 const SETTING_LABEL_KEYS: Record<string, string> = {
   client_secret: "serverSettings.clientSecret",
 };
 
-/**
- * Server Settings (admin): manages the library score-provider configuration at
- * runtime — which rating provider serves each media type, plus per-provider API
- * keys. Replaces the .env-only configuration (SCORE_PROVIDER_* / *_API_KEY,
- * which now only act as a one-time bootstrap). Admin-only on the backend; this
- * page offers a dev admin-mode toggle consistent with the dev identity headers.
- */
+/** Admin: runtime score-provider config (provider per media type + API keys). The .env values only seed it.
+ * Admin-only on the backend; the dev admin-mode toggle matches the identity headers. */
 export default function ServerSettings() {
   const queryClient = useQueryClient();
   const { t } = useI18n();
@@ -41,8 +34,7 @@ export default function ServerSettings() {
   const [assignments, setAssignments] = useState<Record<string, string>>({ movie: "", series: "", game: "", book: "" });
   const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
   const [baseUrls, setBaseUrls] = useState<Record<string, string>>({});
-  // Per-provider extra settings (e.g. IGDB's client_secret), keyed by provider
-  // name then setting key. Only non-empty entries are sent. empty = keep.
+  // Extra per-provider settings (e.g. IGDB's client_secret) keyed by provider then field.
   const [settings, setSettings] = useState<Record<string, Record<string, string>>>({});
   const [lookupEnabled, setLookupEnabled] = useState(false);
   const [dirty, setDirty] = useState(false);
@@ -76,8 +68,7 @@ export default function ServerSettings() {
   const save = useMutation({
     mutationFn: async (): Promise<ScoreProvidersConfig> => {
       const providers = (data?.providers ?? []).map((p) => {
-        // Same "empty = keep" rule as the API key: only send a setting when the
-        // admin typed a value. Omitting the key leaves the stored secret alone.
+        // Same "empty = keep" rule as the API key: omitting a field leaves the stored secret alone.
         const settingsPayload: Record<string, string> = {};
         for (const k of p.settings_keys ?? []) {
           const v = settings[p.name]?.[k];
@@ -138,8 +129,7 @@ export default function ServerSettings() {
     }
   }
 
-  // Backup & Restore. Export a JSON snapshot of all non-sensitive data, or
-  // restore from a previous one (destructive, so it needs confirmation).
+  // Backup & Restore: export a JSON snapshot, or restore one (destructive, needs confirmation).
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 

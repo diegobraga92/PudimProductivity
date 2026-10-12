@@ -7,11 +7,7 @@ interface ErrorReport {
   context?: string;
 }
 
-/**
- * Reports client-side errors (window.onerror + unhandledrejection) to the
- * backend POST /api/v1/errors beacon, where they are logged with trace context.
- * Debounced to at most one request per second to avoid flooding.
- */
+/** Beacons window.onerror + unhandledrejection to POST /errors, at most once per second. */
 export function useErrorReporter(): void {
   useEffect(() => {
     let lastSent = 0;

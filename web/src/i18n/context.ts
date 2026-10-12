@@ -9,10 +9,7 @@ export interface I18nContextValue {
   setLang: (lang: Language) => void;
   /** Switches between the two supported languages. */
   toggleLang: () => void;
-  /**
-   * Translates a dictionary key. Supports `{name}` interpolation and simple
-   * ICU-lite pluralization: `{count, plural, one {…} other {…}}`.
-   */
+  /** Translate a key, with {name} interpolation and ICU-lite pluralization. */
   t: (key: string, vars?: TranslateVars) => string;
 }
 

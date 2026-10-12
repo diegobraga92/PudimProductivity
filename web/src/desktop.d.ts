@@ -1,7 +1,4 @@
-/**
- * Types for the Electron desktop bridge exposed via contextBridge. 
- * The global is absent in plain-browser builds, all access must be optional-chained.
- */
+/** Electron bridge types; absent in browser builds, so always optional-chain the global. */
 interface DesktopBridge {
   platform: string;
   versions: {

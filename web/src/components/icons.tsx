@@ -1,8 +1,6 @@
 import type { SVGProps } from "react";
 
-/**
- * Shared inline-SVG icon set for the app chrome (nav, header, drawer).
- */
+/** Shared inline-SVG icon set for the app chrome. */
 export interface IconProps extends Omit<SVGProps<SVGSVGElement>, "width" | "height"> {
   size?: number;
 }

@@ -29,9 +29,7 @@ interface LibraryBulkScoreProps {
   onClose: () => void;
 }
 
-/**
- * Bulk score dialog for the Library.
- */
+/** Bulk score lookup dialog for the Library. */
 export function LibraryBulkScore({ items, skippedCount, onSaved, onClose }: LibraryBulkScoreProps) {
   const { t } = useI18n();
   const { pushToast } = useToast();
@@ -50,8 +48,7 @@ export function LibraryBulkScore({ items, skippedCount, onSaved, onClose }: Libr
 
   const busy = searching || saving;
 
-  /** Fetches score candidates for every target. Pure: it touches no React state,
-   * so the mount effect below triggers no synchronous re-render. */
+  /** Fetch candidates for every target; pure, so the mount effect causes no synchronous re-render. */
   const fetchCandidates = useCallback(async () => {
     const found: Record<string, ScoreCandidate[]> = {};
     const failed: Record<string, string> = {};

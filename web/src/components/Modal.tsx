@@ -8,11 +8,7 @@ interface ModalProps {
   children: ReactNode;
 }
 
-/**
- * Reusable modal shell: backdrop + centered dialog with the app's existing
- * .modal-backdrop/.modal-dialog styling. Closes on Escape or backdrop click,
- * and locks body scroll while open. Mount/unmount controls visibility.
- */
+/** Modal shell on .modal-backdrop/.modal-dialog; Escape/backdrop closes and body scroll is locked. */
 export default function Modal({ onClose, maxWidth = 440, ariaLabel, children }: ModalProps) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

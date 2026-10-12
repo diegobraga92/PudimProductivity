@@ -26,8 +26,7 @@ function fmt(event: WsEvent, t: Translate): { icon: string; title: string; body?
       return { icon: "✏️", title: t("toast.taskUpdated"), body: task.title };
     }
     case "task.merged": {
-      // A CRDT merge resolved. The payload is the winning task; this is the
-      // "someone else changed it" signal for collaborative edits.
+      // A CRDT merge resolved; the payload is the winning task from someone else's edit.
       const task = payload as Task;
       if (!task.title) return null;
       return { icon: "🔄", title: t("toast.merged"), body: t("toast.mergedBody", { title: task.title }) };
@@ -45,9 +44,7 @@ function fmt(event: WsEvent, t: Translate): { icon: string; title: string; body?
   }
 }
 
-/**
- * Shows in-app toasts for real-time task events delivered over the WebSocket stream.
- */
+/** In-app toasts for real-time task events from the WebSocket stream. */
 export function useTaskNotifier(): void {
   const { pushToast } = useToast();
   const { t } = useI18n();

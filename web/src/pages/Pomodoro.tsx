@@ -94,9 +94,7 @@ function Pomodoro({ onOpenSounds }: PomodoroProps) {
 
   const session = currentResp?.active ? currentResp.session : null;
 
-  // Sync local state from the server session, only on session identity, status
-  // or phase change (continuous runs flip phase while status stays "running"),
-  // NOT on every refetch (remaining_seconds changes every poll).
+  // Sync from the session only on identity/status/phase change, not on every poll (remaining_seconds ticks).
   const sessionKey = session ? `${session.id}:${session.status}:${session.phase}` : null;
   const [syncedSessionKey, setSyncedSessionKey] = useState<string | null>(null);
   if (sessionKey !== syncedSessionKey) {
@@ -114,8 +112,7 @@ function Pomodoro({ onOpenSounds }: PomodoroProps) {
     },
   });
 
-  // Use a ref to avoid stale closure issues in the auto-stop effect (synced in an
-  // effect: refs must not be written during render).
+  // Ref avoids stale closures in the auto-stop effect (written in an effect, not on render).
   const stopMutateRef = useRef(stopMutate);
   useEffect(() => {
     stopMutateRef.current = stopMutate;
@@ -142,9 +139,7 @@ function Pomodoro({ onOpenSounds }: PomodoroProps) {
     };
   }, [localStatus]);
 
-  // When the timer hits 0 while running, stop in single-shot mode. In
-  // continuous mode the backend auto-advances to the next phase, so refetch the
-  // current session to pick up the new segment instead of stopping.
+  // At 0 while running: stop in single-shot, refetch in continuous (the backend advances the phase).
   useEffect(() => {
     if (localRemaining === 0 && localStatus === "running") {
       if (continuous) {
@@ -191,8 +186,7 @@ function Pomodoro({ onOpenSounds }: PomodoroProps) {
   const isPaused = localStatus === "paused";
   const isActive = isRunning || isPaused;
   const displayTime = localRemaining !== null ? localRemaining : (session?.remaining_seconds ?? 0);
-  // The progress ring uses the current segment's duration, the break duration
-  // while in a break phase, so continuous runs count down correctly.
+  // The ring uses the current segment's duration (break duration while in a break).
   const currentPhase = session?.phase ?? "focus";
   const segmentMinutes =
     currentPhase === "break"
@@ -201,13 +195,9 @@ function Pomodoro({ onOpenSounds }: PomodoroProps) {
   const totalSeconds = segmentMinutes * 60;
   const progress = totalSeconds > 0 ? ((totalSeconds - displayTime) / totalSeconds) * 100 : 0;
 
-  // Note: the pomodoro → sound automation lives in usePomodoroSoundSync (mounted
-  // at the app root), so the sound keeps playing when navigating away from this
-  // page while the timer runs.
+    // The sound automation lives in usePomodoroSoundSync (app root), so audio survives navigation.
 
-  // Desktop: prevent the OS from suspending while the focus timer runs so the
-  // countdown and audio stay accurate (Electron powerSaveBlocker. No-op in the
-  // plain browser).
+  // Desktop: block OS suspend while the timer runs (powerSaveBlocker; no-op in the browser).
   useEffect(() => {
     window.desktop?.setPowerSaveBlocker?.(localStatus === "running");
     return () => window.desktop?.setPowerSaveBlocker?.(false);

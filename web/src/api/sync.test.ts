@@ -30,8 +30,7 @@ const sessionStorageStub = {
   },
 };
 
-// `config.ts` reads `window` at module load, so the globals must exist before
-// the module is imported (hence the dynamic import below).
+// config.ts reads window at import time, hence the dynamic import below.
 vi.stubGlobal(
   "window",
   {
@@ -84,8 +83,7 @@ describe("SyncClient connection lifecycle", () => {
     client.connect(); // socket B (replaces A)
     expect(MockWebSocket.instances).toHaveLength(2);
 
-    // Socket A's onclose fires only after B is already live. It must NOT
-    // flip status offline or schedule a reconnect (which would open socket C).
+    // A's onclose fires after B is live: it must not flip offline or open a third socket.
     socketA.onclose?.();
     vi.advanceTimersByTime(60_000);
     expect(MockWebSocket.instances).toHaveLength(2);

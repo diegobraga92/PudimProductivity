@@ -12,8 +12,7 @@ import {
   subscribe,
 } from "./pomodoroMediaSync";
 
-// Vitest runs in a node environment where `localStorage` is unavailable, so
-// provide a minimal in-memory implementation for the store tests.
+// Node has no localStorage, so stub a minimal in-memory one for the store tests.
 const storage = new Map<string, string>();
 Object.defineProperty(globalThis, "localStorage", {
   configurable: true,

@@ -60,8 +60,7 @@ export default function Planner({ onNavigate }: PlannerProps) {
 
   // Handle clicking an existing entry, navigate to task detail
   const handleEntryClick = useCallback((task: Task) => {
-    // We can't navigate directly to a task detail from the Planner without the app state.
-    // Delegate this to the app level. For now, store the task ID and navigate to tasks.
+    // Without app state we cannot open a task here: hand the id to the app level and go to tasks.
     sessionStorage.setItem("planner_task_detail", task.id);
     onNavigate("tasks");
   }, [onNavigate]);

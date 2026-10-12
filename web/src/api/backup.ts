@@ -6,10 +6,7 @@ export interface BackupImportResult {
   row_counts: Record<string, number>;
 }
 
-/**
- * Exports a full backup of the non-sensitive data as a downloadable JSON file.
- * The backend sends it with Content-Disposition: attachment.
- */
+/** Download a JSON backup of the non-sensitive data. */
 export async function exportBackup(): Promise<{ blob: Blob; filename: string }> {
   const res = await fetch(`${config.apiBaseUrl}/backup/export`, {
     headers: apiHeaders(),
@@ -23,11 +20,7 @@ export async function exportBackup(): Promise<{ blob: Blob; filename: string }> 
   return { blob, filename: match?.[1] ?? fallback };
 }
 
-/**
- * Restores a backup, replacing the current contents of every backed-up table.
- * The restore is transactional on the server, a malformed backup changes
- * nothing.
- */
+/** Restore a backup, replacing every backed-up table. Server-side transactional: malformed input changes nothing. */
 export async function importBackup(file: File): Promise<BackupImportResult> {
   return request<BackupImportResult>("/backup/import", {
     method: "POST",

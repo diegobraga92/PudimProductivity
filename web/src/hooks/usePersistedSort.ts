@@ -1,10 +1,7 @@
 import { useState, useCallback } from "react";
 import { VALID_SORT_OPTIONS, type SortOption } from "../utils/sort";
 
-/**
- * Persists a sort option to localStorage and returns the current value
- * plus an update function.
- */
+/** Persist a sort option to localStorage; returns the value and its setter. */
 export function usePersistedSort(key: string, initial: SortOption) {
   const [sort, setSort] = useState<SortOption>(() => {
     try {

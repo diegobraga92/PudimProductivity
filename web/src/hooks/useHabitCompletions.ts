@@ -2,10 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getAllTaskCompletions, type Task } from "../api/tasks";
 import { STREAK_HISTORY_START } from "../utils/constants";
 
-/**
- * Fetches the full completion history for all habit tasks in a single
- * batch request, keyed by task ID.
- */
+/** All habit completions from one batch request, keyed by task ID. */
 export function useHabitCompletions(habitTasks: Task[]) {
   const { data } = useQuery({
     queryKey: ["habitCompletions", STREAK_HISTORY_START],

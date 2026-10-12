@@ -4,10 +4,7 @@ import { ToastContext, type Toast } from "./toastContext";
 /** Auto-dismiss delay for non-alarm toasts. */
 const TOAST_DURATION_MS = 5_000;
 
-/**
- * Provides lightweight in-app toasts (used for real-time task notifications
- * delivered over the WebSocket stream). Alarm toasts remain separate.
- */
+/** In-app toasts for real-time task notifications. Alarm toasts are separate. */
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const nextId = useRef(1);

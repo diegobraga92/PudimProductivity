@@ -1,7 +1,6 @@
 import type { MediaType } from "../api/library";
 
-/** Media types in display order, shared by the Library, CSV import and Server
- *  Settings screens so their filters/selects never drift apart. */
+/** Media types in display order, shared by the Library, CSV import and Server Settings. */
 export const MEDIA_TYPES: MediaType[] = ["movie", "series", "book", "game"];
 
 /** i18n label key per media type. */

@@ -6,14 +6,7 @@ import { useCurrentPomodoroStatus } from "./useCurrentPomodoroStatus";
 import { usePomodoroMediaSettings } from "./usePomodoroMediaSettings";
 import { useSystemMediaPlayers } from "./useSystemMediaPlayers";
 
-/**
- * App root pomodoro to system media player automation.
- *
- * Mounted once in App.tsx so it outlives the Pomodoro page: the external player
- * resumes while the timer runs and pauses on any other status, even after the
- * user navigates to another tab. The action is recomputed only when the status
- * string actually changes, so the 30s poll does not reissue commands.
- */
+/** App-root pomodoro -> system player automation; recomputed only when the status string changes. */
 export function usePomodoroMediaSync(): void {
   const { enabled, player } = usePomodoroMediaSettings();
   const { availability } = useSystemMediaPlayers();

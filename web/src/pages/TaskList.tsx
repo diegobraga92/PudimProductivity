@@ -112,11 +112,9 @@ export default function TaskList() {
     },
   });
 
-  // Tasks and habits now open in edit modals (rendered at the bottom of this
-  // component) instead of swapping the whole page.
+    // Tasks and habits open in edit modals rather than swapping the page.
 
-  // To-Dos are split into two sub-tabs so completed items don't clutter the
-  // unchecked view; sorting is shared across both lists.
+  // Two sub-tabs so completed to-dos don't clutter the unchecked view; sorting is shared.
   const openTodos = todoTasks.filter((t) => t.status === "todo");
   const completedTodos = todoTasks.filter((t) => t.status === "done");
   const activeTodos = todoTab === "open" ? openTodos : completedTodos;

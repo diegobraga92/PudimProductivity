@@ -21,11 +21,7 @@ interface AddSoundModalProps {
   onClose: () => void;
 }
 
-/**
- * Adds a sound to the library (name, icon and audio file) or edits the name and
- * icon of a sound the user already added. The file is checked and previewed
- * before sending, but the backend remains the authority on what it accepts.
- */
+/** Add a sound (name, icon, file) or rename/re-icon a user sound; the backend still validates. */
 export default function AddSoundModal({ sound, onClose }: AddSoundModalProps) {
   const { t } = useI18n();
   const { pushToast } = useToast();

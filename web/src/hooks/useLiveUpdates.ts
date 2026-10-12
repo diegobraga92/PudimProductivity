@@ -19,11 +19,7 @@ function removeTask(tasks: Task[] | undefined, id: string): Task[] | undefined {
   return tasks.filter((t) => t.id !== id);
 }
 
-/**
- * Subscribes to the backend WebSocket stream and keeps the React Query cache in
- * sync with task changes made from any client (web, mobile). Mount this once at
- * the app root; it is reference-counted, so multiple consumers are safe.
- */
+/** Mount once at the app root: mirrors WebSocket task events into the React Query cache. */
 export function useLiveUpdates(): void {
   const queryClient = useQueryClient();
 
@@ -61,15 +57,13 @@ export function useLiveUpdates(): void {
       invalidateTaskLists(queryClient);
     };
 
-    // A task merge resolved. The payload is the winning task, so the cache
-    // converges exactly like task.updated.
+    // A merge resolved; the payload is the winning task, so merge it like task.updated.
     const handleMerge = (event: WsEvent) => {
       handleUpsert(event);
       queryClient.invalidateQueries({ queryKey: queryKeys.scheduledTasks });
     };
 
-    // Membership changed (list shared with me / unshared). Refresh the list
-    // picker and any tasks cached under that list.
+    // Membership changed: refresh the list picker and the tasks cached under that list.
     const handleShareChanged = (event: WsEvent) => {
       invalidateTaskLists(queryClient);
       const payload = (event.payload ?? {}) as { list_id?: string };

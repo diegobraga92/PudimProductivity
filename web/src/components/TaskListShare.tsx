@@ -19,10 +19,7 @@ interface TaskListShareProps {
   onClose: () => void;
 }
 
-/**
- * Share dialog: invite a user (editor/viewer), list members with live
- * presence dots, and revoke access. Owner-only for mutations.
- */
+/** Share a list: invite (editor/viewer), list members with presence dots, revoke. Owner-only for writes. */
 export default function TaskListShare({
   listId,
   listName,

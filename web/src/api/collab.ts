@@ -1,10 +1,7 @@
 import { request } from "./client";
 import type { components } from "./generated/tasks-v1";
 
-/**
- * Collaboration API client. Backend contract: api/openapi/tasks-v1.yaml.
- * Sharing + presence are user-scoped via the dev identity headers.
- */
+/** Collaboration API client; sharing and presence are user-scoped. */
 
 export type TaskListMember = components["schemas"]["TaskListMember"];
 export type ShareTaskListRequest = components["schemas"]["ShareTaskListRequest"];
@@ -38,10 +35,7 @@ export interface ListPresenceResponse {
   online: string[];
 }
 
-/**
- * Snapshot of the users currently connected and able to access a list. Live
- * updates arrive via presence.online / presence.offline WebSocket events.
- */
+/** Users currently connected to a list; live changes arrive as presence events. */
 export async function getListPresence(listId: string): Promise<ListPresenceResponse> {
   return request<ListPresenceResponse>(`/presence/${listId}`, { action: "fetch presence" });
 }

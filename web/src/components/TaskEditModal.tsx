@@ -35,11 +35,7 @@ interface TaskEditModalProps {
   onDeleted: () => void;
 }
 
-/**
- * Modal editor for a task or habit. Opens directly in edit mode (title focused)
- * with the full editable field set, plus a collapsible habit history (streak + weekly
- * heatmap).
- */
+/** Task/habit editor with the full field set and a collapsible habit history (streak + heatmap). */
 export default function TaskEditModal({
   taskId,
   onClose,
@@ -76,8 +72,7 @@ export default function TaskEditModal({
 
   const today = getToday();
 
-  // Fetch the habit's full completion history (not just the visible 7-day
-  // window) so the streak can grow across calendar weeks without a hard reset.
+  // Fetch the full history, not just the visible week, so the streak spans calendar weeks.
   const { data: completions = [] } = useQuery({
     queryKey: ["taskCompletions", taskId, STREAK_HISTORY_START, today],
     queryFn: () => getTaskCompletions(taskId, STREAK_HISTORY_START, today),

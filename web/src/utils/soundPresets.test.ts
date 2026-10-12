@@ -1,9 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { deletePreset, getPresets, savePreset } from "./soundPresets";
 
-// Vitest runs in a node environment where `localStorage` is unavailable, so
-// provide a minimal in-memory implementation (same approach as
-// pomodoroSoundSync.test.ts).
+// Node has no localStorage, so stub a minimal in-memory one (as in the other store tests).
 const storage = new Map<string, string>();
 Object.defineProperty(globalThis, "localStorage", {
   configurable: true,

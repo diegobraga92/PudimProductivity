@@ -35,19 +35,13 @@ function saveFiredAlarms(keys: Set<string>): void {
   }
 }
 
-/**
- * Polls scheduled habit tasks and fires an in-app alarm toast (sound + UI
- * notification) when the alarm time (start_time minus alarm_minutes) arrives
- * for a habit that recurs on today.
- */
+/** Polls scheduled habits and fires an alarm toast when start_time - alarm_minutes arrives. */
 export function useAlarmNotifier(): void {
   const queryClient = useQueryClient();
   const { fireAlarm } = useAlarm();
   const { t } = useI18n();
   const firedRef = useRef<Set<string>>(new Set());
-  // Stable ref so the polling effect doesn't restart when the translation
-  // function identity changes (and to satisfy exhaustive-deps). Refs must not be
-  // written during render, so the sync happens in an effect.
+  // Ref keeps the polling effect stable across t() identity changes; written in an effect, not on render.
   const tRef = useRef(t);
   useEffect(() => {
     tRef.current = t;
@@ -67,8 +61,7 @@ export function useAlarmNotifier(): void {
         let tasks: Task[] = cached ?? [];
         if (tasks.length === 0) {
           tasks = await listScheduledTasks();
-          // Write back to the react-query cache so the planner and future
-          // alarm checks share the same data without redundant fetches.
+          // Write back to the query cache so the planner and later checks reuse the data.
           queryClient.setQueryData<Task[]>(["scheduledTasks"], tasks);
         }
 
@@ -91,13 +84,11 @@ export function useAlarmNotifier(): void {
           if (alarmMinutes < 0) continue;
 
           // Fire when the alarm time falls between the previous check and now.
-          // This catches alarms even if the app loads slightly after the minute.
           if (lastCheckMinutes !== null) {
             const passedThisCheck = alarmMinutes > lastCheckMinutes && alarmMinutes <= nowMinutes;
             if (!passedThisCheck) continue;
           } else {
-            // First check: fire if the alarm is at the current minute
-            // or was within the last 2 minutes (grace period for late loads).
+            // First check: fire if the alarm is at this minute or within the last 2 minutes.
             if (nowMinutes - alarmMinutes > 2 || nowMinutes - alarmMinutes < 0) continue;
           }
 

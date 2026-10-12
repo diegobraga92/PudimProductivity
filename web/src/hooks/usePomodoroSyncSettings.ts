@@ -17,11 +17,7 @@ export interface PomodoroSyncSettings {
   setSound: (sound: SoundID) => void;
 }
 
-/**
- * Reactive access to the Pomodoro ↔ Soundscape sync settings. Keeps every
- * consumer (the Pomodoro page's inline control and the app-root automation
- * hook) in sync through one shared store.
- */
+/** Reactive pomodoro <-> sound sync settings, shared by the Pomodoro page and the app-root hook. */
 export function usePomodoroSyncSettings(): PomodoroSyncSettings {
   const enabled = useSyncExternalStore(subscribe, getPomodoroSyncEnabled);
   const sound = useSyncExternalStore(subscribe, getPomodoroSyncSound);

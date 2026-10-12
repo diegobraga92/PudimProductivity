@@ -26,8 +26,7 @@ export default function RecipeList({ onNew, onEdit }: RecipeListProps) {
       listRecipes({ search: search || undefined, tags: tag ? [tag] : undefined, difficulty: difficulty || undefined }),
   });
 
-  // Fetch all recipes (no filters) so the tag filter options follow the tags
-  // that actually exist in the user's recipes instead of a pre-made list.
+  // Fetch unfiltered so the tag options reflect the tags actually in use.
   const { data: allRecipes = [] } = useQuery({
     queryKey: ["recipes", "all"],
     queryFn: () => listRecipes(),

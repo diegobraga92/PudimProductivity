@@ -81,11 +81,7 @@ interface LibraryCsvImportProps {
   onImported: (result: ImportResult) => void;
 }
 
-/**
- * CSV import dialog with column matching + fixed values. Parses the file
- * client-side, lets the user map each field to a column (or a constant), shows
- * a preview, then POSTs the resolved items to /library/import.
- */
+/** CSV import: map columns or fixed values, preview, then POST the resolved items to /library/import. */
 export function LibraryCsvImport({ onClose, onImported }: LibraryCsvImportProps) {
   const queryClient = useQueryClient();
   const { t } = useI18n();
@@ -145,9 +141,7 @@ export function LibraryCsvImport({ onClose, onImported }: LibraryCsvImportProps)
     reader.readAsText(file);
   }
 
-  /** Resolves the effective value for a field at a data-row index. Auto-scored
-   *  values override whatever the column mapping produced. Scores are truncated
-   *  to one decimal so the preview shows exactly what will be stored. */
+  /** Effective value at a data-row index: an auto-score wins, truncated to 1 decimal. */
   function resolve(field: FieldKey, rowIndex: number): string {
     const filled = autoFilled[rowIndex];
     if (field === "score" && filled?.score != null) return String(normalizeScore(filled.score));
@@ -169,10 +163,7 @@ export function LibraryCsvImport({ onClose, onImported }: LibraryCsvImportProps)
     return value;
   }
 
-  /**
-   * Builds the import payload, collecting per-row validation errors. Auto-scored
-   * values are read from the committed `autoFilled` state via `resolve`.
-   */
+  /** Build the import payload and collect per-row errors; auto-scored values come from autoFilled. */
   function buildItems(): { items: CreateLibraryItemRequest[]; rowErrors: string[] } {
     const items: CreateLibraryItemRequest[] = [];
     const rowErrors: string[] = [];
@@ -203,11 +194,7 @@ export function LibraryCsvImport({ onClose, onImported }: LibraryCsvImportProps)
     return { items, rowErrors };
   }
 
-  /**
-   * Looks up critic scores for every row that has no score yet, using the batch
-   * score endpoint in chunks of 100. Returns the auto-fill map (data-row index
-   * → score + source + release year) plus simple stats for the UI.
-   */
+  /** Batch critic-score lookup (chunks of 100) for rows without a score; returns the fill map + stats. */
   async function runAutoScore(): Promise<{ fill: Record<number, AutoFill>; found: number; noRating: number }> {
     const targets: { row: number; name: string; type: MediaTypeValue; year?: number }[] = [];
     dataRows.forEach((_, i) => {
@@ -259,9 +246,7 @@ export function LibraryCsvImport({ onClose, onImported }: LibraryCsvImportProps)
     }
   }
 
-  /** Imports the current preview as-is. Auto-scoring is a separate, explicit
-   *  step (the "Auto-score" button) so the user can review the filled values in
-   *  the preview before committing. */
+  /** Import the preview as-is; auto-scoring stays a separate, explicit step. */
   function handleImport() {
     setError(null);
     const { items } = buildItems();

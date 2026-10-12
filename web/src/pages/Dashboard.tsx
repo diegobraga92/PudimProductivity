@@ -32,15 +32,12 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   const today = getToday();
   const allCompletions = useHabitCompletions(habitTasks);
 
-  // Stats, one-off tasks and habits are deliberately kept separate: habits are
-  // daily commitments (done per-day, tracked via completions), while one-off
-  // tasks are single items with a flat todo/done status and no "done today".
+  // Habits (per-day completions) and one-off tasks (flat todo/done) are kept apart by design.
   const openTodos = todoTasks.filter((t) => t.status === "todo").length;
   const todayHabitCompletions = Object.values(allCompletions).filter((dates) =>
     dates.includes(today)
   ).length;
-  // Habits that are due today (or were completed today even if off-schedule,
-  // mirroring the mobile widgets), the denominator for the "Habits Today" stat.
+  // Habits due today (or completed today off-schedule), the "Habits Today" denominator.
   const habitsToday = habitTasks.filter(
     (h) =>
       isScheduledOn(today, h.recurrence_days) ||

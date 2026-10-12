@@ -1,8 +1,4 @@
-/**
- * Minimal external store, the `subscribe` half of React's
- * `useSyncExternalStore`. Shared by the localStorage-backed settings modules so
- * they don't each re-implement listener bookkeeping.
- */
+/** Minimal external store (the subscribe half of useSyncExternalStore), shared by settings modules. */
 export interface ExternalStore {
   /** Subscribes to store changes. Returns an unsubscribe function. */
   subscribe(listener: () => void): () => void;

@@ -66,11 +66,7 @@ export async function deleteTask(taskId: string): Promise<void> {
   });
 }
 
-/**
- * Completes a habit task for a specific date.
- * @param taskId - The ID of the task to complete.
- * @param date - Optional date string in YYYY-MM-DD format. Defaults to today if omitted.
- */
+/** Completes a habit for a date (YYYY-MM-DD, defaults to today). */
 export async function completeTask(taskId: string, date?: string): Promise<TaskCompletion> {
   const params = date ? `?date=${encodeURIComponent(date)}` : "";
   return request<TaskCompletion>(`/tasks/${taskId}/complete${params}`, {
@@ -80,11 +76,7 @@ export async function completeTask(taskId: string, date?: string): Promise<TaskC
   });
 }
 
-/**
- * Uncompletes a habit task for a specific date.
- * @param taskId - The ID of the task to uncomplete.
- * @param date - Optional date string in YYYY-MM-DD format. Defaults to today if omitted.
- */
+/** Uncompletes a habit for a date (YYYY-MM-DD, defaults to today). */
 export async function uncompleteTask(taskId: string, date?: string): Promise<void> {
   const params = date ? `?date=${encodeURIComponent(date)}` : "";
   return request<void>(`/tasks/${taskId}/complete${params}`, {
@@ -94,10 +86,7 @@ export async function uncompleteTask(taskId: string, date?: string): Promise<voi
   });
 }
 
-/**
- * Gets all completions across every habit task within a date range (batch endpoint).
- * Use this instead of calling getTaskCompletions per task to avoid N+1 requests.
- */
+/** All habit completions in a date range - use instead of getTaskCompletions per task (N+1). */
 export async function getAllTaskCompletions(from?: string, to?: string): Promise<TaskCompletion[]> {
   const params = new URLSearchParams();
   if (from) params.set("from", from);

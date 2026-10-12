@@ -7,10 +7,7 @@ function getDayName(dateStr: string): string {
   return DAY_NAMES[new Date(dateStr + "T00:00:00").getDay()];
 }
 
-/**
- * Whether a date falls on a scheduled day for the habit.
- * When scheduledDays is omitted or empty, every calendar day counts as scheduled.
- */
+/** Is this date a scheduled weekday? Omitted/empty scheduledDays means every day. */
 export function isScheduledOn(
   dateStr: string,
   scheduledDays?: readonly string[] | null
@@ -19,10 +16,7 @@ export function isScheduledOn(
   return scheduledDays.includes(getDayName(dateStr));
 }
 
-/**
- * Count how many scheduled days fall strictly between fromDate and toDate.
- * When scheduledDays is omitted, counts all calendar days in between.
- */
+/** Scheduled days strictly between two dates; omitted scheduledDays counts every day. */
 function countScheduledGapDays(
   fromDate: string,
   toDate: string,
@@ -40,18 +34,8 @@ function countScheduledGapDays(
   return count;
 }
 
-/**
- * Compute current and longest streak from a list of completion dates.
- *
- * A streak is a run of completed dates where no **scheduled** day is missed.
- * Non-scheduled days (e.g. a habit that only repeats Mon/Wed/Fri) are skipped
- * and do not break the streak, so it flows continuously across calendar weeks.
- *
- * @param completions - Completion date strings in YYYY-MM-DD format.
- * @param scheduledDays - Optional weekday names the habit repeats on
- *   (e.g. ["mon", "wed", "fri"]). When omitted, every calendar day is treated
- *   as scheduled, preserving the original behavior.
- */
+/** Current + longest streak over YYYY-MM-DD completions. A missed *scheduled* day breaks it; other
+ * weekdays (e.g. ["mon", "wed", "fri"]) are skipped, so runs span calendar weeks. */
 export function computeStreaks(
   completions: readonly string[],
   scheduledDays?: readonly string[] | null
@@ -73,8 +57,7 @@ export function computeStreaks(
   const dateSet = new Set(sorted);
   const uniqueDates = [...new Set(sorted)].sort();
 
-  // Longest streak: scan consecutive completed dates, breaking only when a
-  // scheduled day was missed between them.
+  // Longest run of completions, broken only by a missed scheduled day.
   let longest = 0;
   let tempStreak = 0;
   for (let i = 0; i < uniqueDates.length; i++) {
@@ -91,8 +74,7 @@ export function computeStreaks(
     longest = Math.max(longest, tempStreak);
   }
 
-  // Current streak: walk backwards from today. Non-scheduled days are skipped
-  // without breaking the streak.
+  // Current run, walked back from today; non-scheduled days are skipped.
   let current = 0;
   const today = formatLocalDate(new Date());
   const checkDate = new Date();

@@ -1,8 +1,4 @@
-/**
- * Format a Date as YYYY-MM-DD using local timezone.
- * This avoids the UTC offset issue where .toISOString() can return
- * the wrong date for users in negative UTC offsets late in the evening.
- */
+/** Date -> local YYYY-MM-DD (not toISOString(), which can be off by a day at negative UTC offsets). */
 export function formatLocalDate(d: Date): string {
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, "0");
@@ -10,11 +6,7 @@ export function formatLocalDate(d: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-/**
- * Format a string like "YYYY-MM-DD" to a short display format e.g. "Jun 1".
- * Month abbreviations can be localized by passing the translated month list
- * (e.g. from the i18n dictionary). Defaults to English.
- */
+/** "YYYY-MM-DD" -> "Jun 1"; monthNames localizes the abbreviations. */
 function formatShortDisplay(dateStr: string, months: string[] = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
@@ -23,16 +15,7 @@ function formatShortDisplay(dateStr: string, months: string[] = [
   return `${months[d.getMonth()]} ${d.getDate()}`;
 }
 
-/**
- * Get ISO date strings (YYYY-MM-DD) for a given calendar week
- * (Monday to Sunday), using local timezone. Used by the weekly Planner grid,
- * which is anchored to fixed Monday–Sunday columns.
- *
- * @param weekOffset - Offset relative to the current week:
- *   0 (default) = current week,
- *  -1 = previous week,
- *  +1 = next week, etc.
- */
+/** ISO dates for a local Monday–Sunday week; weekOffset shifts by whole weeks (0 = current). */
 export function getWeekDates(weekOffset = 0): string[] {
   const dates: string[] = [];
   const now = new Date();
@@ -47,18 +30,7 @@ export function getWeekDates(weekOffset = 0): string[] {
   return dates;
 }
 
-/**
- * Get ISO date strings (YYYY-MM-DD) for a rolling 7-day window.
- *
- * Unlike getWeekDates (anchored to Monday), this window is anchored to today:
- * offset 0 returns the last 7 days ending today, with today as the final
- * column.
- *
- * @param offset - Offset relative to the current window:
- *   0 (default) = last 7 days ending today,
- *  -1 = the 7 days before that,
- *  +1 = the 7 days after that (future — usually not shown).
- */
+/** ISO dates for a rolling 7-day window ending today; offset shifts it (e.g. -1 = the previous 7 days). */
 export function getRollingWindowDates(offset = 0): string[] {
   const dates: string[] = [];
   const today = new Date();
@@ -74,21 +46,12 @@ export function getRollingWindowDates(offset = 0): string[] {
   return dates;
 }
 
-/**
- * Get today's date as an ISO string (YYYY-MM-DD) using local timezone.
- */
+/** Today as a local YYYY-MM-DD string. */
 export function getToday(): string {
   return formatLocalDate(new Date());
 }
 
-/**
- * Format a week's date range into a compact display string.
- * Same-month: "1–7 Jun"
- * Cross-month: "29 Jun – 5 Jul"
- *
- * @param monthNames Optional localized month abbreviations (length 12). Falls
- *   back to English when omitted.
- */
+/** Compact week range: "1–7 Jun" or "29 Jun – 5 Jul"; monthNames (length 12) localizes the abbreviations. */
 export function formatWeekRange(weekDates: string[], monthNames?: string[]): string {
   const start = formatShortDisplay(weekDates[0], monthNames);
   const end = formatShortDisplay(weekDates[6], monthNames);
@@ -101,11 +64,7 @@ export function formatWeekRange(weekDates: string[], monthNames?: string[]): str
   return `${start} – ${end}`;
 }
 
-/**
- * Normalize a time string from the backend (e.g. "09:00:00") to the
- * HH:MM format expected by HTML <input type="time"> elements.
- * If the input is invalid or empty, returns an empty string.
- */
+/** Backend time ("09:00:00") -> HH:MM for <input type="time">; "" when invalid. */
 export function sanitizeTime(t: string | null | undefined): string {
   if (!t) return "";
   const parts = t.split(":");
@@ -113,10 +72,7 @@ export function sanitizeTime(t: string | null | undefined): string {
   return `${parts[0]}:${parts[1]}`;
 }
 
-/**
- * Minutes since midnight for an "HH:MM" (or "HH:MM:SS") time string. Missing or
- * invalid parts default to 0 so a bare hour still parses.
- */
+/** Minutes since midnight from "HH:MM" or "HH:MM:SS"; missing parts default to 0. */
 export function parseTimeToMinutes(t: string): number {
   const [h, m] = sanitizeTime(t).split(":").map(Number);
   return (h || 0) * 60 + (m || 0);

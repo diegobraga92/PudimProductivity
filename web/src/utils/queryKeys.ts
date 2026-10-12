@@ -1,10 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query";
 
-/**
- * Central React Query keys. Keeping them in one place stops the string literals
- * from drifting apart between the components that read a cache entry and the
- * ones that invalidate it.
- */
+/** Central React Query keys, so readers and invalidators cannot drift apart. */
 export const queryKeys = {
   tasksOneOff: ["tasks", "one-off"] as const,
   tasksHabit: ["tasks", "habit"] as const,

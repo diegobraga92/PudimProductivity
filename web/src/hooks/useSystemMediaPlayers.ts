@@ -10,14 +10,9 @@ export interface SystemMediaPlayers {
   recheck: () => void;
 }
 
-/**
- * Detects whether the desktop shell can control the system media player.
- * The bridge is absent in the browser, which reports the feature as
- * unsupported so the UI can hide it entirely.
- */
+/** Whether the desktop shell can control the system player; false in the browser. */
 export function useSystemMediaPlayers(): SystemMediaPlayers {
-  // Without the bridge the feature must be hidden on the very first render,
-  // otherwise the browser build flashes a control it can never use.
+  // Must be false on the first render, or the browser build flashes an unusable control.
   const [availability, setAvailability] = useState<MediaAvailability>(() =>
     window.desktop?.mediaStatus ? "checking" : "unsupported"
   );

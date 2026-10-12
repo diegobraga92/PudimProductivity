@@ -2,17 +2,7 @@ import config from "../config";
 import type { SoundEntry } from "../api/sounds";
 import type { SoundID } from "./audio";
 
-/**
- * Soundscape ambient sounds are served as audio files (e.g. MP3 loops) by the
- * backend:
- *
- *   GET /api/v1/sounds        → { "sounds": [{ "id": "rain", "file": "rain.mp3", … }] }
- *   GET /api/v1/sounds/{file} → audio bytes (Range-capable, CORS-enabled)
- *
- * This module fetches that catalog and maps each sound id to its playable URL.
- * The audio engine is catalog-agnostic: a sound whose file is unknown simply
- * does not play.
- */
+/** Maps sound ids to their backend file URLs from GET /sounds; unknown ids simply do not play. */
 
 let fileBySound: Partial<Record<SoundID, string>> = {};
 

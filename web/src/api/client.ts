@@ -3,10 +3,7 @@ import type { components } from "./generated/health-v1";
 
 export type HealthResponse = components["schemas"]["HealthResponse"];
 
-/**
- * Dev-mode identity headers mirroring the backend's AuthMiddleware
- * (X-User-ID / X-User-Role).
- */
+/** Dev identity headers mirroring the backend AuthMiddleware (X-User-ID / X-User-Role). */
 export const DEV_USER_ID = "dev-user";
 const DEV_USER_ROLE = "user";
 
@@ -23,11 +20,7 @@ export function setDevRole(role: "admin" | "user") {
   localStorage.setItem(DEV_ROLE_KEY, role);
 }
 
-/**
- * Returns identity headers without a Content-Type, for requests whose body sets
- * its own. Most importantly FormData uploads, where the browser has to add the
- * multipart boundary itself.
- */
+/** Identity headers without Content-Type, for bodies that set their own (e.g. FormData uploads). */
 export function apiIdentityHeaders(extra?: Record<string, string>): Record<string, string> {
   return {
     "X-User-ID": DEV_USER_ID,
@@ -41,9 +34,7 @@ export function apiHeaders(extra?: Record<string, string>): Record<string, strin
   return { "Content-Type": "application/json", ...apiIdentityHeaders(), ...extra };
 }
 
-/**
- * Fetches the health status from the backend.
- */
+/** Backend health status. */
 export async function getHealth(): Promise<HealthResponse> {
   const response = await fetch(`${config.apiBaseUrl}/health`);
 
@@ -73,9 +64,7 @@ export interface RequestOptions {
   tooLarge?: string;
 }
 
-/**
- * Single entry point for JSON API calls.
- */
+/** Single entry point for JSON API calls. */
 export async function request<T>(path: string, opts: RequestOptions): Promise<T> {
   const { action, notFound, tooLarge, headers, ...init } = opts;
   const response = await fetch(`${config.apiBaseUrl}${path}`, {

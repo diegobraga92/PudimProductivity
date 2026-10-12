@@ -45,8 +45,7 @@ export default function MealPlanner() {
     queryFn: listMealPlanItems,
   });
 
-  // Recipes back the optional link picker and name the linked chips. The list
-  // payload is enough: titles are all the chips need.
+  // Recipes back the link picker; the list payload is enough for the chips.
   const { data: recipes = [] } = useQuery({
     queryKey: ["recipes", "all"],
     queryFn: () => listRecipes(),
@@ -199,11 +198,7 @@ interface MealItemModalProps {
   onClose: () => void;
 }
 
-/**
- * Create/edit dialog for one meal plan item. Creating fans out over the
- * selected days (one independent item each); editing keeps the item's day fixed
- * so a single row is replaced.
- */
+/** Create/edit one meal item; create fans out over the selected days, edit keeps its day fixed. */
 function MealItemModal({ target, onClose }: MealItemModalProps) {
   const { t } = useI18n();
   const queryClient = useQueryClient();

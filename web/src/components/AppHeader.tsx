@@ -46,11 +46,7 @@ interface AppHeaderProps {
   onNavigate: (view: Page) => void;
 }
 
-/**
- * App chrome: top bar (nav tabs, "More" menu, status + toggles) and the mobile
- * slide-out drawer. Owns its own open/closed state so the page shell does not
- * have to.
- */
+/** Top bar (nav tabs, More menu, status/toggles) + mobile drawer; owns its open/closed state. */
 export default function AppHeader({ page, isBackendOk, onNavigate }: AppHeaderProps) {
   const { t, lang, toggleLang } = useI18n();
   const { theme, toggleTheme } = useTheme();

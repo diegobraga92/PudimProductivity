@@ -1,11 +1,7 @@
 import en from "../../../shared/i18n/en.json";
 import ptBR from "../../../shared/i18n/pt-BR.json";
 
-/**
- * Supported UI languages. The dictionary lives in `shared/i18n/` so the web
- * (this module) and the Android app (assets copied by Gradle) share one
- * single source of truth.
- */
+/** Supported UI languages; the dictionary lives in shared/i18n/, shared with the Android app. */
 export type Language = "en" | "pt-BR";
 
 /** Flat key → translated string map. */

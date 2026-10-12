@@ -61,11 +61,7 @@ export async function importLibraryItems(req: {
   });
 }
 
-/**
- * Searches the configured rating provider (OMDb for films/series, RAWG for
- * games) for a title. The returned candidates let the user confirm the right
- * match before its score is saved with the item.
- */
+/** Search the configured rating provider (OMDb/RAWG) for a title; the user confirms the match. */
 export async function searchLibraryScores(
   query: string,
   type: MediaType,
@@ -81,10 +77,7 @@ export async function searchLibraryScores(
 export type ScoreBatchItem = components["schemas"]["ScoreBatchItem"];
 export type ScoreBatchResponse = components["schemas"]["ScoreBatchResponse"];
 
-/**
- * Looks up scores for many titles at once (used by the CSV import auto-scoring
- * flow). Per-item failures come back inline in each result's error field.
- */
+/** Batch score lookup (used by CSV auto-scoring); per-item failures come back inline. */
 export async function searchLibraryScoresBatch(
   items: ScoreBatchItem[],
 ): Promise<ScoreBatchResponse> {

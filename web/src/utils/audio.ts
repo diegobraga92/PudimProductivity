@@ -1,20 +1,9 @@
-/**
- * Soundscape audio engine.
- *
- * Plays the ambient sound loops (audio files served by the backend) through the
- * Web Audio graph so volume, reverb and the frequency visualizer apply.
- *
- * The engine is catalog-agnostic: it plays any id it is given as long as
- * ./soundFiles knows a file for it. The built-in ids and their labels live in
- * ./soundCatalog, and saved mixes live in ./soundPresets.
- */
+/** Soundscape engine: plays looped sound files through the Web Audio graph (volume, reverb, visualizer).
+ * Catalog-agnostic - it plays any id ./soundFiles knows a file for; built-in ids live in ./soundCatalog. */
 
 import { getSoundFile } from "./soundFiles";
 
-/**
- * Identifier of a sound in the library. Built-in ids are the names shipped with
- * the app; sounds added by the user get their own ids from the backend catalog.
- */
+/** Sound id: a built-in name, or a backend-assigned id for a user-added sound. */
 export type SoundID = string;
 
 /** Default level of a sound's own volume slider (0–1). */
@@ -47,11 +36,7 @@ class SoundscapeEngine {
   private reverbNode: ConvolverNode | null = null;
   private analyserNode: AnalyserNode | null = null;
 
-  /**
-   * Ensure the AudioContext exists (must be called from a user gesture).
-   * Creates the master gain, a subtle global reverb send and the analyser used
-   * by the frequency visualizer.
-   */
+  /** Lazily create the AudioContext (needs a user gesture) plus master gain, reverb send and analyser. */
   private ensureContext(): AudioContext {
     if (!this.ctx) {
       this.ctx = new AudioContext({ latencyHint: "playback" });
@@ -96,10 +81,7 @@ class SoundscapeEngine {
     return buffer;
   }
 
-  /**
-   * Get current frequency data for the visualizer (returns Uint8Array of
-   * length fftSize/2). Caller should supply a pre-allocated Uint8Array.
-   */
+  /** Frequency data for the visualizer (fftSize/2 samples); the caller supplies the Uint8Array. */
   getFrequencyData(data: Uint8Array): void {
     if (this.analyserNode) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -107,13 +89,7 @@ class SoundscapeEngine {
     }
   }
 
-  /**
-   * Play a looping audio file for a sound, routing it through the shared
-   * gain → masterGain graph (volume, reverb and the visualizer apply).
-   *
-   * The caller owns the level: pass the sound's current volume so the fade-in
-   * lands on it directly instead of jumping once the slider state catches up.
-   */
+  /** Loop a sound's file through gain -> masterGain. Pass the current volume so the fade-in lands on it. */
   play(id: SoundID, volume = DEFAULT_SOUND_VOLUME): boolean {
     if (this.active.has(id)) return true;
 
@@ -131,9 +107,7 @@ class SoundscapeEngine {
 
     let entry: ActiveSource;
     try {
-      // MediaElementAudioSourceNode outputs silence unless the media is
-      // CORS-clean. The desktop app loads from app://bundle and fetches the
-      // audio from the backend, so request anonymous (no-credential) CORS mode.
+      // MediaElementAudioSourceNode is silent unless CORS-clean, so request anonymous CORS mode.
       const element = new Audio();
       element.crossOrigin = "anonymous";
       element.loop = true;
@@ -153,8 +127,7 @@ class SoundscapeEngine {
 
     this.active.set(id, entry);
     void entry.element.play().catch(() => {
-      // The file failed to load/autoplay (missing file, CORS failure or
-      // autoplay policy).
+      // Load/autoplay failed (missing file, CORS, or autoplay policy).
       this.releaseEntry(entry);
       this.active.delete(id);
     });
@@ -207,10 +180,7 @@ class SoundscapeEngine {
     }
   }
 
-  /**
-   * Live-updates the volume of a playing sound (0–1). No-op when it is not
-   * playing: the caller owns the level and passes it to `play` next time.
-   */
+  /** Live volume update (0-1). No-op when not playing: the caller owns the level and passes it to `play`. */
   setSoundVolume(id: SoundID, v: number): void {
     const entry = this.active.get(id);
     if (entry) {

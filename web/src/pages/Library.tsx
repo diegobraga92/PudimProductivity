@@ -216,8 +216,7 @@ export default function Library() {
   // Ids selected for bulk actions (e.g. delete).
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const confirm = useConfirm();
-  // Score lookup is gated by the backend flag `library.score_lookup_enabled`
-  // (off by default). Hide the button so users don't hit a 503 "disabled".
+  // Gated by the backend flag library.score_lookup_enabled, so users never hit a 503.
   const scoreLookupEnabled = useFeatureFlag("library.score_lookup_enabled");
 
   const { data: items = [], isLoading, error: listError } = useQuery({
@@ -230,17 +229,13 @@ export default function Library() {
       ),
   });
 
-  // Genre/console options for the subtype filter, scoped by the type filter so
-  // games show consoles and movies/series/books show genres.
+  // Genre/console options, scoped by the type filter.
   const { data: subtypeOptions = [] } = useQuery({
     queryKey: ["library-subtypes", typeFilter],
     queryFn: () => listLibrarySubtypes((typeFilter || undefined) as MediaType | undefined),
   });
 
-  // Quick subtype filters, derived from the subtypes that actually exist in the
-  // user's items (same philosophy as the recipe tag chips). Each chip pairs the
-  // subtype with its media type so e.g. a Horror book is not confused with a
-  // Horror movie.
+  // Quick subtype chips derived from the subtypes in use; each pairs a subtype with its media type.
   const { data: allItems = [] } = useQuery({
     queryKey: ["library", "all"],
     queryFn: () => listLibraryItems(),
@@ -256,8 +251,7 @@ export default function Library() {
       seen.add(key);
       pairs.push({ media_type: item.media_type, subtype: item.subtype });
     }
-    // Same-named subtypes from different types stay adjacent (so the type icon
-    // disambiguation is obvious); within a subtype, order by media type.
+    // Same-named subtypes from different types stay adjacent, ordered by media type.
     return pairs.sort(
       (a, b) =>
         a.subtype.localeCompare(b.subtype) || a.media_type.localeCompare(b.media_type),
@@ -276,8 +270,7 @@ export default function Library() {
     return out;
   }, [selected, itemById]);
 
-  // Sort the displayed items client-side (the list is fully loaded, no
-  // pagination). Missing values are kept at the end regardless of direction.
+  // Sort client-side (no pagination); missing values stay last in both directions.
   const sortedItems = useMemo(() => {
     const dir = sort.dir === "asc" ? 1 : -1;
     return [...items].sort((a, b) => compareItems(a, b, sort.key) * dir);
@@ -379,8 +372,7 @@ export default function Library() {
     setScoreError(null);
   }
 
-  /** Toggles a quick subtype chip: activates it (setting both the type and the
-   *  subtype filters) or, when already active, clears the pair. */
+  /** Toggle a subtype chip: sets type + subtype, or clears both when already active. */
   function toggleSubtypeFilter(mediaType: string, subtype: string) {
     if (typeFilter === mediaType && subtypeFilter === subtype) {
       setTypeFilter("");
@@ -416,8 +408,7 @@ export default function Library() {
     }
   }
 
-  /** Applies a confirmed candidate's score + source to the form. The score is
-   *  truncated to one decimal so the input shows exactly what will be saved. */
+  /** Apply a confirmed candidate's score + source; the score is truncated to 1 decimal. */
   function applyCandidate(candidate: ScoreCandidate) {
     setForm({
       ...form,
@@ -455,8 +446,7 @@ export default function Library() {
           value={typeFilter}
           onChange={(e) => {
             setTypeFilter(e.target.value);
-            // The subtype list is scoped by media type. Drop a stale value
-            // (e.g. a console filter while browsing movies).
+            // Drop a subtype that does not belong to the current media type.
             setSubtypeFilter("");
           }}
           aria-label={t("library.filterType")}

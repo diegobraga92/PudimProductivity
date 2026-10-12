@@ -85,8 +85,7 @@ function Soundscape() {
   const [playing, setPlaying] = useState<Set<SoundID>>(new Set());
   const [masterVolume, setMasterVolume] = useState(DEFAULT_MASTER_VOLUME);
   const [volumes, setVolumes] = useState<Record<SoundID, number>>({});
-  // Read the stored presets lazily on first render. 
-  // Refreshes after save/delete happen in the event handlers.
+  // Read presets lazily on first render; save/delete refresh them in their handlers.
   const [presets, setPresets] = useState<Preset[]>(getPresets);
 
   const soundscape = getSoundscape();
@@ -126,8 +125,7 @@ function Soundscape() {
     });
     if (!ok) return;
 
-    // Stop it first so the engine does not keep a deleted file playing, and
-    // never leave the Pomodoro automation pointing at a missing sound.
+    // Stop it first, and never leave the Pomodoro automation pointing at a deleted sound.
     soundscape.stop(sound.id, false);
     setPlaying((prev) => {
       const next = new Set(prev);

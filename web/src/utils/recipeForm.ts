@@ -14,9 +14,7 @@ export type RecipeFormValues = {
   sourceUrl: string;
 };
 
-// Maps a recipe fetched from the API onto the editor's form state. Every field
-// the editor can save has to round-trip through here: a field missing from this
-// mapping looks like it was never persisted when the recipe is reopened.
+// API recipe -> editor form state. Every savable field must round-trip here, or reopening looks unpersisted.
 export function formValuesFromRecipe(recipe: Recipe): RecipeFormValues {
   return {
     title: recipe.title,

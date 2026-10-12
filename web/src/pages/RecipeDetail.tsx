@@ -55,10 +55,7 @@ export default function RecipeDetail({ recipeId, onBack }: { recipeId: string; o
     };
   }, [previewUrl]);
 
-  // Populate the form from the fetched recipe. The effect runs again while a
-  // background refetch is in flight - the cached copy may be stale, e.g. right
-  // after saving - and stops as soon as the form holds non-fetching data, so
-  // in-progress edits are never overwritten.
+  // Hydrate the form from fetched data; in-progress edits are never overwritten (it stops once dirty).
   const hydratedFor = useRef<string | null>(null);
   useEffect(() => {
     if (isNew || !recipe || hydratedFor.current === recipe.id) return;
@@ -92,8 +89,7 @@ export default function RecipeDetail({ recipeId, onBack }: { recipeId: string; o
         steps: steps.filter((s) => s.instruction.trim()),
       };
 
-      // New recipes need an id before an image can be uploaded, so create
-      // first (without media), then upload, then save the final record.
+      // New recipes need an id before an upload: create, upload, then save.
       let id = recipeId;
       if (isNew) {
         const created = await createRecipe({ ...baseBody, image_url: null, source_url: null });

@@ -1,12 +1,7 @@
 import type { SessionStatus } from "../api/pomodoro";
 import { createExternalStore } from "./externalStore";
 
-/**
- * Pomodoro to system media player sync settings.
- *
- * Stores the enabled flag and the chosen player in localStorage, and exposes a
- * small external store so the Pomodoro page and the app root hook stay in sync.
- */
+/** Pomodoro -> system player sync settings (enabled + player) in localStorage, with an external store. */
 
 export const POMODORO_MEDIA_ENABLED_KEY = "soundscape_pomodoro_media_enabled";
 export const POMODORO_MEDIA_PLAYER_KEY = "soundscape_pomodoro_media_player";
@@ -42,11 +37,7 @@ export const subscribe = store.subscribe;
 
 export type MediaSyncAction = "play" | "pause" | "idle";
 
-/**
- * Decides what the automation hook should do for a given timer status.
- * Disabled sync and an unusable playerctl never touch the system player, so
- * the feature stays inert instead of reporting errors.
- */
+/** Action for a timer status; disabled sync and an unusable playerctl stay inert instead of erroring. */
 export function resolveMediaAction(
   enabled: boolean,
   available: boolean,

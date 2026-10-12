@@ -1,11 +1,6 @@
 import type { SoundID } from "./audio";
 
-/**
- * Soundscape presets: the saved "mixes" of sounds and volumes.
- *
- * Kept as pure functions over localStorage (mirroring `pomodoroSoundSync`) so
- * the audio engine stays focused on playback and the storage is unit-testable.
- */
+/** Saved soundscape mixes, kept as pure functions over localStorage so storage stays testable. */
 
 /** A saved mix: which sounds were on, their levels, and the master level. */
 export interface Preset {

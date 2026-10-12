@@ -2,18 +2,14 @@ import { useEffect, useState } from "react";
 import { useToast } from "./toastContext";
 import { useI18n } from "../i18n";
 
-/**
- * Renders the in-app toast stack (real-time task notifications). Reuses the
- * alarm toast styles. Alarms themselves are rendered by AlarmToast.
- */
+/** Renders the toast stack (reusing the alarm toast styles); alarms themselves come from AlarmToast. */
 export function ToastStack() {
   const { toasts, dismissToast } = useToast();
   const { t } = useI18n();
   // Toast IDs currently playing their exit animation (fade/slide out).
   const [leaving, setLeaving] = useState<Set<string>>(new Set());
 
-  // Auto-dismiss: schedule the exit animation shortly before the provider
-  // removes the toast so the removal is animated.
+  // Schedule the exit animation shortly before the provider removes the toast.
   useEffect(() => {
     const timers: ReturnType<typeof setTimeout>[] = [];
     for (const t of toasts) {

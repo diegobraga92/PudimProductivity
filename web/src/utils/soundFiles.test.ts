@@ -1,8 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-// config.ts reads `window` while it is evaluated, so stub it before the module
-// under test (and its config import) is loaded. Vitest runs in a node
-// environment, which has no window.
+// config.ts reads window at import time, so stub it first (the node env has none).
 vi.hoisted(() => {
   Object.defineProperty(globalThis, "window", { configurable: true, value: {} });
 });

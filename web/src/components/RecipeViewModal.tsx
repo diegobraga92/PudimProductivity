@@ -18,12 +18,7 @@ interface RecipeViewModalProps {
   onEdit: (recipeId: string) => void;
 }
 
-/**
- * Read-only recipe detail, opened by clicking a recipe card. Ingredients and
- * steps are not part of the list payload, so the full recipe is fetched with
- * the same query key the editor hydrates from - opening the modal therefore
- * warms the editor's cache. Editing and deleting both leave from here.
- */
+/** Read-only recipe detail; fetches the full recipe with the editor's query key, warming its cache. */
 export default function RecipeViewModal({ recipeId, onClose, onEdit }: RecipeViewModalProps) {
   const { t } = useI18n();
   const queryClient = useQueryClient();

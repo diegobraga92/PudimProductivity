@@ -9,14 +9,12 @@ export type CreateRecipeRequest = components["schemas"]["CreateRecipeRequest"];
 export type UploadURLRequest = components["schemas"]["UploadURLRequest"];
 export type UploadURL = components["schemas"]["UploadURL"];
 
-// React Query key for a single recipe. Exported so the editor screen and the
-// cache helpers below cannot drift apart.
+// React Query key for a single recipe, exported so the editor and cache helpers cannot drift apart.
 export function recipeDetailKey(recipeId: string) {
   return ["recipe", recipeId] as const;
 }
 
-// Resolves a URL returned by the API against the API origin. Absolute URLs pass
-// through unchanged.
+// Resolve an API URL against the API origin; absolute URLs pass through.
 function toAbsoluteApiUrl(url: string): string {
   if (/^[a-z][a-z0-9+.-]*:\/\//i.test(url)) return url;
   return new URL(url, apiOrigin()).toString();
@@ -54,14 +52,10 @@ export async function updateRecipe(recipeId: string, req: CreateRecipeRequest): 
   });
 }
 
-// Reconciles the React Query cache after a recipe was saved. Writing the server
-// response into the detail entry is what makes a reopened recipe show what was
-// just saved: without it the cache keeps the pre-save copy and the editor
-// hydrates from stale values (e.g. an empty source_url).
+// Seed the detail cache with the saved recipe, or a reopen hydrates from the pre-save copy.
 export function applySavedRecipe(queryClient: QueryClient, saved: Recipe): void {
   queryClient.setQueryData(recipeDetailKey(saved.id), saved);
-  // Mark the seeded entry stale as well: it renders immediately while the next
-  // mount revalidates it against the server.
+  // Also mark the seeded entry stale so the next mount revalidates it.
   queryClient.invalidateQueries({ queryKey: recipeDetailKey(saved.id) });
   queryClient.invalidateQueries({ queryKey: ["recipes"] });
 }
@@ -93,8 +87,7 @@ export async function uploadToPresignedUrl(presignedUrl: string, file: File): Pr
   if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
 }
 
-// Resolves a stored media value to a displayable URL. Full URLs pass through,
-// object keys are prefixed with the media base. Returns null when empty.
+// Stored media value -> displayable URL (object keys get the media base); null when empty.
 export function resolveMediaUrl(value: string | null | undefined): string | null {
   if (!value) return null;
   if (/^https?:\/\//.test(value) || value.startsWith("data:")) return value;

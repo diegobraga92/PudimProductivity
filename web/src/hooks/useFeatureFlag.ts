@@ -1,13 +1,7 @@
 import { useState, useEffect } from "react";
 import { getFeature } from "../api/features";
 
-/**
- * Hook to check if a feature flag is enabled.
- * Returns `false` by default while loading or on error.
- *
- * @param name - The feature flag name to check.
- * @returns `true` if the feature is enabled, `false` otherwise.
- */
+/** Feature flag name -> enabled; false while loading or on error. */
 export function useFeatureFlag(name: string): boolean {
   const [enabled, setEnabled] = useState(false);
 

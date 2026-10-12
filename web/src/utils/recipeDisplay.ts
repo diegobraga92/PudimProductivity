@@ -1,7 +1,6 @@
 import type { Recipe } from "../api/recipes";
 
-/** Maps the well-known default recipe tags to i18n label keys so they can be
- *  translated (e.g. "quick" → "Rápida" in pt-BR). Custom tags are shown as-is. */
+/** Default recipe tags -> i18n label keys; custom tags display as-is. */
 const TAG_LABEL_KEYS: Record<string, string> = {
   quick: "tags.quick",
   vegan: "tags.vegan",

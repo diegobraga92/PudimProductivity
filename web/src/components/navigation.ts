@@ -46,8 +46,7 @@ export const NAV_ITEMS: NavItem[] = [
   { id: "library", labelKey: "nav.library", icon: FilmIcon },
 ];
 
-// Secondary pages tucked into the desktop "More" dropdown so the top bar does
-// not overflow.
+// Secondary pages tucked into the "More" dropdown so the top bar does not overflow.
 export const MORE_ITEMS: NavItem[] = [
   { id: "health", labelKey: "nav.health", icon: HeartPulseIcon },
   { id: "settings", labelKey: "nav.serverSettings", icon: SettingsIcon },

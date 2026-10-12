@@ -1,10 +1,4 @@
-/**
- * Shared lazy-initialized AudioContext for short UI feedback sounds.
- *
- * Creating/closing an AudioContext per sound is wasteful and can cause
- * performance issues. This singleton reuses a single context across all
- * UI sound effects, creating it on first use and resuming it if suspended.
- */
+/** Singleton AudioContext for short UI sounds, created on first use and resumed if suspended. */
 let sharedCtx: AudioContext | null = null;
 
 /** Get (or lazily create) the shared AudioContext. */

@@ -2,11 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getCurrentSession, type SessionStatus } from "../api/pomodoro";
 import { queryKeys } from "../utils/queryKeys";
 
-/**
- * Reads the current pomodoro session status, polling every 30s, and returns null
- * when no session is active. Shares one React Query cache entry with the
- * Pomodoro page, so a start/pause/stop there is reflected here promptly.
- */
+/** Current session status, polled every 30s (null when idle); shares the Pomodoro page's cache entry. */
 export function useCurrentPomodoroStatus(): SessionStatus | null {
   const { data } = useQuery({
     queryKey: queryKeys.pomodoroCurrent,

@@ -3,21 +3,13 @@ import type { SoundID } from "./audio";
 import { createExternalStore } from "./externalStore";
 import { BUILTIN_SOUND_IDS } from "./soundCatalog";
 
-/**
- * Pomodoro ↔ Soundscape sync settings.
- *
- * Single source of truth for "auto-play a sound while the pomodoro timer is
- * running". Values are persisted in localStorage (legacy keys are kept so
- * existing settings survive), and a tiny external store lets both the Pomodoro
- * page and the app-root automation hook react to changes.
- */
+/** Pomodoro <-> sound sync settings in localStorage (legacy keys kept) + an external store for subscribers. */
 
 export const POMODORO_SYNC_ENABLED_KEY = "soundscape_pomodoro_enabled";
 export const POMODORO_SYNC_SOUND_KEY = "soundscape_pomodoro_sound";
 export const DEFAULT_SYNC_SOUND: SoundID = "rain";
 
-// Built-in ids are always valid. `setValidSoundIds` adds the ids from the
-// fetched backend catalog (sounds added by the user) once it is available.
+// Built-in ids are always valid; setValidSoundIds adds the user's ids once the catalog is fetched.
 let validSoundIds = new Set<SoundID>(BUILTIN_SOUND_IDS);
 
 const store = createExternalStore();
@@ -54,12 +46,7 @@ export const subscribe = store.subscribe;
 
 export type SyncAction = "play" | "stop" | "idle";
 
-/**
- * Decides what the automation hook should do for a given timer status.
- * Disabled sync never touches the engine ("idle"). When enabled, the sound
- * plays while the timer runs and stops on any other status (paused, completed,
- * cancelled, no session).
- */
+/** Action for a timer status: "idle" when disabled, else play while running and stop on any other status. */
 export function resolveSyncAction(enabled: boolean, status: SessionStatus | null): SyncAction {
   if (!enabled) return "idle";
   return status === "running" ? "play" : "stop";

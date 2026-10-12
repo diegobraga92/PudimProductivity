@@ -3,8 +3,7 @@ import { dictionaries } from "./translations";
 
 const languages = Object.keys(dictionaries) as (keyof typeof dictionaries)[];
 
-// Source files are loaded as raw text through Vite so the guard needs no node
-// filesystem access. Test files are skipped because they contain sample keys.
+// Sources load as raw text through Vite; test files are skipped (they hold sample keys).
 const sources = Object.entries(
   import.meta.glob("/src/**/*.{ts,tsx}", {
     query: "?raw",
@@ -38,8 +37,7 @@ describe("i18n dictionaries", () => {
   });
 
   it("defines every key referenced by the UI", () => {
-    // A key that is used but missing falls back to printing its own name in the
-    // interface, so the guard is the only thing that catches a dropped entry.
+    // A missing key renders its own name, so this guard is the only thing that catches it.
     const keys = referencedKeys();
 
     // Guards against a glob that silently matches nothing.
