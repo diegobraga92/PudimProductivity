@@ -56,7 +56,7 @@
     "task": {
       "type": "object",
       "description": "Task data for create/update/merge events.",
-      "required": ["id", "title", "status", "created_at", "updated_at"],
+      "required": ["id", "title", "status", "position", "created_at", "updated_at"],
       "properties": {
         "id": { "type": "string", "format": "uuid" },
         "title": { "type": "string" },
@@ -95,6 +95,11 @@
         "alarm_minutes": {
           "anyOf": [{ "type": "integer", "minimum": 0 }, { "type": "null" }],
           "description": "Alarm offset in minutes, or null."
+        },
+        "position": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Manual rank inside the task's bucket, lower comes first."
         },
         "created_at": { "type": "string", "format": "date-time" },
         "updated_at": { "type": "string", "format": "date-time" }

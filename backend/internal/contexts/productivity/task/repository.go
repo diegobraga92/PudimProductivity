@@ -31,6 +31,15 @@ type TaskRepository interface {
 	// Valid typeFilter values: "one-off", "habit".
 	ListByListID(ctx context.Context, listID, typeFilter string) ([]*Task, error)
 
+	// NextPosition returns the rank a task appended to the given scope takes.
+	NextPosition(ctx context.Context, scope TaskScope) (int, error)
+
+	// Reorder rewrites the position of every task in orderedIDs to its index,
+	// where index 0 is the first item on screen.
+	// Returns ErrTaskScopeMismatch when an ID is unknown or belongs to another
+	// scope, and the reordered tasks on success.
+	Reorder(ctx context.Context, scope TaskScope, orderedIDs []string) ([]*Task, error)
+
 	// Update persists changes to an existing task.
 	// Returns ErrTaskNotFound if the task does not exist.
 	Update(ctx context.Context, task *Task) error

@@ -78,11 +78,11 @@ func TestWsEventsConformToContract(t *testing.T) {
 	}{
 		{eventbus.EventTaskCreated, map[string]interface{}{
 			"id": "00000000-0000-0000-0000-000000000001", "title": "Contract test", "status": "todo",
-			"recurrence_days": []string{"mon", "fri"}, "created_at": "2026-08-09T12:00:00Z", "updated_at": "2026-08-09T12:00:00Z",
+			"recurrence_days": []string{"mon", "fri"}, "position": 2, "created_at": "2026-08-09T12:00:00Z", "updated_at": "2026-08-09T12:00:00Z",
 		}},
 		{eventbus.EventTaskUpdated, map[string]interface{}{
 			"id": "00000000-0000-0000-0000-000000000001", "title": "Contract test", "status": "done",
-			"created_at": "2026-08-09T12:00:00Z", "updated_at": "2026-08-09T12:01:00Z",
+			"position": 0, "created_at": "2026-08-09T12:00:00Z", "updated_at": "2026-08-09T12:01:00Z",
 		}},
 		{eventbus.EventTaskDeleted, map[string]interface{}{"id": "00000000-0000-0000-0000-000000000001"}},
 		{eventbus.EventTaskCompleted, map[string]interface{}{
@@ -94,7 +94,7 @@ func TestWsEventsConformToContract(t *testing.T) {
 		}},
 		{eventbus.EventTaskMerged, map[string]interface{}{
 			"id": "00000000-0000-0000-0000-000000000001", "title": "Merged title", "status": "todo",
-			"list_id":    "00000000-0000-0000-0000-00000000000a",
+			"list_id": "00000000-0000-0000-0000-00000000000a", "position": 0,
 			"created_at": "2026-08-09T12:00:00Z", "updated_at": "2026-08-09T12:02:00Z",
 		}},
 		{eventbus.EventTaskListShared, map[string]interface{}{

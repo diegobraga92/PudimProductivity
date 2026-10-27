@@ -136,6 +136,7 @@
   "sort.timeAsc": "Hora ↑",
   "sort.timeDesc": "Hora ↓",
   "sort.ariaLabel": "Ordenar tarefas",
+  "sort.manual": "Manual",
 
   "days.mon": "Seg",
   "days.tue": "Ter",
@@ -194,6 +195,8 @@
   "tasks.deleteTaskTitle": "Excluir esta tarefa?",
   "tasks.deleteHabitTitle": "Excluir este hábito?",
   "tasks.deleteAria": "Excluir {title}",
+  "tasks.reorderAria": "Reordenar {title}",
+  "tasks.reorderAnnounce": "{title} movida para a posição {position}",
   "tasks.deleteHabitAria": "Excluir hábito",
   "tasks.delete": "Excluir",
   "tasks.validation.titleRequired": "O título é obrigatório",

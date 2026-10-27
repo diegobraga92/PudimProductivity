@@ -136,6 +136,7 @@
   "sort.timeAsc": "Time ↑",
   "sort.timeDesc": "Time ↓",
   "sort.ariaLabel": "Sort tasks",
+  "sort.manual": "Manual",
 
   "days.mon": "Mon",
   "days.tue": "Tue",
@@ -194,6 +195,8 @@
   "tasks.deleteTaskTitle": "Delete this task?",
   "tasks.deleteHabitTitle": "Delete this habit?",
   "tasks.deleteAria": "Delete {title}",
+  "tasks.reorderAria": "Reorder {title}",
+  "tasks.reorderAnnounce": "{title} moved to position {position}",
   "tasks.deleteHabitAria": "Delete habit",
   "tasks.delete": "Delete",
   "tasks.validation.titleRequired": "Title is required",

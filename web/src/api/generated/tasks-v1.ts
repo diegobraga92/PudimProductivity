@@ -59,6 +59,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tasks/reorder": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Persist the manual order of one bucket
+         * @description Rewrites `position` for every task in `ordered_ids`, taking the array
+         *     order as the new on-screen order. Positions live inside a bucket, so the
+         *     request names the list (omit for the inbox), the type and the status.
+         *     Tasks the client does not send keep their rank.
+         *     Returns 400 when an id is unknown, duplicated or belongs to another bucket.
+         */
+        put: operations["reorderTasks"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tasks/{taskId}": {
         parameters: {
             query?: never;
@@ -328,6 +352,11 @@ export interface components {
              */
             alarm_minutes?: number | null;
             /**
+             * @description Rank inside the task's bucket (list, habit-ness, status). Lower comes first.
+             * @example 0
+             */
+            position: number;
+            /**
              * Format: date-time
              * @example 2026-05-07T10:00:00Z
              */
@@ -411,6 +440,11 @@ export interface components {
              */
             alarm_minutes?: number | null;
         };
+        /**
+         * @description Fields to change. `position` is deliberately absent: manual order is
+         *     written through PUT /api/v1/tasks/reorder, so an edit pushed by a client
+         *     that does not track ordering cannot reset it.
+         */
         UpdateTaskRequest: {
             /**
              * Format: date-time
@@ -476,6 +510,22 @@ export interface components {
              * @example 10
              */
             alarm_minutes?: number | null;
+        };
+        /**
+         * @description One bucket's full visible order. `status` is required for to-dos and
+         *     defaults to `todo` for habits, which never leave that status.
+         */
+        ReorderTasksRequest: {
+            type: components["schemas"]["TaskType"];
+            status?: components["schemas"]["TaskStatus"];
+            /**
+             * Format: uuid
+             * @description Omit or set to null to reorder the inbox. Set to a list UUID to reorder inside that list.
+             * @example 770e8400-e29b-41d4-a716-446655440002
+             */
+            list_id?: string | null;
+            /** @description Every task of the bucket, first on screen first. */
+            ordered_ids: string[];
         };
         TaskList: {
             /**
@@ -694,6 +744,37 @@ export interface operations {
                 };
             };
             /** @description Invalid request body. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    reorderTasks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReorderTasksRequest"];
+            };
+        };
+        responses: {
+            /** @description Order persisted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid request body or task ids. */
             400: {
                 headers: {
                     [name: string]: unknown;

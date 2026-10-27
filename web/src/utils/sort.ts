@@ -1,6 +1,7 @@
 import type { Task } from "../api/tasks";
 
 export type SortOption =
+  | "manual"
   | "alpha-asc"
   | "alpha-desc"
   | "created-asc"
@@ -9,6 +10,7 @@ export type SortOption =
   | "time-desc";
 
 export const VALID_SORT_OPTIONS = new Set<string>([
+  "manual",
   "alpha-asc",
   "alpha-desc",
   "created-asc",
@@ -21,6 +23,15 @@ export function sortTasks(tasks: Task[], option: SortOption): Task[] {
   const sorted = [...tasks];
 
   switch (option) {
+    case "manual": {
+      // Position is per bucket, so ties only happen across buckets or before
+      // the first save. Newest first matches what the server seeded.
+      return sorted.sort(
+        (a, b) =>
+          a.position - b.position ||
+          (a.created_at < b.created_at ? 1 : a.created_at > b.created_at ? -1 : 0)
+      );
+    }
     case "alpha-asc": {
       return sorted.sort((a, b) => a.title.localeCompare(b.title));
     }

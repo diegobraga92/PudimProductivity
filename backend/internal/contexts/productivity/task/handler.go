@@ -25,6 +25,7 @@ type Service interface {
 	ListTasks(ctx context.Context, statusFilter, typeFilter string) ([]*Task, error)
 	ListScheduledTasks(ctx context.Context) ([]*Task, error)
 	ListTasksByListID(ctx context.Context, listID, typeFilter string) ([]*Task, error)
+	ReorderTasks(ctx context.Context, scope TaskScope, orderedIDs []string) error
 	UpdateTask(ctx context.Context, id string, title *string, status *TaskStatus, recurrenceDays *[]string, listID **string, startTime, endTime, color, scheduledDate **string, alarmMinutes **int) (*Task, error)
 	MergeTask(ctx context.Context, id, userID string, clientUpdatedAt time.Time, title *string, status *TaskStatus, recurrenceDays *[]string, listID **string, startTime, endTime, color, scheduledDate **string, alarmMinutes **int) (*Task, bool, error)
 	DeleteTask(ctx context.Context, id string) error
@@ -54,6 +55,7 @@ type TaskResponse struct {
 	Color          *string  `json:"color,omitempty"`
 	ScheduledDate  *string  `json:"scheduled_date,omitempty"`
 	AlarmMinutes   *int     `json:"alarm_minutes,omitempty"`
+	Position       int      `json:"position"`
 	CreatedAt      string   `json:"created_at"`
 	UpdatedAt      string   `json:"updated_at"`
 }
@@ -83,6 +85,15 @@ type updateTaskRequest struct {
 	AlarmMinutes   optional.Optional[int]    `json:"alarm_minutes"`
 }
 
+// reorderTasksRequest carries the whole visible order of one bucket. status is
+// required for to-dos and defaults to todo for habits, which never leave it.
+type reorderTasksRequest struct {
+	Type       string   `json:"type"`
+	Status     string   `json:"status,omitempty"`
+	ListID     *string  `json:"list_id,omitempty"`
+	OrderedIDs []string `json:"ordered_ids"`
+}
+
 type TaskCompletionResponse struct {
 	ID            string `json:"id"`
 	TaskID        string `json:"task_id"`
@@ -102,6 +113,7 @@ func ToTaskResponse(t *Task) TaskResponse {
 		Color:          t.Color,
 		ScheduledDate:  t.ScheduledDate,
 		AlarmMinutes:   t.AlarmMinutes,
+		Position:       t.Position,
 		CreatedAt:      t.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:      t.UpdatedAt.Format(time.RFC3339),
 	}
@@ -266,6 +278,49 @@ func (h *Handler) MergeTask(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httpx.WriteJSON(w, http.StatusOK, ToTaskResponse(task))
+}
+
+// ReorderTasks is used for PUT /tasks/reorder
+func (h *Handler) ReorderTasks(w http.ResponseWriter, r *http.Request) {
+	var req reorderTasksRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpx.WriteError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	scope := TaskScope{ListID: req.ListID, Status: TaskStatusTodo}
+	switch req.Type {
+	case "one-off":
+		scope.IsHabit = false
+	case "habit":
+		scope.IsHabit = true
+	default:
+		httpx.WriteError(w, http.StatusBadRequest, `type must be "one-off" or "habit"`)
+		return
+	}
+
+	if req.Status != "" {
+		status := TaskStatus(req.Status)
+		if !status.Valid() {
+			httpx.WriteError(w, http.StatusBadRequest, `status must be "todo" or "done"`)
+			return
+		}
+		scope.Status = status
+	}
+
+	if err := h.service.ReorderTasks(r.Context(), scope, req.OrderedIDs); err != nil {
+		// Both errors mean the client sent ids the server cannot place, which is
+		// a bad request rather than a server fault.
+		if errors.Is(err, ErrInvalidTaskOrder) || errors.Is(err, ErrTaskScopeMismatch) {
+			httpx.WriteError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		log.Error().Err(err).Msg("failed to reorder tasks")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to reorder tasks")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // DeleteTask is used for DELETE /tasks/{taskId}

@@ -17,6 +17,13 @@ var ErrTaskNotFound = fmt.Errorf("task not found")
 var ErrCompletionAlreadyExists = fmt.Errorf("completion already exists for this task on this date")
 var ErrCompletionNotFound = fmt.Errorf("completion not found")
 
+// ErrTaskScopeMismatch reports a reorder that names a task outside the bucket
+// being reordered, e.g. a habit ID in a to-do request or a stale client ID.
+var ErrTaskScopeMismatch = fmt.Errorf("task does not belong to the requested list, type and status")
+
+// ErrInvalidTaskOrder reports a reorder payload the server refuses to apply.
+var ErrInvalidTaskOrder = fmt.Errorf("invalid task order")
+
 // taskCacheNamespace is the cache namespace used for all task reads. Mutations
 // bump its version so every previously cached task entry is invalidated.
 const taskCacheNamespace = "tasks"
@@ -195,14 +202,76 @@ func (s *TaskService) ListTasksByListID(ctx context.Context, listID, typeFilter 
 	return s.cachedList(ctx, inner, func() ([]*Task, error) { return s.repo.ListByListID(ctx, listID, typeFilter) })
 }
 
+// maxReorderIDs caps a single reorder request, a screen never holds this many
+// items and it keeps the uuid array and the audit payload bounded.
+const maxReorderIDs = 500
+
+// ReorderTasks applies a full visual order to one bucket. orderedIDs carries
+// the ids the client shows, first on screen first, and only those ids move.
+func (s *TaskService) ReorderTasks(ctx context.Context, scope TaskScope, orderedIDs []string) error {
+	if len(orderedIDs) == 0 {
+		return fmt.Errorf("%w: no task ids", ErrInvalidTaskOrder)
+	}
+	if len(orderedIDs) > maxReorderIDs {
+		return fmt.Errorf("%w: at most %d tasks per request", ErrInvalidTaskOrder, maxReorderIDs)
+	}
+
+	seen := make(map[string]struct{}, len(orderedIDs))
+	for _, id := range orderedIDs {
+		if _, err := guuid.Parse(id); err != nil {
+			return fmt.Errorf("%w: %q is not a uuid", ErrInvalidTaskOrder, id)
+		}
+		if _, duplicate := seen[id]; duplicate {
+			return fmt.Errorf("%w: duplicate id %q", ErrInvalidTaskOrder, id)
+		}
+		seen[id] = struct{}{}
+	}
+
+	tasks, err := s.repo.Reorder(ctx, scope, orderedIDs)
+	if err != nil {
+		return err
+	}
+
+	log.Info().Ctx(ctx).Int("count", len(tasks)).Msg("tasks reordered")
+
+	s.audit.Log(ctx, audit.ActionTaskUpdated, audit.ResourceTasks, "", nil, map[string]any{
+		"list_id":  scope.ListID,
+		"is_habit": scope.IsHabit,
+		"status":   scope.Status,
+		"task_ids": orderedIDs,
+	})
+
+	s.invalidate(ctx)
+
+	// one event per task so a client that filters by id still sees the change,
+	// the payload is the task with its new rank
+	for _, t := range tasks {
+		s.publish(ctx, eventbus.EventTaskUpdated, ToTaskResponse(t))
+	}
+
+	return nil
+}
+
 func (s *TaskService) UpdateTask(ctx context.Context, id string, title *string, status *TaskStatus, recurrenceDays *[]string, listID **string, startTime, endTime, color, scheduledDate **string, alarmMinutes **int) (*Task, error) {
 	task, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 
+	previousScope := task.ScopeOf()
+
 	if err := task.Update(title, status, recurrenceDays, listID, startTime, endTime, color, scheduledDate, alarmMinutes); err != nil {
 		return nil, fmt.Errorf("update task: %w", err)
+	}
+
+	// a task that lands in another bucket takes the last slot there, the old
+	// rank only means something inside the bucket it was set in
+	if next := task.ScopeOf(); !next.Equal(previousScope) {
+		position, err := s.repo.NextPosition(ctx, next)
+		if err != nil {
+			return nil, fmt.Errorf("next task position: %w", err)
+		}
+		task.Position = position
 	}
 
 	if err := s.repo.Update(ctx, task); err != nil {

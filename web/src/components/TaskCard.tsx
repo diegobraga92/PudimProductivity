@@ -1,5 +1,6 @@
 import Checkbox from "./Checkbox";
 import { useI18n } from "../i18n";
+import type { DragHandleProps } from "../hooks/useDragReorder";
 
 interface TaskCardProps {
   variant: "todo" | "list";
@@ -10,6 +11,12 @@ interface TaskCardProps {
   onTitleClick?: () => void;
   animationDelay?: string;
   compact?: boolean;
+  /** Ref for the row element, drag measurement reads its box. */
+  rowRef?: (element: HTMLDivElement | null) => void;
+  /** Props for the drag handle, omitted when the list cannot be reordered. */
+  dragHandle?: DragHandleProps;
+  /** True while this row is the one being dragged. */
+  dragging?: boolean;
 }
 
 export default function TaskCard({
@@ -21,13 +28,17 @@ export default function TaskCard({
   onTitleClick,
   animationDelay,
   compact = false,
+  rowRef,
+  dragHandle,
+  dragging = false,
 }: TaskCardProps) {
   const { t } = useI18n();
   const cardClass = variant === "todo" ? "card-todo" : "card-list";
 
   return (
     <div
-      className={`card ${cardClass} ${done ? "card-done" : ""}`}
+      ref={rowRef}
+      className={`card ${cardClass} ${done ? "card-done" : ""} ${dragging ? "card-dragging" : ""}`}
       style={{
         display: "flex",
         alignItems: "center",
@@ -36,6 +47,17 @@ export default function TaskCard({
         animationDelay,
       }}
     >
+      {dragHandle && (
+        <button
+          type="button"
+          className="reorder-handle"
+          {...dragHandle}
+          aria-label={t("tasks.reorderAria", { title })}
+          title={t("tasks.reorderAria", { title })}
+        >
+          ⠿
+        </button>
+      )}
       <Checkbox checked={done} onChange={onToggle} />
       <span
         style={{

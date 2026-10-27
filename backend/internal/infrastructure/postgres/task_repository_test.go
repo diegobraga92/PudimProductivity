@@ -75,3 +75,56 @@ func TestDoubleCompleteStillConflicts(t *testing.T) {
 		t.Fatalf("second CompleteTask: want task.ErrCompletionAlreadyExists, got %v", err)
 	}
 }
+
+// Positions are scoped per bucket, so a reorder of the to-dos must not touch
+// habits and a stale/foreign id must fail the whole request.
+func TestReorderScopedPerBucket(t *testing.T) {
+	postgrestest.SkipIfShort(t)
+	ctx, pool := postgrestest.SetupPool(t)
+	service := task.NewTaskService(postgres.NewTaskRepository(pool), nil, nil)
+
+	first, err := service.CreateTask(ctx, "first", nil)
+	if err != nil {
+		t.Fatalf("CreateTask(first): %v", err)
+	}
+	second, err := service.CreateTask(ctx, "second", nil)
+	if err != nil {
+		t.Fatalf("CreateTask(second): %v", err)
+	}
+	habit, err := service.CreateTask(ctx, "habit", []string{"mon"})
+	if err != nil {
+		t.Fatalf("CreateTask(habit): %v", err)
+	}
+
+	if first.Position != 0 || second.Position != 1 || habit.Position != 0 {
+		t.Fatalf("new tasks should append to their own bucket: first=%d second=%d habit=%d",
+			first.Position, second.Position, habit.Position)
+	}
+
+	scope := task.TaskScope{Status: task.TaskStatusTodo}
+	if err := service.ReorderTasks(ctx, scope, []string{second.ID, first.ID}); err != nil {
+		t.Fatalf("ReorderTasks: %v", err)
+	}
+
+	got, err := service.GetTask(ctx, first.ID)
+	if err != nil {
+		t.Fatalf("GetTask: %v", err)
+	}
+	if got.Position != 1 {
+		t.Errorf("first task position: got %d, want 1", got.Position)
+	}
+
+	// A habit id cannot be placed in the to-do bucket.
+	if err := service.ReorderTasks(ctx, scope, []string{first.ID, habit.ID}); !errors.Is(err, task.ErrTaskScopeMismatch) {
+		t.Fatalf("mixed buckets: got %v, want ErrTaskScopeMismatch", err)
+	}
+
+	// The rejected request must not have moved anything.
+	got, err = service.GetTask(ctx, first.ID)
+	if err != nil {
+		t.Fatalf("GetTask after rejected reorder: %v", err)
+	}
+	if got.Position != 1 {
+		t.Errorf("position changed on a rejected reorder: got %d, want 1", got.Position)
+	}
+}

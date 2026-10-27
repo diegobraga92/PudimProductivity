@@ -38,6 +38,10 @@ func (r *countingRepo) ListScheduled(_ context.Context) ([]*Task, error) { retur
 func (r *countingRepo) ListByListID(_ context.Context, _, _ string) ([]*Task, error) {
 	return nil, nil
 }
+func (r *countingRepo) NextPosition(_ context.Context, _ TaskScope) (int, error) { return 0, nil }
+func (r *countingRepo) Reorder(_ context.Context, _ TaskScope, _ []string) ([]*Task, error) {
+	return nil, nil
+}
 func (r *countingRepo) Update(_ context.Context, _ *Task) error  { return nil }
 func (r *countingRepo) Delete(_ context.Context, _ string) error { return nil }
 func (r *countingRepo) CreateCompletion(_ context.Context, _ *TaskCompletion) error {

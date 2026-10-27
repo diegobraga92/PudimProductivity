@@ -8,6 +8,7 @@ export type RecurrenceDay = components["schemas"]["RecurrenceDay"];
 export type TaskCompletion = components["schemas"]["TaskCompletion"];
 export type CreateTaskRequest = components["schemas"]["CreateTaskRequest"];
 export type UpdateTaskRequest = components["schemas"]["UpdateTaskRequest"];
+export type ReorderTasksRequest = components["schemas"]["ReorderTasksRequest"];
 
 // Every task endpoint answers 404 with the same message.
 const NOT_FOUND = "Task not found";
@@ -63,6 +64,15 @@ export async function deleteTask(taskId: string): Promise<void> {
     method: "DELETE",
     action: "delete task",
     notFound: NOT_FOUND,
+  });
+}
+
+/** Persists the manual order of one bucket (inbox or list, to-dos or habits). */
+export async function reorderTasks(req: ReorderTasksRequest): Promise<void> {
+  return request<void>("/tasks/reorder", {
+    method: "PUT",
+    body: JSON.stringify(req),
+    action: "reorder tasks",
   });
 }
 

@@ -18,16 +18,23 @@ type backupTable struct {
 	name     string // table name
 	idColumn string // column used to order rows for deterministic exports
 	columns  string // e.g. "id uuid, title text, status text"
+	// importDefaults fills columns that backups written before a migration do
+	// not carry, so an older file still restores instead of failing on NOT NULL.
+	importDefaults map[string]string
 }
 
-func (t backupTable) columnNames() string {
+func (t backupTable) columnList() []string {
 	parts := strings.Split(t.columns, ",")
 	names := make([]string, len(parts))
 	for i, p := range parts {
 		fields := strings.Fields(strings.TrimSpace(p))
 		names[i] = fields[0]
 	}
-	return strings.Join(names, ", ")
+	return names
+}
+
+func (t backupTable) columnNames() string {
+	return strings.Join(t.columnList(), ", ")
 }
 
 // TODO: Check tables after migrations are finalized
@@ -48,7 +55,9 @@ var backupTables = []backupTable{
 	{
 		name:     "tasks",
 		idColumn: "id",
-		columns:  "id uuid, title text, status text, created_at timestamptz, updated_at timestamptz, recurrence_days text[], list_id uuid, start_time time, end_time time, color text, scheduled_date date, alarm_minutes integer, updated_by text, deleted_at timestamptz",
+		columns:  "id uuid, title text, status text, created_at timestamptz, updated_at timestamptz, recurrence_days text[], list_id uuid, start_time time, end_time time, color text, scheduled_date date, alarm_minutes integer, updated_by text, deleted_at timestamptz, position integer",
+		// task backups written before 004 have no position, park those rows at 0
+		importDefaults: map[string]string{"position": "0"},
 	},
 	{
 		name:     "task_completions",
@@ -215,9 +224,17 @@ func (s *BackupRepository) truncateAll(ctx context.Context, tx pgx.Tx) error {
 
 func (s *BackupRepository) insertTable(ctx context.Context, tx pgx.Tx, table backupTable, raw json.RawMessage) (int, error) {
 	names := table.columnNames()
+	projection := make([]string, 0, len(table.columnList()))
+	for _, name := range table.columnList() {
+		if def, ok := table.importDefaults[name]; ok {
+			projection = append(projection, fmt.Sprintf("COALESCE(t.%s, %s)", name, def))
+			continue
+		}
+		projection = append(projection, "t."+name)
+	}
 	q := fmt.Sprintf(
 		"INSERT INTO %s (%s) SELECT %s FROM jsonb_to_recordset($1::jsonb) AS t(%s)",
-		table.name, names, names, table.columns,
+		table.name, names, strings.Join(projection, ", "), table.columns,
 	)
 	if _, err := tx.Exec(ctx, q, raw); err != nil {
 		return 0, err

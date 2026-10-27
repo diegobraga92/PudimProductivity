@@ -41,7 +41,7 @@ func (r *SyncRepository) Bundle(ctx context.Context, since time.Time) (*persiste
 func (r *SyncRepository) loadTasks(ctx context.Context, since time.Time, cs *persistence.ChangeSet) error {
 	rows, err := r.pool.Query(ctx, `
 		SELECT id, title, status, recurrence_days, list_id, start_time, end_time,
-		       color, scheduled_date, alarm_minutes, created_at, updated_at
+		       color, scheduled_date, alarm_minutes, created_at, updated_at, position
 		FROM tasks
 		WHERE deleted_at IS NULL AND (created_at > $1 OR updated_at > $1)
 		ORDER BY updated_at ASC
@@ -60,7 +60,7 @@ func (r *SyncRepository) loadTasks(ctx context.Context, since time.Time, cs *per
 		if err := rows.Scan(
 			&t.ID, &t.Title, (*string)(&t.Status), &t.RecurrenceDays, &t.ListID,
 			&t.StartTime, &t.EndTime, &t.Color, &scheduledDate, &t.AlarmMinutes,
-			&t.CreatedAt, &t.UpdatedAt,
+			&t.CreatedAt, &t.UpdatedAt, &t.Position,
 		); err != nil {
 			return fmt.Errorf("scan sync task: %w", err)
 		}

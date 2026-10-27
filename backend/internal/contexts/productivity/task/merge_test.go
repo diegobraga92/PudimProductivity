@@ -43,6 +43,33 @@ func (r *fakeRepo) ListScheduled(_ context.Context) ([]*Task, error)     { retur
 func (r *fakeRepo) ListByListID(_ context.Context, _, _ string) ([]*Task, error) {
 	return nil, nil
 }
+
+func (r *fakeRepo) NextPosition(_ context.Context, scope TaskScope) (int, error) {
+	next := 0
+	for _, t := range r.store {
+		if scope.Contains(t) && t.Position >= next {
+			next = t.Position + 1
+		}
+	}
+	return next, nil
+}
+
+func (r *fakeRepo) Reorder(_ context.Context, scope TaskScope, orderedIDs []string) ([]*Task, error) {
+	for _, id := range orderedIDs {
+		t, ok := r.store[id]
+		if !ok || !scope.Contains(t) {
+			return nil, ErrTaskScopeMismatch
+		}
+	}
+
+	reordered := make([]*Task, 0, len(orderedIDs))
+	for i, id := range orderedIDs {
+		t := r.store[id]
+		t.Position = i
+		reordered = append(reordered, t)
+	}
+	return reordered, nil
+}
 func (r *fakeRepo) Delete(_ context.Context, _ string) error { return nil }
 func (r *fakeRepo) CreateCompletion(_ context.Context, _ *TaskCompletion) error {
 	return nil

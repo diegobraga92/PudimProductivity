@@ -57,7 +57,7 @@ components:
 
     SyncTask:
       type: object
-      required: [id, title, status, created_at, updated_at]
+      required: [id, title, status, position, created_at, updated_at]
       properties:
         id: { type: string, format: uuid }
         title: { type: string }
@@ -71,6 +71,7 @@ components:
         color: { type: [string, "null"] }
         scheduled_date: { type: [string, "null"] }
         alarm_minutes: { type: [integer, "null"] }
+        position: { type: integer, minimum: 0 }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
 

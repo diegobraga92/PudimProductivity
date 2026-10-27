@@ -2,6 +2,7 @@ import { type SortOption } from "../utils/sort";
 import { useI18n } from "../i18n";
 
 const SORT_LABEL_KEYS: Record<SortOption, string> = {
+  manual: "sort.manual",
   "alpha-asc": "sort.alphaAsc",
   "alpha-desc": "sort.alphaDesc",
   "created-asc": "sort.createdAsc",

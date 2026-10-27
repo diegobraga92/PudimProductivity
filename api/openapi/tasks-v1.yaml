@@ -130,6 +130,35 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /api/v1/tasks/reorder:
+    put:
+      operationId: reorderTasks
+      summary: Persist the manual order of one bucket
+      description: |
+        Rewrites `position` for every task in `ordered_ids`, taking the array
+        order as the new on-screen order. Positions live inside a bucket, so the
+        request names the list (omit for the inbox), the type and the status.
+        Tasks the client does not send keep their rank.
+        Returns 400 when an id is unknown, duplicated or belongs to another bucket.
+      security: []
+      tags:
+        - Tasks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReorderTasksRequest"
+      responses:
+        "204":
+          description: Order persisted.
+        "400":
+          description: Invalid request body or task ids.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /api/v1/tasks/{taskId}:
     get:
       operationId: getTask
@@ -702,6 +731,7 @@ components:
         - id
         - title
         - status
+        - position
         - created_at
         - updated_at
       properties:
@@ -748,6 +778,11 @@ components:
           type: [integer, "null"]
           description: Number of minutes before start_time to trigger an alarm notification. null for no alarm.
           example: 10
+        position:
+          type: integer
+          minimum: 0
+          description: Rank inside the task's bucket (list, habit-ness, status). Lower comes first.
+          example: 0
         created_at:
           type: string
           format: date-time
@@ -832,6 +867,10 @@ components:
 
     UpdateTaskRequest:
       type: object
+      description: |
+        Fields to change. `position` is deliberately absent: manual order is
+        written through PUT /api/v1/tasks/reorder, so an edit pushed by a client
+        that does not track ordering cannot reset it.
       properties:
         updated_at:
           type: string
@@ -895,6 +934,33 @@ components:
             Omit to leave unchanged. Set to null to disable.
             Only for habits.
           example: 10
+
+    ReorderTasksRequest:
+      type: object
+      description: |
+        One bucket's full visible order. `status` is required for to-dos and
+        defaults to `todo` for habits, which never leave that status.
+      required:
+        - type
+        - ordered_ids
+      properties:
+        type:
+          $ref: "#/components/schemas/TaskType"
+        status:
+          $ref: "#/components/schemas/TaskStatus"
+        list_id:
+          type: [string, "null"]
+          format: uuid
+          description: Omit or set to null to reorder the inbox. Set to a list UUID to reorder inside that list.
+          example: "770e8400-e29b-41d4-a716-446655440002"
+        ordered_ids:
+          type: array
+          description: Every task of the bucket, first on screen first.
+          minItems: 1
+          maxItems: 500
+          items:
+            type: string
+            format: uuid
 
     TaskList:
       type: object

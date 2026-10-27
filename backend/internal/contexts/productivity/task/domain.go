@@ -43,9 +43,39 @@ type Task struct {
 	Color          *string    `json:"color,omitempty"`           // nil = default (#3B82F6)
 	ScheduledDate  *string    `json:"scheduled_date,omitempty"`  // nil for habits, "2026-07-20" for one-off tasks
 	AlarmMinutes   *int       `json:"alarm_minutes,omitempty"`   // nil = no alarm, e.g. 5 = notify 5 min before start_time
+	Position       int        `json:"position"`                  // 0-based rank inside TaskScope, drives manual ordering
 	UpdatedBy      *string    `json:"updated_by,omitempty"`      // last writer, used to break LWW merge ties (nil = never merged)
 	CreatedAt      time.Time  `json:"created_at"`
 	UpdatedAt      time.Time  `json:"updated_at"`
+}
+
+// TaskScope is the bucket manual positions live in: the task list (nil for the
+// inbox), habit-ness and status. Two tasks in different scopes never share a
+// position, so the inbox and a list can each start counting at 0.
+type TaskScope struct {
+	ListID  *string
+	IsHabit bool
+	Status  TaskStatus
+}
+
+func (s TaskScope) Contains(t *Task) bool {
+	return s.Equal(t.ScopeOf())
+}
+
+// Equal compares scopes by value, list IDs include their NULL case.
+func (s TaskScope) Equal(other TaskScope) bool {
+	if s.IsHabit != other.IsHabit || s.Status != other.Status {
+		return false
+	}
+	if s.ListID == nil || other.ListID == nil {
+		return s.ListID == nil && other.ListID == nil
+	}
+	return *s.ListID == *other.ListID
+}
+
+// ScopeOf returns the bucket a task currently belongs to.
+func (t *Task) ScopeOf() TaskScope {
+	return TaskScope{ListID: t.ListID, IsHabit: t.IsHabit(), Status: t.Status}
 }
 
 func NewTask(id, title string, recurrenceDays []string) (*Task, error) {

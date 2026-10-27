@@ -26,6 +26,7 @@ func RegisterTaskRoutes(r chi.Router, repo TaskRepository, auditLogger audit.Log
 		r.Group(func(r chi.Router) {
 			r.Use(httpx.RequireRole("admin", "user"))
 			r.Post("/", handler.CreateTask)
+			r.Put("/reorder", handler.ReorderTasks)
 			r.Put("/{taskId}", handler.UpdateTask)
 			r.Patch("/{taskId}/merge", handler.MergeTask)
 			r.Delete("/{taskId}", handler.DeleteTask)

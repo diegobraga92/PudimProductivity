@@ -20,7 +20,7 @@ func NewTaskRepository(pool *pgxpool.Pool) *TaskRepository {
 }
 
 // returns the full set of columns used in SELECT, INSERT, and UPDATE queries.
-const taskColumns = `id, title, status, recurrence_days, list_id, start_time, end_time, color, scheduled_date, alarm_minutes, updated_by, created_at, updated_at`
+const taskColumns = `id, title, status, recurrence_days, list_id, start_time, end_time, color, scheduled_date, alarm_minutes, updated_by, created_at, updated_at, position`
 
 func (r *TaskRepository) scanTask(scanner interface {
 	Scan(dest ...any) error
@@ -48,6 +48,7 @@ func (r *TaskRepository) scanTask(scanner interface {
 		&task.UpdatedBy,
 		&task.CreatedAt,
 		&task.UpdatedAt,
+		&task.Position,
 	)
 	if err != nil {
 		return nil, err
@@ -67,12 +68,22 @@ func (r *TaskRepository) scanTask(scanner interface {
 }
 
 func (r *TaskRepository) Create(ctx context.Context, task *taskdomain.Task) error {
+	// New tasks land last in their bucket. The subselect keeps the rank in one
+	// statement, so two concurrent creates cannot pick the same number.
 	query := `
 		INSERT INTO tasks (` + taskColumns + `)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
+			COALESCE((
+				SELECT MAX(position) + 1 FROM tasks
+				WHERE deleted_at IS NULL
+				  AND list_id IS NOT DISTINCT FROM $5
+				  AND (recurrence_days IS NOT NULL) = ($4::text[] IS NOT NULL)
+				  AND status = $3
+			), 0))
+		RETURNING position
 	`
 
-	_, err := r.pool.Exec(ctx, query,
+	err := r.pool.QueryRow(ctx, query,
 		task.ID,
 		task.Title,
 		string(task.Status),
@@ -86,7 +97,7 @@ func (r *TaskRepository) Create(ctx context.Context, task *taskdomain.Task) erro
 		task.UpdatedBy,
 		task.CreatedAt,
 		task.UpdatedAt,
-	)
+	).Scan(&task.Position)
 	if err != nil {
 		return fmt.Errorf("insert task: %w", err)
 	}
@@ -219,6 +230,87 @@ func (r *TaskRepository) ListByListID(ctx context.Context, listID, typeFilter st
 
 	if tasks == nil {
 		tasks = make([]*taskdomain.Task, 0)
+	}
+
+	return tasks, nil
+}
+
+func (r *TaskRepository) NextPosition(ctx context.Context, scope taskdomain.TaskScope) (int, error) {
+	query := `
+		SELECT COALESCE(MAX(position) + 1, 0)
+		FROM tasks
+		WHERE deleted_at IS NULL
+		  AND list_id IS NOT DISTINCT FROM $1
+		  AND (recurrence_days IS NOT NULL) = $2
+		  AND status = $3
+	`
+
+	var position int
+	if err := r.pool.QueryRow(ctx, query, scope.ListID, scope.IsHabit, string(scope.Status)).Scan(&position); err != nil {
+		return 0, fmt.Errorf("next task position: %w", err)
+	}
+
+	return position, nil
+}
+
+func (r *TaskRepository) Reorder(ctx context.Context, scope taskdomain.TaskScope, orderedIDs []string) ([]*taskdomain.Task, error) {
+	positions := make([]int32, len(orderedIDs))
+	for i := range positions {
+		positions[i] = int32(i)
+	}
+
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("begin reorder tasks: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	// One statement, so the ranks in a bucket never end up half applied. The
+	// scope predicates are repeated here on purpose: they are what marks an id
+	// as out of scope, including ids deleted since the client loaded the list.
+	result, err := tx.Exec(ctx, `
+		WITH ordered AS (
+			SELECT unnest($1::uuid[]) AS id, unnest($2::int[]) AS position
+		)
+		UPDATE tasks
+		SET position = ordered.position, updated_at = NOW()
+		FROM ordered
+		WHERE tasks.id = ordered.id
+		  AND tasks.deleted_at IS NULL
+		  AND tasks.list_id IS NOT DISTINCT FROM $3
+		  AND (tasks.recurrence_days IS NOT NULL) = $4
+		  AND tasks.status = $5
+	`, orderedIDs, positions, scope.ListID, scope.IsHabit, string(scope.Status))
+	if err != nil {
+		return nil, fmt.Errorf("update task positions: %w", err)
+	}
+
+	if int(result.RowsAffected()) != len(orderedIDs) {
+		return nil, taskdomain.ErrTaskScopeMismatch
+	}
+
+	rows, err := tx.Query(ctx, `SELECT `+taskColumns+` FROM tasks WHERE id = ANY($1::uuid[]) AND deleted_at IS NULL`, orderedIDs)
+	if err != nil {
+		return nil, fmt.Errorf("load reordered tasks: %w", err)
+	}
+
+	tasks := make([]*taskdomain.Task, 0, len(orderedIDs))
+	for rows.Next() {
+		task, err := r.scanTask(rows)
+		if err != nil {
+			rows.Close()
+			return nil, fmt.Errorf("scan reordered task row: %w", err)
+		}
+		tasks = append(tasks, task)
+	}
+	rows.Close()
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate reordered task rows: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("commit reorder tasks: %w", err)
 	}
 
 	return tasks, nil

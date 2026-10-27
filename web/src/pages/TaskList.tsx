@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useCallback } from "react";
+import { Fragment, useState, useCallback } from "react";
 import { useConfirm } from "../components/useConfirm";
 import {
   listTasks,
@@ -8,6 +8,7 @@ import {
   completeTask,
   uncompleteTask,
   createTask,
+  reorderTasks,
   type Task,
   type TaskStatus,
 } from "../api/tasks";
@@ -21,10 +22,12 @@ import SortSelect from "../components/SortSelect";
 import { TasksIcon } from "../components/icons";
 import { usePersistedSort } from "../hooks/usePersistedSort";
 import { useHabitCompletions } from "../hooks/useHabitCompletions";
+import { useDragReorder } from "../hooks/useDragReorder";
 import { useI18n } from "../i18n";
 import { computeStreaks } from "../utils/streaks";
 import { getRollingWindowDates, formatWeekRange } from "../utils/dates";
-import { sortTasks } from "../utils/sort";
+import { sortTasks, type SortOption } from "../utils/sort";
+import { positionsFor } from "../utils/reorder";
 import { invalidateTasks, queryKeys } from "../utils/queryKeys";
 import {
   playHabitCompletionSound,
@@ -32,6 +35,14 @@ import {
   playHabitUncompletionSound,
   playTodoUncompletionSound,
 } from "../utils/sounds";
+
+type TaskKind = "one-off" | "habit";
+
+const taskQueryKey = (kind: TaskKind) =>
+  kind === "habit" ? queryKeys.tasksHabit : queryKeys.tasksOneOff;
+
+const TODO_SORTS: SortOption[] = ["manual", "created-desc", "created-asc", "alpha-asc", "alpha-desc"];
+const HABIT_SORTS: SortOption[] = [...TODO_SORTS, "time-asc", "time-desc"];
 
 export default function TaskList() {
   const queryClient = useQueryClient();
@@ -44,6 +55,8 @@ export default function TaskList() {
   const [habitSort, setHabitSort] = usePersistedSort("taskSort.habits", "created-desc");
   // Which sub-list of to-dos is shown: unchecked ("open") or completed.
   const [todoTab, setTodoTab] = useState<"open" | "completed">("open");
+  // Announced to screen readers after a keyboard or pointer reorder.
+  const [reorderMessage, setReorderMessage] = useState("");
   const handleWeekOffsetChange = useCallback((newOffset: number) => {
     setWeekOffset(newOffset);
   }, []);
@@ -66,6 +79,21 @@ export default function TaskList() {
   const allCompletions = useHabitCompletions(habitTasks);
 
   const confirm = useConfirm();
+
+  // Writes an order into the cache straight away, so rows do not jump back
+  // while the request is in flight.
+  const applyLocalPositions = useCallback(
+    (kind: TaskKind, orderedIds: string[]) => {
+      const positions = positionsFor(orderedIds);
+      queryClient.setQueryData<Task[]>(taskQueryKey(kind), (old) =>
+        old?.map((task) => {
+          const position = positions.get(task.id);
+          return position === undefined ? task : { ...task, position };
+        })
+      );
+    },
+    [queryClient]
+  );
 
   // Mutations
   const deleteMutation = useMutation({
@@ -112,6 +140,30 @@ export default function TaskList() {
     },
   });
 
+  const reorderMutation = useMutation({
+    mutationFn: ({ kind, status, orderedIds }: { kind: TaskKind; status: TaskStatus; orderedIds: string[] }) =>
+      reorderTasks({ type: kind, status, ordered_ids: orderedIds }),
+    onMutate: ({ kind, orderedIds }) => {
+      applyLocalPositions(kind, orderedIds);
+    },
+    // A rejection means the list moved under us (deleted or completed item),
+    // so drop the optimistic order and take the server's again.
+    onError: () => {
+      invalidateTasks(queryClient);
+    },
+    onSettled: () => {
+      invalidateTasks(queryClient);
+    },
+  });
+
+  const persistOrder = useCallback(
+    (kind: TaskKind, status: TaskStatus, orderedIds: string[]) => {
+      if (orderedIds.length === 0) return;
+      reorderMutation.mutate({ kind, status, orderedIds });
+    },
+    [reorderMutation]
+  );
+
     // Tasks and habits open in edit modals rather than swapping the page.
 
   // Two sub-tabs so completed to-dos don't clutter the unchecked view; sorting is shared.
@@ -120,6 +172,52 @@ export default function TaskList() {
   const activeTodos = todoTab === "open" ? openTodos : completedTodos;
   const sortedTodoTasks = sortTasks(activeTodos, todoSort);
   const sortedHabitTasks = sortTasks(habitTasks, habitSort);
+
+  const todoStatus: TaskStatus = todoTab === "open" ? "todo" : "done";
+  const displayedTodoIds = sortedTodoTasks.map((task) => task.id);
+  const displayedHabitIds = sortedHabitTasks.map((task) => task.id);
+
+  const announceMove = useCallback(
+    (movedId: string, orderedIds: string[]) => {
+      const moved = [...todoTasks, ...habitTasks].find((task) => task.id === movedId);
+      if (!moved) return;
+      setReorderMessage(
+        t("tasks.reorderAnnounce", {
+          title: moved.title,
+          position: orderedIds.indexOf(movedId) + 1,
+        })
+      );
+    },
+    [habitTasks, t, todoTasks]
+  );
+
+  // Dragging only makes sense in manual order, so the first drag adopts the
+  // order already on screen instead of the stored ranks.
+  const todoDrag = useDragReorder({
+    ids: displayedTodoIds,
+    onReorder: (orderedIds, movedId) => {
+      persistOrder("one-off", todoStatus, orderedIds);
+      announceMove(movedId, orderedIds);
+    },
+    onDragStart: () => {
+      if (todoSort === "manual") return;
+      applyLocalPositions("one-off", displayedTodoIds);
+      setTodoSort("manual");
+    },
+  });
+
+  const habitDrag = useDragReorder({
+    ids: displayedHabitIds,
+    onReorder: (orderedIds, movedId) => {
+      persistOrder("habit", "todo", orderedIds);
+      announceMove(movedId, orderedIds);
+    },
+    onDragStart: () => {
+      if (habitSort === "manual") return;
+      applyLocalPositions("habit", displayedHabitIds);
+      setHabitSort("manual");
+    },
+  });
 
   return (
     <div className="animate-fade-in">
@@ -138,6 +236,11 @@ export default function TaskList() {
           {t("tasks.newTask")}
         </button>
       </div>
+
+      {/* Reorder feedback for keyboard and screen reader users */}
+      <p className="sr-only" role="status" aria-live="polite">
+        {reorderMessage}
+      </p>
 
       {isLoading && (
         <div className="card loading-card">
@@ -164,7 +267,7 @@ export default function TaskList() {
               <SortSelect
                 value={todoSort}
                 onChange={setTodoSort}
-                options={["created-desc", "created-asc", "alpha-asc", "alpha-desc"]}
+                options={TODO_SORTS}
               />
             </div>
           </div>
@@ -217,28 +320,38 @@ export default function TaskList() {
 
             <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
               {sortedTodoTasks.map((task, index) => (
-                <TaskCard
-                  key={task.id}
-                  variant="todo"
-                  title={task.title}
-                  done={task.status === "done"}
-                  onToggle={() => toggleMutation.mutate({ id: task.id, status: task.status })}
-                  onDelete={async () => {
-                    const ok = await confirm({
-                      title: t("tasks.deleteTaskTitle"),
-                      confirmLabel: t("tasks.delete"),
-                      confirmVariant: "danger",
-                    });
-                    if (ok) {
-                      deleteMutation.mutate(task.id);
-                    }
-                  }}
-                  onTitleClick={() => {
-                    setSelectedTaskId(task.id);
-                  }}
-                  animationDelay={`${index * 30}ms`}
-                />
+                <Fragment key={task.id}>
+                  {todoDrag.draggingId !== null && todoDrag.landingIndex === index && (
+                    <div className="reorder-slot" aria-hidden="true" />
+                  )}
+                  <TaskCard
+                    variant="todo"
+                    title={task.title}
+                    done={task.status === "done"}
+                    onToggle={() => toggleMutation.mutate({ id: task.id, status: task.status })}
+                    onDelete={async () => {
+                      const ok = await confirm({
+                        title: t("tasks.deleteTaskTitle"),
+                        confirmLabel: t("tasks.delete"),
+                        confirmVariant: "danger",
+                      });
+                      if (ok) {
+                        deleteMutation.mutate(task.id);
+                      }
+                    }}
+                    onTitleClick={() => {
+                      setSelectedTaskId(task.id);
+                    }}
+                    animationDelay={`${index * 30}ms`}
+                    rowRef={todoDrag.registerItem(task.id)}
+                    dragHandle={todoDrag.handleProps(task.id)}
+                    dragging={todoDrag.draggingId === task.id}
+                  />
+                </Fragment>
               ))}
+              {todoDrag.draggingId !== null && todoDrag.landingIndex === sortedTodoTasks.length && (
+                <div className="reorder-slot" aria-hidden="true" />
+              )}
             </div>
           </div>
         </div>
@@ -253,7 +366,7 @@ export default function TaskList() {
               <SortSelect
                 value={habitSort}
                 onChange={setHabitSort}
-                options={["created-desc", "created-asc", "alpha-asc", "alpha-desc", "time-asc", "time-desc"]}
+                options={HABIT_SORTS}
               />
             </div>
           </div>
@@ -308,65 +421,82 @@ export default function TaskList() {
                 const { current, longest } = computeStreaks(taskCompletions, task.recurrence_days);
 
                 return (
-                  <div
-                    key={task.id}
-                    className="card card-habit"
-                    style={{ animationDelay: `${index * 30}ms` }}
-                  >
-                    {/* Row 1: Title + Streak + Delete (hover reveal) */}
-                    <div className="flex-center" style={{ gap: "var(--space-sm)", marginBottom: "0.35rem" }}>
-                      <span
-                        className="flex-1"
-                        style={{
-                          cursor: "pointer",
-                          fontSize: "var(--font-size-sm)",
-                          fontWeight: 600,
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                        }}
-                        onClick={() => {
-                          setSelectedTaskId(task.id);
-                        }}
-                      >
-                        {task.title}
-                      </span>
-                      <StreakBadge current={current} longest={longest} />
-                      <button
-                        className="btn btn-danger btn-sm habit-delete"
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          const ok = await confirm({
-                            title: t("tasks.deleteHabitTitle"),
-                            confirmLabel: t("tasks.delete"),
-                            confirmVariant: "danger",
-                          });
-                          if (ok) {
-                            deleteMutation.mutate(task.id);
-                          }
-                        }}
-                        title={t("tasks.deleteHabitAria")}
-                        aria-label={t("tasks.deleteHabitAria")}
-                      >
-                        ✕
-                      </button>
-                    </div>
+                  <Fragment key={task.id}>
+                    {habitDrag.draggingId !== null && habitDrag.landingIndex === index && (
+                      <div className="reorder-slot" aria-hidden="true" />
+                    )}
+                    <div
+                      ref={habitDrag.registerItem(task.id)}
+                      className={`card card-habit ${habitDrag.draggingId === task.id ? "card-dragging" : ""}`}
+                      style={{ animationDelay: `${index * 30}ms` }}
+                    >
+                      {/* Row 1: Handle + Title + Streak + Delete (hover reveal) */}
+                      <div className="flex-center" style={{ gap: "var(--space-sm)", marginBottom: "0.35rem" }}>
+                        <button
+                          type="button"
+                          className="reorder-handle"
+                          {...habitDrag.handleProps(task.id)}
+                          aria-label={t("tasks.reorderAria", { title: task.title })}
+                          title={t("tasks.reorderAria", { title: task.title })}
+                        >
+                          ⠿
+                        </button>
+                        <span
+                          className="flex-1"
+                          style={{
+                            cursor: "pointer",
+                            fontSize: "var(--font-size-sm)",
+                            fontWeight: 600,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                          onClick={() => {
+                            setSelectedTaskId(task.id);
+                          }}
+                        >
+                          {task.title}
+                        </span>
+                        <StreakBadge current={current} longest={longest} />
+                        <button
+                          className="btn btn-danger btn-sm habit-delete"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            const ok = await confirm({
+                              title: t("tasks.deleteHabitTitle"),
+                              confirmLabel: t("tasks.delete"),
+                              confirmVariant: "danger",
+                            });
+                            if (ok) {
+                              deleteMutation.mutate(task.id);
+                            }
+                          }}
+                          title={t("tasks.deleteHabitAria")}
+                          aria-label={t("tasks.deleteHabitAria")}
+                        >
+                          ✕
+                        </button>
+                      </div>
 
-                    {/* Row 2: Completion buttons — primary interaction */}
-                    <div style={{ marginBottom: "0.35rem" }}>
-                      <WeekHeatmap
-                        recurrenceDays={task.recurrence_days ?? []}
-                        completions={taskCompletions}
-                        onToggleDay={(date, completed) => {
-                          habitToggleMutation.mutate({ taskId: task.id, date, completed });
-                        }}
-                        disabled={habitToggleMutation.isPending}
-                        weekOffset={weekOffset}
-                      />
+                      {/* Row 2: Completion buttons — primary interaction */}
+                      <div style={{ marginBottom: "0.35rem" }}>
+                        <WeekHeatmap
+                          recurrenceDays={task.recurrence_days ?? []}
+                          completions={taskCompletions}
+                          onToggleDay={(date, completed) => {
+                            habitToggleMutation.mutate({ taskId: task.id, date, completed });
+                          }}
+                          disabled={habitToggleMutation.isPending}
+                          weekOffset={weekOffset}
+                        />
+                      </div>
                     </div>
-                  </div>
+                  </Fragment>
                 );
               })}
+              {habitDrag.draggingId !== null && habitDrag.landingIndex === sortedHabitTasks.length && (
+                <div className="reorder-slot" aria-hidden="true" />
+              )}
             </div>
           </div>
         </div>
