@@ -27,7 +27,7 @@ import { useI18n } from "../i18n";
 import { computeStreaks } from "../utils/streaks";
 import { getRollingWindowDates, formatWeekRange } from "../utils/dates";
 import { sortTasks, type SortOption } from "../utils/sort";
-import { positionsFor } from "../utils/reorder";
+import { dropIndicatorIndex, positionsFor } from "../utils/reorder";
 import { invalidateTasks, queryKeys } from "../utils/queryKeys";
 import {
   playHabitCompletionSound,
@@ -219,6 +219,17 @@ export default function TaskList() {
     },
   });
 
+  // Where the insertion line goes while dragging, null when idle.
+  const todoIndicator =
+    todoDrag.landingIndex === null || todoDrag.draggingId === null
+      ? null
+      : dropIndicatorIndex(todoDrag.landingIndex, displayedTodoIds.indexOf(todoDrag.draggingId));
+
+  const habitIndicator =
+    habitDrag.landingIndex === null || habitDrag.draggingId === null
+      ? null
+      : dropIndicatorIndex(habitDrag.landingIndex, displayedHabitIds.indexOf(habitDrag.draggingId));
+
   return (
     <div className="animate-fade-in">
       {/* Page Header */}
@@ -321,7 +332,7 @@ export default function TaskList() {
             <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
               {sortedTodoTasks.map((task, index) => (
                 <Fragment key={task.id}>
-                  {todoDrag.draggingId !== null && todoDrag.landingIndex === index && (
+                  {todoIndicator === index && (
                     <div className="reorder-slot" aria-hidden="true" />
                   )}
                   <TaskCard
@@ -349,7 +360,7 @@ export default function TaskList() {
                   />
                 </Fragment>
               ))}
-              {todoDrag.draggingId !== null && todoDrag.landingIndex === sortedTodoTasks.length && (
+              {todoIndicator === sortedTodoTasks.length && (
                 <div className="reorder-slot" aria-hidden="true" />
               )}
             </div>
@@ -422,7 +433,7 @@ export default function TaskList() {
 
                 return (
                   <Fragment key={task.id}>
-                    {habitDrag.draggingId !== null && habitDrag.landingIndex === index && (
+                    {habitIndicator === index && (
                       <div className="reorder-slot" aria-hidden="true" />
                     )}
                     <div
@@ -494,7 +505,7 @@ export default function TaskList() {
                   </Fragment>
                 );
               })}
-              {habitDrag.draggingId !== null && habitDrag.landingIndex === sortedHabitTasks.length && (
+              {habitIndicator === sortedHabitTasks.length && (
                 <div className="reorder-slot" aria-hidden="true" />
               )}
             </div>

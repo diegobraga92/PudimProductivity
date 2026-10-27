@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { landingIndex, moveItem, positionsFor } from "./reorder";
+import { dropIndicatorIndex, landingIndex, moveItem, positionsFor } from "./reorder";
 
 describe("moveItem", () => {
   it("moves an item down", () => {
@@ -51,6 +51,27 @@ describe("landingIndex", () => {
 
   it("lands first in an empty list", () => {
     expect(landingIndex([], 42)).toBe(0);
+  });
+});
+
+describe("dropIndicatorIndex", () => {
+  it("keeps the gap above the row when dragging down one slot", () => {
+    // rows a,b,c: a dragged below b lands at index 1, the gap is after b
+    expect(dropIndicatorIndex(1, 0)).toBe(2);
+  });
+
+  it("uses the target gap when moving up", () => {
+    // rows a,b,c: c dragged above b lands at index 1, the gap is before b
+    expect(dropIndicatorIndex(1, 2)).toBe(1);
+  });
+
+  it("points above the first row and below the last one", () => {
+    expect(dropIndicatorIndex(0, 2)).toBe(0);
+    expect(dropIndicatorIndex(2, 0)).toBe(3);
+  });
+
+  it("keeps the indicator around the current row when the target is unchanged", () => {
+    expect(dropIndicatorIndex(1, 1)).toBe(2);
   });
 });
 

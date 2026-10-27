@@ -30,6 +30,15 @@ export function positionsFor(ids: readonly string[]): Map<string, number> {
   return new Map(ids.map((id, index) => [id, index]));
 }
 
+/**
+ * Gap in the rendered list where the drop indicator belongs. `target` is the
+ * index the item lands on, `from` where it currently sits. Dragging down has to
+ * skip the dragged row itself, which is still rendered while dragging.
+ */
+export function dropIndicatorIndex(target: number, from: number): number {
+  return target >= from ? target + 1 : target;
+}
+
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
