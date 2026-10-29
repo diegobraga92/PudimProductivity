@@ -4,6 +4,7 @@ import config from "../config";
 type WsEventType =
   | "task.created"
   | "task.updated"
+  | "task.reordered"
   | "task.deleted"
   | "task.completed"
   | "task.uncompleted"

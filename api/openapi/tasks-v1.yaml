@@ -781,7 +781,7 @@ components:
         position:
           type: integer
           minimum: 0
-          description: Rank inside the task's bucket (list, habit-ness, status). Lower comes first.
+          description: Rank inside the task's bucket (list, habit-ness, status). Lower comes first, a new task starts at 0.
           example: 0
         created_at:
           type: string

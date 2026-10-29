@@ -13,6 +13,7 @@ type EventType string
 const (
 	EventTaskCreated     EventType = "task.created"
 	EventTaskUpdated     EventType = "task.updated"
+	EventTaskReordered   EventType = "task.reordered"
 	EventTaskDeleted     EventType = "task.deleted"
 	EventTaskCompleted   EventType = "task.completed"
 	EventTaskUncompleted EventType = "task.uncompleted"

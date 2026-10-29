@@ -68,18 +68,19 @@ func (r *TaskRepository) scanTask(scanner interface {
 }
 
 func (r *TaskRepository) Create(ctx context.Context, task *taskdomain.Task) error {
-	// New tasks land last in their bucket. The subselect keeps the rank in one
-	// statement, so two concurrent creates cannot pick the same number.
+	// New tasks take the first rank of their bucket and the rest shifts down.
+	// One statement keeps the shift and the insert atomic for concurrent creates.
 	query := `
+		WITH shifted AS (
+			UPDATE tasks
+			SET position = position + 1
+			WHERE deleted_at IS NULL
+			  AND list_id IS NOT DISTINCT FROM $5
+			  AND (recurrence_days IS NOT NULL) = ($4::text[] IS NOT NULL)
+			  AND status = $3
+		)
 		INSERT INTO tasks (` + taskColumns + `)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
-			COALESCE((
-				SELECT MAX(position) + 1 FROM tasks
-				WHERE deleted_at IS NULL
-				  AND list_id IS NOT DISTINCT FROM $5
-				  AND (recurrence_days IS NOT NULL) = ($4::text[] IS NOT NULL)
-				  AND status = $3
-			), 0))
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 0)
 		RETURNING position
 	`
 

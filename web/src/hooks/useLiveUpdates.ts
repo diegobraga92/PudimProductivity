@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { syncClient, type WsEvent } from "../api/sync";
 import type { Task } from "../api/tasks";
 import { invalidateTaskLists, queryKeys } from "../utils/queryKeys";
+import { applyPositions } from "../utils/reorder";
 
 function isHabit(task: Task): boolean {
   return Boolean(task.recurrence_days && task.recurrence_days.length > 0);
@@ -33,6 +34,21 @@ export function useLiveUpdates(): void {
       const otherKey = isHabit(task) ? queryKeys.tasksOneOff : queryKeys.tasksHabit;
       queryClient.setQueryData<Task[]>(otherKey, (old) =>
         old ? removeTask(old, task.id) : old
+      );
+      queryClient.invalidateQueries({ queryKey: queryKeys.scheduledTasks });
+    };
+
+    // A drag ships one event with the new ranks, so apply them quietly.
+    const handleReorder = (event: WsEvent) => {
+      const payload = (event.payload ?? {}) as {
+        is_habit?: boolean;
+        ordered_ids?: string[];
+      };
+      const orderedIds = payload.ordered_ids;
+      if (!orderedIds?.length) return;
+      const key = payload.is_habit ? queryKeys.tasksHabit : queryKeys.tasksOneOff;
+      queryClient.setQueryData<Task[]>(key, (old) =>
+        old ? applyPositions(old, orderedIds) : old
       );
       queryClient.invalidateQueries({ queryKey: queryKeys.scheduledTasks });
     };
@@ -80,6 +96,7 @@ export function useLiveUpdates(): void {
     const offs = [
       syncClient.on("task.created", handleUpsert),
       syncClient.on("task.updated", handleUpsert),
+      syncClient.on("task.reordered", handleReorder),
       syncClient.on("task.deleted", handleDeleted),
       syncClient.on("task.completed", handleCompletionChanged),
       syncClient.on("task.uncompleted", handleCompletionChanged),

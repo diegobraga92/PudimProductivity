@@ -96,9 +96,17 @@ func TestReorderScopedPerBucket(t *testing.T) {
 		t.Fatalf("CreateTask(habit): %v", err)
 	}
 
-	if first.Position != 0 || second.Position != 1 || habit.Position != 0 {
-		t.Fatalf("new tasks should append to their own bucket: first=%d second=%d habit=%d",
-			first.Position, second.Position, habit.Position)
+	// New tasks take the first rank of their bucket and push the rest down.
+	if second.Position != 0 || habit.Position != 0 {
+		t.Fatalf("new tasks should take the first rank of their bucket: second=%d habit=%d",
+			second.Position, habit.Position)
+	}
+	shifted, err := service.GetTask(ctx, first.ID)
+	if err != nil {
+		t.Fatalf("GetTask(first): %v", err)
+	}
+	if shifted.Position != 1 {
+		t.Fatalf("older task should have shifted down: first=%d, want 1", shifted.Position)
 	}
 
 	scope := task.TaskScope{Status: task.TaskStatusTodo}
@@ -126,5 +134,43 @@ func TestReorderScopedPerBucket(t *testing.T) {
 	}
 	if got.Position != 1 {
 		t.Errorf("position changed on a rejected reorder: got %d, want 1", got.Position)
+	}
+}
+
+// Creating a task must show it first, so the repository shifts the ranks of the
+// same bucket down instead of appending at the end.
+func TestCreateInsertsAtTopPerBucket(t *testing.T) {
+	postgrestest.SkipIfShort(t)
+	ctx, pool := postgrestest.SetupPool(t)
+	service := task.NewTaskService(postgres.NewTaskRepository(pool), nil, nil)
+
+	older, err := service.CreateTask(ctx, "older", nil)
+	if err != nil {
+		t.Fatalf("CreateTask(older): %v", err)
+	}
+	habit, err := service.CreateTask(ctx, "habit", []string{"mon"})
+	if err != nil {
+		t.Fatalf("CreateTask(habit): %v", err)
+	}
+	newer, err := service.CreateTask(ctx, "newer", nil)
+	if err != nil {
+		t.Fatalf("CreateTask(newer): %v", err)
+	}
+
+	if older.Position != 0 || habit.Position != 0 || newer.Position != 0 {
+		t.Fatalf("every create should report rank 0: older=%d habit=%d newer=%d",
+			older.Position, habit.Position, newer.Position)
+	}
+
+	// The second to-do pushed the first one down, the habit bucket kept its rank.
+	want := map[string]int{newer.ID: 0, older.ID: 1, habit.ID: 0}
+	for id, position := range want {
+		got, err := service.GetTask(ctx, id)
+		if err != nil {
+			t.Fatalf("GetTask(%s): %v", id, err)
+		}
+		if got.Position != position {
+			t.Errorf("position of %q: got %d, want %d", got.Title, got.Position, position)
+		}
 	}
 }

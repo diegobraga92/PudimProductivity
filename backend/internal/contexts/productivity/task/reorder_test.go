@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"testing"
+
+	"github.com/diegobraga92/pudimproductivity/backend/internal/platform/eventbus"
 )
 
 const (
@@ -48,6 +50,78 @@ func TestReorderTasks_AppliesOrder(t *testing.T) {
 		if got := repo.store[id].Position; got != position {
 			t.Errorf("position of %s: got %d, want %d", id, got, position)
 		}
+	}
+}
+
+// A drag must reach other clients as one silent reorder, not as one update per
+// task, and the payload must carry the bucket a websocket subscriber filters on.
+func TestReorderTasks_PublishesSingleReorderEvent(t *testing.T) {
+	listID := "00000000-0000-0000-0000-00000000000a"
+
+	cases := []struct {
+		name       string
+		listID     *string
+		isHabit    bool
+		wantListID any
+	}{
+		{"inbox", nil, false, nil},
+		{"shared list", &listID, false, listID},
+		{"habit bucket", nil, true, nil},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			a := reorderTask(t, todoA, tc.isHabit, 0)
+			b := reorderTask(t, todoB, tc.isHabit, 1)
+			a.ListID, b.ListID = tc.listID, tc.listID
+
+			bus := eventbus.NewInMemoryBus()
+			t.Cleanup(func() { _ = bus.Close() })
+
+			var events []eventbus.Event
+			unsub, err := bus.Subscribe(context.Background(), func(_ context.Context, event eventbus.Event) error {
+				events = append(events, event)
+				return nil
+			})
+			if err != nil {
+				t.Fatalf("Subscribe: %v", err)
+			}
+			t.Cleanup(unsub)
+
+			service := NewTaskService(newFakeRepo(a, b), nil, bus)
+			scope := TaskScope{ListID: tc.listID, IsHabit: tc.isHabit, Status: TaskStatusTodo}
+			if err := service.ReorderTasks(context.Background(), scope, []string{todoB, todoA}); err != nil {
+				t.Fatalf("ReorderTasks: %v", err)
+			}
+
+			if len(events) != 1 {
+				t.Fatalf("want 1 event, got %d", len(events))
+			}
+			if events[0].Type != eventbus.EventTaskReordered {
+				t.Fatalf("event type = %q, want %q", events[0].Type, eventbus.EventTaskReordered)
+			}
+
+			payload, ok := events[0].Payload.(map[string]any)
+			if !ok {
+				t.Fatalf("payload type = %T, want map[string]any", events[0].Payload)
+			}
+			if payload["list_id"] != tc.wantListID {
+				t.Errorf("list_id = %v, want %v", payload["list_id"], tc.wantListID)
+			}
+			if payload["is_habit"] != tc.isHabit {
+				t.Errorf("is_habit = %v, want %v", payload["is_habit"], tc.isHabit)
+			}
+			if payload["status"] != "todo" {
+				t.Errorf("status = %v, want todo", payload["status"])
+			}
+			ids, ok := payload["ordered_ids"].([]string)
+			if !ok {
+				t.Fatalf("ordered_ids type = %T, want []string", payload["ordered_ids"])
+			}
+			if len(ids) != 2 || ids[0] != todoB || ids[1] != todoA {
+				t.Errorf("ordered_ids = %v, want [%s %s]", ids, todoB, todoA)
+			}
+		})
 	}
 }
 

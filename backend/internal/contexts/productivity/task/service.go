@@ -243,11 +243,18 @@ func (s *TaskService) ReorderTasks(ctx context.Context, scope TaskScope, ordered
 
 	s.invalidate(ctx)
 
-	// one event per task so a client that filters by id still sees the change,
-	// the payload is the task with its new rank
-	for _, t := range tasks {
-		s.publish(ctx, eventbus.EventTaskUpdated, ToTaskResponse(t))
+	// A drag is one user action, so it ships as one event. Clients apply the
+	// ranks silently instead of refreshing every task in the bucket.
+	var listID any
+	if scope.ListID != nil {
+		listID = *scope.ListID
 	}
+	s.publish(ctx, eventbus.EventTaskReordered, map[string]any{
+		"list_id":     listID,
+		"is_habit":    scope.IsHabit,
+		"status":      string(scope.Status),
+		"ordered_ids": orderedIDs,
+	})
 
 	return nil
 }

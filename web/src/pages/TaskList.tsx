@@ -27,7 +27,7 @@ import { useI18n } from "../i18n";
 import { computeStreaks } from "../utils/streaks";
 import { getRollingWindowDates, formatWeekRange } from "../utils/dates";
 import { sortTasks, type SortOption } from "../utils/sort";
-import { dropIndicatorIndex, positionsFor } from "../utils/reorder";
+import { applyPositions, dropIndicatorIndex } from "../utils/reorder";
 import { invalidateTasks, queryKeys } from "../utils/queryKeys";
 import {
   playHabitCompletionSound,
@@ -84,12 +84,8 @@ export default function TaskList() {
   // while the request is in flight.
   const applyLocalPositions = useCallback(
     (kind: TaskKind, orderedIds: string[]) => {
-      const positions = positionsFor(orderedIds);
       queryClient.setQueryData<Task[]>(taskQueryKey(kind), (old) =>
-        old?.map((task) => {
-          const position = positions.get(task.id);
-          return position === undefined ? task : { ...task, position };
-        })
+        old ? applyPositions(old, orderedIds) : old
       );
     },
     [queryClient]

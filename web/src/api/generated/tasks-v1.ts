@@ -51,7 +51,11 @@ export interface paths {
          */
         get: operations["listTasks"];
         put?: never;
-        /** Create a new task */
+        /**
+         * Create a new task
+         * @description The new task takes the first rank of its bucket (list, habit-ness,
+         *     status), so it shows up on top of a manually sorted list.
+         */
         post: operations["createTask"];
         delete?: never;
         options?: never;
@@ -352,7 +356,7 @@ export interface components {
              */
             alarm_minutes?: number | null;
             /**
-             * @description Rank inside the task's bucket (list, habit-ness, status). Lower comes first.
+             * @description Rank inside the task's bucket (list, habit-ness, status). Lower comes first, a new task starts at 0.
              * @example 0
              */
             position: number;

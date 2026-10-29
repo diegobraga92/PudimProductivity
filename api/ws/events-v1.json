@@ -16,6 +16,7 @@
           "enum": [
             "task.created",
             "task.updated",
+            "task.reordered",
             "task.deleted",
             "task.completed",
             "task.uncompleted",
@@ -103,6 +104,31 @@
         },
         "created_at": { "type": "string", "format": "date-time" },
         "updated_at": { "type": "string", "format": "date-time" }
+      }
+    },
+
+    "taskOrder": {
+      "type": "object",
+      "description": "New manual order for one task bucket.",
+      "required": ["list_id", "is_habit", "status", "ordered_ids"],
+      "properties": {
+        "list_id": {
+          "anyOf": [{ "type": "string", "format": "uuid" }, { "type": "null" }],
+          "description": "Task list ID, or null for the inbox."
+        },
+        "is_habit": {
+          "type": "boolean",
+          "description": "Bucket holds habits when true, to-dos when false."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["todo", "done"]
+        },
+        "ordered_ids": {
+          "type": "array",
+          "description": "Task IDs in display order, first on screen first.",
+          "items": { "type": "string", "format": "uuid" }
+        }
       }
     },
 
@@ -335,6 +361,14 @@
           "properties": {
             "type": { "const": "task.updated" },
             "payload": { "$ref": "#/$defs/task" }
+          },
+          "required": ["payload"]
+        },
+        {
+          "description": "Manual order changed. Payload: taskOrder.",
+          "properties": {
+            "type": { "const": "task.reordered" },
+            "payload": { "$ref": "#/$defs/taskOrder" }
           },
           "required": ["payload"]
         },

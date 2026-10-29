@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { dropIndicatorIndex, landingIndex, moveItem, positionsFor } from "./reorder";
+import {
+  applyPositions,
+  dropIndicatorIndex,
+  landingIndex,
+  moveItem,
+  positionsFor,
+} from "./reorder";
 
 describe("moveItem", () => {
   it("moves an item down", () => {
@@ -82,5 +88,34 @@ describe("positionsFor", () => {
       ["y", 1],
       ["z", 2],
     ]);
+  });
+});
+
+describe("applyPositions", () => {
+  const tasks = [
+    { id: "x", position: 0 },
+    { id: "y", position: 1 },
+    { id: "z", position: 2 },
+  ];
+
+  it("writes the server ranks onto the matching tasks", () => {
+    expect(applyPositions(tasks, ["z", "x", "y"]).map((t) => [t.id, t.position])).toEqual([
+      ["x", 1],
+      ["y", 2],
+      ["z", 0],
+    ]);
+  });
+
+  it("keeps tasks the payload does not name", () => {
+    expect(applyPositions(tasks, ["z"]).map((t) => t.position)).toEqual([0, 1, 0]);
+  });
+
+  it("leaves the input untouched", () => {
+    applyPositions(tasks, ["z", "y", "x"]);
+    expect(tasks.map((t) => t.position)).toEqual([0, 1, 2]);
+  });
+
+  it("returns an empty list for an empty cache", () => {
+    expect(applyPositions([], ["x"])).toEqual([]);
   });
 });

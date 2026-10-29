@@ -16,6 +16,7 @@ func affectedListIDs(event eventbus.Event) ([]string, bool) {
 	switch event.Type {
 	case eventbus.EventTaskCreated,
 		eventbus.EventTaskUpdated,
+		eventbus.EventTaskReordered,
 		eventbus.EventTaskMerged,
 		eventbus.EventTaskListShared,
 		eventbus.EventTaskListUnshared:

@@ -84,6 +84,15 @@ func TestWsEventsConformToContract(t *testing.T) {
 			"id": "00000000-0000-0000-0000-000000000001", "title": "Contract test", "status": "done",
 			"position": 0, "created_at": "2026-08-09T12:00:00Z", "updated_at": "2026-08-09T12:01:00Z",
 		}},
+		{eventbus.EventTaskReordered, map[string]interface{}{
+			"list_id":  "00000000-0000-0000-0000-00000000000a",
+			"is_habit": false,
+			"status":   "todo",
+			"ordered_ids": []string{
+				"00000000-0000-0000-0000-000000000001",
+				"00000000-0000-0000-0000-000000000002",
+			},
+		}},
 		{eventbus.EventTaskDeleted, map[string]interface{}{"id": "00000000-0000-0000-0000-000000000001"}},
 		{eventbus.EventTaskCompleted, map[string]interface{}{
 			"id": "00000000-0000-0000-0000-000000000002", "task_id": "00000000-0000-0000-0000-000000000001",

@@ -31,6 +31,21 @@ export function positionsFor(ids: readonly string[]): Map<string, number> {
 }
 
 /**
+ * Writes the server's visual order into the matching tasks. Ids the payload
+ * does not name keep their rank, mirroring what the server does.
+ */
+export function applyPositions<T extends { id: string; position: number }>(
+  tasks: readonly T[],
+  orderedIds: readonly string[]
+): T[] {
+  const ranks = positionsFor(orderedIds);
+  return tasks.map((task) => {
+    const position = ranks.get(task.id);
+    return position === undefined ? task : { ...task, position };
+  });
+}
+
+/**
  * Gap in the rendered list where the drop indicator belongs. `target` is the
  * index the item lands on, `from` where it currently sits. Dragging down has to
  * skip the dragged row itself, which is still rendered while dragging.
