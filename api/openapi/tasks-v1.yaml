@@ -107,6 +107,9 @@ paths:
     post:
       operationId: createTask
       summary: Create a new task
+      description: |
+        The new task takes the first rank of its bucket (list, habit-ness,
+        status), so it shows up on top of a manually sorted list.
       security: []
       tags:
         - Tasks
