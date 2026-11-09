@@ -1,3 +1,8 @@
+# Dependabot does one version-update pass per month for every ecosystem below:
+# each entry keeps `schedule.interval: monthly`, so the bumps arrive together on
+# the same day instead of trickling in weekly. Security updates are the one
+# exception - GitHub opens those as soon as a vulnerable dependency is published,
+# and no schedule applies to them.
 version: 2
 
 updates:
@@ -42,6 +47,15 @@ updates:
       semver-major-days: 30
       semver-minor-days: 7
       semver-patch-days: 3
+    # Two dev-dependency peers cap /web at TypeScript 5.x:
+    #   - typescript-eslint@8 peers `typescript >=4.8.4 <6.1.0`
+    #   - openapi-typescript@7 peers `typescript ^5.x`
+    # A major bump (6 or 7) therefore makes `npm ci` fail, so /web tracks the
+    # newest 5.x release (~5.9.3) and this rule should be removed once both
+    # peers allow the next major.
+    ignore:
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
     labels: ["dependencies", "web"]
     commit-message:
       prefix: "chore"
