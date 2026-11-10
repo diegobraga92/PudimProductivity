@@ -20,7 +20,7 @@ import SortSelect from "./SortSelect";
 import { usePersistedSort } from "../hooks/usePersistedSort";
 import { useI18n } from "../i18n";
 import { sortTasks } from "../utils/sort";
-import { invalidateTaskLists } from "../utils/queryKeys";
+import { invalidateTaskLists, queryKeys } from "../utils/queryKeys";
 import {
   playTodoCompletionSound,
   playTodoUncompletionSound,
@@ -41,12 +41,12 @@ export default function ListDetailPanel({ listId, onListDeleted }: ListDetailPan
   const confirm = useConfirm();
 
   const { data: taskList, isLoading: listLoading } = useQuery({
-    queryKey: ["taskList", listId],
+    queryKey: queryKeys.taskList(listId),
     queryFn: () => getTaskList(listId),
   });
 
   const { data: tasks = [], isLoading: tasksLoading } = useQuery<Task[]>({
-    queryKey: ["taskListTasks", listId],
+    queryKey: queryKeys.taskListTasks(listId),
     queryFn: () => listTasksByListID(listId),
   });
 
@@ -54,7 +54,7 @@ export default function ListDetailPanel({ listId, onListDeleted }: ListDetailPan
     mutationFn: (title: string) =>
       createTask({ title, list_id: listId }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["taskListTasks", listId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.taskListTasks(listId) });
       setNewTitle("");
     },
   });
@@ -62,7 +62,7 @@ export default function ListDetailPanel({ listId, onListDeleted }: ListDetailPan
   const deleteTaskMutation = useMutation({
     mutationFn: deleteTask,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["taskListTasks", listId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.taskListTasks(listId) });
     },
   });
 
@@ -76,7 +76,7 @@ export default function ListDetailPanel({ listId, onListDeleted }: ListDetailPan
       return updateTask(id, { status: status === "done" ? "todo" : "done" });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["taskListTasks", listId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.taskListTasks(listId) });
     },
   });
 
@@ -88,7 +88,7 @@ export default function ListDetailPanel({ listId, onListDeleted }: ListDetailPan
   const updateListMutation = useMutation({
     mutationFn: (name: string) => updateTaskList(listId, { name }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["taskList", listId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.taskList(listId) });
       invalidateTaskLists(queryClient);
       setEditingName(false);
     },

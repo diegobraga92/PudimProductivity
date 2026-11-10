@@ -8,6 +8,7 @@ import {
 } from "../api/collab";
 import { useToast } from "./toastContext";
 import { useI18n } from "../i18n";
+import { queryKeys } from "../utils/queryKeys";
 
 interface TaskListShareProps {
   listId: string;
@@ -35,14 +36,14 @@ export default function TaskListShare({
   const [error, setError] = useState<string | null>(null);
 
   const { data: members = [], isLoading } = useQuery<TaskListMember[]>({
-    queryKey: ["taskListMembers", listId],
+    queryKey: queryKeys.taskListMembers(listId),
     queryFn: () => listTaskListMembers(listId),
   });
 
   const shareMutation = useMutation({
     mutationFn: () => shareTaskList(listId, { shared_with: userId.trim(), role }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["taskListMembers", listId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.taskListMembers(listId) });
       setUserId("");
       setError(null);
       pushToast({ icon: "👥", title: t("toast.listShared"), body: t("toast.listSharedBody", { role, user: userId.trim() }) });
@@ -53,7 +54,7 @@ export default function TaskListShare({
   const unshareMutation = useMutation({
     mutationFn: (target: string) => unshareTaskList(listId, target),
     onSuccess: (_data, target) => {
-      queryClient.invalidateQueries({ queryKey: ["taskListMembers", listId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.taskListMembers(listId) });
       pushToast({ icon: "🔒", title: t("toast.accessRevoked"), body: t("toast.accessRevokedBody", { target }) });
     },
     onError: (err: Error) => setError(err.message),
