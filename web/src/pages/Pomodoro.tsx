@@ -15,13 +15,12 @@ import { useSystemMediaPlayers } from "../hooks/useSystemMediaPlayers";
 import { AUTO_PLAYER } from "../utils/pomodoroMediaSync";
 import { queryKeys } from "../utils/queryKeys";
 import { useSounds } from "../hooks/useSounds";
+import { usePomodoroTimerSettings } from "../hooks/usePomodoroTimerSettings";
+import { BREAK_PRESETS, FOCUS_PRESETS } from "../utils/pomodoroTimerSettings";
 import { ClockIcon } from "../components/icons";
 
-const FOCUS_PRESETS = [15, 25, 30, 45, 60, 90, 120];
-const BREAK_PRESETS = [5, 10, 15, 20, 25, 30];
 const RING_RADIUS = 96;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
-const LS_CONTINUOUS = "pomodoro_continuous";
 
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -77,11 +76,14 @@ function Pomodoro({ onOpenSounds }: PomodoroProps) {
   const mediaReady = mediaAvailability === "available";
   // Hidden in the browser and on platforms playerctl cannot serve.
   const showMediaControl = mediaAvailability !== "unsupported";
-  const [focusMinutes, setFocusMinutes] = useState(25);
-  const [breakMinutes, setBreakMinutes] = useState(5);
-  const [continuous, setContinuous] = useState<boolean>(
-    () => localStorage.getItem(LS_CONTINUOUS) === "true"
-  );
+  const {
+    focusMinutes,
+    breakMinutes,
+    continuous,
+    setFocusMinutes,
+    setBreakMinutes,
+    setContinuous,
+  } = usePomodoroTimerSettings();
   const [localRemaining, setLocalRemaining] = useState<number | null>(null);
   const [localStatus, setLocalStatus] = useState<string | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -731,11 +733,7 @@ function Pomodoro({ onOpenSounds }: PomodoroProps) {
               <input
                 type="checkbox"
                 checked={continuous}
-                onChange={(e) => {
-                  const v = e.target.checked;
-                  setContinuous(v);
-                  localStorage.setItem(LS_CONTINUOUS, String(v));
-                }}
+                onChange={(e) => setContinuous(e.target.checked)}
                 style={{ display: "none" }}
               />
               <span
