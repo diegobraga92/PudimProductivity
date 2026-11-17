@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import type { SessionStatus } from "../api/pomodoro";
 import { useToast } from "../components/toastContext";
 import { useI18n } from "../i18n";
 import { resolveMediaAction } from "../utils/pomodoroMediaSync";
@@ -13,6 +14,9 @@ export function usePomodoroMediaSync(): void {
   const { pushToast } = useToast();
   const { t } = useI18n();
   const warnedRef = useRef(false);
+  // undefined means the timer status was never observed yet; the first
+  // observation must not touch the OS player (opening the app used to pause it).
+  const previousStatusRef = useRef<SessionStatus | null | undefined>(undefined);
   const status = useCurrentPomodoroStatus();
   const available = availability === "available";
 
@@ -22,12 +26,15 @@ export function usePomodoroMediaSync(): void {
   }, [available]);
 
   useEffect(() => {
+    const previousStatus = previousStatusRef.current;
+    previousStatusRef.current = status;
+
     if (!enabled || !available) return;
 
     const bridge = window.desktop;
     if (!bridge?.mediaControl) return;
 
-    const action = resolveMediaAction(enabled, available, status);
+    const action = resolveMediaAction(enabled, available, previousStatus, status);
     if (action === "idle") return;
 
     void bridge

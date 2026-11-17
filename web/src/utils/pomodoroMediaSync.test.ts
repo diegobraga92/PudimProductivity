@@ -6,6 +6,7 @@ import {
   POMODORO_MEDIA_PLAYER_KEY,
   getPomodoroMediaEnabled,
   getPomodoroMediaPlayer,
+  type MediaSyncAction,
   resolveMediaAction,
   setPomodoroMediaEnabled,
   setPomodoroMediaPlayer,
@@ -71,18 +72,55 @@ describe("pomodoroMediaSync store", () => {
 });
 
 describe("resolveMediaAction", () => {
-  it.each<[boolean, boolean, SessionStatus | null, string]>([
-    [false, true, "running", "idle"],
-    [false, true, null, "idle"],
-    [true, false, "running", "idle"],
-    [true, false, "paused", "idle"],
-    [false, false, null, "idle"],
-    [true, true, "running", "play"],
-    [true, true, "paused", "pause"],
-    [true, true, "completed", "pause"],
-    [true, true, "cancelled", "pause"],
-    [true, true, null, "pause"],
-  ])("enabled=%s available=%s status=%s returns %s", (enabled, available, status, expected) => {
-    expect(resolveMediaAction(enabled, available, status)).toBe(expected);
+  it.each<
+    [boolean, boolean, SessionStatus | null | undefined, SessionStatus | null, MediaSyncAction]
+  >([
+    [false, true, null, "running", "idle"],
+    [false, true, undefined, null, "idle"],
+    [true, false, "running", "paused", "idle"],
+    [true, false, undefined, null, "idle"],
+    [false, false, undefined, null, "idle"],
+    // First observation is launch: never touch the media already playing in the OS.
+    [true, true, undefined, null, "idle"],
+    [true, true, undefined, "paused", "idle"],
+    [true, true, undefined, "completed", "idle"],
+    [true, true, undefined, "cancelled", "idle"],
+    [true, true, undefined, "running", "idle"],
+    // Real transitions.
+    [true, true, null, "running", "play"],
+    [true, true, "paused", "running", "play"],
+    [true, true, "completed", "running", "play"],
+    [true, true, "running", "paused", "pause"],
+    [true, true, "running", "completed", "pause"],
+    [true, true, "running", "cancelled", "pause"],
+    [true, true, "running", null, "pause"],
+    // Statuses that did not change stay inert (no repeated play/pause calls).
+    [true, true, null, null, "idle"],
+    [true, true, "running", "running", "idle"],
+    [true, true, "paused", "paused", "idle"],
+    [true, true, "paused", null, "idle"],
+    [true, true, "completed", null, "idle"],
+  ])(
+    "enabled=%s available=%s previous=%s status=%s returns %s",
+    (enabled, available, previousStatus, status, expected) => {
+      expect(resolveMediaAction(enabled, available, previousStatus, status)).toBe(expected);
+    }
+  );
+
+  it("does not pause the system player when the app opens", () => {
+    // The reported bug: no active session on launch must not reach playerctl.
+    expect(resolveMediaAction(true, true, undefined, null)).toBe("idle");
+  });
+
+  it("pauses only after a running session ends", () => {
+    const statuses: (SessionStatus | null)[] = [null, "running", "completed", null];
+    let previous: SessionStatus | null | undefined = undefined;
+    const actions = statuses.map((status) => {
+      const action = resolveMediaAction(true, true, previous, status);
+      previous = status;
+      return action;
+    });
+
+    expect(actions).toEqual(["idle", "play", "pause", "idle"]);
   });
 });

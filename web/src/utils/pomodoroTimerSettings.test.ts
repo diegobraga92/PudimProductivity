@@ -99,6 +99,13 @@ describe("pomodoroTimerSettings store", () => {
     }
   });
 
+  it("accepts the 75 minute focus preset", () => {
+    expect(FOCUS_PRESETS).toContain(75);
+
+    setPomodoroFocusMinutes(75);
+    expect(getPomodoroFocusMinutes()).toBe(75);
+  });
+
   it("notifies subscribers on change", () => {
     let calls = 0;
     const unsubscribe = subscribe(() => {

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   getCurrentSession,
   startSession,
@@ -28,21 +28,49 @@ function formatTime(seconds: number): string {
   return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
 }
 
-/** Label + control row used by the settings/preset cards. */
-function SettingRow({ label, children }: { label: string; children: ReactNode }) {
+/** Picks the shortest label that keeps the pill row readable: 45 -> "45m", 75 -> "1h15". */
+function formatPreset(minutes: number): string {
+  if (minutes < 60) return `${minutes}m`;
+  const rest = minutes % 60;
+  return rest === 0 ? `${minutes / 60}h` : `${Math.floor(minutes / 60)}h${rest}`;
+}
+
+interface MinutePresetPickerProps {
+  /** Group label and accessible name, e.g. "Focus (min)". */
+  label: string;
+  value: number;
+  options: readonly number[];
+  onChange: (minutes: number) => void;
+}
+
+/** Single-choice pill row used by the focus and break duration settings. */
+function MinutePresetPicker({ label, value, options, onChange }: MinutePresetPickerProps) {
   return (
-    <div className="flex-center" style={{ gap: "var(--space-sm)" }}>
-      <span
+    <div>
+      <div
         style={{
           fontSize: "var(--font-size-sm)",
           fontWeight: 500,
-          whiteSpace: "nowrap",
           color: "var(--color-text-secondary)",
+          marginBottom: "var(--space-xs)",
         }}
       >
         {label}
-      </span>
-      {children}
+      </div>
+      <div className="minute-presets" role="radiogroup" aria-label={label}>
+        {options.map((minutes) => (
+          <button
+            key={minutes}
+            type="button"
+            role="radio"
+            aria-checked={value === minutes}
+            className={`minute-preset${value === minutes ? " active" : ""}`}
+            onClick={() => onChange(minutes)}
+          >
+            {formatPreset(minutes)}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -668,36 +696,20 @@ function Pomodoro({ onOpenSounds }: PomodoroProps) {
 
           <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-md)" }}>
             {/* Focus Duration */}
-            <SettingRow label={t("pomodoro.focusMinutes")}>
-              <select
-                className="select"
-                value={focusMinutes}
-                onChange={(e) => setFocusMinutes(Number(e.target.value))}
-                style={{ flex: 1 }}
-              >
-                {FOCUS_PRESETS.map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
-                ))}
-              </select>
-            </SettingRow>
+            <MinutePresetPicker
+              label={t("pomodoro.focusMinutes")}
+              value={focusMinutes}
+              options={FOCUS_PRESETS}
+              onChange={setFocusMinutes}
+            />
 
             {/* Break Duration */}
-            <SettingRow label={t("pomodoro.breakMinutes")}>
-              <select
-                className="select"
-                value={breakMinutes}
-                onChange={(e) => setBreakMinutes(Number(e.target.value))}
-                style={{ flex: 1 }}
-              >
-                {BREAK_PRESETS.map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
-                ))}
-              </select>
-            </SettingRow>
+            <MinutePresetPicker
+              label={t("pomodoro.breakMinutes")}
+              value={breakMinutes}
+              options={BREAK_PRESETS}
+              onChange={setBreakMinutes}
+            />
           </div>
 
           {/* Continuous mode */}

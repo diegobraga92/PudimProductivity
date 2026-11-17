@@ -7,7 +7,7 @@ export const POMODORO_BREAK_MINUTES_KEY = "pomodoro_break_minutes";
 /** Legacy key kept so existing installs keep their continuous preference. */
 export const POMODORO_CONTINUOUS_KEY = "pomodoro_continuous";
 
-export const FOCUS_PRESETS = [15, 25, 30, 45, 60, 90, 120];
+export const FOCUS_PRESETS = [15, 25, 30, 45, 60, 75, 90, 120];
 export const BREAK_PRESETS = [5, 10, 15, 20, 25, 30];
 export const DEFAULT_FOCUS_MINUTES = 25;
 export const DEFAULT_BREAK_MINUTES = 5;

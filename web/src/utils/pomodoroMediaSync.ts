@@ -37,12 +37,23 @@ export const subscribe = store.subscribe;
 
 export type MediaSyncAction = "play" | "pause" | "idle";
 
-/** Action for a timer status; disabled sync and an unusable playerctl stay inert instead of erroring. */
+/**
+ * Action for one status observation; disabled sync and an unusable playerctl
+ * stay inert instead of erroring.
+ *
+ * Only real transitions act. The first observation (`previousStatus` undefined)
+ * is inert, so launching the app never touches the media that is already
+ * playing in the OS, and pause only fires when a running timer stops.
+ */
 export function resolveMediaAction(
   enabled: boolean,
   available: boolean,
+  previousStatus: SessionStatus | null | undefined,
   status: SessionStatus | null
 ): MediaSyncAction {
   if (!enabled || !available) return "idle";
-  return status === "running" ? "play" : "pause";
+  if (previousStatus === undefined) return "idle";
+  if (status === "running" && previousStatus !== "running") return "play";
+  if (previousStatus === "running" && status !== "running") return "pause";
+  return "idle";
 }
